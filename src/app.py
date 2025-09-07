@@ -119,8 +119,15 @@ def get_word_definition():
             
             # Add audio data if available
             if audio_data:
+                # Always store audio as bytes in database, encode to base64 for JSON response
+                if isinstance(audio_data, (bytes, memoryview)):
+                    audio_bytes = bytes(audio_data)
+                else:
+                    app.logger.warning(f"Unexpected audio_data type: {type(audio_data)}, converting to bytes")
+                    audio_bytes = bytes(audio_data) if audio_data else b''
+                
                 definition_data['audio'] = {
-                    'data': base64.b64encode(audio_data).decode('utf-8'),
+                    'data': base64.b64encode(audio_bytes).decode('utf-8'),
                     'content_type': audio_content_type,
                     'generated_at': audio_generated_at.isoformat() if audio_generated_at else None
                 }
