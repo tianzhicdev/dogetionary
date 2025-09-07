@@ -26,8 +26,7 @@ $COMPOSE_CMD build app
 echo "🔄 Restarting app container..."
 $COMPOSE_CMD up -d app
 
-echo "🗃️ Running database migration..."
-./scripts/migrate-db.sh
+echo "🗃️ Database will be initialized from init.sql on restart"
 
 echo "⏳ Waiting for app to start..."
 sleep 5
