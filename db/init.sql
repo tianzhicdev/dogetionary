@@ -1,25 +1,10 @@
 -- Dogetionary Database Schema
 -- Complete schema with all tables and indexes
 
--- Saved Words Table (user's vocabulary with spaced repetition)
-CREATE TABLE saved_words (
-    id SERIAL PRIMARY KEY,
-    user_id UUID NOT NULL,
-    word VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    metadata JSONB DEFAULT '{}'::jsonb,
-    -- Spaced Repetition Fields
-    review_count INTEGER DEFAULT 0,
-    ease_factor DECIMAL(3,1) DEFAULT 2.5,
-    interval_days INTEGER DEFAULT 1,
-    next_review_date DATE DEFAULT CURRENT_DATE + INTERVAL '1 day',
-    last_reviewed_at TIMESTAMP NULL,
-    UNIQUE(user_id, word)
-);
 
 -- Words Cache Table (LLM definitions and audio)
 CREATE TABLE words (
-    word_lower VARCHAR(255) PRIMARY KEY,
+    word VARCHAR(255) PRIMARY KEY,
     definition_data JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -29,6 +14,24 @@ CREATE TABLE words (
     audio_data BYTEA NULL,
     audio_content_type VARCHAR(50) DEFAULT 'audio/mpeg',
     audio_generated_at TIMESTAMP NULL
+);
+
+
+-- Saved Words Table (user's vocabulary with spaced repetition)
+CREATE TABLE saved_words (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    word VARCHAR(255) NOT NULL, -- Always lowercase, references words.word
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    -- Spaced Repetition Fields
+    review_count INTEGER DEFAULT 0,
+    ease_factor DECIMAL(3,1) DEFAULT 2.5,
+    interval_days INTEGER DEFAULT 1,
+    next_review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 day',
+    last_reviewed_at TIMESTAMP NULL,
+    UNIQUE(user_id, word),
+    FOREIGN KEY (word) REFERENCES words(word)
 );
 
 -- Review History Table (track all review responses)

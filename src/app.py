@@ -149,7 +149,7 @@ def get_word_definition():
         cur.execute("""
             SELECT definition_data, access_count, audio_data, audio_content_type, audio_generated_at
             FROM words 
-            WHERE word_lower = %s
+            WHERE word = %s
         """, (word_lower,))
         
         cached_result = cur.fetchone()
@@ -165,7 +165,7 @@ def get_word_definition():
             cur.execute("""
                 UPDATE words 
                 SET access_count = %s, last_accessed = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE word_lower = %s
+                WHERE word = %s
             """, (access_count + 1, word_lower))
             
             conn.commit()
@@ -200,7 +200,7 @@ def get_word_definition():
                     cur.execute("""
                         UPDATE words 
                         SET audio_data = %s, audio_content_type = %s, audio_generated_at = CURRENT_TIMESTAMP
-                        WHERE word_lower = %s
+                        WHERE word = %s
                     """, (audio_bytes, 'audio/mpeg', word_lower))
                     conn.commit()
                     
@@ -255,8 +255,8 @@ def get_word_definition():
         # Store in cache with audio
         if audio_bytes:
             cur.execute("""
-                INSERT INTO words (word, word_lower, definition_data, audio_data, audio_content_type, audio_generated_at, created_at, updated_at, access_count, last_accessed)
-                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
+                INSERT INTO words (word, definition_data, audio_data, audio_content_type, audio_generated_at, created_at, updated_at, access_count, last_accessed)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
                 ON CONFLICT (word) 
                 DO UPDATE SET 
                     definition_data = EXCLUDED.definition_data,
@@ -266,18 +266,18 @@ def get_word_definition():
                     updated_at = CURRENT_TIMESTAMP,
                     access_count = words.access_count + 1,
                     last_accessed = CURRENT_TIMESTAMP
-            """, (word_normalized, word_lower, json.dumps(definition_data), audio_bytes, 'audio/mpeg'))
+            """, (word_lower, json.dumps(definition_data), audio_bytes, 'audio/mpeg'))
         else:
             cur.execute("""
-                INSERT INTO words (word, word_lower, definition_data, created_at, updated_at, access_count, last_accessed)
-                VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
+                INSERT INTO words (word, definition_data, created_at, updated_at, access_count, last_accessed)
+                VALUES (%s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
                 ON CONFLICT (word) 
                 DO UPDATE SET 
                     definition_data = EXCLUDED.definition_data,
                     updated_at = CURRENT_TIMESTAMP,
                     access_count = words.access_count + 1,
                     last_accessed = CURRENT_TIMESTAMP
-            """, (word_normalized, word_lower, json.dumps(definition_data)))
+            """, (word_lower, json.dumps(definition_data)))
         
         conn.commit()
         

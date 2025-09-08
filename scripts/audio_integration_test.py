@@ -73,7 +73,7 @@ def test_audio_caching():
     # Clear cache if exists
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM words WHERE word_lower = %s", (test_word.lower(),))
+    cur.execute("DELETE FROM words WHERE word = %s", (test_word.lower(),))
     conn.commit()
     conn.close()
     
@@ -116,7 +116,7 @@ def test_database_audio_storage():
     cur.execute("""
         SELECT word, audio_data, audio_content_type, audio_generated_at 
         FROM words 
-        WHERE word_lower = %s
+        WHERE word = %s
     """, (test_word.lower(),))
     
     result = cur.fetchone()
