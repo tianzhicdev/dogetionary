@@ -19,9 +19,7 @@ CREATE TABLE saved_words (
 
 -- Words Cache Table (LLM definitions and audio)
 CREATE TABLE words (
-    id SERIAL PRIMARY KEY,
-    word VARCHAR(255) NOT NULL UNIQUE,
-    word_lower VARCHAR(255) NOT NULL,
+    word_lower VARCHAR(255) PRIMARY KEY,
     definition_data JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -51,7 +49,6 @@ CREATE INDEX idx_saved_words_next_review_date ON saved_words(next_review_date);
 CREATE INDEX idx_saved_words_user_next_review ON saved_words(user_id, next_review_date);
 
 -- Indexes for words
-CREATE INDEX idx_words_word_lower ON words(word_lower);
 CREATE INDEX idx_words_last_accessed ON words(last_accessed);
 
 -- Indexes for reviews
