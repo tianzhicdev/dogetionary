@@ -537,7 +537,7 @@ def submit_review():
             )
         
         # Calculate next review date
-        next_review_date = datetime.now().date() + timedelta(days=interval_days)
+        next_review_date = datetime.now() + timedelta(days=interval_days)
         
         # Insert review record
         cur.execute("""
