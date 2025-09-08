@@ -26,6 +26,67 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://dogeuser:dogepass@localho
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def validate_definition_schema(definition_data: dict) -> bool:
+    """Validate that definition_data has the expected structure"""
+    try:
+        required_fields = ['word', 'definitions']
+        for field in required_fields:
+            if field not in definition_data:
+                app.logger.error(f"Missing required field: {field}")
+                return False
+        
+        # Validate definitions structure
+        definitions = definition_data['definitions']
+        if not isinstance(definitions, list) or len(definitions) == 0:
+            app.logger.error("Definitions must be a non-empty list")
+            return False
+        
+        for definition in definitions:
+            if not isinstance(definition, dict):
+                app.logger.error("Each definition must be a dictionary")
+                return False
+            if 'type' not in definition or 'definition' not in definition:
+                app.logger.error("Each definition must have 'type' and 'definition' fields")
+                return False
+        
+        return True
+    except Exception as e:
+        app.logger.error(f"Schema validation error: {str(e)}")
+        return False
+
+def get_definition_with_retry(word: str, max_retries: int = 3) -> dict:
+    """Get definition with retry logic and schema validation"""
+    for attempt in range(max_retries):
+        try:
+            app.logger.info(f"Getting definition for '{word}' (attempt {attempt + 1}/{max_retries})")
+            
+            # Your existing LLM call logic here
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a dictionary API. Return a JSON object with the word definition."},
+                    {"role": "user", "content": f"Define the word: {word}"}
+                ],
+                response_format={"type": "json_object"}
+            )
+            
+            definition_data = json.loads(completion.choices[0].message.content)
+            
+            # Validate schema
+            if validate_definition_schema(definition_data):
+                app.logger.info(f"Successfully got valid definition for '{word}'")
+                return definition_data
+            else:
+                app.logger.warning(f"Invalid schema for '{word}', retrying...")
+                continue
+                
+        except Exception as e:
+            app.logger.error(f"Error getting definition for '{word}' (attempt {attempt + 1}): {str(e)}")
+            if attempt == max_retries - 1:
+                raise e
+    
+    raise Exception(f"Failed to get valid definition for '{word}' after {max_retries} attempts")
+
 def generate_audio_for_word(word: str) -> bytes:
     """Generate TTS audio for a word using OpenAI API and return audio bytes"""
     try:
