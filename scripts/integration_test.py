@@ -73,23 +73,16 @@ class TestRunner:
         
         # Test valid word request
         try:
-            response = requests.get(f"{BASE_URL}/word", params={"w": "hello"})
+            response = requests.get(f"{BASE_URL}/word", params={"w": "hello", "user_id": self.test_user_id, "learning_lang": "en", "native_lang": "en"})
             self.assert_status_code(response, 200, "/word endpoint with valid word")
             
             data = response.json()
             self.assert_json_contains(data, "word", "/word response contains word")
-            self.assert_json_contains(data, "phonetic", "/word response contains phonetic")
-            self.assert_json_contains(data, "definitions", "/word response contains definitions")
-            self.assert_json_contains(data, "_cache_info", "/word response contains cache info")
-            
-            # Check cache info (don't assume first request is cache miss since DB persists)
-            cache_info = data.get("_cache_info", {})
-            if "cached" in cache_info:
-                self.log(f"✓ Cache info present - cached: {cache_info.get('cached')}, access_count: {cache_info.get('access_count')}")
-                self.passed += 1
-            else:
-                self.log("✗ Cache info missing")
-                self.failed += 1
+            self.assert_json_contains(data, "learning_language", "/word response contains learning_language")
+            self.assert_json_contains(data, "native_language", "/word response contains native_language")
+            self.assert_json_contains(data, "definition_data", "/word response contains definition_data")
+            self.assert_json_contains(data, "audio_references", "/word response contains audio_references")
+            self.assert_json_contains(data, "audio_generation_status", "/word response contains audio_generation_status")
             
         except Exception as e:
             self.log(f"✗ /word endpoint failed with error: {e}")
@@ -113,6 +106,7 @@ class TestRunner:
             payload = {
                 "word": "hello",
                 "user_id": self.test_user_id,
+                "learning_language": "en",
                 "metadata": {"source": "test", "category": "greeting"}
             }
             
@@ -124,6 +118,7 @@ class TestRunner:
             self.assert_json_contains(data, "id", "/save response contains id")
             self.assert_json_contains(data, "word", "/save response contains word")
             self.assert_json_contains(data, "user_id", "/save response contains user_id")
+            self.assert_json_contains(data, "learning_language", "/save response contains learning_language")
             self.assert_json_contains(data, "created_at", "/save response contains created_at")
             
         except Exception as e:
@@ -132,7 +127,7 @@ class TestRunner:
             
         # Test missing word parameter
         try:
-            payload = {"user_id": self.test_user_id}
+            payload = {"user_id": self.test_user_id, "learning_language": "en"}
             response = requests.post(f"{BASE_URL}/save", json=payload)
             self.assert_status_code(response, 400, "/save endpoint without word")
             
@@ -142,7 +137,7 @@ class TestRunner:
             
         # Test missing user_id parameter
         try:
-            payload = {"word": "test"}
+            payload = {"word": "test", "learning_language": "en"}
             response = requests.post(f"{BASE_URL}/save", json=payload)
             self.assert_status_code(response, 400, "/save endpoint without user_id")
             
@@ -152,7 +147,7 @@ class TestRunner:
             
         # Test invalid user_id format
         try:
-            payload = {"word": "test", "user_id": "invalid-uuid"}
+            payload = {"word": "test", "user_id": "invalid-uuid", "learning_language": "en"}
             response = requests.post(f"{BASE_URL}/save", json=payload)
             self.assert_status_code(response, 400, "/save endpoint with invalid user_id")
             
@@ -170,6 +165,7 @@ class TestRunner:
             payload = {
                 "word": word,
                 "user_id": self.test_user_id,
+                "learning_language": "en",
                 "metadata": {"test_word": True}
             }
             requests.post(f"{BASE_URL}/save", json=payload)
@@ -224,6 +220,7 @@ class TestRunner:
             payload1 = {
                 "word": "duplicate_test",
                 "user_id": self.test_user_id,
+                "learning_language": "en",
                 "metadata": {"version": 1}
             }
             
@@ -234,6 +231,7 @@ class TestRunner:
             payload2 = {
                 "word": "duplicate_test",
                 "user_id": self.test_user_id,
+                "learning_language": "en",
                 "metadata": {"version": 2}
             }
             
@@ -265,62 +263,57 @@ class TestRunner:
             self.log(f"✗ Duplicate save test failed with error: {e}")
             self.failed += 1
 
-    def test_cache_behavior(self):
-        """Test caching behavior for word definitions"""
-        self.log("Testing cache behavior...")
-        
-        test_word = "cache_test_word"
+    def test_audio_endpoint(self):
+        """Test the new audio endpoint"""
+        self.log("Testing /audio/<text>/<language> endpoint...")
         
         try:
-            # First request - should be cache miss
-            response1 = requests.get(f"{BASE_URL}/word", params={"w": test_word})
-            self.assert_status_code(response1, 200, "First request for cache test")
+            # Test fetching audio for a word
+            text = "hello"
+            language = "en"
+            response = requests.get(f"{BASE_URL}/audio/{text}/{language}")
+            self.assert_status_code(response, 200, f"/audio/{text}/{language} endpoint")
             
-            data1 = response1.json()
-            cache_info1 = data1.get("_cache_info", {})
+            data = response.json()
+            self.assert_json_contains(data, "audio_data", "/audio response contains audio_data")
+            self.assert_json_contains(data, "content_type", "/audio response contains content_type")
+            self.assert_json_contains(data, "created_at", "/audio response contains created_at")
             
-            if cache_info1.get("cached") == False and cache_info1.get("access_count") == 1:
-                self.log("✓ First request is cache miss with access_count=1")
-                self.passed += 1
-            elif cache_info1.get("cached") == True and cache_info1.get("access_count") > 1:
-                self.log(f"✓ Word was already cached (access_count: {cache_info1.get('access_count')})")
-                self.passed += 1
-            else:
-                self.log(f"✗ Unexpected cache state: cached={cache_info1.get('cached')}, access_count={cache_info1.get('access_count')}")
-                self.failed += 1
-            
-            # Second request - should be cache hit
-            response2 = requests.get(f"{BASE_URL}/word", params={"w": test_word})
-            self.assert_status_code(response2, 200, "Second request for cache test")
-            
-            data2 = response2.json()
-            cache_info2 = data2.get("_cache_info", {})
-            
-            expected_count = cache_info1.get("access_count", 0) + 1
-            if cache_info2.get("cached") == True and cache_info2.get("access_count") == expected_count:
-                self.log(f"✓ Second request is cache hit with access_count={expected_count}")
-                self.passed += 1
-            else:
-                self.log(f"✗ Second request cache hit failed: cached={cache_info2.get('cached')}, access_count={cache_info2.get('access_count')}, expected={expected_count}")
-                self.failed += 1
-                
-            # Test case-insensitive caching
-            response3 = requests.get(f"{BASE_URL}/word", params={"w": test_word.upper()})
-            self.assert_status_code(response3, 200, "Case-insensitive cache test")
-            
-            data3 = response3.json()
-            cache_info3 = data3.get("_cache_info", {})
-            
-            expected_count_3 = cache_info2.get("access_count", 0) + 1
-            if cache_info3.get("cached") == True and cache_info3.get("access_count") == expected_count_3:
-                self.log(f"✓ Case-insensitive caching works with access_count={expected_count_3}")
-                self.passed += 1
-            else:
-                self.log(f"✗ Case-insensitive caching failed: cached={cache_info3.get('cached')}, access_count={cache_info3.get('access_count')}, expected={expected_count_3}")
+            # Verify audio data is base64 encoded
+            try:
+                import base64
+                audio_bytes = base64.b64decode(data["audio_data"])
+                if len(audio_bytes) > 100:
+                    self.log(f"✓ Audio data is valid base64 ({len(audio_bytes)} bytes)")
+                    self.passed += 1
+                else:
+                    self.log("✗ Audio data seems too small")
+                    self.failed += 1
+            except Exception as e:
+                self.log(f"✗ Failed to decode audio data: {e}")
                 self.failed += 1
                 
         except Exception as e:
-            self.log(f"✗ Cache behavior test failed with error: {e}")
+            self.log(f"✗ /audio endpoint failed with error: {e}")
+            self.failed += 1
+
+    def test_next_due_endpoint(self):
+        """Test the next due words endpoint"""
+        self.log("Testing /saved_words/next_due endpoint...")
+        
+        try:
+            # Test getting next due words
+            response = requests.get(f"{BASE_URL}/saved_words/next_due", params={"user_id": self.test_user_id})
+            self.assert_status_code(response, 200, "/saved_words/next_due endpoint")
+            
+            data = response.json()
+            self.assert_json_contains(data, "user_id", "/saved_words/next_due response contains user_id")
+            self.assert_json_contains(data, "saved_words", "/saved_words/next_due response contains saved_words")
+            self.assert_json_contains(data, "count", "/saved_words/next_due response contains count")
+            self.assert_json_contains(data, "limit", "/saved_words/next_due response contains limit")
+            
+        except Exception as e:
+            self.log(f"✗ /saved_words/next_due endpoint failed with error: {e}")
             self.failed += 1
 
     def run_all_tests(self):
@@ -336,7 +329,8 @@ class TestRunner:
         self.test_save_word_endpoint()
         self.test_saved_words_endpoint()
         self.test_duplicate_save()
-        self.test_cache_behavior()
+        self.test_audio_endpoint()
+        self.test_next_due_endpoint()
         
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
         

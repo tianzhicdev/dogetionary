@@ -8,40 +8,55 @@
 import SwiftUI
 
 struct ReviewView: View {
-    @State private var dueWords: [SavedWord] = []
-    @State private var currentWordIndex = 0
+    @State private var currentWord: SavedWord?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var reviewStats: ReviewStats?
     @State private var isSessionComplete = false
     @State private var reviewStartTime: Date?
-    @State private var reviewType: String = "regular"
+    @State private var dueCounts: DueCountsResponse?
+    @State private var isLoadingCounts = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
+                // Always show overdue count at top
+                if isLoadingCounts {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading counts...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                } else if let dueCounts = dueCounts {
+                    OverdueCountView(dueCounts: dueCounts)
+                        .padding(.horizontal)
+                }
+                
                 if isLoading {
-                    ProgressView("Loading reviews...")
+                    ProgressView("Loading review...")
                         .padding()
-                } else if dueWords.isEmpty && !isSessionComplete {
-                    EmptyReviewState(
-                        onStartAnyway: {
-                            startAnywayReview()
+                } else if let currentWord = currentWord, !isSessionComplete {
+                    ReviewSessionView(
+                        currentWord: currentWord,
+                        progress: "Review Mode",
+                        onResponse: { response in
+                            submitReview(response: response)
                         }
                     )
                 } else if isSessionComplete {
                     ReviewCompleteView(
                         reviewStats: reviewStats,
-                        onStartNewReview: startNewReview,
-                        onStartAnyway: startNewAnywayReview
+                        onStartNewReview: startReview,
+                        onStartAnyway: startReview
                     )
                 } else {
-                    ReviewSessionView(
-                        currentWord: dueWords[currentWordIndex],
-                        progress: reviewType == "start_anyway" ? "Review Mode" : "\(currentWordIndex + 1) of \(dueWords.count)",
-                        onResponse: { response in
-                            submitReview(response: response)
-                        }
+                    StartReviewState(
+                        dueCounts: dueCounts,
+                        isLoadingCounts: isLoadingCounts,
+                        onStart: startReview
                     )
                 }
                 
@@ -53,28 +68,25 @@ struct ReviewView: View {
             }
             .navigationTitle("Review")
             .onAppear {
-                loadDueWords()
+                loadDueCounts()
             }
             .refreshable {
-                await loadDueWordsAsync()
+                await loadDueCountsAsync()
             }
         }
     }
     
-    private func loadDueWords() {
-        isLoading = true
+    private func loadDueCounts() {
+        isLoadingCounts = true
         errorMessage = nil
-        reviewType = "regular"
         
-        DictionaryService.shared.getDueWords { result in
+        DictionaryService.shared.getDueCounts { result in
             DispatchQueue.main.async {
-                isLoading = false
+                self.isLoadingCounts = false
                 
                 switch result {
-                case .success(let words):
-                    self.dueWords = words
-                    self.currentWordIndex = 0
-                    self.isSessionComplete = false
+                case .success(let counts):
+                    self.dueCounts = counts
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -82,21 +94,23 @@ struct ReviewView: View {
         }
     }
     
-    private func startAnywayReview() {
+    private func startReview() {
         isLoading = true
         errorMessage = nil
-        reviewType = "start_anyway"
         
-        DictionaryService.shared.getNextDueWords(limit: 1) { result in
+        DictionaryService.shared.getNextReviewWord { result in
             DispatchQueue.main.async {
-                isLoading = false
+                self.isLoading = false
                 
                 switch result {
                 case .success(let words):
-                    self.dueWords = words
-                    self.currentWordIndex = 0
-                    self.isSessionComplete = false
-                    self.reviewStartTime = Date()
+                    if !words.isEmpty {
+                        self.currentWord = words[0]
+                        self.isSessionComplete = false
+                        self.reviewStartTime = Date()
+                    } else {
+                        self.errorMessage = "No words available for review"
+                    }
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -105,24 +119,21 @@ struct ReviewView: View {
     }
     
     @MainActor
-    private func loadDueWordsAsync() async {
+    private func loadDueCountsAsync() async {
         await withCheckedContinuation { continuation in
-            loadDueWords()
+            loadDueCounts()
             continuation.resume()
         }
     }
     
     private func submitReview(response: Bool) {
-        guard currentWordIndex < dueWords.count else { return }
+        guard let currentWord = currentWord else { return }
         
-        let currentWord = dueWords[currentWordIndex]
         let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
         
         DictionaryService.shared.submitReview(
             wordID: currentWord.id,
-            response: response,
-            responseTimeMS: responseTime,
-            reviewType: reviewType
+            response: response
         ) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -136,38 +147,29 @@ struct ReviewView: View {
     }
     
     private func moveToNextWord() {
-        if reviewType == "start_anyway" {
-            // For "start anyway" mode, fetch next word one by one
-            isLoading = true
-            DictionaryService.shared.getNextDueWords(limit: 1) { result in
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    
-                    switch result {
-                    case .success(let words):
-                        if !words.isEmpty {
-                            // Continue with next word
-                            self.dueWords = words
-                            self.currentWordIndex = 0
-                            self.reviewStartTime = Date()
-                        } else {
-                            // No more words - session complete
-                            self.fetchReviewStats()
-                        }
-                    case .failure:
-                        // End session on error
+        // Refresh due counts after each review
+        loadDueCounts()
+        
+        // Get the next word to review
+        isLoading = true
+        DictionaryService.shared.getNextReviewWord { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success(let words):
+                    if !words.isEmpty {
+                        // Always use the next word returned by backend
+                        self.currentWord = words[0]
+                        self.reviewStartTime = Date()
+                    } else {
+                        // No more words - session complete
                         self.fetchReviewStats()
                     }
+                case .failure(let error):
+                    // Show error but don't end session
+                    self.errorMessage = error.localizedDescription
                 }
-            }
-        } else {
-            // Regular review mode - use batched words
-            if currentWordIndex + 1 < dueWords.count {
-                currentWordIndex += 1
-                reviewStartTime = Date()
-            } else {
-                // Session complete - fetch updated stats
-                fetchReviewStats()
             }
         }
     }
@@ -187,17 +189,12 @@ struct ReviewView: View {
         }
     }
     
-    private func startNewReview() {
-        loadDueWords()
-    }
-    
-    private func startNewAnywayReview() {
-        startAnywayReview()
-    }
 }
 
-struct EmptyReviewState: View {
-    let onStartAnyway: () -> Void
+struct StartReviewState: View {
+    let dueCounts: DueCountsResponse?
+    let isLoadingCounts: Bool
+    let onStart: () -> Void
     
     var body: some View {
         VStack(spacing: 20) {
@@ -205,33 +202,32 @@ struct EmptyReviewState: View {
                 .font(.system(size: 64))
                 .foregroundColor(.secondary)
             
-            Text("No Reviews Due")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Great job! Come back tomorrow to continue learning.")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            
-            VStack(spacing: 12) {
-                Text("Want to practice anyway?")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+            VStack(spacing: 8) {
+                Text("Ready to Review")
+                    .font(.title2)
+                    .fontWeight(.semibold)
                 
-                Button("Start Anyway") {
-                    onStartAnyway()
+                if let dueCounts = dueCounts {
+                    if dueCounts.total_count > 0 {
+                        Text("Ready to practice!")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No saved words yet. Save some words to start reviewing.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                
-                Text("Reviews words one by one using an alternative scheduling algorithm. You can exit anytime.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
             }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal)
+            
+            Button("Start Review") {
+                onStart()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled((dueCounts?.total_count ?? 0) == 0)
         }
         .padding()
     }
@@ -486,6 +482,38 @@ struct StatRow: View {
             Text(value)
                 .fontWeight(.medium)
         }
+    }
+}
+
+struct OverdueCountView: View {
+    let dueCounts: DueCountsResponse
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "clock.fill")
+                .foregroundColor(dueCounts.overdue_count > 0 ? .orange : .green)
+                .font(.caption)
+            
+            if dueCounts.overdue_count > 0 {
+                Text("\(dueCounts.overdue_count) words overdue")
+                    .font(.subheadline)
+                    .foregroundColor(.orange)
+            } else {
+                Text("No overdue words")
+                    .font(.subheadline)
+                    .foregroundColor(.green)
+            }
+            
+            Spacer()
+            
+            Text("\(dueCounts.total_count) total")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
     }
 }
 

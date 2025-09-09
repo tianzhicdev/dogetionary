@@ -129,7 +129,7 @@ struct DefinitionTabView: View {
                     .padding()
                 } else {
                     LazyVStack(alignment: .leading, spacing: 16) {
-                        ForEach(definitions) { definition in
+                        ForEach(definitions) { (definition: Definition) in
                             DefinitionCard(definition: definition)
                         }
                     }
@@ -504,6 +504,7 @@ private enum DateStyle {
         WordDetailView(savedWord: SavedWord(
             id: 1,
             word: "example",
+            learning_language: "en",
             metadata: nil,
             created_at: "2025-09-06T10:00:00Z",
             review_count: 2,

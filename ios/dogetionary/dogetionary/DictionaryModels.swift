@@ -10,69 +10,107 @@ import Foundation
 struct WordDefinitionResponse: Identifiable, Codable {
     let id = UUID()
     let word: String
-    let phonetic: String?
-    let definitions: [DefinitionEntry]
-    let _cache_info: CacheInfo?
-    let audio: AudioData?
+    let learning_language: String
+    let native_language: String
+    let definition_data: DefinitionData
+    let audio_references: AudioReferences
+    let audio_generation_status: String
     
     private enum CodingKeys: String, CodingKey {
-        case word, phonetic, definitions, _cache_info, audio
+        case word, learning_language, native_language, definition_data, audio_references, audio_generation_status
     }
 }
 
+struct DefinitionData: Codable {
+    let phonetic: String?
+    let word: String?
+    let translations: [String]?
+    let definitions: [DefinitionEntry]
+}
+
 struct DefinitionEntry: Codable {
-    let type: String
     let definition: String
-    let example: String
+    let type: String
+    let examples: [String]
+    let definition_native: String?
+    let cultural_notes: String?
 }
 
-struct CacheInfo: Codable {
-    let cached: Bool
-    let access_count: Int
+struct AudioReferences: Codable {
+    let word_audio: Bool?
+    let example_audio: [String: Bool] // text -> availability mapping
 }
 
-struct AudioData: Codable {
-    let data: String // Base64 encoded audio data
+// Audio fetch models for getting actual audio data
+struct AudioDataResponse: Codable {
+    let audio_data: String // Base64 encoded audio data
     let content_type: String
-    let generated_at: String?
+    let created_at: String
+    let generated: Bool? // Whether this was generated on-demand
 }
 
-// Legacy models for backward compatibility with UI
-struct Definition: Identifiable, Codable {
-    let id = UUID()
+// UI-compatible models converted from new API response
+struct Definition: Identifiable {
+    let id: UUID
     let word: String
     let phonetic: String?
+    let translations: [String] // Direct translations from learning to native language
     let meanings: [Meaning]
     let audioData: Data? // Decoded audio data ready for playback
+    let hasWordAudio: Bool // whether word audio is available
+    let exampleAudioAvailability: [String: Bool] // text -> availability mapping for examples
     
     init(from response: WordDefinitionResponse) {
+        self.id = UUID()
         self.word = response.word
-        self.phonetic = response.phonetic
+        self.phonetic = response.definition_data.phonetic
+        self.translations = response.definition_data.translations ?? []
         
+        // Always show native definition if it exists and is different from main definition
+        
+        // Convert new format to UI-compatible format
         // Group definitions by type (part of speech)
-        let groupedDefinitions = Dictionary(grouping: response.definitions) { $0.type }
+        let groupedDefinitions = Dictionary(grouping: response.definition_data.definitions) { $0.type }
         self.meanings = groupedDefinitions.map { (partOfSpeech, definitions) in
             let definitionDetails = definitions.map { def in
-                DefinitionDetail(
-                    definition: def.definition,
-                    example: def.example,
+                // Show native definition if it exists and is different from main definition
+                let definitionText: String
+                if let nativeDefinition = def.definition_native, 
+                   !nativeDefinition.isEmpty && nativeDefinition != def.definition {
+                    definitionText = "\(def.definition)\n\n\(nativeDefinition)"
+                } else {
+                    definitionText = def.definition
+                }
+                
+                // Use first example (always in learning language)
+                let exampleText = def.examples.first
+                
+                return DefinitionDetail(
+                    definition: definitionText,
+                    example: exampleText,
                     synonyms: nil,
-                    antonyms: nil
+                    antonyms: def.cultural_notes != nil ? [def.cultural_notes!] : nil // Use antonyms field for cultural notes
                 )
             }
             return Meaning(partOfSpeech: partOfSpeech, definitions: definitionDetails)
         }
         
-        // Decode audio data if available
-        if let audioInfo = response.audio {
-            self.audioData = Data(base64Encoded: audioInfo.data)
-        } else {
-            self.audioData = nil
-        }
+        // Store audio availability information
+        self.hasWordAudio = response.audio_references.word_audio ?? false
+        self.exampleAudioAvailability = response.audio_references.example_audio
+        self.audioData = nil // Will be loaded separately when needed
     }
     
-    private enum CodingKeys: String, CodingKey {
-        case word, phonetic, meanings, audioData
+    // Custom initializer for updating with audio data
+    init(id: UUID = UUID(), word: String, phonetic: String?, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:]) {
+        self.id = id
+        self.word = word
+        self.phonetic = phonetic
+        self.translations = translations
+        self.meanings = meanings
+        self.audioData = audioData
+        self.hasWordAudio = hasWordAudio
+        self.exampleAudioAvailability = exampleAudioAvailability
     }
 }
 
@@ -99,8 +137,10 @@ struct SavedWordsResponse: Codable {
 struct SavedWord: Identifiable, Codable {
     let id: Int
     let word: String
+    let learning_language: String
     let metadata: [String: Any]?
     let created_at: String
+    // Calculated fields from review history (backend provides these)
     let review_count: Int
     let ease_factor: Double
     let interval_days: Int
@@ -108,13 +148,14 @@ struct SavedWord: Identifiable, Codable {
     let last_reviewed_at: String?
     
     private enum CodingKeys: String, CodingKey {
-        case id, word, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at
+        case id, word, learning_language, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
         word = try container.decode(String.self, forKey: .word)
+        learning_language = try container.decode(String.self, forKey: .learning_language)
         created_at = try container.decode(String.self, forKey: .created_at)
         review_count = try container.decodeIfPresent(Int.self, forKey: .review_count) ?? 0
         ease_factor = try container.decodeIfPresent(Double.self, forKey: .ease_factor) ?? 2.5
@@ -125,9 +166,10 @@ struct SavedWord: Identifiable, Codable {
     }
     
     // Convenience initializer for testing
-    init(id: Int, word: String, metadata: [String: Any]?, created_at: String, review_count: Int, ease_factor: Double, interval_days: Int, next_review_date: String?, last_reviewed_at: String?) {
+    init(id: Int, word: String, learning_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, ease_factor: Double, interval_days: Int, next_review_date: String?, last_reviewed_at: String?) {
         self.id = id
         self.word = word
+        self.learning_language = learning_language
         self.metadata = metadata
         self.created_at = created_at
         self.review_count = review_count
@@ -143,15 +185,12 @@ struct ReviewSubmissionRequest: Codable {
     let user_id: String
     let word_id: Int
     let response: Bool
-    let response_time_ms: Int?
-    let review_type: String?
 }
 
 struct ReviewSubmissionResponse: Codable {
     let success: Bool
     let word_id: Int
     let response: Bool
-    let review_type: String?
     let review_count: Int
     let ease_factor: Double
     let interval_days: Int
@@ -179,6 +218,7 @@ struct ReviewStats: Codable {
 struct WordDetails: Codable {
     let id: Int
     let word: String
+    let learning_language: String
     let metadata: [String: Any]?
     let created_at: String
     let review_count: Int
@@ -189,13 +229,14 @@ struct WordDetails: Codable {
     let review_history: [ReviewHistoryEntry]
     
     private enum CodingKeys: String, CodingKey {
-        case id, word, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at, review_history
+        case id, word, learning_language, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at, review_history
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
         word = try container.decode(String.self, forKey: .word)
+        learning_language = try container.decode(String.self, forKey: .learning_language)
         created_at = try container.decode(String.self, forKey: .created_at)
         review_count = try container.decode(Int.self, forKey: .review_count)
         ease_factor = try container.decode(Double.self, forKey: .ease_factor)
@@ -211,4 +252,19 @@ struct ReviewHistoryEntry: Codable {
     let response: Bool
     let response_time_ms: Int?
     let reviewed_at: String
+}
+
+// User Preferences Models
+struct UserPreferences: Codable {
+    let user_id: String
+    let learning_language: String
+    let native_language: String
+    let updated: Bool?
+}
+
+// Due Counts Models
+struct DueCountsResponse: Codable {
+    let user_id: String
+    let overdue_count: Int
+    let total_count: Int
 }

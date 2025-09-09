@@ -40,6 +40,9 @@ struct ContentView: View {
         .onAppear {
             // Initialize user manager to generate UUID if needed
             _ = userManager.getUserID()
+            
+            // Sync user preferences from server on app startup
+            userManager.syncPreferencesFromServer()
         }
     }
 }
