@@ -140,6 +140,9 @@ struct DefinitionCard: View {
     @State private var isSaved = false
     @State private var isSaving = false
     @State private var isCheckingStatus = true
+    @State private var wordAudioData: Data?
+    @State private var exampleAudioData: [String: Data] = [:]
+    @State private var loadingAudio = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -172,22 +175,41 @@ struct DefinitionCard: View {
                     .disabled(isSaving || isCheckingStatus)
                     .buttonStyle(PlainButtonStyle())
                     
-                    // Audio play button
-                    if let audioData = definition.audioData {
-                        Button(action: {
-                            if audioPlayer.isPlaying {
-                                audioPlayer.stopAudio()
-                            } else {
-                                audioPlayer.playAudio(from: audioData)
-                            }
-                        }) {
+                    // Audio play button - always show
+                    Button(action: {
+                        if audioPlayer.isPlaying {
+                            audioPlayer.stopAudio()
+                        } else {
+                            playWordAudio()
+                        }
+                    }) {
+                        if loadingAudio {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
                             Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
                                 .font(.title2)
                                 .foregroundColor(.blue)
                         }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(loadingAudio)
                 }
+            }
+            
+            // Show translations if available
+            if !definition.translations.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Translations:")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    
+                    Text(definition.translations.joined(separator: " • "))
+                        .font(.body)
+                        .foregroundColor(.primary)
+                }
+                .padding(.bottom, 8)
             }
             
             ForEach(definition.meanings, id: \.partOfSpeech) { meaning in
@@ -202,10 +224,21 @@ struct DefinitionCard: View {
                                 .font(.body)
                             
                             if let example = def.example {
-                                Text("Example: \(example)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .italic()
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("Example: \(example)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .italic()
+                                    
+                                    Button(action: {
+                                        playExampleAudio(example)
+                                    }) {
+                                        Image(systemName: "speaker.wave.2")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
                             }
                         }
                         .padding(.leading, 8)
@@ -219,6 +252,7 @@ struct DefinitionCard: View {
         .cornerRadius(12)
         .onAppear {
             checkIfWordIsSaved()
+            loadWordAudioIfNeeded()
         }
     }
     
@@ -253,6 +287,61 @@ struct DefinitionCard: View {
                     // If we can't check, assume not saved
                     isSaved = false
                 }
+            }
+        }
+    }
+    
+    private func loadWordAudioIfNeeded() {
+        guard wordAudioData == nil else {
+            return
+        }
+        
+        DictionaryService.shared.fetchAudioForText(definition.word, language: UserManager.shared.learningLanguage) { audioData in
+            DispatchQueue.main.async {
+                self.wordAudioData = audioData
+            }
+        }
+    }
+    
+    private func playWordAudio() {
+        if let audioData = wordAudioData {
+            audioPlayer.playAudio(from: audioData)
+        } else {
+            // Fetch audio using text+language directly
+            loadingAudio = true
+            DictionaryService.shared.fetchAudioForText(definition.word, language: UserManager.shared.learningLanguage) { audioData in
+                DispatchQueue.main.async {
+                    self.loadingAudio = false
+                    if let audioData = audioData {
+                        self.wordAudioData = audioData
+                        self.audioPlayer.playAudio(from: audioData)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func playExampleAudio(_ text: String) {
+        loadExampleAudio(for: text) { audioData in
+            if let audioData = audioData {
+                self.audioPlayer.playAudio(from: audioData)
+            }
+        }
+    }
+    
+    private func loadExampleAudio(for text: String, completion: @escaping (Data?) -> Void) {
+        if let audioData = exampleAudioData[text] {
+            completion(audioData)
+            return
+        }
+        
+        // Fetch audio using text+language directly
+        DictionaryService.shared.fetchAudioForText(text, language: UserManager.shared.learningLanguage) { audioData in
+            DispatchQueue.main.async {
+                if let audioData = audioData {
+                    self.exampleAudioData[text] = audioData
+                }
+                completion(audioData)
             }
         }
     }

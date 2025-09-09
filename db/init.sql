@@ -1,60 +1,65 @@
--- Dogetionary Database Schema
--- Complete schema with all tables and indexes
+-- Dogetionary Database Schema v4 - Ultra Simplified Architecture
+-- Minimal tables with calculated spaced repetition
 
+-- User Preferences Table (language settings)
+CREATE TABLE user_preferences (
+    user_id UUID PRIMARY KEY,
+    learning_language VARCHAR(10) DEFAULT 'en',
+    native_language VARCHAR(10) DEFAULT 'zh',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Words Cache Table (LLM definitions and audio)
-CREATE TABLE words (
-    word VARCHAR(255) PRIMARY KEY,
+-- Simple Audio Table (text + language -> audio bytes)
+CREATE TABLE audio (
+    text_content TEXT NOT NULL,
+    language VARCHAR(10) NOT NULL,
+    audio_data BYTEA NOT NULL,
+    content_type VARCHAR(50) DEFAULT 'audio/mpeg',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (text_content, language)
+);
+
+-- Language-Specific Definitions Table
+CREATE TABLE definitions (
+    word VARCHAR(255) NOT NULL,
+    learning_language VARCHAR(10) NOT NULL,
+    native_language VARCHAR(10) NOT NULL,
     definition_data JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    access_count INTEGER DEFAULT 1,
-    last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    -- Audio data (binary)
-    audio_data BYTEA NULL,
-    audio_content_type VARCHAR(50) DEFAULT 'audio/mpeg',
-    audio_generated_at TIMESTAMP NULL
+    PRIMARY KEY (word, learning_language, native_language)
 );
 
-
--- Saved Words Table (user's vocabulary with spaced repetition)
+-- Minimal Saved Words Table (user's vocabulary)
 CREATE TABLE saved_words (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
-    word VARCHAR(255) NOT NULL, -- Always lowercase, references words.word
+    word VARCHAR(255) NOT NULL,
+    learning_language VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}'::jsonb,
-    -- Spaced Repetition Fields
-    review_count INTEGER DEFAULT 0,
-    ease_factor DECIMAL(3,1) DEFAULT 2.5,
-    interval_days INTEGER DEFAULT 1,
-    next_review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 day',
-    last_reviewed_at TIMESTAMP NULL,
-    UNIQUE(user_id, word),
-    FOREIGN KEY (word) REFERENCES words(word)
+    UNIQUE(user_id, word, learning_language)
 );
 
--- Review History Table (track all review responses)
+-- Minimal Review History Table (track all review responses)
 CREATE TABLE reviews (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
     word_id INTEGER NOT NULL REFERENCES saved_words(id) ON DELETE CASCADE,
     response BOOLEAN NOT NULL,
-    response_time_ms INTEGER NULL,
-    review_type VARCHAR(50) DEFAULT 'regular',
     reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for saved_words
+-- Indexes for performance
+CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);
 CREATE INDEX idx_saved_words_user_id ON saved_words(user_id);
-CREATE INDEX idx_saved_words_created_at ON saved_words(created_at);
-CREATE INDEX idx_saved_words_next_review_date ON saved_words(next_review_date);
-CREATE INDEX idx_saved_words_user_next_review ON saved_words(user_id, next_review_date);
-
--- Indexes for words
-CREATE INDEX idx_words_last_accessed ON words(last_accessed);
-
--- Indexes for reviews
 CREATE INDEX idx_reviews_user_id ON reviews(user_id);
 CREATE INDEX idx_reviews_word_id ON reviews(word_id);
 CREATE INDEX idx_reviews_reviewed_at ON reviews(reviewed_at);
+CREATE INDEX idx_user_preferences_learning_lang ON user_preferences(learning_language);
+CREATE INDEX idx_user_preferences_native_lang ON user_preferences(native_language);
+
+-- Sample data
+INSERT INTO user_preferences (user_id, learning_language, native_language) 
+VALUES ('00000000-0000-0000-0000-000000000001', 'en', 'zh');

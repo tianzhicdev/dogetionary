@@ -11,10 +11,62 @@ struct SettingsView: View {
     @AppStorage("forceProduction") private var forceProduction: Bool = false
     @State private var connectionTestResult: String = ""
     @State private var isTestingConnection = false
+    @State private var showLanguageAlert = false
+    @State private var pendingLanguageChange: (type: String, value: String)?
+    @ObservedObject private var userManager = UserManager.shared
+    
+    private let availableLanguages = [
+        ("en", "English"),
+        ("es", "Spanish"),
+        ("fr", "French"),
+        ("de", "German"),
+        ("it", "Italian"),
+        ("pt", "Portuguese"),
+        ("zh", "Chinese"),
+        ("ja", "Japanese"),
+        ("ko", "Korean"),
+        ("ru", "Russian")
+    ]
     
     var body: some View {
         NavigationView {
             Form {
+                Section(header: Text("User Information")) {
+                    HStack {
+                        Text("User ID:")
+                        Spacer()
+                        Text(userManager.userID)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section(header: Text("Language Preferences")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Learning Language:")
+                            Spacer()
+                            Picker("Learning Language", selection: learningLanguageBinding) {
+                                ForEach(availableLanguages, id: \.0) { code, name in
+                                    Text(name).tag(code)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                        }
+                        
+                        HStack {
+                            Text("Native Language:")
+                            Spacer()
+                            Picker("Native Language", selection: nativeLanguageBinding) {
+                                ForEach(availableLanguages, id: \.0) { code, name in
+                                    Text(name).tag(code)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                        }
+                    }
+                }
+                
                 Section(header: Text("API Configuration")) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -87,6 +139,11 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .alert("Invalid Language Selection", isPresented: $showLanguageAlert) {
+                Button("OK") { }
+            } message: {
+                Text("Learning language and native language cannot be the same. Please choose different languages.")
+            }
         }
     }
     
@@ -104,6 +161,32 @@ struct SettingsView: View {
         } else {
             return Configuration.environment == .development ? .blue : .green
         }
+    }
+    
+    private var learningLanguageBinding: Binding<String> {
+        Binding(
+            get: { userManager.learningLanguage },
+            set: { newValue in
+                if newValue == userManager.nativeLanguage {
+                    showLanguageAlert = true
+                } else {
+                    userManager.learningLanguage = newValue
+                }
+            }
+        )
+    }
+    
+    private var nativeLanguageBinding: Binding<String> {
+        Binding(
+            get: { userManager.nativeLanguage },
+            set: { newValue in
+                if newValue == userManager.learningLanguage {
+                    showLanguageAlert = true
+                } else {
+                    userManager.nativeLanguage = newValue
+                }
+            }
+        )
     }
     
     private func testConnection() {
