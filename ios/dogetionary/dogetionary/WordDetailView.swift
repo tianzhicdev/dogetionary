@@ -1,0 +1,516 @@
+//
+//  WordDetailView.swift
+//  dogetionary
+//
+//  Created by biubiu on 9/7/25.
+//
+
+import SwiftUI
+
+struct WordDetailView: View {
+    let savedWord: SavedWord
+    @State private var selectedTab = 0
+    @State private var definitions: [Definition] = []
+    @State private var wordDetails: WordDetails?
+    @State private var isLoadingDefinitions = false
+    @State private var isLoadingStats = false
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Custom tab picker
+            Picker("Tab", selection: $selectedTab) {
+                Text("Definition").tag(0)
+                Text("Review Stats").tag(1)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding()
+            
+            // Tab content
+            TabView(selection: $selectedTab) {
+                // Definition tab
+                DefinitionTabView(
+                    word: savedWord.word,
+                    definitions: definitions,
+                    isLoading: isLoadingDefinitions,
+                    errorMessage: errorMessage
+                )
+                .tag(0)
+                
+                // Stats tab
+                StatsTabView(
+                    wordDetails: wordDetails,
+                    isLoading: isLoadingStats,
+                    errorMessage: errorMessage
+                )
+                .tag(1)
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+        }
+        .navigationTitle(savedWord.word)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if selectedTab == 0 {
+                loadDefinitions()
+            } else {
+                loadWordDetails()
+            }
+        }
+        .onChange(of: selectedTab) { _, newTab in
+            if newTab == 0 && definitions.isEmpty {
+                loadDefinitions()
+            } else if newTab == 1 && wordDetails == nil {
+                loadWordDetails()
+            }
+        }
+    }
+    
+    private func loadDefinitions() {
+        isLoadingDefinitions = true
+        errorMessage = nil
+        
+        DictionaryService.shared.searchWord(savedWord.word) { result in
+            DispatchQueue.main.async {
+                isLoadingDefinitions = false
+                
+                switch result {
+                case .success(let definitions):
+                    self.definitions = definitions
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+    private func loadWordDetails() {
+        isLoadingStats = true
+        errorMessage = nil
+        
+        DictionaryService.shared.getWordDetails(wordID: savedWord.id) { result in
+            DispatchQueue.main.async {
+                isLoadingStats = false
+                
+                switch result {
+                case .success(let details):
+                    self.wordDetails = details
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+}
+
+struct DefinitionTabView: View {
+    let word: String
+    let definitions: [Definition]
+    let isLoading: Bool
+    let errorMessage: String?
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                if isLoading {
+                    ProgressView("Loading definitions...")
+                        .padding()
+                } else if let errorMessage = errorMessage {
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.title)
+                            .foregroundColor(.orange)
+                        Text("Error loading definitions")
+                            .font(.headline)
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        ForEach(definitions) { definition in
+                            DefinitionCard(definition: definition)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+}
+
+struct StatsTabView: View {
+    let wordDetails: WordDetails?
+    let isLoading: Bool
+    let errorMessage: String?
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                if isLoading {
+                    ProgressView("Loading stats...")
+                        .padding()
+                } else if let errorMessage = errorMessage {
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.title)
+                            .foregroundColor(.orange)
+                        Text("Error loading stats")
+                            .font(.headline)
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                } else if let details = wordDetails {
+                    WordInfoSection(details: details)
+                    
+                    if !details.review_history.isEmpty {
+                        ReviewHistorySection(reviewHistory: details.review_history)
+                    } else {
+                        EmptyHistorySection()
+                    }
+                    
+                    ReviewStatsSection(details: details)
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+struct WordInfoSection: View {
+    let details: WordDetails
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: "Word Information")
+            
+            VStack(spacing: 12) {
+                InfoRow(
+                    label: "Word",
+                    value: details.word,
+                    style: .prominent
+                )
+                
+                InfoRow(
+                    label: "First Added",
+                    value: formatDate(details.created_at, style: .full)
+                )
+                
+                if let nextReviewDate = details.next_review_date {
+                    InfoRow(
+                        label: "Next Review",
+                        value: formatDate(nextReviewDate, style: .relative),
+                        style: isOverdue(nextReviewDate) ? .warning : .normal
+                    )
+                }
+                
+                if let lastReviewed = details.last_reviewed_at {
+                    InfoRow(
+                        label: "Last Reviewed",
+                        value: formatDate(lastReviewed, style: .relative)
+                    )
+                }
+            }
+        }
+    }
+    
+    private func isOverdue(_ dateString: String) -> Bool {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: dateString) else { return false }
+        return date <= Date()
+    }
+}
+
+struct ReviewHistorySection: View {
+    let reviewHistory: [ReviewHistoryEntry]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: "Review History")
+            
+            LazyVStack(spacing: 8) {
+                ForEach(Array(reviewHistory.enumerated()), id: \.offset) { index, entry in
+                    ReviewHistoryRow(
+                        entry: entry,
+                        reviewNumber: index + 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+struct ReviewHistoryRow: View {
+    let entry: ReviewHistoryEntry
+    let reviewNumber: Int
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Review number
+            Text("\(reviewNumber)")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+                .frame(width: 20)
+            
+            // Success/Failure indicator
+            Image(systemName: entry.response ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .font(.title3)
+                .foregroundColor(entry.response ? .green : .red)
+            
+            // Date and details
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text(entry.response ? "Correct" : "Incorrect")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(entry.response ? .green : .red)
+                    
+                    Spacer()
+                    
+                    Text(formatDate(entry.reviewed_at, style: .short))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                if let responseTime = entry.response_time_ms {
+                    Text("Response time: \(formatResponseTime(responseTime))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
+    }
+    
+    private func formatResponseTime(_ ms: Int) -> String {
+        let seconds = Double(ms) / 1000.0
+        if seconds < 1.0 {
+            return "\(ms)ms"
+        } else {
+            return String(format: "%.1fs", seconds)
+        }
+    }
+}
+
+struct ReviewStatsSection: View {
+    let details: WordDetails
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: "Review Statistics")
+            
+            VStack(spacing: 12) {
+                InfoRow(
+                    label: "Successful Reviews",
+                    value: "\(details.review_count)"
+                )
+                
+                InfoRow(
+                    label: "Total Reviews",
+                    value: "\(details.review_history.count)"
+                )
+                
+                if !details.review_history.isEmpty {
+                    let successRate = Double(details.review_history.filter { $0.response }.count) / Double(details.review_history.count)
+                    InfoRow(
+                        label: "Success Rate",
+                        value: "\(Int(successRate * 100))%",
+                        style: successRate >= 0.8 ? .success : (successRate >= 0.5 ? .normal : .warning)
+                    )
+                }
+                
+                InfoRow(
+                    label: "Current Interval",
+                    value: "\(details.interval_days) day\(details.interval_days == 1 ? "" : "s")"
+                )
+                
+                InfoRow(
+                    label: "Ease Factor",
+                    value: String(format: "%.2f", details.ease_factor)
+                )
+            }
+        }
+    }
+}
+
+struct EmptyHistorySection: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "clock")
+                .font(.system(size: 32))
+                .foregroundColor(.secondary)
+            
+            Text("No Reviews Yet")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Text("This word hasn't been reviewed yet. It will appear in your review queue when due.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.vertical, 24)
+    }
+}
+
+struct ErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 32))
+                .foregroundColor(.orange)
+            
+            Text("Error Loading Details")
+                .font(.headline)
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Button("Retry") {
+                onRetry()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+    }
+}
+
+struct SectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(.headline)
+            .fontWeight(.semibold)
+    }
+}
+
+struct InfoRow: View {
+    enum Style {
+        case normal
+        case prominent
+        case success
+        case warning
+    }
+    
+    let label: String
+    let value: String
+    let style: Style
+    
+    init(label: String, value: String, style: Style = .normal) {
+        self.label = label
+        self.value = value
+        self.style = style
+    }
+    
+    var body: some View {
+        HStack {
+            Text(label)
+                .foregroundColor(.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .fontWeight(style == .prominent ? .semibold : .medium)
+                .foregroundColor(foregroundColor)
+        }
+    }
+    
+    private var foregroundColor: Color {
+        switch style {
+        case .normal:
+            return .primary
+        case .prominent:
+            return .primary
+        case .success:
+            return .green
+        case .warning:
+            return .orange
+        }
+    }
+}
+
+// MARK: - Date Formatting Helpers
+
+private func formatDate(_ dateString: String, style: DateStyle) -> String {
+    let formatter = ISO8601DateFormatter()
+    guard let date = formatter.date(from: dateString) else {
+        return dateString
+    }
+    
+    switch style {
+    case .full:
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .full
+        displayFormatter.timeStyle = .medium  // Shows seconds precision max
+        return displayFormatter.string(from: date)
+        
+    case .short:
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .medium
+        displayFormatter.timeStyle = .medium  // Shows seconds precision max
+        return displayFormatter.string(from: date)
+        
+    case .relative:
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(date)
+        
+        if timeInterval < -86400 { // More than 1 day in the future
+            let days = Int(-timeInterval / 86400)
+            return "in \(days) day\(days == 1 ? "" : "s")"
+        } else if timeInterval < -3600 { // More than 1 hour in the future
+            let hours = Int(-timeInterval / 3600)
+            return "in \(hours) hour\(hours == 1 ? "" : "s")"
+        } else if timeInterval < 0 { // In the future but less than 1 hour
+            return "soon"
+        } else if timeInterval < 60 { // Less than 1 minute ago
+            return "just now"
+        } else if timeInterval < 3600 { // Less than 1 hour ago
+            let minutes = Int(timeInterval / 60)
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") ago"
+        } else if timeInterval < 86400 { // Less than 1 day ago
+            let hours = Int(timeInterval / 3600)
+            return "\(hours) hour\(hours == 1 ? "" : "s") ago"
+        } else { // More than 1 day ago
+            let days = Int(timeInterval / 86400)
+            return "\(days) day\(days == 1 ? "" : "s") ago"
+        }
+    }
+}
+
+private enum DateStyle {
+    case full
+    case short
+    case relative
+}
+
+#Preview {
+    NavigationView {
+        WordDetailView(savedWord: SavedWord(
+            id: 1,
+            word: "example",
+            metadata: nil,
+            created_at: "2025-09-06T10:00:00Z",
+            review_count: 2,
+            ease_factor: 2.3,
+            interval_days: 6,
+            next_review_date: "2025-09-13",
+            last_reviewed_at: "2025-09-07T14:30:00Z"
+        ))
+    }
+}
