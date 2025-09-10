@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ReviewView: View {
-    @State private var currentWord: SavedWord?
+    @State private var currentWord: ReviewWord?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var reviewStats: ReviewStats?
@@ -98,7 +98,7 @@ struct ReviewView: View {
         isLoading = true
         errorMessage = nil
         
-        DictionaryService.shared.getNextReviewWord { result in
+        DictionaryService.shared.ios/dogetionary/dogetionary/ReviewView.swift { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
@@ -234,7 +234,7 @@ struct StartReviewState: View {
 }
 
 struct ReviewSessionView: View {
-    let currentWord: SavedWord
+    let currentWord: ReviewWord
     let progress: String
     let onResponse: (Bool) -> Void
     @StateObject private var audioPlayer = AudioPlayer()
@@ -280,7 +280,7 @@ struct ReviewSessionView: View {
                             .foregroundColor(.blue)
                         }
                         .buttonStyle(PlainButtonStyle())
-                    } else if isLoadingAudio {
+                    } else if isLoadingAudio && wordDefinitions.isEmpty {
                         HStack {
                             ProgressView()
                                 .scaleEffect(0.8)
@@ -405,18 +405,31 @@ struct ReviewSessionView: View {
     }
     
     private func loadWordAudio() {
-        isLoadingAudio = true
-        
-        DictionaryService.shared.searchWord(currentWord.word) { result in
-            DispatchQueue.main.async {
-                isLoadingAudio = false
-                
-                switch result {
-                case .success(let definitions):
-                    wordDefinitions = definitions
-                case .failure(_):
-                    // Silently fail - audio is optional
-                    break
+        // Only show loading if we don't already have audio for this word
+        if wordDefinitions.isEmpty || wordDefinitions.first?.word != currentWord.word {
+            isLoadingAudio = true
+            
+            // Get user's learning language for audio
+            let learningLanguage = UserManager.shared.learningLanguage
+            
+            DictionaryService.shared.fetchAudioForText(currentWord.word, language: learningLanguage) { audioData in
+                DispatchQueue.main.async {
+                    self.isLoadingAudio = false
+                    
+                    if let audioData = audioData {
+                        // Create a simple definition with just the word and audio data
+                        let definition = Definition(
+                            id: UUID(),
+                            word: self.currentWord.word,
+                            phonetic: nil,
+                            translations: [],
+                            meanings: [],
+                            audioData: audioData,
+                            hasWordAudio: true,
+                            exampleAudioAvailability: [:]
+                        )
+                        self.wordDefinitions = [definition]
+                    }
                 }
             }
         }
