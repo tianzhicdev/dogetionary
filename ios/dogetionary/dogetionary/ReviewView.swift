@@ -331,6 +331,7 @@ struct ReviewSessionView: View {
                     Button(action: {
                         userResponse = false
                         hasAnswered = true
+                        isLoadingDefinitions = true
                         loadWordDefinitions()
                     }) {
                         HStack {
@@ -412,24 +413,24 @@ struct ReviewSessionView: View {
         }
     }
     
-    private func loadWordDefinitions() {
-        isLoadingDefinitions = true
-        
-        DictionaryService.shared.searchWord(currentWord.word) { result in
-            DispatchQueue.main.async {
-                self.isLoadingDefinitions = false
-                
-                switch result {
-                case .success(let definitions):
-                    if !definitions.isEmpty {
-                        self.wordDefinitions = definitions
-                    }
-                case .failure(let error):
-                    print("Failed to load definitions: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
+//    private func loadWordDefinitions() {
+//        isLoadingDefinitions = true
+//        
+//        DictionaryService.shared.searchWord(currentWord.word) { result in
+//            DispatchQueue.main.async {
+//                self.isLoadingDefinitions = false
+//                
+//                switch result {
+//                case .success(let definitions):
+//                    if !definitions.isEmpty {
+//                        self.wordDefinitions = definitions
+//                    }
+//                case .failure(let error):
+//                    print("Failed to load definitions: \(error.localizedDescription)")
+//                }
+//            }
+//        }
+//    }
     
     private func loadWordAudio() {
         // Only show loading if we don't already have audio for this word
@@ -457,6 +458,44 @@ struct ReviewSessionView: View {
                         )
                         self.wordDefinitions = [definition]
                     }
+                }
+            }
+        }
+    }
+    
+    private func loadWordDefinitions() {
+        // Fetch full word definitions for display when user doesn't know the word
+        DictionaryService.shared.searchWord(currentWord.word) { result in
+            DispatchQueue.main.async {
+                self.isLoadingDefinitions = false
+                
+                switch result {
+                case .success(let definitions):
+                    // If we already have audio-only definition, update it with full data
+                    if let existingDef = self.wordDefinitions.first, 
+                       existingDef.word == self.currentWord.word,
+                       let audioData = existingDef.audioData {
+                        // Keep the audio data and add the full definition data
+                        if let fullDef = definitions.first {
+                            let updatedDef = Definition(
+                                id: fullDef.id,
+                                word: fullDef.word,
+                                phonetic: fullDef.phonetic,
+                                translations: fullDef.translations,
+                                meanings: fullDef.meanings,
+                                audioData: audioData, // Keep existing audio
+                                hasWordAudio: fullDef.hasWordAudio,
+                                exampleAudioAvailability: fullDef.exampleAudioAvailability
+                            )
+                            self.wordDefinitions = [updatedDef]
+                        }
+                    } else {
+                        // No existing audio, just use the full definitions
+                        self.wordDefinitions = definitions
+                    }
+                case .failure(let error):
+                    // Handle error silently or show user-friendly message
+                    print("Failed to load word definitions: \(error)")
                 }
             }
         }
