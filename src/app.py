@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, g
 import os
 from dotenv import load_dotenv
 import openai
@@ -8,12 +8,15 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import uuid
 from datetime import datetime, timedelta
+from review import get_next_review_datetime
 import io
 import math
 import threading
 import queue
 import time
 import base64
+import logging
+import sys
 
 # SM-2 SuperMemo spaced repetition algorithm
 DEFAULT_EASE_FACTOR = 2.5
@@ -33,7 +36,13 @@ def validate_language(lang: str) -> bool:
     return lang in SUPPORTED_LANGUAGES
 
 def calculate_spaced_repetition(reviews_data, current_review_time=None):
-    """Simple calculation for backward compatibility - SQL handles the logic now"""
+    """
+    DEPRECATED: Simple calculation for backward compatibility - SQL handles the logic now
+    
+    This function is deprecated and should not be used for new code.
+    Use get_next_review_datetime from review.py instead.
+    This function is maintained only for get_word_review_data compatibility.
+    """
     if not reviews_data:
         return 0, 1, datetime.now() + timedelta(days=1), None
     
@@ -90,6 +99,80 @@ def get_word_review_data(user_id: str, word_id: int):
 load_dotenv('.env.secrets')
 
 app = Flask(__name__)
+
+# Configure comprehensive logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Set Flask app logger level and handler
+app.logger.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+app.logger.addHandler(handler)
+
+# Test log to verify logging is working
+app.logger.info("=== DOGETIONARY LOGGING INITIALIZED ===")
+
+@app.before_request
+def log_request_info():
+    """Log all incoming requests with full details"""
+    g.start_time = time.time()
+    
+    # Log request details
+    request_data = {
+        'method': request.method,
+        'url': request.url,
+        'remote_addr': request.remote_addr,
+        'user_agent': request.headers.get('User-Agent', ''),
+        'content_type': request.headers.get('Content-Type', ''),
+        'content_length': request.headers.get('Content-Length', ''),
+        'headers': dict(request.headers),
+        'args': dict(request.args),
+    }
+    
+    # Only log request body for non-GET requests and if it's not too large
+    if request.method != 'GET' and request.content_length and request.content_length < 10000:
+        try:
+            if request.is_json:
+                request_data['json_body'] = request.get_json()
+            elif request.form:
+                request_data['form_data'] = dict(request.form)
+            else:
+                request_data['raw_body'] = request.get_data(as_text=True)[:1000]  # Limit to 1000 chars
+        except Exception as e:
+            request_data['body_error'] = str(e)
+    
+    app.logger.info(f"REQUEST: {json.dumps(request_data, default=str, indent=2)}")
+
+@app.after_request
+def log_response_info(response):
+    """Log all outgoing responses with full details"""
+    duration = time.time() - getattr(g, 'start_time', time.time())
+    
+    response_data = {
+        'status_code': response.status_code,
+        'status': response.status,
+        'content_type': response.content_type,
+        'content_length': response.content_length,
+        'headers': dict(response.headers),
+        'duration_ms': round(duration * 1000, 2)
+    }
+    
+    # Log response body if it's not too large and is text-based
+    if response.content_length and response.content_length < 10000:
+        try:
+            if response.content_type and 'json' in response.content_type:
+                response_data['json_body'] = response.get_json()
+            elif response.content_type and response.content_type.startswith('text/'):
+                response_data['text_body'] = response.get_data(as_text=True)[:1000]  # Limit to 1000 chars
+        except Exception as e:
+            response_data['body_error'] = str(e)
+    
+    app.logger.info(f"RESPONSE: {json.dumps(response_data, default=str, indent=2)}")
+    
+    return response
 
 client = openai.OpenAI(
     api_key=os.getenv('OPENAI_API_KEY'),
@@ -429,92 +512,38 @@ def get_next_review_word():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # SQL query to find word with earliest calculated next review date
+        # Find word with earliest next review date (due now or overdue)
         cur.execute("""
-            WITH word_reviews AS (
-                SELECT 
-                    sw.id,
-                    sw.user_id,
-                    sw.word,
-                    sw.learning_language,
-                    sw.metadata,
-                    sw.created_at,
-                    COUNT(r.id) as review_count,
-                    MAX(r.reviewed_at) as last_reviewed_at,
-                    -- Count consecutive correct responses from the end
-                    COALESCE((
-                        SELECT COUNT(*)
-                        FROM reviews r2 
-                        WHERE r2.user_id = sw.user_id 
-                        AND r2.word_id = sw.id 
-                        AND r2.reviewed_at >= COALESCE((
-                            SELECT MAX(r3.reviewed_at)
-                            FROM reviews r3
-                            WHERE r3.user_id = sw.user_id 
-                            AND r3.word_id = sw.id 
-                            AND r3.response = false
-                        ), '1900-01-01'::timestamp)
-                        AND r2.response = true
-                    ), 0) as consecutive_correct,
-                    -- Get last response
-                    (
-                        SELECT r4.response
-                        FROM reviews r4
-                        WHERE r4.user_id = sw.user_id 
-                        AND r4.word_id = sw.id
-                        ORDER BY r4.reviewed_at DESC
-                        LIMIT 1
-                    ) as last_response
-                FROM saved_words sw
-                LEFT JOIN reviews r ON r.user_id = sw.user_id AND r.word_id = sw.id
-                WHERE sw.user_id = %s
-                GROUP BY sw.id, sw.user_id, sw.word, sw.learning_language, sw.metadata, sw.created_at
-            ),
-            word_intervals AS (
-                SELECT *,
-                    CASE
-                        -- No reviews yet: 1 day
-                        WHEN review_count = 0 THEN 1
-                        -- Last review failed: 1 day
-                        WHEN last_response = false THEN 1
-                        -- Exactly 1 successful review: 5 days
-                        WHEN consecutive_correct = 1 THEN 5
-                        -- 2+ successful reviews: 2.5 * (most_recent - 2nd_most_recent)
-                        ELSE GREATEST(1, CAST(
-                            2.5 * EXTRACT(epoch FROM (last_reviewed_at - (
-                                SELECT r6.reviewed_at 
-                                FROM reviews r6 
-                                WHERE r6.user_id = word_reviews.user_id AND r6.word_id = word_reviews.id
-                                ORDER BY r6.reviewed_at DESC 
-                                OFFSET 1 LIMIT 1
-                            ))) / 86400 AS INTEGER
-                        ))
-                    END as interval_days,
-                    CASE
-                        -- No reviews yet: 1 day after creation
-                        WHEN review_count = 0 THEN created_at + INTERVAL '1 day'
-                        -- Last review failed: 1 day after last review  
-                        WHEN last_response = false THEN last_reviewed_at + INTERVAL '1 day'
-                        -- Exactly 1 successful review: 5 days after that review
-                        WHEN consecutive_correct = 1 THEN last_reviewed_at + INTERVAL '5 days'
-                        -- 2+ successful reviews: most_recent + 2.5 * (most_recent - 2nd_most_recent)
-                        ELSE last_reviewed_at + INTERVAL '1 day' * GREATEST(1, CAST(
-                            2.5 * EXTRACT(epoch FROM (last_reviewed_at - (
-                                SELECT r6.reviewed_at 
-                                FROM reviews r6 
-                                WHERE r6.user_id = word_reviews.user_id AND r6.word_id = word_reviews.id
-                                ORDER BY r6.reviewed_at DESC 
-                                OFFSET 1 LIMIT 1
-                            ))) / 86400 AS INTEGER
-                        ))
-                    END as next_review_date
-                FROM word_reviews
-            )
             SELECT 
-                id, word, learning_language, metadata, created_at,
-                review_count, interval_days, next_review_date, last_reviewed_at
-            FROM word_intervals
-            ORDER BY next_review_date ASC
+                sw.id, 
+                sw.word, 
+                sw.learning_language, 
+                sw.metadata, 
+                sw.created_at,
+                COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
+                COALESCE(latest_review.review_count, 0) as review_count,
+                latest_review.last_reviewed_at,
+                CASE 
+                    WHEN latest_review.last_reviewed_at IS NOT NULL AND latest_review.next_review_date IS NOT NULL 
+                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - latest_review.last_reviewed_at)) / 86400
+                    WHEN latest_review.next_review_date IS NOT NULL
+                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - sw.created_at)) / 86400
+                    ELSE 1
+                END as interval_days
+            FROM saved_words sw
+            LEFT JOIN (
+                SELECT 
+                    word_id,
+                    next_review_date,
+                    reviewed_at as last_reviewed_at,
+                    COUNT(*) as review_count,
+                    ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                FROM reviews
+                GROUP BY word_id, next_review_date, reviewed_at
+            ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+            WHERE sw.user_id = %s 
+            -- AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
+            ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
             LIMIT 1
         """, (user_id,))
         
@@ -533,15 +562,7 @@ def get_next_review_word():
             "user_id": user_id,
             "saved_words": [{
                 "id": word['id'],
-                "word": word['word'],
-                "learning_language": word['learning_language'],
-                "metadata": word['metadata'],
-                "created_at": word['created_at'].isoformat(),
-                "review_count": word['review_count'],
-                "ease_factor": DEFAULT_EASE_FACTOR,
-                "interval_days": word['interval_days'],
-                "next_review_date": word['next_review_date'].isoformat() if word['next_review_date'] else None,
-                "last_reviewed_at": word['last_reviewed_at'].isoformat() if word['last_reviewed_at'] else None
+                "word": word['word']
             }],
             "count": 1
         })
@@ -561,70 +582,20 @@ def get_due_counts():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # SQL query to count total and overdue words
+        # Count total and overdue words using stored next_review_date
         cur.execute("""
-            WITH word_reviews AS (
-                SELECT 
-                    sw.id,
-                    sw.user_id,
-                    sw.created_at,
-                    COUNT(r.id) as review_count,
-                    MAX(r.reviewed_at) as last_reviewed_at,
-                    -- Count consecutive correct responses from the end
-                    COALESCE((
-                        SELECT COUNT(*)
-                        FROM reviews r2 
-                        WHERE r2.user_id = sw.user_id 
-                        AND r2.word_id = sw.id 
-                        AND r2.reviewed_at >= COALESCE((
-                            SELECT MAX(r3.reviewed_at)
-                            FROM reviews r3
-                            WHERE r3.user_id = sw.user_id 
-                            AND r3.word_id = sw.id 
-                            AND r3.response = false
-                        ), '1900-01-01'::timestamp)
-                        AND r2.response = true
-                    ), 0) as consecutive_correct,
-                    -- Get last response
-                    (
-                        SELECT r4.response
-                        FROM reviews r4
-                        WHERE r4.user_id = sw.user_id 
-                        AND r4.word_id = sw.id
-                        ORDER BY r4.reviewed_at DESC
-                        LIMIT 1
-                    ) as last_response
-                FROM saved_words sw
-                LEFT JOIN reviews r ON r.user_id = sw.user_id AND r.word_id = sw.id
-                WHERE sw.user_id = %s
-                GROUP BY sw.id, sw.user_id, sw.created_at
-            ),
-            word_intervals AS (
-                SELECT *,
-                    CASE
-                        -- No reviews yet: 1 day after creation
-                        WHEN review_count = 0 THEN created_at + INTERVAL '1 day'
-                        -- Last review failed: 1 day after last review  
-                        WHEN last_response = false THEN last_reviewed_at + INTERVAL '1 day'
-                        -- Exactly 1 successful review: 5 days after that review
-                        WHEN consecutive_correct = 1 THEN last_reviewed_at + INTERVAL '5 days'
-                        -- 2+ successful reviews: most_recent + 2.5 * (most_recent - 2nd_most_recent)
-                        ELSE last_reviewed_at + INTERVAL '1 day' * GREATEST(1, CAST(
-                            2.5 * EXTRACT(epoch FROM (last_reviewed_at - (
-                                SELECT r6.reviewed_at 
-                                FROM reviews r6 
-                                WHERE r6.user_id = word_reviews.user_id AND r6.word_id = word_reviews.id
-                                ORDER BY r6.reviewed_at DESC 
-                                OFFSET 1 LIMIT 1
-                            ))) / 86400 AS INTEGER
-                        ))
-                    END as next_review_date
-                FROM word_reviews
-            )
             SELECT 
                 COUNT(*) as total_count,
-                COUNT(CASE WHEN next_review_date <= NOW() THEN 1 END) as overdue_count
-            FROM word_intervals
+                COUNT(CASE WHEN COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW() THEN 1 END) as overdue_count
+            FROM saved_words sw
+            LEFT JOIN (
+                SELECT 
+                    word_id,
+                    next_review_date,
+                    ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                FROM reviews
+            ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+            WHERE sw.user_id = %s
         """, (user_id,))
         
         result = cur.fetchone()
@@ -664,23 +635,42 @@ def submit_review():
         # Record the current review time
         current_review_time = datetime.now()
         
-        cur.execute("""
-            INSERT INTO reviews (user_id, word_id, response)
-            VALUES (%s, %s, %s)
-        """, (user_id, word_id, response))
-        
-        # Get review data and pass current review time for early review bonus calculation
-        conn.commit()  # Commit first so the new review is included
-        
-        # Get updated review data including the new review
+        # Get existing review data before inserting new review
         cur.execute("""
             SELECT response, reviewed_at FROM reviews 
             WHERE user_id = %s AND word_id = %s 
             ORDER BY reviewed_at ASC
         """, (user_id, word_id))
         
-        reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in cur.fetchall()]
-        review_count, interval_days, next_review_date, last_reviewed_at = calculate_spaced_repetition(reviews, current_review_time)
+        existing_reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in cur.fetchall()]
+        
+        # Convert boolean responses to numeric values (0.1 for false, 0.9 for true) for calculation
+        numeric_reviews = []
+        for review in existing_reviews:
+            numeric_score = 0.9 if review['response'] else 0.1
+            numeric_reviews.append((review['reviewed_at'], numeric_score))
+        
+        # Add current review
+        current_numeric_score = 0.9 if response else 0.1
+        numeric_reviews.append((current_review_time, current_numeric_score))
+        
+        # Calculate next review date using review.py
+        next_review_date = get_next_review_datetime(numeric_reviews)
+        
+        # Insert the new review with calculated next_review_date
+        cur.execute("""
+            INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user_id, word_id, response, current_review_time, next_review_date))
+        
+        conn.commit()
+        
+        # Calculate simple stats for response
+        review_count = len(numeric_reviews)
+        if len(numeric_reviews) >= 2:
+            interval_days = (next_review_date - current_review_time).days
+        else:
+            interval_days = 1
         
         conn.close()
         
@@ -803,23 +793,52 @@ def get_saved_words():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Simple query to test
+        # Get saved words with their latest review next_review_date
         cur.execute("""
-            SELECT id, word, learning_language, metadata, created_at
-            FROM saved_words 
-            WHERE user_id = %s
-            ORDER BY created_at DESC
+            SELECT 
+                sw.id, 
+                sw.word, 
+                sw.learning_language, 
+                sw.metadata, 
+                sw.created_at,
+                COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
+                COALESCE(latest_review.review_count, 0) as review_count,
+                latest_review.last_reviewed_at
+            FROM saved_words sw
+            LEFT JOIN (
+                SELECT 
+                    word_id,
+                    next_review_date,
+                    reviewed_at as last_reviewed_at,
+                    COUNT(*) as review_count,
+                    ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                FROM reviews
+                GROUP BY word_id, next_review_date, reviewed_at
+            ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+            WHERE sw.user_id = %s
+            ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
         """, (user_id,))
         
         rows = cur.fetchall()
         saved_words = []
         
         for row in rows:
-            # Use simple default values for testing
-            review_count = 0
-            last_reviewed_at = None 
-            next_review_date = row['created_at'] + timedelta(days=1)
-            interval_days = 1
+            # Use values directly from the query
+            review_count = row['review_count']
+            last_reviewed_at = row['last_reviewed_at']
+            next_review_date = row['next_review_date']
+            
+            # Calculate interval_days from next_review_date and last_reviewed_at (or created_at if no reviews)
+            if last_reviewed_at and next_review_date:
+                interval_days = (next_review_date.date() - last_reviewed_at.date()).days
+            elif next_review_date:
+                interval_days = (next_review_date.date() - row['created_at'].date()).days
+            else:
+                interval_days = 1
+            
+            # Filter by due_only if requested
+            if due_only and next_review_date > datetime.now():
+                continue
                 
             saved_words.append({
                 "id": row['id'],
@@ -829,7 +848,7 @@ def get_saved_words():
                 "created_at": row['created_at'].isoformat(),
                 "review_count": review_count,
                 "ease_factor": DEFAULT_EASE_FACTOR,  # Hardcoded as requested
-                "interval_days": interval_days,
+                "interval_days": int(float(interval_days)) if interval_days else 1,
                 "next_review_date": next_review_date.isoformat() if next_review_date else None,
                 "last_reviewed_at": last_reviewed_at.isoformat() if last_reviewed_at else None
             })
