@@ -98,7 +98,7 @@ struct ReviewView: View {
         isLoading = true
         errorMessage = nil
         
-        DictionaryService.shared.ios/dogetionary/dogetionary/ReviewView.swift { result in
+        DictionaryService.shared.getNextReviewWord { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
