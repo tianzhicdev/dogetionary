@@ -1,6 +1,34 @@
 
-0. choose language: Afrikaans, Arabic, Armenian, Azerbaijani, Belarusian, Bosnian, Bulgarian, Catalan, Chinese, Croatian, Czech, Danish, Dutch, English, Estonian, Finnish, French, Galician, German, Greek, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Japanese, Kannada, Kazakh, Korean, Latvian, Lithuanian, Macedonian, Malay, Marathi, Maori, Nepali, Norwegian, Persian, Polish, Portuguese, Romanian, Russian, Serbian, Slovak, Slovenian, Spanish, Swahili, Swedish, Tagalog, Tamil, Thai, Turkish, Ukrainian, Urdu, Vietnamese, and Welsh
-1. audio support for example sentences
+0. [done]choose language: Afrikaans, Arabic, Armenian, Azerbaijani, Belarusian, Bosnian, Bulgarian, Catalan, Chinese, Croatian, Czech, Danish, Dutch, English, Estonian, Finnish, French, Galician, German, Greek, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Japanese, Kannada, Kazakh, Korean, Latvian, Lithuanian, Macedonian, Malay, Marathi, Maori, Nepali, Norwegian, Persian, Polish, Portuguese, Romanian, Russian, Serbian, Slovak, Slovenian, Spanish, Swahili, Swedish, Tagalog, Tamil, Thai, Turkish, Ukrainian, Urdu, Vietnamese, and Welsh
+1. [done ]audio support for example sentences [check]
+4. [done] use fabinacci, SuperMemo SM-2 uses these default intervals:
+First review: 1 day
+Second review: 6 days
+Subsequent reviews: previous interval × ease factor (typically 2.5)
+5. [done]saved words should be sorted by due date ASC
+6. [done ]if the user reviews the words correctly before their due date, the next review date should be max(current_review_datetime + (current_review_datetime - previous_review_datetime) * 2.5, 1) day
+
 2. users read
 2. graph
 3. leader boards
+
+3. in saved words, show next review date / sort by next review date too ASC; to the day, not Second; and review count
+4. in saved words detail stats; show datetime to the seconds but not more granular
+5. bug fix: when in review mode, before users click yes and no, it show loading audio but never let the user play the audio; 
+
+6.  bug fix:  in the saved words list view, the review count is different (often less than the real count) from the list of past reviews in the detail view;
+
+7. create a /privacy-agreement that display our privacy agreement - make it as complicated as possible but basically it means users are free to use our service; we are not going to share user data with any 3rd aprties; the app is powered by ai so sometimes it can be wrong;  
+
+ productionize:
+8. setting fix
+9. landing 
+10. screenshots
+
+1. SuperMemo Algo burns the words in your brain.
+2. Lookup once, memorized forever
+3. Support 57 languages 
+4. Effortlessly become a native speaker
+
+
+11. cache? 

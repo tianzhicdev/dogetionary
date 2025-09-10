@@ -240,6 +240,7 @@ struct ReviewSessionView: View {
     @StateObject private var audioPlayer = AudioPlayer()
     @State private var wordDefinitions: [Definition] = []
     @State private var isLoadingAudio = false
+    @State private var isLoadingDefinitions = false
     @State private var hasAnswered = false
     @State private var userResponse: Bool? = nil
     
@@ -298,16 +299,21 @@ struct ReviewSessionView: View {
             .padding(.horizontal)
             
             // Show definitions if user answered "No"
-            if hasAnswered && userResponse == false && !wordDefinitions.isEmpty {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        ForEach(wordDefinitions) { definition in
-                            DefinitionCard(definition: definition)
+            if hasAnswered && userResponse == false {
+                if isLoadingDefinitions {
+                    ProgressView("Loading definitions...")
+                        .padding()
+                } else if !wordDefinitions.isEmpty && wordDefinitions.first?.meanings.count ?? 0 > 0 {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 16) {
+                            ForEach(wordDefinitions) { definition in
+                                DefinitionCard(definition: definition)
+                            }
                         }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
+                    .frame(maxHeight: 300)
                 }
-                .frame(maxHeight: 300)
             }
             
             // Question or instruction
@@ -325,6 +331,7 @@ struct ReviewSessionView: View {
                     Button(action: {
                         userResponse = false
                         hasAnswered = true
+                        loadWordDefinitions()
                     }) {
                         HStack {
                             Image(systemName: "xmark")
@@ -400,7 +407,27 @@ struct ReviewSessionView: View {
             wordDefinitions = []
             hasAnswered = false
             userResponse = nil
+            isLoadingDefinitions = false
             loadWordAudio()
+        }
+    }
+    
+    private func loadWordDefinitions() {
+        isLoadingDefinitions = true
+        
+        DictionaryService.shared.searchWord(currentWord.word) { result in
+            DispatchQueue.main.async {
+                self.isLoadingDefinitions = false
+                
+                switch result {
+                case .success(let definitions):
+                    if !definitions.isEmpty {
+                        self.wordDefinitions = definitions
+                    }
+                case .failure(let error):
+                    print("Failed to load definitions: \(error.localizedDescription)")
+                }
+            }
         }
     }
     
