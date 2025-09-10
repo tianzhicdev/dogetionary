@@ -72,7 +72,19 @@ struct SavedWordsView: View {
                     
                     switch result {
                     case .success(let words):
-                        self.savedWords = words
+                        // Sort by next_review_date ascending (soonest first)
+                        self.savedWords = words.sorted { word1, word2 in
+                            // Handle nil values - put words without reviews at the end
+                            guard let date1 = word1.next_review_date else { return false }
+                            guard let date2 = word2.next_review_date else { return true }
+                            
+                            // Parse dates and compare
+                            let formatter = ISO8601DateFormatter()
+                            guard let d1 = formatter.date(from: date1),
+                                  let d2 = formatter.date(from: date2) else { return false }
+                            
+                            return d1 < d2
+                        }
                     case .failure(let error):
                         self.errorMessage = error.localizedDescription
                     }
@@ -96,9 +108,15 @@ struct SavedWordRow: View {
                     .foregroundColor(.primary)
                 
                 HStack {
-                    Text("Added \(formatDateOnly(savedWord.created_at))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    if let nextReviewDate = savedWord.next_review_date {
+                        Text("Next review \(formatDateOnly(nextReviewDate))")
+                            .font(.caption)
+                            .foregroundColor(isOverdue(nextReviewDate) ? .red : .secondary)
+                    } else {
+                        Text("No reviews yet")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     
                     Text("•")
                         .font(.caption)
@@ -124,6 +142,14 @@ struct SavedWordRow: View {
             return displayFormatter.string(from: date)
         }
         return dateString
+    }
+    
+    private func isOverdue(_ dateString: String) -> Bool {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            return date < Date()
+        }
+        return false
     }
 }
 
