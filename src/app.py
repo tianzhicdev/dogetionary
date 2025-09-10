@@ -1277,7 +1277,7 @@ def fix_next_review_dates():
             'error': str(e)
         }), 500
 
-@app.route('/privacy-agreement', methods=['GET'])
+@app.route('/privacy', methods=['GET'])
 def privacy_agreement():
     """Display comprehensive privacy agreement and terms of service"""
     
@@ -1287,7 +1287,7 @@ def privacy_agreement():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dogetionary Privacy Policy and Terms of Service</title>
+        <title>Unforgettable Dictionary Privacy Policy and Terms of Service</title>
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
             h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
@@ -1302,7 +1302,7 @@ def privacy_agreement():
         </style>
     </head>
     <body>
-        <h1>Dogetionary Privacy Policy and Terms of Service</h1>
+        <h1>Unforgettable Dictionary Privacy Policy and Terms of Service</h1>
         
         <div class="effective-date">
             Effective Date: September 10, 2025<br>
@@ -1315,15 +1315,15 @@ def privacy_agreement():
         </div>
 
         <h2>1. ACCEPTANCE OF TERMS AND PRIVACY POLICY</h2>
-        <p>By accessing, downloading, installing, or using the Dogetionary application ("Service", "App", "Platform"), you ("User", "You", "Your") hereby acknowledge that you have read, understood, and agree to be bound by this Privacy Policy and Terms of Service Agreement ("Agreement") in its entirety. If you do not agree with any provision of this Agreement, you must immediately discontinue use of the Service.</p>
+        <p>By accessing, downloading, installing, or using the Unforgettable Dictionary application ("Service", "App", "Platform"), you ("User", "You", "Your") hereby acknowledge that you have read, understood, and agree to be bound by this Privacy Policy and Terms of Service Agreement ("Agreement") in its entirety. If you do not agree with any provision of this Agreement, you must immediately discontinue use of the Service.</p>
 
         <h2>2. DEFINITIONS AND INTERPRETATIONS</h2>
         <h3>2.1 Key Definitions</h3>
         <ul>
             <li><strong>"Personal Data"</strong> means any information relating to an identified or identifiable natural person;</li>
             <li><strong>"Processing"</strong> means any operation performed on personal data, including collection, recording, organization, structuring, storage, adaptation, retrieval, consultation, use, disclosure, dissemination, or erasure;</li>
-            <li><strong>"Data Controller"</strong> means Dogetionary and its affiliated entities;</li>
-            <li><strong>"Third Parties"</strong> means any individual, company, or organization that is not directly affiliated with Dogetionary;</li>
+            <li><strong>"Data Controller"</strong> means Unforgettable Dictionary and its affiliated entities;</li>
+            <li><strong>"Third Parties"</strong> means any individual, company, or organization that is not directly affiliated with Unforgettable Dictionary;</li>
             <li><strong>"AI Technology"</strong> refers to artificial intelligence, machine learning, and automated systems used to provide dictionary, translation, and language learning services;</li>
         </ul>
 
@@ -1466,9 +1466,9 @@ def privacy_agreement():
             <h3>Privacy Inquiries and Data Subject Requests</h3>
             <p>For any privacy-related questions, concerns, or to exercise your data protection rights, please contact us:</p>
             <ul>
-                <li><strong>Email:</strong> privacy@dogetionary.com</li>
-                <li><strong>Data Protection Officer:</strong> dpo@dogetionary.com</li>
-                <li><strong>Mailing Address:</strong> Dogetionary Privacy Office, [Address to be determined]</li>
+                <li><strong>Email:</strong> privacy@unforgettabledictionary.com</li>
+                <li><strong>Data Protection Officer:</strong> dpo@unforgettabledictionary.com</li>
+                <li><strong>Mailing Address:</strong> Unforgettable Dictionary Privacy Office, [Address to be determined]</li>
                 <li><strong>Response Time:</strong> We will respond to all inquiries within 30 days</li>
             </ul>
         </div>
@@ -1481,12 +1481,12 @@ def privacy_agreement():
 
         <div class="important">
             <h3>ACKNOWLEDGMENT</h3>
-            <p>By using Dogetionary, you acknowledge that you have read this Privacy Policy and Terms of Service, understand its contents, and agree to be bound by its terms. You also acknowledge the AI-powered nature of our service and accept the associated limitations and risks.</p>
+            <p>By using Unforgettable Dictionary, you acknowledge that you have read this Privacy Policy and Terms of Service, understand its contents, and agree to be bound by its terms. You also acknowledge the AI-powered nature of our service and accept the associated limitations and risks.</p>
         </div>
 
         <hr style="margin-top: 40px;">
         <p style="text-align: center; color: #7f8c8d; font-size: 14px;">
-            © 2025 Dogetionary. All rights reserved. Generated on {timestamp}
+            © 2025 Unforgettable Dictionary. All rights reserved. Generated on {timestamp}
         </p>
     </body>
     </html>
