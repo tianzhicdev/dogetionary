@@ -48,7 +48,8 @@ CREATE TABLE reviews (
     user_id UUID NOT NULL,
     word_id INTEGER NOT NULL REFERENCES saved_words(id) ON DELETE CASCADE,
     response BOOLEAN NOT NULL,
-    reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    next_review_date TIMESTAMP
 );
 
 -- Indexes for performance
@@ -57,6 +58,7 @@ CREATE INDEX idx_saved_words_user_id ON saved_words(user_id);
 CREATE INDEX idx_reviews_user_id ON reviews(user_id);
 CREATE INDEX idx_reviews_word_id ON reviews(word_id);
 CREATE INDEX idx_reviews_reviewed_at ON reviews(reviewed_at);
+CREATE INDEX idx_reviews_next_review_date ON reviews(next_review_date);
 CREATE INDEX idx_user_preferences_learning_lang ON user_preferences(learning_language);
 CREATE INDEX idx_user_preferences_native_lang ON user_preferences(native_language);
 

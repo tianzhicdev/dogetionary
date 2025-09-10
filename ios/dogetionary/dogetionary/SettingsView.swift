@@ -44,7 +44,6 @@ struct SettingsView: View {
                 Section(header: Text("Language Preferences")) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Learning Language:")
                             Spacer()
                             Picker("Learning Language", selection: learningLanguageBinding) {
                                 ForEach(availableLanguages, id: \.0) { code, name in
@@ -55,7 +54,6 @@ struct SettingsView: View {
                         }
                         
                         HStack {
-                            Text("Native Language:")
                             Spacer()
                             Picker("Native Language", selection: nativeLanguageBinding) {
                                 ForEach(availableLanguages, id: \.0) { code, name in

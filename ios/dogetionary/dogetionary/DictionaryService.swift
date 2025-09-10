@@ -15,6 +15,79 @@ class DictionaryService: ObservableObject {
     
     private init() {}
     
+    // MARK: - Logging Helper
+    
+    private func performNetworkRequest<T: Codable>(
+        url: URL,
+        method: String = "GET",
+        body: Data? = nil,
+        responseType: T.Type,
+        completion: @escaping (Result<T, Error>) -> Void
+    ) {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        if let body = body {
+            request.httpBody = body
+        }
+        
+        // Log request details
+        logger.info("REQUEST: \(method) \(url.absoluteString)")
+        if let body = body, let bodyString = String(data: body, encoding: .utf8) {
+            logger.info("REQUEST BODY: \(bodyString)")
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.logger.error("Network error: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            // Log response status and headers
+            self.logger.info("RESPONSE STATUS: \(httpResponse.statusCode)")
+            self.logger.info("RESPONSE HEADERS: \(httpResponse.allHeaderFields)")
+            
+            guard let data = data else {
+                self.logger.error("No data received")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            // Log raw response data for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                self.logger.info("RAW RESPONSE: \(responseString)")
+            } else {
+                self.logger.error("Could not convert response data to string")
+            }
+            
+            if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                do {
+                    let response = try JSONDecoder().decode(responseType, from: data)
+                    self.logger.info("Successfully decoded response")
+                    completion(.success(response))
+                } catch {
+                    self.logger.error("Failed to decode response: \(error.localizedDescription)")
+                    if let decodingError = error as? DecodingError {
+                        self.logger.error("Detailed decoding error: \(decodingError)")
+                    }
+                    completion(.failure(DictionaryError.decodingError(error)))
+                }
+            } else {
+                self.logger.error("HTTP error: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+            }
+        }.resume()
+    }
+    
     func saveWord(_ word: String, completion: @escaping (Result<Bool, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         guard let url = URL(string: "\(baseURL)/save") else {
@@ -614,6 +687,9 @@ class DictionaryService: ObservableObject {
         logger.info("Fetching next review word for user: \(userID)")
         
         URLSession.shared.dataTask(with: url) { data, response, error in
+            // Log request details
+            self.logger.info("REQUEST: GET \(url.absoluteString)")
+            
             if let error = error {
                 self.logger.error("Network error getting next review word: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -625,6 +701,10 @@ class DictionaryService: ObservableObject {
                 completion(.failure(DictionaryError.invalidResponse))
                 return
             }
+            
+            // Log response status and headers
+            self.logger.info("RESPONSE STATUS: \(httpResponse.statusCode)")
+            self.logger.info("RESPONSE HEADERS: \(httpResponse.allHeaderFields)")
             
             guard httpResponse.statusCode == 200 else {
                 self.logger.error("HTTP error getting next review word: \(httpResponse.statusCode)")
@@ -638,12 +718,39 @@ class DictionaryService: ObservableObject {
                 return
             }
             
+            // Log raw response data for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                self.logger.info("RAW RESPONSE: \(responseString)")
+            } else {
+                self.logger.error("Could not convert response data to string")
+            }
+            
             do {
-                let response = try JSONDecoder().decode(SavedWordsResponse.self, from: data)
-                self.logger.info("Successfully fetched next review word - count: \(response.count)")
-                completion(.success(response.saved_words))
+                let response = try JSONDecoder().decode(ReviewWordsResponse.self, from: data)
+                self.logger.info("Successfully decoded next review word response - count: \(response.count), words: \(response.saved_words.count)")
+                
+                // Convert ReviewWord to SavedWord for UI compatibility
+                let savedWords = response.saved_words.map { reviewWord in
+                    SavedWord(
+                        id: reviewWord.id,
+                        word: reviewWord.word,
+                        learning_language: "en", // Default, actual value not needed for review UI
+                        metadata: nil,
+                        created_at: "",
+                        review_count: 0,
+                        ease_factor: 2.5,
+                        interval_days: 1,
+                        next_review_date: nil,
+                        last_reviewed_at: nil
+                    )
+                }
+                
+                completion(.success(savedWords))
             } catch {
                 self.logger.error("Failed to decode next review word response: \(error.localizedDescription)")
+                if let decodingError = error as? DecodingError {
+                    self.logger.error("Detailed decoding error: \(decodingError)")
+                }
                 completion(.failure(DictionaryError.decodingError(error)))
             }
         }.resume()

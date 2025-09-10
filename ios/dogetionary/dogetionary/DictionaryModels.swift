@@ -205,6 +205,18 @@ struct NextDueWordsResponse: Codable {
     let limit: Int
 }
 
+// Review Words Models (simplified for review_next endpoint)
+struct ReviewWordsResponse: Codable {
+    let user_id: String
+    let saved_words: [ReviewWord]
+    let count: Int
+}
+
+struct ReviewWord: Identifiable, Codable {
+    let id: Int
+    let word: String
+}
+
 struct ReviewStats: Codable {
     let user_id: String
     let total_words: Int
