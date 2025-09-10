@@ -22,7 +22,7 @@ struct SearchView: View {
                 // Search bar with clear button and search button
                 HStack(spacing: 12) {
                     HStack {
-                        TextField("Enter an English word", text: $searchText)
+                        TextField("Enter a word", text: $searchText)
                             .font(.title2)
                             .onSubmit {
                                 searchWord()
@@ -86,7 +86,6 @@ struct SearchView: View {
                 
                 Spacer()
             }
-            .navigationTitle("Dogetionary")
             .contentShape(Rectangle())
             .onTapGesture {
                 // Dismiss keyboard when tapping outside text field
