@@ -793,7 +793,7 @@ def get_saved_words():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Get saved words with their latest review next_review_date
+        # Get saved words with their latest review next_review_date and correct review count
         cur.execute("""
             SELECT 
                 sw.id, 
@@ -802,7 +802,7 @@ def get_saved_words():
                 sw.metadata, 
                 sw.created_at,
                 COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
-                COALESCE(latest_review.review_count, 0) as review_count,
+                COALESCE(review_counts.total_reviews, 0) as review_count,
                 latest_review.last_reviewed_at
             FROM saved_words sw
             LEFT JOIN (
@@ -810,11 +810,16 @@ def get_saved_words():
                     word_id,
                     next_review_date,
                     reviewed_at as last_reviewed_at,
-                    COUNT(*) as review_count,
                     ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
                 FROM reviews
-                GROUP BY word_id, next_review_date, reviewed_at
             ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+            LEFT JOIN (
+                SELECT 
+                    word_id,
+                    COUNT(*) as total_reviews
+                FROM reviews
+                GROUP BY word_id
+            ) review_counts ON sw.id = review_counts.word_id
             WHERE sw.user_id = %s
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
         """, (user_id,))
@@ -849,8 +854,8 @@ def get_saved_words():
                 "review_count": review_count,
                 "ease_factor": DEFAULT_EASE_FACTOR,  # Hardcoded as requested
                 "interval_days": int(float(interval_days)) if interval_days else 1,
-                "next_review_date": next_review_date.isoformat() if next_review_date else None,
-                "last_reviewed_at": last_reviewed_at.isoformat() if last_reviewed_at else None
+                "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
+                "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None
             })
         
         cur.close()
@@ -1014,7 +1019,7 @@ def get_word_details(word_id):
             review_history.append({
                 "response": review['response'],
                 "response_time_ms": None,  # Simplified
-                "reviewed_at": review['reviewed_at'].isoformat()
+                "reviewed_at": review['reviewed_at'].strftime('%Y-%m-%d %H:%M:%S')
             })
         
         # Calculate review data
@@ -1028,12 +1033,12 @@ def get_word_details(word_id):
             "word": word['word'],
             "learning_language": word['learning_language'],
             "metadata": word['metadata'],
-            "created_at": word['created_at'].isoformat(),
+            "created_at": word['created_at'].strftime('%Y-%m-%d %H:%M:%S'),
             "review_count": review_count,
             "ease_factor": 2.5,
             "interval_days": interval_days,
-            "next_review_date": next_review_date.isoformat() if next_review_date else None,
-            "last_reviewed_at": last_reviewed_at.isoformat() if last_reviewed_at else None,
+            "next_review_date": next_review_date.strftime('%Y-%m-%d %H:%M:%S') if next_review_date else None,
+            "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
             "review_history": review_history
         })
         

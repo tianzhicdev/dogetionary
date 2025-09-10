@@ -676,7 +676,7 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func getNextReviewWord(completion: @escaping (Result<[SavedWord], Error>) -> Void) {
+    func getNextReviewWord(completion: @escaping (Result<[ReviewWord], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         guard let url = URL(string: "\(baseURL)/review_next?user_id=\(userID)") else {
             logger.error("Invalid URL for next review word endpoint")
@@ -729,23 +729,7 @@ class DictionaryService: ObservableObject {
                 let response = try JSONDecoder().decode(ReviewWordsResponse.self, from: data)
                 self.logger.info("Successfully decoded next review word response - count: \(response.count), words: \(response.saved_words.count)")
                 
-                // Convert ReviewWord to SavedWord for UI compatibility
-                let savedWords = response.saved_words.map { reviewWord in
-                    SavedWord(
-                        id: reviewWord.id,
-                        word: reviewWord.word,
-                        learning_language: "en", // Default, actual value not needed for review UI
-                        metadata: nil,
-                        created_at: "",
-                        review_count: 0,
-                        ease_factor: 2.5,
-                        interval_days: 1,
-                        next_review_date: nil,
-                        last_reviewed_at: nil
-                    )
-                }
-                
-                completion(.success(savedWords))
+                completion(.success(response.saved_words))
             } catch {
                 self.logger.error("Failed to decode next review word response: \(error.localizedDescription)")
                 if let decodingError = error as? DecodingError {
