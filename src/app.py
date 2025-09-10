@@ -1126,6 +1126,150 @@ def get_supported_languages():
         "count": len(languages)
     })
 
+@app.route('/fix_next_review_dates', methods=['POST'])
+def fix_next_review_dates():
+    """
+    Fix existing review records by calculating proper next_review_date using get_next_review_datetime
+    Reports statistics on correct vs incorrect records
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        app.logger.info("Starting next_review_date fix process...")
+        
+        # Get all review records that have next_review_date (newest first per word)
+        cur.execute("""
+            WITH latest_reviews AS (
+                SELECT word_id, user_id, MAX(reviewed_at) as latest_reviewed_at
+                FROM reviews 
+                WHERE next_review_date IS NOT NULL
+                GROUP BY word_id, user_id
+            )
+            SELECT r.id, r.word_id, r.user_id, r.next_review_date, r.reviewed_at
+            FROM reviews r
+            INNER JOIN latest_reviews lr ON 
+                r.word_id = lr.word_id AND 
+                r.user_id = lr.user_id AND 
+                r.reviewed_at = lr.latest_reviewed_at
+            ORDER BY r.word_id, r.user_id
+        """)
+        
+        records_to_check = cur.fetchall()
+        app.logger.info(f"Found {len(records_to_check)} latest review records to check")
+        
+        stats = {
+            'total_checked': 0,
+            'correct_records': 0,
+            'incorrect_records': 0,
+            'updated_records': 0,
+            'error_records': 0,
+            'details': []
+        }
+        
+        for record in records_to_check:
+            record_id = record['id']
+            word_id = record['word_id']
+            user_id = record['user_id'] 
+            current_next_review_date = record['next_review_date']
+            reviewed_at = record['reviewed_at']
+            stats['total_checked'] += 1
+            
+            try:
+                # Get all review history for this word/user combination
+                cur.execute("""
+                    SELECT reviewed_at, response FROM reviews 
+                    WHERE word_id = %s AND user_id = %s 
+                    ORDER BY reviewed_at ASC
+                """, (word_id, user_id))
+                
+                review_history = cur.fetchall()
+                
+                # Convert to format expected by get_next_review_datetime
+                numeric_reviews = []
+                for review in review_history:
+                    numeric_score = 0.9 if review['response'] else 0.1
+                    numeric_reviews.append((review['reviewed_at'], numeric_score))
+                
+                # Calculate correct next_review_date
+                calculated_next_review_date = get_next_review_datetime(numeric_reviews)
+                
+                # Compare with current value (allowing for small time differences)
+                current_date = datetime.fromisoformat(current_next_review_date.replace('Z', '+00:00')) if isinstance(current_next_review_date, str) else current_next_review_date
+                time_diff = abs((calculated_next_review_date - current_date).total_seconds())
+                
+                # Consider dates within 1 minute as "correct" (to account for processing time differences)
+                if time_diff <= 60:
+                    stats['correct_records'] += 1
+                    app.logger.info(f"Record {record_id} (word_id={word_id}): CORRECT")
+                else:
+                    stats['incorrect_records'] += 1
+                    
+                    # Update the record with correct next_review_date
+                    cur.execute("""
+                        UPDATE reviews 
+                        SET next_review_date = %s 
+                        WHERE id = %s
+                    """, (calculated_next_review_date, record_id))
+                    
+                    stats['updated_records'] += 1
+                    
+                    detail = {
+                        'record_id': record_id,
+                        'word_id': word_id,
+                        'user_id': user_id,
+                        'old_next_review_date': current_next_review_date.isoformat() if current_next_review_date else None,
+                        'new_next_review_date': calculated_next_review_date.isoformat(),
+                        'time_diff_seconds': time_diff,
+                        'review_count': len(review_history)
+                    }
+                    stats['details'].append(detail)
+                    
+                    app.logger.info(f"Record {record_id} (word_id={word_id}): UPDATED - was {current_date}, now {calculated_next_review_date} (diff: {time_diff:.1f}s)")
+                
+            except Exception as e:
+                stats['error_records'] += 1
+                app.logger.error(f"Error processing record {record_id}: {str(e)}")
+                
+                stats['details'].append({
+                    'record_id': record_id,
+                    'word_id': word_id,
+                    'user_id': user_id,
+                    'error': str(e)
+                })
+        
+        # Commit all updates
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        app.logger.info(f"Fix process completed: {stats['updated_records']} records updated, {stats['correct_records']} were already correct")
+        
+        # Prepare response
+        response = {
+            'success': True,
+            'message': 'next_review_date fix process completed',
+            'statistics': {
+                'total_checked': stats['total_checked'],
+                'correct_records': stats['correct_records'],
+                'incorrect_records': stats['incorrect_records'],
+                'updated_records': stats['updated_records'],
+                'error_records': stats['error_records'],
+                'correct_percentage': round((stats['correct_records'] / stats['total_checked']) * 100, 2) if stats['total_checked'] > 0 else 0
+            },
+            'updated_details': [d for d in stats['details'] if 'error' not in d],
+            'errors': [d for d in stats['details'] if 'error' in d]
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        app.logger.error(f"Error in fix_next_review_dates: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
