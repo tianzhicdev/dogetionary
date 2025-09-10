@@ -15,82 +15,115 @@ struct SearchView: View {
     @State private var definitions: [Definition] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    
+    private var isSearchActive: Bool {
+        return !definitions.isEmpty || errorMessage != nil || isLoading
+    }
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                // Search bar with clear button and search button
-                HStack(spacing: 12) {
-                    HStack {
-                        TextField("Enter a word", text: $searchText)
-                            .font(.title2)
-                            .onSubmit {
-                                searchWord()
-                            }
+            ZStack {
+                if isSearchActive {
+                    // Active search layout - search bar at top
+                    VStack(spacing: 20) {
+                        searchBarView()
+                            .padding(.horizontal)
                         
-                        if !searchText.isEmpty {
-                            Button(action: {
-                                searchText = ""
-                                definitions = []
-                                errorMessage = nil
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                                    .font(.title3)
+                        if isLoading {
+                            ProgressView("Searching...")
+                                .padding()
+                        }
+                        
+                        if let errorMessage = errorMessage {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .padding()
+                        }
+                        
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 16) {
+                                ForEach(definitions) { definition in
+                                    DefinitionCard(definition: definition)
+                                }
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .padding(.horizontal)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                // Dismiss keyboard when tapping on results
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            }
                         }
+                        
+                        Spacer()
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                    
-                    Button(action: {
-                        searchWord()
-                    }) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.title2)
-                            .fontWeight(.medium)
-                    }
-                    .disabled(searchText.isEmpty || isLoading)
-                    .buttonStyle(.borderedProminent)
-                    .frame(height: 36) // Match text field height
-                }
-                .padding(.horizontal)
-                
-                if isLoading {
-                    ProgressView("Searching...")
-                        .padding()
-                }
-                
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
-                }
-                
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        ForEach(definitions) { definition in
-                            DefinitionCard(definition: definition)
+                } else {
+                    // Landing page layout - centered search bar with logo
+                    VStack(spacing: 40) {
+                        Spacer()
+                        
+                        VStack(spacing: 24) {
+                            // Centered search bar
+                            searchBarView()
+                                .padding(.horizontal, 24)
+                            
+                            // Tagline
+                            Text("Every lookup becomes unforgettable")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
                         }
-                    }
-                    .padding(.horizontal)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        // Dismiss keyboard when tapping on results
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        
+                        Spacer()
                     }
                 }
-                
-                Spacer()
             }
             .contentShape(Rectangle())
             .onTapGesture {
                 // Dismiss keyboard when tapping outside text field
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
+        }
+    }
+    
+    @ViewBuilder
+    private func searchBarView() -> some View {
+        HStack(spacing: 12) {
+            HStack {
+                TextField("Enter a word", text: $searchText)
+                    .font(.title2)
+                    .onSubmit {
+                        searchWord()
+                    }
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                        definitions = []
+                        errorMessage = nil
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .font(.title3)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
+            
+            Button(action: {
+                searchWord()
+            }) {
+                Image(systemName: "magnifyingglass")
+                    .font(.title2)
+                    .fontWeight(.medium)
+            }
+            .disabled(searchText.isEmpty || isLoading)
+            .buttonStyle(.borderedProminent)
+            .frame(height: 36) // Match text field height
         }
     }
     

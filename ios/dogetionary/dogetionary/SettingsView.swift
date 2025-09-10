@@ -79,6 +79,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             Form {
+                #if DEBUG
                 Section(header: Text("User Information")) {
                     HStack {
                         Text("User ID:")
@@ -88,12 +89,11 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+                #endif
                 
                 Section(header: Text("Language Preferences")) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Learning")
-                                .foregroundColor(.secondary)
                             Spacer()
                             Picker("Learning Language", selection: learningLanguageBinding) {
                                 ForEach(availableLanguages, id: \.0) { code, name in
@@ -111,8 +111,6 @@ struct SettingsView: View {
                         }
                         
                         HStack {
-                            Text("Native")
-                                .foregroundColor(.secondary)
                             Spacer()
                             Picker("Native Language", selection: nativeLanguageBinding) {
                                 ForEach(availableLanguages, id: \.0) { code, name in
@@ -145,6 +143,7 @@ struct SettingsView: View {
                     }
                 }
                 
+                #if DEBUG
                 Section(header: Text("API Configuration")) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -173,13 +172,8 @@ struct SettingsView: View {
                     HStack {
                         Text("Build Configuration:")
                         Spacer()
-                        #if DEBUG
                         Text("Debug")
                             .foregroundColor(.orange)
-                        #else
-                        Text("Release")
-                            .foregroundColor(.green)
-                        #endif
                     }
                     
                     HStack {
@@ -215,6 +209,7 @@ struct SettingsView: View {
                         }
                     }
                 }
+                #endif
             }
             .navigationTitle("Settings")
             .alert("Invalid Language Selection", isPresented: $showLanguageAlert) {
