@@ -139,7 +139,7 @@ struct StatsView: View {
             VStack(spacing: 20) {
                 // Progress Funnel at top
                 if let progressData = progressData {
-                    HorizontalProgressFunnelView(data: progressData)
+                    HorizontalProgressBarChart(data: progressData)
                         .padding(.horizontal)
                         .padding(.top)
                 }
@@ -332,7 +332,7 @@ struct StatCard: View {
                 Spacer()
             }
             Text(value)
-                .font(.title3)
+                .font(.title)
                 .fontWeight(.bold)
             Text(title)
                 .font(.caption2)
@@ -356,15 +356,16 @@ struct WeeklyReviewChart: View {
             HStack(alignment: .bottom, spacing: 4) {
                 ForEach(dailyCounts) { day in
                     VStack(spacing: 4) {
-                        // Bar
-                        Rectangle()
-                            .fill(Color.blue.opacity(0.7))
-                            .frame(height: CGFloat(day.count) / CGFloat(maxCount) * 60)
-                        
-                        // Count
+                        // Count on top of bar
                         Text("\(day.count)")
                             .font(.caption2)
                             .fontWeight(.medium)
+                        
+                        // Bar
+                        Rectangle()
+                            .fill(Color.blue.opacity(0.7))
+                            .frame(height: CGFloat(day.count) / CGFloat(maxCount) * 50)
+                            .cornerRadius(4)
                         
                         // Day label
                         Text(dayLabel(from: day.date))
@@ -400,11 +401,10 @@ struct ProgressFunnelData: Codable {
     let total_words: Int
 }
 
-struct HorizontalProgressFunnelView: View {
+struct HorizontalProgressBarChart: View {
     let data: ProgressFunnelData
     
-    private let percentages = ["recognized", "familiar", "remembered", "unforgettable"]
-    private let icons = ["circle.fill", "circle.lefthalf.filled", "circle.threequarter.fill", "checkmark.circle.fill"]
+    private let stageLabels = ["Recognized", "Familiar", "Remembered", "Unforgettable"]
     
     private func greenColor(for index: Int) -> Color {
         // Light green to dark green gradient
@@ -417,88 +417,72 @@ struct HorizontalProgressFunnelView: View {
         return greenValues[index]
     }
     
+    private var maxCount: Int {
+        max(data.stage1_count, data.stage2_count, data.stage3_count, data.stage4_count, 1)
+    }
+    
     var body: some View {
-        HStack(spacing: 2) {
-            // Stage 1 - 25%
-            ProgressSegment(
-                percentage: percentages[0],
-                icon: icons[0],
-                count: data.stage1_count,
-                color: .white,
-                bgColor: greenColor(for: 0),
-                isLastStage: false
-            )
-            
-            // Stage 2 - 50%
-            ProgressSegment(
-                percentage: percentages[1],
-                icon: icons[1],
-                count: data.stage2_count,
-                color: .white,
-                bgColor: greenColor(for: 1),
-                isLastStage: false
-            )
-            
-            // Stage 3 - 75%
-            ProgressSegment(
-                percentage: percentages[2],
-                icon: icons[2],
-                count: data.stage3_count,
-                color: .white,
-                bgColor: greenColor(for: 2),
-                isLastStage: false
-            )
-            
-            // Stage 4 - 100%
-            ProgressSegment(
-                percentage: percentages[3],
-                icon: icons[3],
-                count: data.stage4_count,
-                color: .white,
-                bgColor: greenColor(for: 3),
-                isLastStage: true
-            )
+        VStack(spacing: 8) {
+            HStack (alignment: .bottom, spacing: 4){
+                ForEach(0..<4) { index in
+                    let counts = [data.stage1_count, data.stage2_count, data.stage3_count, data.stage4_count]
+                    let count = counts[index]
+                    
+                    VStack(spacing: 4) {
+                        // Bar with count on top
+//                        VStack(spacing: 2) {
+                            // Count on top of bar
+                            Text("\(count)")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.primary)
+                            
+                            // Bar
+//                            VStack {
+//                                Spacer(minLength: 0)
+                                Rectangle()
+                                    .fill(greenColor(for: index))
+                                    .frame(height: CGFloat(count) / CGFloat(maxCount) * 80)
+                                    .cornerRadius(4)
+//                            }
+//                            .frame(height: 80)
+//                        }
+                        
+                        // Label
+                        Text(stageLabels[index])
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+//                    VStack(spacing: 4) {
+//                        // Count on top of bar
+//                        Text("\(day.count)")
+//                            .font(.caption2)
+//                            .fontWeight(.medium)
+//                        
+//                        // Bar
+//                        Rectangle()
+//                            .fill(Color.blue.opacity(0.7))
+//                            .frame(height: CGFloat(day.count) / CGFloat(maxCount) * 50)
+//                            .cornerRadius(4)
+//                        
+//                        // Day label
+//                        Text(dayLabel(from: day.date))
+//                            .font(.caption2)
+//                            .foregroundColor(.secondary)
+//                    }
+                    
+                    if index < 3 {
+                        Spacer()
+                    }
+                }
+            }
         }
-        .frame(height: 70)
+        .padding(.vertical, 8)
     }
 }
 
-struct ProgressSegment: View {
-    let percentage: String
-    let icon: String
-    let count: Int
-    let color: Color
-    let bgColor: Color
-    let isLastStage: Bool
-    
-    var body: some View {
-        ZStack {
-            // Background
-            Rectangle()
-                .fill(bgColor)
-            
-            // Content
-            VStack(spacing: 4) {
-                Text("\(count)")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(color)
-                
-//                if isLastStage {
-//                    // Brain icon for final stage
-//                    Image(systemName: "brain.filled.head.profile")
-//                        .font(.system(size: 16, weight: .medium))
-//                        .foregroundColor(.yellow)
-//                } else {
-                    // Text symbols for first 3 stages
-                Text(percentage)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(color)
-//                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
+// Removed ProgressSegment - replaced with bar chart
 
 
 struct MonthlyCalendarView: View {

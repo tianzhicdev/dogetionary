@@ -7,7 +7,6 @@ CREATE TABLE illustrations (
     content_type VARCHAR(50) DEFAULT 'image/png',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (word, language),
-    FOREIGN KEY (word, language) REFERENCES definitions(word, learning_language)
 );
 
 -- Add index for better performance

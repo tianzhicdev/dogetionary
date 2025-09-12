@@ -34,8 +34,7 @@ struct AIIllustrationView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(maxHeight: 180)
-                            .cornerRadius(16)
-                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
 
                 }
@@ -56,19 +55,8 @@ struct AIIllustrationView: View {
                 .background(Color.blue.opacity(0.05))
                 .cornerRadius(12)
             } else {
-                // Show generate button
-                Button(action: generateIllustration) {
-                    HStack {
-                        Image(systemName: "wand.and.stars")
-                        Text("Generate AI Illustration")
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                    .padding(12)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .cornerRadius(12)
-                }
+                // Auto-generate on first appearance - no button needed
+                EmptyView()
             }
             
             if let error = error {
@@ -85,7 +73,7 @@ struct AIIllustrationView: View {
             }
         }
         .onAppear {
-            // Try to load existing illustration
+            // Try to load existing illustration, if not found, auto-generate
             loadExistingIllustration()
         }
     }
@@ -98,8 +86,8 @@ struct AIIllustrationView: View {
                     self.illustration = illustrationResponse
                     self.error = nil
                 case .failure(_):
-                    // Illustration doesn't exist yet, that's fine
-                    break
+                    // Illustration doesn't exist yet, auto-generate it
+                    self.generateIllustration()
                 }
             }
         }

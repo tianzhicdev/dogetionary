@@ -6,6 +6,8 @@ CREATE TABLE user_preferences (
     user_id UUID PRIMARY KEY,
     learning_language VARCHAR(10) DEFAULT 'en',
     native_language VARCHAR(10) DEFAULT 'zh',
+    user_name VARCHAR(255),
+    user_motto TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -51,6 +53,21 @@ CREATE TABLE reviews (
     reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     next_review_date TIMESTAMP
 );
+
+-- Create illustration table for AI-generated word illustrations
+CREATE TABLE illustrations (
+    word VARCHAR(255) NOT NULL,
+    language VARCHAR(10) NOT NULL,
+    scene_description TEXT NOT NULL,
+    image_data BYTEA NOT NULL,
+    content_type VARCHAR(50) DEFAULT 'image/png',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (word, language)
+);
+
+-- Add index for better performance
+CREATE INDEX idx_illustrations_word_lang ON illustrations(word, language);
+
 
 -- Indexes for performance
 CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);
