@@ -21,9 +21,9 @@ Subsequent reviews: previous interval × ease factor (typically 2.5)
 7. create a /privacy-agreement that display our privacy agreement - make it as complicated as possible but basically it means users are free to use our service; we are not going to share user data with any 3rd aprties; the app is powered by ai so sometimes it can be wrong;  
 
  productionize:
-8. setting fix
-9. landing 
-10. screenshots
+8. [done]setting fix [done]
+9. [done] landing 
+10. [done] screenshots
 
 1. SuperMemo Algo burns the words in your brain.
 2. Lookup once, memorized forever
@@ -31,4 +31,22 @@ Subsequent reviews: previous interval × ease factor (typically 2.5)
 4. Effortlessly become a native speaker
 
 
-11. cache? 
+
+soft launch:
+
+marketing:
+1. tictok ads
+
+product:
+1. 
+
+
+virality:
+leader board
+
+attainment:
+stats: 4 steps progress
+weekly review graph
+monthly review graph 
+
+ai illustration 
