@@ -15,6 +15,13 @@ struct SavedWordsView: View {
     var body: some View {
         NavigationView {
             TabView {
+                // Stats Tab (now first)
+                StatsView()
+                    .tabItem {
+                        Image(systemName: "chart.bar.fill")
+                        Text("Stats")
+                    }
+                
                 // Words Tab
                 SavedWordsListView(
                     savedWords: savedWords,
@@ -26,13 +33,6 @@ struct SavedWordsView: View {
                     Image(systemName: "list.bullet")
                     Text("Words")
                 }
-                
-                // Stats Tab
-                StatsView()
-                    .tabItem {
-                        Image(systemName: "chart.bar.fill")
-                        Text("Stats")
-                    }
             }
             .navigationTitle("Saved Words")
             .onAppear {
@@ -129,43 +129,45 @@ struct SavedWordsListView: View {
 struct StatsView: View {
     @State private var reviewDates: Set<String> = []
     @State private var progressData: ProgressFunnelData?
+    @State private var reviewStats: ReviewStatsData?
+    @State private var weeklyReviews: [DailyReviewCount] = []
     @State private var isLoading = false
     @State private var currentDate = Date()
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 32) {
-                // Review Activity Section
-                VStack(spacing: 24) {
-                    // Header
-                    VStack(spacing: 8) {
-                        Text("Review Activity")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text("Green dates show days with reviews")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top)
-                    
-                    // Monthly Calendar
-                    MonthlyCalendarView(
-                        currentDate: $currentDate,
-                        reviewDates: reviewDates
-                    )
-                    
-                    // Month Navigation
+            VStack(spacing: 20) {
+                // Progress Funnel at top
+                if let progressData = progressData {
+                    HorizontalProgressFunnelView(data: progressData)
+                        .padding(.horizontal)
+                        .padding(.top)
+                }
+                
+                // Stats Cards
+                if let stats = reviewStats {
+                    StatsCardsView(stats: stats)
+                        .padding(.horizontal)
+                }
+                
+                // Weekly Review Chart
+                if !weeklyReviews.isEmpty {
+                    WeeklyReviewChart(dailyCounts: weeklyReviews)
+                        .padding(.horizontal)
+                }
+                
+                // Calendar with integrated navigation
+                VStack(spacing: 0) {
                     HStack {
                         Button(action: {
                             currentDate = Calendar.current.date(byAdding: .month, value: -1, to: currentDate) ?? currentDate
                             loadReviewDates()
                         }) {
-                            HStack {
-                                Image(systemName: "chevron.left")
-                                Text("Previous")
-                            }
+                            Image(systemName: "chevron.left")
+                                .font(.caption)
+                                .foregroundColor(.blue)
                         }
+                        .padding(.leading)
                         
                         Spacer()
                         
@@ -179,41 +181,18 @@ struct StatsView: View {
                             currentDate = Calendar.current.date(byAdding: .month, value: 1, to: currentDate) ?? currentDate
                             loadReviewDates()
                         }) {
-                            HStack {
-                                Text("Next")
-                                Image(systemName: "chevron.right")
-                            }
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.blue)
                         }
+                        .padding(.trailing)
                     }
-                    .padding(.horizontal)
-                }
-                
-                Divider()
-                    .padding(.horizontal)
-                
-                // Progress Funnel Section
-                VStack(spacing: 16) {
-                    // Header
-                    VStack(spacing: 8) {
-                        Text("Memorization Progress")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text("Words progressing through learning stages")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    .padding(.vertical, 8)
                     
-                    if let progressData = progressData {
-                        ProgressFunnelView(data: progressData)
-                    } else if isLoading {
-                        ProgressView("Loading progress data...")
-                            .padding()
-                    } else {
-                        Text("No progress data available")
-                            .foregroundColor(.secondary)
-                            .padding()
-                    }
+                    MonthlyCalendarView(
+                        currentDate: $currentDate,
+                        reviewDates: reviewDates
+                    )
                 }
                 
                 Spacer(minLength: 40)
@@ -222,6 +201,8 @@ struct StatsView: View {
         .onAppear {
             loadReviewDates()
             loadProgressData()
+            loadReviewStats()
+            loadWeeklyReviews()
         }
         .onChange(of: currentDate) { _, _ in
             loadReviewDates()
@@ -257,12 +238,8 @@ struct StatsView: View {
     }
     
     private func loadProgressData() {
-        isLoading = true
-        
         DictionaryService.shared.getProgressFunnelData { result in
             DispatchQueue.main.async {
-                self.isLoading = false
-                
                 switch result {
                 case .success(let data):
                     self.progressData = data
@@ -272,6 +249,146 @@ struct StatsView: View {
                 }
             }
         }
+    }
+    
+    private func loadReviewStats() {
+        DictionaryService.shared.getReviewStatistics { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let stats):
+                    self.reviewStats = stats
+                case .failure(let error):
+                    print("Failed to load review stats: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func loadWeeklyReviews() {
+        DictionaryService.shared.getWeeklyReviewCounts { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let counts):
+                    self.weeklyReviews = counts
+                case .failure(let error):
+                    print("Failed to load weekly reviews: \(error)")
+                }
+            }
+        }
+    }
+}
+
+struct ReviewStatsData: Codable {
+    let total_reviews: Int
+    let streak_days: Int
+    let avg_reviews_per_week: Double
+    let avg_reviews_per_active_day: Double
+    let week_over_week_change: Double
+}
+
+struct DailyReviewCount: Codable, Identifiable {
+    let date: String
+    let count: Int
+    
+    var id: String { date }
+}
+
+struct StatsCardsView: View {
+    let stats: ReviewStatsData
+    
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            StatCard(title: "Total Reviews", value: "\(stats.total_reviews)", icon: "checkmark.circle.fill", color: .blue)
+            StatCard(title: "Streak", value: "\(stats.streak_days) days", icon: "flame.fill", color: .orange)
+            StatCard(title: "Avg/Week", value: String(format: "%.1f", stats.avg_reviews_per_week), icon: "calendar", color: .green)
+            StatCard(title: "Avg/Day", value: String(format: "%.1f", stats.avg_reviews_per_active_day), icon: "chart.bar.fill", color: .purple)
+        }
+        
+        // Week over week change
+        HStack {
+            Image(systemName: stats.week_over_week_change >= 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
+                .foregroundColor(stats.week_over_week_change >= 0 ? .green : .red)
+            Text(String(format: "%+.0f%% vs last week", stats.week_over_week_change))
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(stats.week_over_week_change >= 0 ? .green : .red)
+        }
+        .padding(.top, 8)
+    }
+}
+
+struct StatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundColor(color)
+                Spacer()
+            }
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+}
+
+struct WeeklyReviewChart: View {
+    let dailyCounts: [DailyReviewCount]
+    
+    private var maxCount: Int {
+        dailyCounts.map { $0.count }.max() ?? 1
+    }
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .bottom, spacing: 4) {
+                ForEach(dailyCounts) { day in
+                    VStack(spacing: 4) {
+                        // Bar
+                        Rectangle()
+                            .fill(Color.blue.opacity(0.7))
+                            .frame(height: CGFloat(day.count) / CGFloat(maxCount) * 60)
+                        
+                        // Count
+                        Text("\(day.count)")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                        
+                        // Day label
+                        Text(dayLabel(from: day.date))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: 100)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+    
+    private func dayLabel(from dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        if let date = formatter.date(from: dateString) {
+            formatter.dateFormat = "E"
+            return formatter.string(from: date)
+        }
+        return ""
     }
 }
 
@@ -283,188 +400,98 @@ struct ProgressFunnelData: Codable {
     let total_words: Int
 }
 
-struct ProgressFunnelView: View {
+struct HorizontalProgressFunnelView: View {
     let data: ProgressFunnelData
     
-    private let stages = [
-        ("Started Learning", "Any successful review", Color.blue.opacity(0.6)),
-        ("Building Memory", "2+ successes in 7 days", Color.green.opacity(0.6)),
-        ("Strengthening", "3+ successes in 14 days", Color.orange.opacity(0.6)),
-        ("Mastered", "4+ successes in 28 days", Color.purple.opacity(0.6))
-    ]
+    private let percentages = ["|", "||", "||", "||||"]
+    private let icons = ["circle.fill", "circle.lefthalf.filled", "circle.threequarter.fill", "checkmark.circle.fill"]
     
-    var body: some View {
-        VStack(spacing: 0) {
-            // Funnel visualization
-            GeometryReader { geometry in
-                ZStack {
-                    // Background funnel shape
-                    FunnelShape()
-                        .fill(LinearGradient(
-                            gradient: Gradient(colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ))
-                    
-                    // Funnel stages
-                    VStack(spacing: 0) {
-                        FunnelStageView(
-                            label: stages[0].0,
-                            count: data.stage1_count,
-                            description: stages[0].1,
-                            color: stages[0].2,
-                            width: geometry.size.width,
-                            isTop: true
-                        )
-                        
-                        FunnelStageView(
-                            label: stages[1].0,
-                            count: data.stage2_count,
-                            description: stages[1].1,
-                            color: stages[1].2,
-                            width: geometry.size.width * 0.75,
-                            isTop: false
-                        )
-                        
-                        FunnelStageView(
-                            label: stages[2].0,
-                            count: data.stage3_count,
-                            description: stages[2].1,
-                            color: stages[2].2,
-                            width: geometry.size.width * 0.5,
-                            isTop: false
-                        )
-                        
-                        FunnelStageView(
-                            label: stages[3].0,
-                            count: data.stage4_count,
-                            description: stages[3].1,
-                            color: stages[3].2,
-                            width: geometry.size.width * 0.25,
-                            isTop: false
-                        )
-                    }
-                }
-            }
-            .frame(height: 320)
-            .padding(.horizontal)
-            
-            // Legend
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(0..<4) { index in
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(stages[index].2)
-                            .frame(width: 12, height: 12)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(stages[index].0)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                            Text(stages[index].1)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Text("\(getCountForStage(index)) words")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(stages[index].2)
-                    }
-                }
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-            .padding(.horizontal)
-        }
+    private func greenColor(for index: Int) -> Color {
+        // Light green to dark green gradient
+        let greenValues: [Color] = [
+            Color(red: 0.6, green: 0.9, blue: 0.6),  // Light green
+            Color(red: 0.4, green: 0.8, blue: 0.4),  // Medium-light green
+            Color(red: 0.2, green: 0.7, blue: 0.2),  // Medium-dark green
+            Color(red: 0.0, green: 0.6, blue: 0.0)   // Dark green
+        ]
+        return greenValues[index]
     }
     
-    private func getCountForStage(_ index: Int) -> Int {
-        switch index {
-        case 0: return data.stage1_count
-        case 1: return data.stage2_count
-        case 2: return data.stage3_count
-        case 3: return data.stage4_count
-        default: return 0
+    var body: some View {
+        HStack(spacing: 2) {
+            // Stage 1 - 25%
+            ProgressSegment(
+                percentage: percentages[0],
+                icon: icons[0],
+                count: data.stage1_count,
+                color: greenColor(for: 0),
+                bgColor: Color.green.opacity(0.1)
+            )
+            
+            // Stage 2 - 50%
+            ProgressSegment(
+                percentage: percentages[1],
+                icon: icons[1],
+                count: data.stage2_count,
+                color: greenColor(for: 1),
+                bgColor: Color.green.opacity(0.1)
+            )
+            
+            // Stage 3 - 75%
+            ProgressSegment(
+                percentage: percentages[2],
+                icon: icons[2],
+                count: data.stage3_count,
+                color: greenColor(for: 2),
+                bgColor: Color.green.opacity(0.1)
+            )
+            
+            // Stage 4 - 100%
+            ProgressSegment(
+                percentage: percentages[3],
+                icon: icons[3],
+                count: data.stage4_count,
+                color: greenColor(for: 3),
+                bgColor: Color.green.opacity(0.1)
+            )
         }
+        .frame(height: 70)
     }
 }
 
-struct FunnelStageView: View {
-    let label: String
+struct ProgressSegment: View {
+    let percentage: String
+    let icon: String
     let count: Int
-    let description: String
     let color: Color
-    let width: CGFloat
-    let isTop: Bool
+    let bgColor: Color
     
     var body: some View {
         ZStack {
-            // Stage background
+            // Background
             Rectangle()
-                .fill(color)
-                .frame(width: width, height: 70)
-                .cornerRadius(isTop ? 12 : 0, corners: isTop ? [.topLeft, .topRight] : [])
+                .fill(bgColor)
             
-            // Stage content
+            // Content
             VStack(spacing: 4) {
-                Text("\(count)")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
                 
-                Text(label)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.9))
+                Text("\(count)")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(color)
+//
+//                Image(systemName: icon)
+//                    .font(.system(size: 20))
+//                    .foregroundColor(color)
+                
+                Text(percentage)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(color.opacity(0.8))
             }
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
-struct FunnelShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        
-        // Define funnel trapezoid
-        let topWidth = rect.width
-        let bottomWidth = rect.width * 0.25
-        let topY = rect.minY
-        let bottomY = rect.maxY
-        
-        path.move(to: CGPoint(x: rect.midX - topWidth/2, y: topY))
-        path.addLine(to: CGPoint(x: rect.midX + topWidth/2, y: topY))
-        path.addLine(to: CGPoint(x: rect.midX + bottomWidth/2, y: bottomY))
-        path.addLine(to: CGPoint(x: rect.midX - bottomWidth/2, y: bottomY))
-        path.closeSubpath()
-        
-        return path
-    }
-}
-
-// Helper extension for corner radius on specific corners
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-    
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
 
 struct MonthlyCalendarView: View {
     @Binding var currentDate: Date

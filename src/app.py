@@ -1709,6 +1709,146 @@ def support_page():
     
     return Response(support_html, mimetype='text/html')
 
+@app.route('/review_statistics', methods=['GET'])
+def get_review_statistics():
+    """Get comprehensive review statistics"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Total reviews
+        cur.execute("SELECT COUNT(*) as count FROM reviews WHERE user_id = %s", (user_id,))
+        total_reviews = cur.fetchone()['count'] or 0
+        
+        # Streak days (continuous days with reviews)
+        cur.execute("""
+            WITH review_days AS (
+                SELECT DISTINCT DATE(reviewed_at) as review_date
+                FROM reviews
+                WHERE user_id = %s
+                ORDER BY review_date DESC
+            ),
+            streaks AS (
+                SELECT review_date,
+                       review_date - INTERVAL '1 day' * ROW_NUMBER() OVER (ORDER BY review_date DESC) as grp
+                FROM review_days
+            )
+            SELECT COUNT(*) as streak_length
+            FROM streaks
+            WHERE grp = (SELECT MAX(grp) FROM streaks WHERE review_date >= CURRENT_DATE - INTERVAL '1 day')
+        """, (user_id,))
+        result = cur.fetchone()
+        streak_days = result['streak_length'] if result and result['streak_length'] else 0
+        
+        # Average reviews per week (since first review)
+        cur.execute("""
+            SELECT 
+                MIN(reviewed_at) as first_review,
+                COUNT(*) as total_count
+            FROM reviews
+            WHERE user_id = %s
+        """, (user_id,))
+        result = cur.fetchone()
+        if result and result['first_review']:
+            weeks_since_start = max(1, (datetime.now() - result['first_review']).days / 7)
+            avg_reviews_per_week = result['total_count'] / weeks_since_start
+        else:
+            avg_reviews_per_week = 0
+        
+        # Average reviews per active day
+        cur.execute("""
+            SELECT COUNT(DISTINCT DATE(reviewed_at)) as active_days
+            FROM reviews
+            WHERE user_id = %s
+        """, (user_id,))
+        active_days = cur.fetchone()['active_days'] or 1
+        avg_reviews_per_active_day = total_reviews / active_days if active_days > 0 else 0
+        
+        # Week over week change
+        cur.execute("""
+            WITH week_counts AS (
+                SELECT 
+                    COUNT(CASE WHEN reviewed_at >= NOW() - INTERVAL '7 days' THEN 1 END) as this_week,
+                    COUNT(CASE WHEN reviewed_at >= NOW() - INTERVAL '14 days' 
+                               AND reviewed_at < NOW() - INTERVAL '7 days' THEN 1 END) as last_week
+                FROM reviews
+                WHERE user_id = %s
+            )
+            SELECT this_week, last_week FROM week_counts
+        """, (user_id,))
+        result = cur.fetchone()
+        this_week = result['this_week'] or 0
+        last_week = result['last_week'] or 1
+        week_over_week_change = ((this_week - last_week) / last_week * 100) if last_week > 0 else 0
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "total_reviews": total_reviews,
+            "streak_days": streak_days,
+            "avg_reviews_per_week": round(avg_reviews_per_week, 1),
+            "avg_reviews_per_active_day": round(avg_reviews_per_active_day, 1),
+            "week_over_week_change": round(week_over_week_change)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting review statistics: {str(e)}")
+        return jsonify({"error": f"Failed to get review statistics: {str(e)}"}), 500
+
+@app.route('/weekly_review_counts', methods=['GET'])
+def get_weekly_review_counts():
+    """Get daily review counts for the past 7 days"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Get counts for past 7 days
+        cur.execute("""
+            WITH date_series AS (
+                SELECT generate_series(
+                    CURRENT_DATE - INTERVAL '6 days',
+                    CURRENT_DATE,
+                    '1 day'::interval
+                )::date as date
+            )
+            SELECT 
+                ds.date,
+                COALESCE(COUNT(r.id), 0) as count
+            FROM date_series ds
+            LEFT JOIN reviews r ON DATE(r.reviewed_at) = ds.date AND r.user_id = %s
+            GROUP BY ds.date
+            ORDER BY ds.date ASC
+        """, (user_id,))
+        
+        daily_counts = []
+        for row in cur.fetchall():
+            daily_counts.append({
+                "date": row['date'].strftime('%Y-%m-%d'),
+                "count": row['count']
+            })
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "daily_counts": daily_counts
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting weekly review counts: {str(e)}")
+        return jsonify({"error": f"Failed to get weekly review counts: {str(e)}"}), 500
+
 @app.route('/progress_funnel', methods=['GET'])
 def get_progress_funnel():
     """Get progress funnel data showing words at different memorization stages"""
