@@ -786,6 +786,98 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
+    func getReviewStatistics(completion: @escaping (Result<ReviewStatsData, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        
+        guard let url = URL(string: "\(baseURL)/review_statistics?user_id=\(userID)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        logger.info("🔍 Fetching review statistics for user \(userID)")
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.logger.error("❌ Review statistics request failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("❌ Review statistics request failed with status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            do {
+                let stats = try JSONDecoder().decode(ReviewStatsData.self, from: data)
+                self.logger.info("✅ Successfully fetched review statistics")
+                completion(.success(stats))
+            } catch {
+                self.logger.error("Failed to decode review statistics: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+    
+    func getWeeklyReviewCounts(completion: @escaping (Result<[DailyReviewCount], Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        
+        guard let url = URL(string: "\(baseURL)/weekly_review_counts?user_id=\(userID)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        logger.info("🔍 Fetching weekly review counts for user \(userID)")
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.logger.error("❌ Weekly review counts request failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("❌ Weekly review counts request failed with status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(WeeklyReviewResponse.self, from: data)
+                self.logger.info("✅ Successfully fetched weekly review counts")
+                completion(.success(response.daily_counts))
+            } catch {
+                self.logger.error("Failed to decode weekly review counts: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+    
     func getProgressFunnelData(completion: @escaping (Result<ProgressFunnelData, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         
@@ -888,6 +980,10 @@ struct ReviewActivityResponse: Codable {
     let review_dates: [String]
     let start_date: String
     let end_date: String
+}
+
+struct WeeklyReviewResponse: Codable {
+    let daily_counts: [DailyReviewCount]
 }
 
 enum DictionaryError: LocalizedError {
