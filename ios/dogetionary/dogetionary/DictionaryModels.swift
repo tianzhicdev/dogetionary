@@ -271,7 +271,39 @@ struct UserPreferences: Codable {
     let user_id: String
     let learning_language: String
     let native_language: String
+    let user_name: String?
+    let user_motto: String?
     let updated: Bool?
+}
+
+// Leaderboard Models
+struct LeaderboardEntry: Codable, Identifiable {
+    let id = UUID()
+    let rank: Int
+    let user_id: String
+    let user_name: String
+    let user_motto: String
+    let total_reviews: Int
+    
+    private enum CodingKeys: String, CodingKey {
+        case rank, user_id, user_name, user_motto, total_reviews
+    }
+}
+
+struct LeaderboardResponse: Codable {
+    let leaderboard: [LeaderboardEntry]
+    let total_users: Int
+}
+
+// AI Illustration Models
+struct IllustrationResponse: Codable {
+    let word: String
+    let language: String
+    let scene_description: String
+    let image_data: String // Base64 encoded image data
+    let content_type: String
+    let cached: Bool?
+    let created_at: String
 }
 
 // Due Counts Models

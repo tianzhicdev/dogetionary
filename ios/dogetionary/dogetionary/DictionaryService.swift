@@ -611,7 +611,7 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
+    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
         guard let encodedUserID = userID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let url = URL(string: "\(baseURL)/users/\(encodedUserID)/preferences") else {
             logger.error("Invalid URL for user preferences POST endpoint")
@@ -619,11 +619,13 @@ class DictionaryService: ObservableObject {
             return
         }
         
-        logger.info("Updating user preferences for: \(userID) - learning: \(learningLanguage), native: \(nativeLanguage)")
+        logger.info("Updating user preferences for: \(userID) - learning: \(learningLanguage), native: \(nativeLanguage), name: \(userName), motto: \(userMotto)")
         
         let requestBody: [String: Any] = [
             "learning_language": learningLanguage,
-            "native_language": nativeLanguage
+            "native_language": nativeLanguage,
+            "user_name": userName,
+            "user_motto": userMotto
         ]
         
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
@@ -968,6 +970,163 @@ class DictionaryService: ObservableObject {
                 completion(.success(reviewActivityResponse.review_dates))
             } catch {
                 self.logger.error("Failed to decode review activity response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+    
+    func getLeaderboard(completion: @escaping (Result<[LeaderboardEntry], Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/leaderboard") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        logger.info("🏆 Fetching leaderboard")
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.logger.error("❌ Leaderboard request failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("❌ Leaderboard request failed with status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            self.logger.info("✅ Leaderboard response received: \(data.count) bytes")
+            
+            do {
+                let leaderboardResponse = try JSONDecoder().decode(LeaderboardResponse.self, from: data)
+                self.logger.info("✅ Leaderboard decoded: \(leaderboardResponse.leaderboard.count) entries")
+                completion(.success(leaderboardResponse.leaderboard))
+            } catch {
+                self.logger.error("Failed to decode leaderboard response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+    
+    func generateIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/generate-illustration") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        let requestBody: [String: Any] = [
+            "word": word,
+            "language": language
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = jsonData
+        request.timeoutInterval = 60.0  // Longer timeout for AI generation
+        
+        logger.info("🎨 Generating AI illustration for word: \(word)")
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.logger.error("❌ Generate illustration request failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("❌ Generate illustration failed with status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            do {
+                let illustrationResponse = try JSONDecoder().decode(IllustrationResponse.self, from: data)
+                self.logger.info("✅ AI illustration generated successfully for: \(word)")
+                completion(.success(illustrationResponse))
+            } catch {
+                self.logger.error("Failed to decode illustration response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+    
+    func getIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
+        guard let encodedWord = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let encodedLanguage = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/illustration?word=\(encodedWord)&lang=\(encodedLanguage)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        logger.info("🖼️ Fetching existing illustration for word: \(word)")
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.logger.error("❌ Get illustration request failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                if httpResponse.statusCode == 404 {
+                    completion(.failure(DictionaryError.noData))
+                } else {
+                    self.logger.error("❌ Get illustration failed with status: \(httpResponse.statusCode)")
+                    completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            do {
+                let illustrationResponse = try JSONDecoder().decode(IllustrationResponse.self, from: data)
+                self.logger.info("✅ Illustration fetched successfully for: \(word)")
+                completion(.success(illustrationResponse))
+            } catch {
+                self.logger.error("Failed to decode illustration response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
         }.resume()

@@ -175,6 +175,10 @@ struct DefinitionCard: View {
     @State private var wordAudioData: Data?
     @State private var exampleAudioData: [String: Data] = [:]
     @State private var loadingAudio = false
+    @State private var illustration: IllustrationResponse?
+    @State private var isGeneratingIllustration = false
+    @State private var illustrationError: String?
+    @ObservedObject private var userManager = UserManager.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -243,6 +247,16 @@ struct DefinitionCard: View {
                 }
                 .padding(.bottom, 8)
             }
+            
+            // AI Illustration Section
+            AIIllustrationView(
+                word: definition.word,
+                language: userManager.learningLanguage,
+                illustration: $illustration,
+                isGenerating: $isGeneratingIllustration,
+                error: $illustrationError
+            )
+            .padding(.bottom, 8)
             
             ForEach(definition.meanings, id: \.partOfSpeech) { meaning in
                 VStack(alignment: .leading, spacing: 4) {

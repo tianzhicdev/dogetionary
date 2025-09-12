@@ -14,6 +14,8 @@ class UserManager: ObservableObject {
     private let userIDKey = "DogetionaryUserID"
     private let learningLanguageKey = "DogetionaryLearningLanguage"
     private let nativeLanguageKey = "DogetionaryNativeLanguage"
+    private let userNameKey = "DogetionaryUserName"
+    private let userMottoKey = "DogetionaryUserMotto"
     
     private var isSyncingFromServer = false
     
@@ -29,6 +31,22 @@ class UserManager: ObservableObject {
     @Published var nativeLanguage: String {
         didSet {
             UserDefaults.standard.set(nativeLanguage, forKey: nativeLanguageKey)
+            if !isSyncingFromServer {
+                syncPreferencesToServer()
+            }
+        }
+    }
+    @Published var userName: String {
+        didSet {
+            UserDefaults.standard.set(userName, forKey: userNameKey)
+            if !isSyncingFromServer {
+                syncPreferencesToServer()
+            }
+        }
+    }
+    @Published var userMotto: String {
+        didSet {
+            UserDefaults.standard.set(userMotto, forKey: userMottoKey)
             if !isSyncingFromServer {
                 syncPreferencesToServer()
             }
@@ -52,6 +70,10 @@ class UserManager: ObservableObject {
         self.learningLanguage = UserDefaults.standard.string(forKey: learningLanguageKey) ?? "en"
         self.nativeLanguage = UserDefaults.standard.string(forKey: nativeLanguageKey) ?? "en"
         
+        // Load user profile or set defaults
+        self.userName = UserDefaults.standard.string(forKey: userNameKey) ?? ""
+        self.userMotto = UserDefaults.standard.string(forKey: userMottoKey) ?? ""
+        
         logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage)")
     }
     
@@ -65,7 +87,9 @@ class UserManager: ObservableObject {
         DictionaryService.shared.updateUserPreferences(
             userID: self.userID,
             learningLanguage: self.learningLanguage,
-            nativeLanguage: self.nativeLanguage
+            nativeLanguage: self.nativeLanguage,
+            userName: self.userName,
+            userMotto: self.userMotto
         ) { result in
             switch result {
             case .success(_):
@@ -86,7 +110,10 @@ class UserManager: ObservableObject {
                     self.logger.info("Successfully fetched preferences from server: learning=\(preferences.learning_language), native=\(preferences.native_language)")
                     
                     // Update local preferences if they're different from server
-                    if self.learningLanguage != preferences.learning_language || self.nativeLanguage != preferences.native_language {
+                    if self.learningLanguage != preferences.learning_language || 
+                       self.nativeLanguage != preferences.native_language ||
+                       self.userName != (preferences.user_name ?? "") ||
+                       self.userMotto != (preferences.user_motto ?? "") {
                         self.logger.info("Updating local preferences to match server")
                         
                         // Set flag to prevent sync loop
@@ -95,6 +122,8 @@ class UserManager: ObservableObject {
                         // Update published properties - the didSet will update UserDefaults but skip server sync
                         self.learningLanguage = preferences.learning_language
                         self.nativeLanguage = preferences.native_language
+                        self.userName = preferences.user_name ?? ""
+                        self.userMotto = preferences.user_motto ?? ""
                         
                         // Reset flag
                         self.isSyncingFromServer = false

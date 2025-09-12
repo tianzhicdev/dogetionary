@@ -91,6 +91,26 @@ struct SettingsView: View {
                 }
                 #endif
                 
+                Section(header: Text("Profile")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Name")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            TextField("Enter your name", text: $userManager.userName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Motto")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            TextField("Enter your motto", text: $userManager.userMotto)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                    }
+                }
+                
                 Section(header: Text("Language Preferences")) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
