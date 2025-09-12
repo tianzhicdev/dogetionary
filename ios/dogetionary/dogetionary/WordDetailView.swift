@@ -108,9 +108,24 @@ struct DefinitionTabView: View {
     let isLoading: Bool
     let errorMessage: String?
     
+    @State private var illustration: IllustrationResponse?
+    @State private var isGeneratingIllustration = false
+    @State private var illustrationError: String?
+    @ObservedObject private var userManager = UserManager.shared
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+//                // AI Illustration Section
+//                AIIllustrationView(
+//                    word: word,
+//                    language: userManager.learningLanguage,
+//                    illustration: $illustration,
+//                    isGenerating: $isGeneratingIllustration,
+//                    error: $illustrationError
+//                )
+//                .padding(.horizontal)
+                
                 if isLoading {
                     ProgressView("Loading definitions...")
                         .padding()

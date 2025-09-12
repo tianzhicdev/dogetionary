@@ -31,6 +31,12 @@ struct ContentView: View {
                     Text("Review")
                 }
             
+            LeaderboardView()
+                .tabItem {
+                    Image(systemName: "trophy.fill")
+                    Text("Leaderboard")
+                }
+            
             SettingsView()
                 .tabItem {
                     Image(systemName: "gear")

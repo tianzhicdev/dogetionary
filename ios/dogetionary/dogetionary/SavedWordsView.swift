@@ -403,7 +403,7 @@ struct ProgressFunnelData: Codable {
 struct HorizontalProgressFunnelView: View {
     let data: ProgressFunnelData
     
-    private let percentages = ["|", "||", "||", "||||"]
+    private let percentages = ["recognized", "familiar", "remembered", "unforgettable"]
     private let icons = ["circle.fill", "circle.lefthalf.filled", "circle.threequarter.fill", "checkmark.circle.fill"]
     
     private func greenColor(for index: Int) -> Color {
@@ -424,8 +424,9 @@ struct HorizontalProgressFunnelView: View {
                 percentage: percentages[0],
                 icon: icons[0],
                 count: data.stage1_count,
-                color: greenColor(for: 0),
-                bgColor: Color.green.opacity(0.1)
+                color: .white,
+                bgColor: greenColor(for: 0),
+                isLastStage: false
             )
             
             // Stage 2 - 50%
@@ -433,8 +434,9 @@ struct HorizontalProgressFunnelView: View {
                 percentage: percentages[1],
                 icon: icons[1],
                 count: data.stage2_count,
-                color: greenColor(for: 1),
-                bgColor: Color.green.opacity(0.1)
+                color: .white,
+                bgColor: greenColor(for: 1),
+                isLastStage: false
             )
             
             // Stage 3 - 75%
@@ -442,8 +444,9 @@ struct HorizontalProgressFunnelView: View {
                 percentage: percentages[2],
                 icon: icons[2],
                 count: data.stage3_count,
-                color: greenColor(for: 2),
-                bgColor: Color.green.opacity(0.1)
+                color: .white,
+                bgColor: greenColor(for: 2),
+                isLastStage: false
             )
             
             // Stage 4 - 100%
@@ -451,8 +454,9 @@ struct HorizontalProgressFunnelView: View {
                 percentage: percentages[3],
                 icon: icons[3],
                 count: data.stage4_count,
-                color: greenColor(for: 3),
-                bgColor: Color.green.opacity(0.1)
+                color: .white,
+                bgColor: greenColor(for: 3),
+                isLastStage: true
             )
         }
         .frame(height: 70)
@@ -465,6 +469,7 @@ struct ProgressSegment: View {
     let count: Int
     let color: Color
     let bgColor: Color
+    let isLastStage: Bool
     
     var body: some View {
         ZStack {
@@ -474,18 +479,21 @@ struct ProgressSegment: View {
             
             // Content
             VStack(spacing: 4) {
-                
                 Text("\(count)")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(color)
-//
-//                Image(systemName: icon)
-//                    .font(.system(size: 20))
-//                    .foregroundColor(color)
                 
+//                if isLastStage {
+//                    // Brain icon for final stage
+//                    Image(systemName: "brain.filled.head.profile")
+//                        .font(.system(size: 16, weight: .medium))
+//                        .foregroundColor(.yellow)
+//                } else {
+                    // Text symbols for first 3 stages
                 Text(percentage)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(color.opacity(0.8))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(color)
+//                }
             }
         }
         .frame(maxWidth: .infinity)

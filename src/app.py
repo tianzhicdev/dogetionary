@@ -416,13 +416,13 @@ audio_worker_thread.start()
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-def get_user_preferences(user_id: str) -> tuple[str, str]:
+def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
         cur.execute("""
-            SELECT learning_language, native_language 
+            SELECT learning_language, native_language, user_name, user_motto 
             FROM user_preferences 
             WHERE user_id = %s
         """, (user_id,))
@@ -432,18 +432,19 @@ def get_user_preferences(user_id: str) -> tuple[str, str]:
         conn.close()
         
         if result:
-            return result['learning_language'], result['native_language']
+            return (result['learning_language'], result['native_language'], 
+                   result['user_name'] or '', result['user_motto'] or '')
         else:
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
-                INSERT INTO user_preferences (user_id, learning_language, native_language)
-                VALUES (%s, 'en', 'zh')
+                INSERT INTO user_preferences (user_id, learning_language, native_language, user_name, user_motto)
+                VALUES (%s, 'en', 'zh', '', '')
                 ON CONFLICT (user_id) DO NOTHING
             """, (user_id,))
             conn.commit()
             conn.close()
-            return 'en', 'zh'
+            return 'en', 'zh', '', ''
             
     except Exception as e:
         app.logger.error(f"Error getting user preferences: {str(e)}")
@@ -463,7 +464,7 @@ def save_word():
         metadata = data.get('metadata', {})
         
         if 'learning_language' not in data:
-            stored_learning_lang, _ = get_user_preferences(user_id)
+            stored_learning_lang, _, _, _ = get_user_preferences(user_id)
             learning_lang = stored_learning_lang
         else:
             # Validate provided learning language
@@ -703,7 +704,7 @@ def get_word_definition():
         word_normalized = word.strip().lower()
         
         # Get user preferences
-        learning_lang, native_lang = get_user_preferences(user_id)
+        learning_lang, native_lang, _, _ = get_user_preferences(user_id)
         
         # Try to get cached definition first
         cached = get_cached_definition(word_normalized, learning_lang, native_lang)
@@ -879,17 +880,21 @@ def handle_user_preferences(user_id):
     """Get or update user language preferences"""
     try:
         if request.method == 'GET':
-            learning_lang, native_lang = get_user_preferences(user_id)
+            learning_lang, native_lang, user_name, user_motto = get_user_preferences(user_id)
             return jsonify({
                 "user_id": user_id,
                 "learning_language": learning_lang,
-                "native_language": native_lang
+                "native_language": native_lang,
+                "user_name": user_name,
+                "user_motto": user_motto
             })
         
         elif request.method == 'POST':
             data = request.get_json()
             learning_lang = data.get('learning_language')
             native_lang = data.get('native_language')
+            user_name = data.get('user_name', '')
+            user_motto = data.get('user_motto', '')
             
             if not learning_lang or not native_lang:
                 return jsonify({"error": "Both learning_language and native_language are required"}), 400
@@ -907,14 +912,16 @@ def handle_user_preferences(user_id):
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
-                INSERT INTO user_preferences (user_id, learning_language, native_language)
-                VALUES (%s, %s, %s)
+                INSERT INTO user_preferences (user_id, learning_language, native_language, user_name, user_motto)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (user_id) 
                 DO UPDATE SET 
                     learning_language = EXCLUDED.learning_language,
                     native_language = EXCLUDED.native_language,
+                    user_name = EXCLUDED.user_name,
+                    user_motto = EXCLUDED.user_motto,
                     updated_at = CURRENT_TIMESTAMP
-            """, (user_id, learning_lang, native_lang))
+            """, (user_id, learning_lang, native_lang, user_name, user_motto))
             conn.commit()
             conn.close()
             
@@ -922,6 +929,8 @@ def handle_user_preferences(user_id):
                 "user_id": user_id,
                 "learning_language": learning_lang,
                 "native_language": native_lang,
+                "user_name": user_name,
+                "user_motto": user_motto,
                 "updated": True
             })
     
@@ -1995,6 +2004,228 @@ def get_review_activity():
     except Exception as e:
         app.logger.error(f"Error getting review activity: {str(e)}")
         return jsonify({"error": f"Failed to get review activity: {str(e)}"}), 500
+
+@app.route('/leaderboard', methods=['GET'])
+def get_leaderboard():
+    """Get leaderboard with all users ranked by total review count"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Get all users with their review counts, name, and motto
+        cur.execute("""
+            SELECT 
+                up.user_id,
+                COALESCE(up.user_name, 'Anonymous') as user_name,
+                COALESCE(up.user_motto, '') as user_motto,
+                COALESCE(COUNT(r.id), 0) as total_reviews
+            FROM user_preferences up
+            LEFT JOIN saved_words sw ON up.user_id = sw.user_id
+            LEFT JOIN reviews r ON sw.id = r.word_id
+            GROUP BY up.user_id, up.user_name, up.user_motto
+            ORDER BY total_reviews DESC, up.user_name ASC
+        """)
+        
+        leaderboard = []
+        rank = 1
+        for row in cur.fetchall():
+            leaderboard.append({
+                "rank": rank,
+                "user_id": row['user_id'],
+                "user_name": row['user_name'],
+                "user_motto": row['user_motto'], 
+                "total_reviews": row['total_reviews']
+            })
+            rank += 1
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "leaderboard": leaderboard,
+            "total_users": len(leaderboard)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting leaderboard: {str(e)}")
+        return jsonify({"error": f"Failed to get leaderboard: {str(e)}"}), 500
+
+@app.route('/generate-illustration', methods=['POST'])
+def generate_illustration():
+    """Generate AI illustration for a word"""
+    try:
+        data = request.get_json()
+        word = data.get('word')
+        language = data.get('language')
+        
+        if not word or not language:
+            return jsonify({"error": "Both 'word' and 'language' are required"}), 400
+        
+        word_normalized = word.strip().lower()
+        
+        # Check if illustration already exists
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT scene_description, image_data, content_type, created_at
+            FROM illustrations 
+            WHERE word = %s AND language = %s
+        """, (word_normalized, language))
+        
+        existing = cur.fetchone()
+        if existing:
+            cur.close()
+            conn.close()
+            return jsonify({
+                "word": word_normalized,
+                "language": language,
+                "scene_description": existing['scene_description'],
+                "image_data": base64.b64encode(existing['image_data']).decode('utf-8'),
+                "content_type": existing['content_type'],
+                "cached": True,
+                "created_at": existing['created_at'].isoformat()
+            })
+        
+        # Get word definition to help with scene generation
+        cur.execute("""
+            SELECT definition_data
+            FROM definitions 
+            WHERE word = %s AND learning_language = %s
+            LIMIT 1
+        """, (word_normalized, language))
+        
+        definition_row = cur.fetchone()
+        definition_context = ""
+        if definition_row:
+            try:
+                definition_data = definition_row['definition_data']
+                if isinstance(definition_data, str):
+                    definition_data = json.loads(definition_data)
+                
+                # Extract main definition for context
+                if definition_data.get('definitions'):
+                    definition_context = definition_data['definitions'][0].get('definition', '')
+            except:
+                pass
+        
+        # Generate scene description using OpenAI
+        scene_prompt = f"""Create a vivid, detailed scene description that would best illustrate the word "{word}" in {language}. 
+        
+        Word definition context: {definition_context}
+        
+        The scene should be:
+        - Visual and concrete (avoid abstract concepts)
+        - Culturally appropriate and universal
+        - Suitable for illustration/artwork
+        - Engaging and memorable for language learning
+        
+        Describe the scene in 2-3 sentences, focusing on visual elements, setting, and actions that clearly represent the meaning of "{word}".
+        
+        Scene description:"""
+        
+        app.logger.info(f"Generating scene description for word: {word}")
+        
+        scene_response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a creative director helping create visual scenes for language learning illustrations."},
+                {"role": "user", "content": scene_prompt}
+            ],
+            max_tokens=200,
+            temperature=0.7
+        )
+        
+        scene_description = scene_response.choices[0].message.content.strip()
+        app.logger.info(f"Generated scene: {scene_description}")
+        
+        # Generate image using DALL-E
+        image_prompt = f"Create a clear, educational illustration showing: {scene_description}. Style: clean, colorful, suitable for language learning, no text in image."
+        
+        app.logger.info(f"Generating image for: {word}")
+        
+        image_response = openai.images.generate(
+            model="dall-e-3",
+            prompt=image_prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+            response_format="b64_json"
+        )
+        
+        image_data = base64.b64decode(image_response.data[0].b64_json)
+        content_type = "image/png"
+        
+        # Store in database
+        cur.execute("""
+            INSERT INTO illustrations (word, language, scene_description, image_data, content_type)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (word, language) 
+            DO UPDATE SET 
+                scene_description = EXCLUDED.scene_description,
+                image_data = EXCLUDED.image_data,
+                content_type = EXCLUDED.content_type,
+                created_at = CURRENT_TIMESTAMP
+        """, (word_normalized, language, scene_description, image_data, content_type))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        app.logger.info(f"Successfully generated and cached illustration for: {word}")
+        
+        return jsonify({
+            "word": word_normalized,
+            "language": language,
+            "scene_description": scene_description,
+            "image_data": base64.b64encode(image_data).decode('utf-8'),
+            "content_type": content_type,
+            "cached": False,
+            "created_at": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error generating illustration: {str(e)}")
+        return jsonify({"error": f"Failed to generate illustration: {str(e)}"}), 500
+
+@app.route('/illustration', methods=['GET'])
+def get_illustration():
+    """Get existing AI illustration for a word"""
+    try:
+        word = request.args.get('word')
+        language = request.args.get('lang')
+        
+        if not word or not language:
+            return jsonify({"error": "Both 'word' and 'lang' parameters are required"}), 400
+        
+        word_normalized = word.strip().lower()
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT scene_description, image_data, content_type, created_at
+            FROM illustrations 
+            WHERE word = %s AND language = %s
+        """, (word_normalized, language))
+        
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not result:
+            return jsonify({"error": "Illustration not found"}), 404
+        
+        return jsonify({
+            "word": word_normalized,
+            "language": language,
+            "scene_description": result['scene_description'],
+            "image_data": base64.b64encode(result['image_data']).decode('utf-8'),
+            "content_type": result['content_type'],
+            "created_at": result['created_at'].isoformat()
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting illustration: {str(e)}")
+        return jsonify({"error": f"Failed to get illustration: {str(e)}"}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
