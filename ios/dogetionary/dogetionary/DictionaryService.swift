@@ -786,6 +786,108 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
+    func getProgressFunnelData(completion: @escaping (Result<ProgressFunnelData, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        
+        guard let url = URL(string: "\(baseURL)/progress_funnel?user_id=\(userID)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        logger.info("🔍 Fetching progress funnel data for user \(userID)")
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.logger.error("❌ Progress funnel request failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("❌ Progress funnel request failed with status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            do {
+                let progressData = try JSONDecoder().decode(ProgressFunnelData.self, from: data)
+                self.logger.info("✅ Successfully fetched progress funnel data")
+                completion(.success(progressData))
+            } catch {
+                self.logger.error("Failed to decode progress funnel response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+    
+    func getReviewActivity(from startDate: Date, to endDate: Date, completion: @escaping (Result<[String], Error>) -> Void) {
+        let formatter = ISO8601DateFormatter()
+        let startDateString = formatter.string(from: startDate)
+        let endDateString = formatter.string(from: endDate)
+        let userID = UserManager.shared.getUserID()
+        
+        guard let url = URL(string: "\(baseURL)/review_activity?user_id=\(userID)&start_date=\(startDateString)&end_date=\(endDateString)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        logger.info("🔍 Fetching review activity from \(startDateString) to \(endDateString) for user \(userID)")
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.logger.error("❌ Review activity request failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("❌ Review activity request failed with status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+            
+            do {
+                let reviewActivityResponse = try JSONDecoder().decode(ReviewActivityResponse.self, from: data)
+                self.logger.info("✅ Successfully fetched \(reviewActivityResponse.review_dates.count) review dates")
+                completion(.success(reviewActivityResponse.review_dates))
+            } catch {
+                self.logger.error("Failed to decode review activity response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+    
+}
+
+struct ReviewActivityResponse: Codable {
+    let user_id: String
+    let review_dates: [String]
+    let start_date: String
+    let end_date: String
 }
 
 enum DictionaryError: LocalizedError {

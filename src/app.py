@@ -1709,6 +1709,153 @@ def support_page():
     
     return Response(support_html, mimetype='text/html')
 
+@app.route('/progress_funnel', methods=['GET'])
+def get_progress_funnel():
+    """Get progress funnel data showing words at different memorization stages"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Stage 1: Words with any successful review
+        cur.execute("""
+            SELECT COUNT(DISTINCT sw.id) as count
+            FROM saved_words sw
+            JOIN reviews r ON sw.id = r.word_id
+            WHERE sw.user_id = %s AND r.response = true
+        """, (user_id,))
+        stage1_count = cur.fetchone()['count'] or 0
+        
+        # Stage 2: Words with 2+ continuous successful reviews in past 7 days
+        cur.execute("""
+            WITH recent_reviews AS (
+                SELECT 
+                    sw.id as word_id,
+                    r.response,
+                    r.reviewed_at,
+                    LAG(r.response) OVER (PARTITION BY sw.id ORDER BY r.reviewed_at DESC) as prev_response
+                FROM saved_words sw
+                JOIN reviews r ON sw.id = r.word_id
+                WHERE sw.user_id = %s 
+                    AND r.reviewed_at >= NOW() - INTERVAL '7 days'
+            )
+            SELECT COUNT(DISTINCT word_id) as count
+            FROM recent_reviews
+            WHERE response = true AND prev_response = true
+        """, (user_id,))
+        stage2_count = cur.fetchone()['count'] or 0
+        
+        # Stage 3: Words with 3+ successful reviews in past 14 days
+        cur.execute("""
+            SELECT COUNT(DISTINCT sw.id) as count
+            FROM saved_words sw
+            JOIN reviews r ON sw.id = r.word_id
+            WHERE sw.user_id = %s 
+                AND r.reviewed_at >= NOW() - INTERVAL '14 days'
+                AND r.response = true
+            GROUP BY sw.id
+            HAVING COUNT(*) >= 3
+        """, (user_id,))
+        result = cur.fetchall()
+        stage3_count = len(result)
+        
+        # Stage 4: Words with 4+ successful reviews in past 28 days
+        cur.execute("""
+            SELECT COUNT(DISTINCT sw.id) as count
+            FROM saved_words sw
+            JOIN reviews r ON sw.id = r.word_id
+            WHERE sw.user_id = %s 
+                AND r.reviewed_at >= NOW() - INTERVAL '28 days'
+                AND r.response = true
+            GROUP BY sw.id
+            HAVING COUNT(*) >= 4
+        """, (user_id,))
+        result = cur.fetchall()
+        stage4_count = len(result)
+        
+        # Get total saved words count
+        cur.execute("""
+            SELECT COUNT(*) as count
+            FROM saved_words
+            WHERE user_id = %s
+        """, (user_id,))
+        total_words = cur.fetchone()['count'] or 0
+        
+        cur.close()
+        conn.close()
+        
+        app.logger.info(f"Progress funnel for user {user_id}: Stage1={stage1_count}, Stage2={stage2_count}, Stage3={stage3_count}, Stage4={stage4_count}")
+        
+        return jsonify({
+            "stage1_count": stage1_count,
+            "stage2_count": stage2_count,
+            "stage3_count": stage3_count,
+            "stage4_count": stage4_count,
+            "total_words": total_words
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting progress funnel: {str(e)}")
+        return jsonify({"error": f"Failed to get progress funnel: {str(e)}"}), 500
+
+@app.route('/review_activity', methods=['GET'])
+def get_review_activity():
+    """Get review activity dates for calendar display"""
+    try:
+        user_id = request.args.get('user_id')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+        if not start_date or not end_date:
+            return jsonify({"error": "start_date and end_date parameters are required"}), 400
+        
+        # Parse ISO date strings
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError as e:
+            return jsonify({"error": f"Invalid date format: {e}"}), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Get unique dates where user had reviews
+        cur.execute("""
+            SELECT DISTINCT DATE(reviewed_at) as review_date
+            FROM reviews 
+            WHERE user_id = %s 
+            AND reviewed_at >= %s 
+            AND reviewed_at <= %s
+            ORDER BY review_date ASC
+        """, (user_id, start_dt, end_dt))
+        
+        review_dates = []
+        for row in cur.fetchall():
+            # Format as YYYY-MM-DD string
+            review_dates.append(row['review_date'].strftime('%Y-%m-%d'))
+        
+        cur.close()
+        conn.close()
+        
+        app.logger.info(f"Found {len(review_dates)} review dates for user {user_id} between {start_date} and {end_date}")
+        
+        return jsonify({
+            "user_id": user_id,
+            "review_dates": review_dates,
+            "start_date": start_date,
+            "end_date": end_date
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting review activity: {str(e)}")
+        return jsonify({"error": f"Failed to get review activity: {str(e)}"}), 500
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
