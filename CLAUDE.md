@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# principles:
+1. always choose the most simple implementation
+2. when writing tests, no skipping
+3. if a change involves db; make sure you take down the db valumn on docker and restart the service
+4. if a change involves backend, always add proper integration tests and run them
+5. if a change involves frontend, alwyas make sure frontend/ios app compiles properly
+
+
 ## Project Overview
 This is an AI-powered dictionary app with spaced repetition learning. The system consists of a Flask backend with PostgreSQL database and a SwiftUI iOS frontend.
 
@@ -15,8 +23,6 @@ This is an AI-powered dictionary app with spaced repetition learning. The system
   - `definitions`: Word definitions with multilingual support  
   - `saved_words`: User's vocabulary list
   - `reviews`: Spaced repetition history
-- **Spaced Repetition**: Fibonacci-based algorithm (`[1,1,2,3,5,8,13,21,34,55,89,144]` days)
-- **Key Features**: On-demand calculation of review intervals from history, no stored state
 
 ### iOS Frontend (SwiftUI)
 - **Location**: `/ios/dogetionary/`

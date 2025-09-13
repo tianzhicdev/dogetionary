@@ -624,10 +624,15 @@ def calculate_retention(review_history, target_date, created_at):
 
 def get_next_review_date_new(review_history, created_at):
     """
-    Calculate when retention drops below 25% threshold using new algorithm.
+    Calculate when retention drops below 25% threshold using cumulative decay algorithm 
+    that matches calculate_retention function.
     """
     import math
     from datetime import datetime, timedelta
+    
+    # Ensure created_at is datetime
+    if not hasattr(created_at, 'hour'):
+        created_at = datetime.combine(created_at, datetime.min.time())
     
     # Start from last review or creation date
     if review_history:
@@ -635,28 +640,43 @@ def get_next_review_date_new(review_history, created_at):
         last_review = sorted_reviews[-1]
         start_date = last_review['reviewed_at']
         
-        # Find last failure for decay rate calculation
+        # Ensure start_date is datetime
+        if not hasattr(start_date, 'hour'):
+            start_date = datetime.combine(start_date, datetime.min.time())
+            
+        # Find last failure for decay rate reference point
         last_failure_date = created_at
         for review in sorted_reviews:
+            review_date = review['reviewed_at']
+            if not hasattr(review_date, 'hour'):
+                review_date = datetime.combine(review_date, datetime.min.time())
             if not review['response']:
-                last_failure_date = review['reviewed_at']
-        
-        days_since_failure = (start_date - last_failure_date).days
+                last_failure_date = review_date
     else:
         start_date = created_at
-        days_since_failure = 0
+        last_failure_date = created_at
     
-    # Calculate when retention drops to 25%
-    # retention = e^(-rate * days) = 0.25
-    # days = -ln(0.25) / rate
-    rate = get_decay_rate(days_since_failure)
-    days_until_threshold = -math.log(0.25) / rate if rate > 0 else 365  # Cap at 1 year
+    # Simulate retention decay day by day using same logic as calculate_retention
+    current_date = start_date
+    retention = 1.0  # Start at 100% after last review/creation
+    max_days = 730  # Safety cap at 2 years
     
-    # Ensure minimum 1 day interval
-    days_until_threshold = max(1, int(days_until_threshold))
+    for day in range(1, max_days + 1):
+        current_date = start_date + timedelta(days=day)
+        
+        # Calculate days since last failure for decay rate determination
+        days_since_failure = (current_date - last_failure_date).days
+        daily_decay_rate = get_decay_rate(days_since_failure)
+        
+        # Apply daily decay: retention = retention * e^(-daily_rate)
+        retention = retention * math.exp(-daily_decay_rate)
+        
+        # Check if retention dropped below 25%
+        if retention <= 0.25:
+            return current_date
     
-    next_date = start_date + timedelta(days=days_until_threshold)
-    return next_date
+    # If retention never drops below 25% in 2 years, return max date
+    return start_date + timedelta(days=max_days)
 
 def get_due_words_count(user_id, conn=None):
     """
