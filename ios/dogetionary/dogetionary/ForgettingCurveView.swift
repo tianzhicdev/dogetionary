@@ -27,6 +27,12 @@ private func parseDateString(_ dateString: String) -> Date? {
            microsecondFormatter.date(from: dateString)
 }
 
+private func formatShortDate(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "M/d"
+    return formatter.string(from: date)
+}
+
 struct ForgettingCurveView: View {
     let reviewHistory: [ReviewHistoryEntry]
     let nextReviewDate: String?
@@ -97,13 +103,13 @@ struct ForgettingCurveView: View {
                         .lineStyle(StrokeStyle(lineWidth: 2))
                     }
                     
-                    // Projection curve (dotted line to next review)
+                    // Projection curve (grey dotted line to next review)
                     ForEach(curveData.filter { $0.isProjection }) { point in
                         LineMark(
                             x: .value("Date", point.date),
                             y: .value("Retention", point.retention)
                         )
-                        .foregroundStyle(Color.blue.opacity(0.7))
+                        .foregroundStyle(Color.gray)
                         .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
                     }
                     
@@ -195,12 +201,10 @@ struct ForgettingCurveView: View {
             
             // Legend
             HStack(spacing: 12) {
-                LegendItem(color: .blue, text: "Historical")
-                LegendItem(color: .blue.opacity(0.7), text: "Projection")
                 LegendItem(color: .blue, shape: .diamond, text: "Created")
                 LegendItem(color: .green, text: "Correct")
                 LegendItem(color: .red, text: "Incorrect")
-                LegendItem(color: .orange, shape: .diamond, text: "Next Review (25%)")
+                LegendItem(color: .orange, shape: .diamond, text: "Next Review")
             }
             .font(.caption)
             
@@ -217,7 +221,7 @@ struct ForgettingCurveView: View {
             ReviewTimelineView(reviewHistory: reviewHistory, createdAt: createdAt)
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(UIColor.systemGray6))
         .cornerRadius(12)
         .onAppear {
             loadForgettingCurve()
@@ -236,7 +240,7 @@ struct ForgettingCurveView: View {
                 switch result {
                 case .success(let response):
                     // Convert backend response to CurveDataPoint array
-                    self.curveData = response.forgetting_curve.map { point in
+                    curveData = response.forgetting_curve.map { point in
                         CurveDataPoint(
                             date: parseDateString(point.date) ?? Date(),
                             retention: point.retention, // Backend already returns percentage (0-100)
@@ -244,12 +248,12 @@ struct ForgettingCurveView: View {
                         )
                     }
                     // Store review markers, all markers, and next review date from backend
-                    self.reviewMarkers = response.review_markers ?? []
-                    self.allMarkers = response.all_markers ?? []
-                    self.backendNextReviewDate = response.next_review_date
+                    reviewMarkers = response.review_markers ?? []
+                    allMarkers = response.all_markers ?? []
+                    backendNextReviewDate = response.next_review_date
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    self.curveData = [] // Fallback to empty curve
+                    errorMessage = error.localizedDescription
+                    curveData = [] // Fallback to empty curve
                 }
             }
         }
@@ -369,6 +373,7 @@ struct ForgettingCurveView: View {
             }
         }
     }
+    
 }
 
 struct CurveDataPoint: Identifiable {
@@ -450,20 +455,26 @@ struct ReviewTimelineView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Learning Timeline")
+Text("Review History")
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
             
             HStack(spacing: 4) {
-                // Start marker (word creation)
+                // Start marker (word creation with date)
                 VStack(spacing: 2) {
                     Image(systemName: "plus.circle.fill")
                         .font(.caption2)
                         .foregroundColor(.blue)
-                    Text("Saved")
-                        .font(.system(size: 8))
-                        .foregroundColor(.secondary)
+                    if let creationDate = parseDateString(createdAt) {
+                        Text(formatShortDate(creationDate))
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Created")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 // Review markers
@@ -504,7 +515,7 @@ struct FallbackCurveView: View {
             
             // Simple bar representation of reviews
             HStack(spacing: 4) {
-                ForEach(Array(reviewHistory.enumerated()), id: \.offset) { index, review in
+                ForEach(Array(reviewHistory.enumerated()), id: \.0) { index, review in
                     VStack {
                         Rectangle()
                             .fill(review.response ? Color.green : Color.red)
@@ -528,7 +539,7 @@ struct FallbackCurveView: View {
         }
         .padding()
         .frame(height: 200)
-        .background(Color(.systemGray5))
+        .background(Color(UIColor.systemGray5))
         .cornerRadius(8)
     }
     
