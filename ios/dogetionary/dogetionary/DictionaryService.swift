@@ -1021,6 +1021,25 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
+    func getForgettingCurve(wordId: Int, completion: @escaping (Result<ForgettingCurveResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/words/\(wordId)/forgetting-curve?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
+            logger.error("Invalid URL for forgetting curve endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+        
+        logger.info("Fetching forgetting curve for word ID: \(wordId), user: \(userID)")
+        
+        performNetworkRequest(
+            url: url,
+            method: "GET",
+            body: nil,
+            responseType: ForgettingCurveResponse.self,
+            completion: completion
+        )
+    }
+    
     func generateIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/generate-illustration") else {
             completion(.failure(DictionaryError.invalidURL))

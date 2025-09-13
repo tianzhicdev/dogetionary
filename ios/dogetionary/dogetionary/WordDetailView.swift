@@ -180,15 +180,21 @@ struct StatsTabView: View {
                     }
                     .padding()
                 } else if let details = wordDetails {
-                    WordInfoSection(details: details)
-                    
+                    // Only show Forgetting Curve visualization
                     if !details.review_history.isEmpty {
-                        ReviewHistorySection(reviewHistory: details.review_history)
+                        ForgettingCurveView(
+                            reviewHistory: details.review_history,
+                            nextReviewDate: details.next_review_date,
+                            createdAt: details.created_at,
+                            wordId: details.id
+                        )
                     } else {
                         EmptyHistorySection()
                     }
                     
-                    ReviewStatsSection(details: details)
+                    if !details.review_history.isEmpty {
+                        ReviewHistorySection(reviewHistory: details.review_history)
+                    }
                 }
             }
             .padding()

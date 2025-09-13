@@ -312,3 +312,30 @@ struct DueCountsResponse: Codable {
     let overdue_count: Int
     let total_count: Int
 }
+
+// Forgetting Curve Models
+struct ForgettingCurveResponse: Codable {
+    let word_id: Int
+    let word: String
+    let created_at: String
+    let forgetting_curve: [CurveDataPointAPI]
+    let next_review_date: String?
+    let review_markers: [ReviewMarker]?
+    let all_markers: [AllMarker]?
+}
+
+struct CurveDataPointAPI: Codable {
+    let date: String
+    let retention: Double
+}
+
+struct ReviewMarker: Codable {
+    let date: String
+    let success: Bool
+}
+
+struct AllMarker: Codable {
+    let date: String
+    let type: String // "creation", "review", "next_review"
+    let success: Bool?
+}

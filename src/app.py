@@ -8,7 +8,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import uuid
 from datetime import datetime, timedelta
-from review import get_next_review_datetime
 import io
 import math
 import threading
@@ -100,7 +99,7 @@ def calculate_spaced_repetition(reviews_data, current_review_time=None):
     DEPRECATED: Simple calculation for backward compatibility - SQL handles the logic now
     
     This function is deprecated and should not be used for new code.
-    Use get_next_review_datetime from review.py instead.
+    Use get_next_review_date_new from app.py instead.
     This function is maintained only for get_word_review_data compatibility.
     """
     if not reviews_data:
@@ -476,6 +475,189 @@ audio_worker_thread.start()
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def get_decay_rate(days_since_start_or_failure):
+    """
+    Calculate daily decay rate based on time elapsed since start or last failure.
+    
+    Decay schedule:
+    - 0-7 days: 12.5% per day
+    - 7-14 days: 6.25% per day  
+    - 14-28 days: 3.125% per day
+    - 28-56 days: 1.5625% per day
+    - 56-112 days: 0.78125% per day
+    - Continue halving every period doubling...
+    """
+    if days_since_start_or_failure < 7:
+        return 0.125  # 12.5%
+    elif days_since_start_or_failure < 14:
+        return 0.0625  # 6.25%
+    elif days_since_start_or_failure < 28:
+        return 0.03125  # 3.125%
+    elif days_since_start_or_failure < 56:
+        return 0.015625  # 1.5625%
+    elif days_since_start_or_failure < 112:
+        return 0.0078125  # 0.78125%
+    else:
+        # Continue halving for longer periods
+        period = 112
+        rate = 0.0078125
+        while days_since_start_or_failure >= period * 2:
+            period *= 2
+            rate /= 2
+        return rate
+
+def calculate_retention(review_history, target_date, created_at):
+    """
+    Calculate memory retention at a specific date using the new decay algorithm.
+    
+    Rules:
+    - Every review sets retention to 100% regardless of success/failure
+    - Failure resets decay rate to 12.5% per day (restart from week 1)
+    - Success continues current decay schedule
+    - Retention follows exponential decay: retention = e^(-rate * days)
+    """
+    import math
+    from datetime import datetime, timedelta
+    
+    # Ensure we have datetime objects - convert if needed
+    if not hasattr(target_date, 'hour'):
+        target_date = datetime.combine(target_date, datetime.max.time())
+    if not hasattr(created_at, 'hour'):
+        created_at = datetime.combine(created_at, datetime.min.time())
+    
+    # If target date is before word creation, no retention
+    if target_date < created_at:
+        return 0.0
+    
+    # If target date is on the same day as creation, start at 100%
+    if target_date.date() == created_at.date():
+        return 1.0
+    
+    # If no reviews yet, start at 100% and decay from creation date
+    if not review_history:
+        days_since_creation = (target_date - created_at).days
+        
+        if days_since_creation == 0:
+            return 1.0  # 100% on creation day
+        
+        # Calculate retention by applying decay cumulatively day by day
+        retention = 1.0  # Start at 100% on creation day
+        
+        for day in range(1, days_since_creation + 1):
+            current_day_date = created_at + timedelta(days=day)
+            # Calculate days since creation for this day's decay rate
+            days_since_start = (current_day_date - created_at).days
+            daily_decay_rate = get_decay_rate(days_since_start)
+            
+            # Apply daily decay: retention = retention * e^(-daily_rate)
+            retention = retention * math.exp(-daily_decay_rate)
+            
+        return max(0.0, min(1.0, retention))
+    
+    # Sort reviews by date
+    sorted_reviews = sorted(review_history, key=lambda x: x['reviewed_at'])
+    
+    # Find the most recent review before or at target_date
+    last_review = None
+    last_failure_date = created_at  # Track when decay rate should reset
+    
+    for review in sorted_reviews:
+        review_date = review['reviewed_at']
+        
+        # Ensure review_date is datetime for comparison
+        if not hasattr(review_date, 'hour'):
+            review_date = datetime.combine(review_date, datetime.min.time())
+            
+        if review_date <= target_date:
+            last_review = review
+            last_review['reviewed_at'] = review_date  # Update with datetime
+            # If this review was a failure, reset the decay rate reference point
+            if not review['response']:
+                last_failure_date = review_date
+        else:
+            break
+    
+    # Calculate retention from the most recent review or creation
+    if last_review:
+        # Start from last review (always 100% immediately after any review)
+        last_review_date = last_review['reviewed_at']
+        days_since_review = (target_date - last_review_date).days
+        
+        # If same day as review, return 100%
+        if target_date.date() == last_review_date.date():
+            return 1.0  
+        
+        # Calculate retention by applying decay cumulatively day by day
+        retention = 1.0  # Start at 100% after review
+        
+        for day in range(1, days_since_review + 1):
+            current_day_date = last_review_date + timedelta(days=day)
+            # Calculate days since last failure for this day's decay rate
+            days_since_failure = (current_day_date - last_failure_date).days
+            daily_decay_rate = get_decay_rate(days_since_failure)
+            
+            # Apply daily decay: retention = retention * e^(-daily_rate)
+            retention = retention * math.exp(-daily_decay_rate)
+            
+        return max(0.0, min(1.0, retention))
+    else:
+        # No reviews before target date, decay from creation
+        days_since_creation = (target_date - created_at).days
+        
+        # If same day as creation, start at 100%
+        if target_date.date() == created_at.date():
+            return 1.0
+        
+        # Calculate retention by applying decay cumulatively day by day
+        retention = 1.0  # Start at 100% on creation day
+        
+        for day in range(1, days_since_creation + 1):
+            current_day_date = created_at + timedelta(days=day)
+            # Calculate days since creation for this day's decay rate
+            days_since_start = (current_day_date - created_at).days
+            daily_decay_rate = get_decay_rate(days_since_start)
+            
+            # Apply daily decay: retention = retention * e^(-daily_rate)
+            retention = retention * math.exp(-daily_decay_rate)
+            
+        return max(0.0, min(1.0, retention))
+
+def get_next_review_date_new(review_history, created_at):
+    """
+    Calculate when retention drops below 25% threshold using new algorithm.
+    """
+    import math
+    from datetime import datetime, timedelta
+    
+    # Start from last review or creation date
+    if review_history:
+        sorted_reviews = sorted(review_history, key=lambda x: x['reviewed_at'])
+        last_review = sorted_reviews[-1]
+        start_date = last_review['reviewed_at']
+        
+        # Find last failure for decay rate calculation
+        last_failure_date = created_at
+        for review in sorted_reviews:
+            if not review['response']:
+                last_failure_date = review['reviewed_at']
+        
+        days_since_failure = (start_date - last_failure_date).days
+    else:
+        start_date = created_at
+        days_since_failure = 0
+    
+    # Calculate when retention drops to 25%
+    # retention = e^(-rate * days) = 0.25
+    # days = -ln(0.25) / rate
+    rate = get_decay_rate(days_since_failure)
+    days_until_threshold = -math.log(0.25) / rate if rate > 0 else 365  # Cap at 1 year
+    
+    # Ensure minimum 1 day interval
+    days_until_threshold = max(1, int(days_until_threshold))
+    
+    next_date = start_date + timedelta(days=days_until_threshold)
+    return next_date
+
 def get_due_words_count(user_id, conn=None):
     """
     Shared function to calculate words due for review today (including overdue).
@@ -730,7 +912,19 @@ def submit_review():
         # Record the current review time
         current_review_time = datetime.now()
         
-        # Get existing review data before inserting new review
+        # Get existing review data and word creation date
+        cur.execute("""
+            SELECT sw.created_at
+            FROM saved_words sw
+            WHERE sw.id = %s AND sw.user_id = %s
+        """, (word_id, user_id))
+        
+        word_data = cur.fetchone()
+        if not word_data:
+            return jsonify({"error": "Word not found"}), 404
+            
+        created_at = word_data['created_at']
+        
         cur.execute("""
             SELECT response, reviewed_at FROM reviews 
             WHERE user_id = %s AND word_id = %s 
@@ -739,18 +933,11 @@ def submit_review():
         
         existing_reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in cur.fetchall()]
         
-        # Convert boolean responses to numeric values (0.1 for false, 0.9 for true) for calculation
-        numeric_reviews = []
-        for review in existing_reviews:
-            numeric_score = 0.9 if review['response'] else 0.1
-            numeric_reviews.append((review['reviewed_at'], numeric_score))
+        # Add current review to history for next review calculation
+        all_reviews = existing_reviews + [{"response": response, "reviewed_at": current_review_time}]
         
-        # Add current review
-        current_numeric_score = 0.9 if response else 0.1
-        numeric_reviews.append((current_review_time, current_numeric_score))
-        
-        # Calculate next review date using review.py
-        next_review_date = get_next_review_datetime(numeric_reviews)
+        # Calculate next review date using new algorithm
+        next_review_date = get_next_review_date_new(all_reviews, created_at)
         
         # Insert the new review with calculated next_review_date
         cur.execute("""
@@ -761,11 +948,8 @@ def submit_review():
         conn.commit()
         
         # Calculate simple stats for response
-        review_count = len(numeric_reviews)
-        if len(numeric_reviews) >= 2:
-            interval_days = (next_review_date - current_review_time).days
-        else:
-            interval_days = 1
+        review_count = len(all_reviews)
+        interval_days = (next_review_date - current_review_time).days if next_review_date else 1
         
         conn.close()
         
@@ -1116,6 +1300,140 @@ def get_review_stats():
         app.logger.error(f"Error getting review stats: {str(e)}")
         return jsonify({"error": f"Failed to get review stats: {str(e)}"}), 500
 
+@app.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])
+def get_forgetting_curve(word_id):
+    """Get forgetting curve data for a specific word"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Get word details
+        cur.execute("""
+            SELECT id, word, learning_language, created_at
+            FROM saved_words 
+            WHERE id = %s AND user_id = %s
+        """, (word_id, user_id))
+        
+        word = cur.fetchone()
+        if not word:
+            return jsonify({"error": "Word not found"}), 404
+        
+        # Get review history
+        cur.execute("""
+            SELECT response, reviewed_at
+            FROM reviews
+            WHERE word_id = %s AND user_id = %s
+            ORDER BY reviewed_at ASC
+        """, (word_id, user_id))
+        
+        review_history = []
+        for review in cur.fetchall():
+            review_history.append({
+                "response": review['response'],
+                "reviewed_at": review['reviewed_at']
+            })
+        
+        cur.close()
+        conn.close()
+        
+        # Calculate curve data points
+        created_at = word['created_at']
+        
+        # Determine time range: from creation to last review (or 30 days if no reviews)
+        if review_history:
+            # End the curve at the last review date
+            end_date = max([r['reviewed_at'] for r in review_history])
+        else:
+            # For words with no reviews, show 30 days from creation
+            end_date = created_at + timedelta(days=30)
+        
+        # Generate curve points (one per day) - use datetime throughout
+        curve_points = []
+        
+        # Ensure we have datetime objects
+        current_datetime = created_at
+        end_datetime = end_date
+        
+        # Start from beginning of creation day
+        if hasattr(current_datetime, 'date'):
+            current_datetime = datetime.combine(current_datetime.date(), datetime.min.time())
+        else:
+            current_datetime = datetime.combine(current_datetime, datetime.min.time())
+            
+        # End at end of last review day
+        if hasattr(end_datetime, 'date'):
+            end_datetime = datetime.combine(end_datetime.date(), datetime.max.time())
+        else:
+            end_datetime = datetime.combine(end_datetime, datetime.max.time())
+        
+        # Generate points for each day
+        while current_datetime <= end_datetime:
+            # Use end of day for retention calculation (to include same-day reviews)
+            end_of_day = datetime.combine(current_datetime.date(), datetime.max.time())
+            retention = calculate_retention(review_history, end_of_day, created_at)
+            
+            curve_points.append({
+                "date": current_datetime.strftime('%Y-%m-%d'),  # Display as date string
+                "retention": retention * 100  # Convert to percentage
+            })
+            
+            # Move to next day (start of day)
+            current_datetime = datetime.combine((current_datetime + timedelta(days=1)).date(), datetime.min.time())
+        
+        # Calculate next review date
+        next_review_date = get_next_review_date_new(review_history, created_at)
+        
+        # Prepare all markers including creation and next review
+        all_markers = []
+        
+        # Add creation marker
+        all_markers.append({
+            "date": created_at.strftime('%Y-%m-%d'),
+            "type": "creation",
+            "success": None
+        })
+        
+        # Add review markers
+        for r in review_history:
+            all_markers.append({
+                "date": r['reviewed_at'].strftime('%Y-%m-%d'),
+                "type": "review",
+                "success": r['response']
+            })
+        
+        # Add next review marker if available
+        if next_review_date:
+            all_markers.append({
+                "date": next_review_date.strftime('%Y-%m-%d'),
+                "type": "next_review",
+                "success": None
+            })
+
+        return jsonify({
+            "word_id": word_id,
+            "word": word['word'],
+            "created_at": created_at.strftime('%Y-%m-%d'),
+            "forgetting_curve": curve_points,
+            "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
+            "review_markers": [
+                {
+                    "date": r['reviewed_at'].strftime('%Y-%m-%d'),
+                    "success": r['response']
+                }
+                for r in review_history
+            ],
+            "all_markers": all_markers
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting forgetting curve: {str(e)}")
+        return jsonify({"error": f"Failed to get forgetting curve: {str(e)}"}), 500
+
 @app.route('/words/<int:word_id>/details', methods=['GET'])
 def get_word_details(word_id):
     """Get detailed information about a saved word"""
@@ -1267,7 +1585,7 @@ def get_supported_languages():
 @app.route('/fix_next_review_dates', methods=['POST'])
 def fix_next_review_dates():
     """
-    Fix existing review records by calculating proper next_review_date using get_next_review_datetime
+    Fix existing review records by calculating proper next_review_date using get_next_review_date_new
     Reports statistics on correct vs incorrect records
     """
     try:
@@ -1314,6 +1632,19 @@ def fix_next_review_dates():
             stats['total_checked'] += 1
             
             try:
+                # Get word creation date
+                cur.execute("""
+                    SELECT created_at FROM saved_words 
+                    WHERE id = %s AND user_id = %s
+                """, (word_id, user_id))
+                
+                word_data = cur.fetchone()
+                if not word_data:
+                    app.logger.warning(f"Word {word_id} not found for user {user_id}")
+                    continue
+                
+                created_at = word_data['created_at']
+                
                 # Get all review history for this word/user combination
                 cur.execute("""
                     SELECT reviewed_at, response FROM reviews 
@@ -1323,14 +1654,14 @@ def fix_next_review_dates():
                 
                 review_history = cur.fetchall()
                 
-                # Convert to format expected by get_next_review_datetime
+                # Convert to format expected by get_next_review_date_new
                 numeric_reviews = []
                 for review in review_history:
                     numeric_score = 1 if review['response'] else 0
                     numeric_reviews.append((review['reviewed_at'], numeric_score))
                 
                 # Calculate correct next_review_date
-                calculated_next_review_date = get_next_review_datetime(numeric_reviews)
+                calculated_next_review_date = get_next_review_date_new(numeric_reviews, created_at)
                 
                 # Compare with current value (allowing for small time differences)
                 current_date = datetime.fromisoformat(current_next_review_date.replace('Z', '+00:00')) if isinstance(current_next_review_date, str) else current_next_review_date
