@@ -23,14 +23,22 @@ INITIAL_INTERVALS = [1, 6]  # First review: 1 day, Second review: 6 days
 
 # Forgetting Curve Configuration (easily tunable)
 # Decay rates for different time periods after last failure
-DECAY_RATE_WEEK_1 = 0.125    # 12.5% per day (days 0-6)
-DECAY_RATE_WEEK_2 = 0.0625   # 6.25% per day (days 7-13)
-DECAY_RATE_WEEK_3_4 = 0.03125  # 3.125% per day (days 14-27)
-DECAY_RATE_WEEK_5_8 = 0.015625  # 1.5625% per day (days 28-55)
-DECAY_RATE_WEEK_9_PLUS = 0.0078125  # 0.78125% per day (days 56+)
+# DECAY_RATE_WEEK_1 = 0.125    # 12.5% per day (days 0-6)
+# DECAY_RATE_WEEK_2 = 0.0625   # 6.25% per day (days 7-13)
+# DECAY_RATE_WEEK_3_4 = 0.03125  # 3.125% per day (days 14-27)
+# DECAY_RATE_WEEK_5_8 = 0.015625  # 1.5625% per day (days 28-55)
+# DECAY_RATE_WEEK_9_PLUS = 0.0078125  # 0.78125% per day (days 56+)
 
-# Retention threshold for scheduling next review
-RETENTION_THRESHOLD = 0.25  # Schedule next review when retention drops to 25%
+# # Retention threshold for scheduling next review
+# RETENTION_THRESHOLD = 0.25  # Schedule next review when retention drops to 25%
+
+DECAY_RATE_WEEK_1 = 0.45      # 45% per day
+DECAY_RATE_WEEK_2 = 0.18      # 22% per day
+DECAY_RATE_WEEK_3_4 = 0.09    # 11% per day
+DECAY_RATE_WEEK_5_8 = 0.035   # 5.5% per day
+DECAY_RATE_WEEK_9_PLUS = 0.015 # 2.5% per day
+
+RETENTION_THRESHOLD = 0.40  # 40% retention threshold
 
 # Supported languages
 SUPPORTED_LANGUAGES = {
