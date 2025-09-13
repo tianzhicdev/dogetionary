@@ -87,14 +87,24 @@ struct ForgettingCurveView: View {
             // Chart
             if #available(iOS 16.0, *) {
                 Chart {
-                    // Forgetting curve line
-                    ForEach(curveData) { point in
+                    // Historical forgetting curve (solid line)
+                    ForEach(curveData.filter { !$0.isProjection }) { point in
                         LineMark(
                             x: .value("Date", point.date),
                             y: .value("Retention", point.retention)
                         )
                         .foregroundStyle(Color.blue.gradient)
                         .lineStyle(StrokeStyle(lineWidth: 2))
+                    }
+                    
+                    // Projection curve (dotted line to next review)
+                    ForEach(curveData.filter { $0.isProjection }) { point in
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value("Retention", point.retention)
+                        )
+                        .foregroundStyle(Color.blue.opacity(0.7))
+                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
                     }
                     
                     // Creation markers
@@ -126,13 +136,12 @@ struct ForgettingCurveView: View {
                         }
                     }
                     
-                    // Next review markers
+                    // Next review markers - always at 25% retention
                     ForEach(allMarkers.filter { $0.type == "next_review" }, id: \.date) { marker in
-                        if let date = parseDateString(marker.date),
-                           let lastPoint = curveData.last {
+                        if let date = parseDateString(marker.date) {
                             PointMark(
                                 x: .value("Date", date),
-                                y: .value("Retention", lastPoint.retention)
+                                y: .value("Retention", 25.0)  // Always at 25% as requested
                             )
                             .foregroundStyle(Color.orange)
                             .symbol(.diamond)
@@ -185,11 +194,13 @@ struct ForgettingCurveView: View {
             }
             
             // Legend
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
+                LegendItem(color: .blue, text: "Historical")
+                LegendItem(color: .blue.opacity(0.7), text: "Projection")
                 LegendItem(color: .blue, shape: .diamond, text: "Created")
                 LegendItem(color: .green, text: "Correct")
                 LegendItem(color: .red, text: "Incorrect")
-                LegendItem(color: .orange, shape: .diamond, text: "Next Review")
+                LegendItem(color: .orange, shape: .diamond, text: "Next Review (25%)")
             }
             .font(.caption)
             
@@ -228,7 +239,8 @@ struct ForgettingCurveView: View {
                     self.curveData = response.forgetting_curve.map { point in
                         CurveDataPoint(
                             date: parseDateString(point.date) ?? Date(),
-                            retention: point.retention // Backend already returns percentage (0-100)
+                            retention: point.retention, // Backend already returns percentage (0-100)
+                            isProjection: point.is_projection ?? false
                         )
                     }
                     // Store review markers, all markers, and next review date from backend
@@ -363,6 +375,7 @@ struct CurveDataPoint: Identifiable {
     let id = UUID()
     let date: Date
     let retention: Double
+    let isProjection: Bool
 }
 
 struct LegendItem: View {
