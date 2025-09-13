@@ -327,6 +327,7 @@ struct ForgettingCurveResponse: Codable {
 struct CurveDataPointAPI: Codable {
     let date: String
     let retention: Double
+    let is_projection: Bool?
 }
 
 struct ReviewMarker: Codable {
