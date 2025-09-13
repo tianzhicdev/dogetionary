@@ -193,7 +193,7 @@ struct StatsTabView: View {
                     }
                     
                     if !details.review_history.isEmpty {
-                        ReviewHistorySection(reviewHistory: details.review_history)
+                        ReviewHistorySection(reviewHistory: details.review_history, createdAt: details.created_at)
                     }
                 }
             }
@@ -248,12 +248,43 @@ struct WordInfoSection: View {
 
 struct ReviewHistorySection: View {
     let reviewHistory: [ReviewHistoryEntry]
+    let createdAt: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: "Review History")
             
             LazyVStack(spacing: 8) {
+                // Show creation as the first entry
+                HStack(spacing: 12) {
+                    // Creation marker
+                    Text("📝")
+                        .font(.caption)
+                        .frame(width: 20)
+                    
+                    // Status icon
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.caption)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Word Created")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                        
+                        Text(formatDate(createdAt))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(8)
+                
+                // Show review history
                 ForEach(Array(reviewHistory.enumerated()), id: \.offset) { index, entry in
                     ReviewHistoryRow(
                         entry: entry,
@@ -262,6 +293,36 @@ struct ReviewHistorySection: View {
                 }
             }
         }
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        // Parse the date string
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        
+        // Try multiple formats
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd"
+        ]
+        
+        var date: Date?
+        for format in formats {
+            formatter.dateFormat = format
+            if let parsedDate = formatter.date(from: dateString) {
+                date = parsedDate
+                break
+            }
+        }
+        
+        guard let date = date else { return dateString }
+        
+        // Format for display
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .medium
+        displayFormatter.timeStyle = .short
+        return displayFormatter.string(from: date)
     }
 }
 
