@@ -218,7 +218,7 @@ struct ForgettingCurveView: View {
             }
             
             // Review timeline (simplified)
-            ReviewTimelineView(reviewHistory: reviewHistory, createdAt: createdAt)
+//            ReviewTimelineView(reviewHistory: reviewHistory, createdAt: createdAt)
         }
         .padding()
         .background(Color(UIColor.systemGray6))
