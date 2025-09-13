@@ -34,7 +34,6 @@ struct SavedWordsView: View {
                     Text("Words")
                 }
             }
-            .navigationTitle("Saved Words")
             .onAppear {
                 Task {
                     await loadSavedWords()

@@ -8,12 +8,33 @@
 DELETE FROM reviews WHERE user_id = '5E0DAFB6-756C-463E-8061-F88DEAC2E20B';
 DELETE FROM saved_words WHERE user_id = '5E0DAFB6-756C-463E-8061-F88DEAC2E20B';
 
--- Ensure user preferences exist
-INSERT INTO user_preferences (user_id, learning_language, native_language)
-VALUES ('5E0DAFB6-756C-463E-8061-F88DEAC2E20B', 'en', 'zh')
+-- Create multiple demo users with AI-generated profiles for leaderboard testing
+INSERT INTO user_preferences (user_id, learning_language, native_language, user_name, user_motto) VALUES
+-- Demo User 1 (highest scorer)
+('5E0DAFB6-756C-463E-8061-F88DEAC2E20B', 'en', 'zh', 'WordMaster', 'Every mistake is a lesson learned!'),
+-- Demo User 2 (second place)  
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'es', 'en', 'LanguageExplorer', 'Growing stronger with every word!'),
+-- Demo User 3 (third place)
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'fr', 'en', 'CuriousLearner', 'Adventure awaits in every conversation!'),
+-- Demo User 4
+('A1B2C3D4-5678-90AB-CDEF-123456789003', 'de', 'en', 'StudyBuddy', 'Practice makes progress!'),
+-- Demo User 5
+('A1B2C3D4-5678-90AB-CDEF-123456789004', 'it', 'en', 'WordSeeker', 'Learning one word at a time!'),
+-- Demo User 6
+('A1B2C3D4-5678-90AB-CDEF-123456789005', 'pt', 'en', 'BraveStudent', 'Courage to learn something new!'),
+-- Demo User 7
+('A1B2C3D4-5678-90AB-CDEF-123456789006', 'ja', 'en', 'KnowledgeHunter', 'Every day brings new discoveries!'),
+-- Demo User 8
+('A1B2C3D4-5678-90AB-CDEF-123456789007', 'ko', 'en', 'WisdomSeeker', 'Building bridges through words!'),
+-- Demo User 9
+('A1B2C3D4-5678-90AB-CDEF-123456789008', 'ru', 'en', 'ProgressMaker', 'Small steps lead to big victories!'),
+-- Demo User 10 (lowest scorer for demonstration)
+('A1B2C3D4-5678-90AB-CDEF-123456789009', 'ar', 'en', 'NewBeginning', 'The journey of a thousand miles starts here!')
 ON CONFLICT (user_id) DO UPDATE SET
     learning_language = EXCLUDED.learning_language,
-    native_language = EXCLUDED.native_language;
+    native_language = EXCLUDED.native_language,
+    user_name = EXCLUDED.user_name,
+    user_motto = EXCLUDED.user_motto;
 
 -- Add saved words with realistic creation dates (last 30 days)
 INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
@@ -115,15 +136,187 @@ SELECT '5E0DAFB6-756C-463E-8061-F88DEAC2E20B', id, false, NOW() - INTERVAL '4 da
 INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
 SELECT '5E0DAFB6-756C-463E-8061-F88DEAC2E20B', id, true, NOW() - INTERVAL '4 days', NOW() + INTERVAL '2 days' FROM saved_words WHERE word = 'adventure' AND user_id = '5E0DAFB6-756C-463E-8061-F88DEAC2E20B';
 
--- Print summary
+-- Demo User 2: LanguageExplorer (second highest - Spanish learner, 95 reviews)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'hola', 'es', NOW() - INTERVAL '20 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'gracias', 'es', NOW() - INTERVAL '18 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'amor', 'es', NOW() - INTERVAL '16 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'familia', 'es', NOW() - INTERVAL '14 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'tiempo', 'es', NOW() - INTERVAL '12 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'hermoso', 'es', NOW() - INTERVAL '10 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'aventura', 'es', NOW() - INTERVAL '8 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'esperanza', 'es', NOW() - INTERVAL '6 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'libertad', 'es', NOW() - INTERVAL '4 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789001', 'felicidad', 'es', NOW() - INTERVAL '2 days');
+
+-- Add multiple reviews for User 2 to get ~95 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789001', sw.id, 
+       CASE WHEN (i % 3) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '19 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '1 day' 
+FROM saved_words sw, generate_series(1, 95) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789001' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 3: CuriousLearner (third place - French learner, 78 reviews)  
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'bonjour', 'fr', NOW() - INTERVAL '15 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'merci', 'fr', NOW() - INTERVAL '13 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'amour', 'fr', NOW() - INTERVAL '11 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'famille', 'fr', NOW() - INTERVAL '9 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'temps', 'fr', NOW() - INTERVAL '7 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'beau', 'fr', NOW() - INTERVAL '5 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'voyage', 'fr', NOW() - INTERVAL '3 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789002', 'espoir', 'fr', NOW() - INTERVAL '1 day');
+
+-- Add reviews for User 3 to get ~78 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789002', sw.id, 
+       CASE WHEN (i % 4) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '14 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '2 days' 
+FROM saved_words sw, generate_series(1, 78) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789002' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 4: StudyBuddy (German learner, 62 reviews)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789003', 'hallo', 'de', NOW() - INTERVAL '12 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789003', 'danke', 'de', NOW() - INTERVAL '10 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789003', 'liebe', 'de', NOW() - INTERVAL '8 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789003', 'familie', 'de', NOW() - INTERVAL '6 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789003', 'zeit', 'de', NOW() - INTERVAL '4 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789003', 'schön', 'de', NOW() - INTERVAL '2 days');
+
+-- Add reviews for User 4 to get ~62 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789003', sw.id, 
+       CASE WHEN (i % 3) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '11 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '3 days' 
+FROM saved_words sw, generate_series(1, 62) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789003' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 5: WordSeeker (Italian learner, 45 reviews)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789004', 'ciao', 'it', NOW() - INTERVAL '10 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789004', 'grazie', 'it', NOW() - INTERVAL '8 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789004', 'amore', 'it', NOW() - INTERVAL '6 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789004', 'famiglia', 'it', NOW() - INTERVAL '4 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789004', 'tempo', 'it', NOW() - INTERVAL '2 days');
+
+-- Add reviews for User 5 to get ~45 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789004', sw.id, 
+       CASE WHEN (i % 4) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '9 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '4 days' 
+FROM saved_words sw, generate_series(1, 45) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789004' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 6: BraveStudent (Portuguese learner, 33 reviews)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789005', 'olá', 'pt', NOW() - INTERVAL '8 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789005', 'obrigado', 'pt', NOW() - INTERVAL '6 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789005', 'amor', 'pt', NOW() - INTERVAL '4 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789005', 'família', 'pt', NOW() - INTERVAL '2 days');
+
+-- Add reviews for User 6 to get ~33 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789005', sw.id, 
+       CASE WHEN (i % 3) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '7 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '5 days' 
+FROM saved_words sw, generate_series(1, 33) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789005' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 7: KnowledgeHunter (Japanese learner, 25 reviews)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789006', 'こんにちは', 'ja', NOW() - INTERVAL '6 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789006', 'ありがとう', 'ja', NOW() - INTERVAL '4 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789006', '愛', 'ja', NOW() - INTERVAL '2 days');
+
+-- Add reviews for User 7 to get ~25 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789006', sw.id, 
+       CASE WHEN (i % 5) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '5 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '6 days' 
+FROM saved_words sw, generate_series(1, 25) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789006' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 8: WisdomSeeker (Korean learner, 18 reviews)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789007', '안녕하세요', 'ko', NOW() - INTERVAL '5 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789007', '감사합니다', 'ko', NOW() - INTERVAL '3 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789007', '사랑', 'ko', NOW() - INTERVAL '1 day');
+
+-- Add reviews for User 8 to get ~18 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789007', sw.id, 
+       CASE WHEN (i % 4) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '4 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '7 days' 
+FROM saved_words sw, generate_series(1, 18) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789007' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 9: ProgressMaker (Russian learner, 12 reviews)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789008', 'привет', 'ru', NOW() - INTERVAL '4 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789008', 'спасибо', 'ru', NOW() - INTERVAL '2 days');
+
+-- Add reviews for User 9 to get ~12 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789008', sw.id, 
+       CASE WHEN (i % 3) = 0 THEN false ELSE true END,
+       NOW() - INTERVAL '3 days' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '8 days' 
+FROM saved_words sw, generate_series(1, 12) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789008' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Demo User 10: NewBeginning (Arabic learner, 5 reviews - just started)
+INSERT INTO saved_words (user_id, word, learning_language, created_at) VALUES
+('A1B2C3D4-5678-90AB-CDEF-123456789009', 'مرحبا', 'ar', NOW() - INTERVAL '2 days'),
+('A1B2C3D4-5678-90AB-CDEF-123456789009', 'شكرا', 'ar', NOW() - INTERVAL '1 day');
+
+-- Add minimal reviews for User 10 to get ~5 total reviews
+INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date) 
+SELECT 'A1B2C3D4-5678-90AB-CDEF-123456789009', sw.id, 
+       true,
+       NOW() - INTERVAL '1 day' + (i::text || ' hours')::interval, 
+       NOW() + INTERVAL '9 days' 
+FROM saved_words sw, generate_series(1, 5) as i 
+WHERE sw.user_id = 'A1B2C3D4-5678-90AB-CDEF-123456789009' 
+  AND sw.id = (SELECT MIN(id) FROM saved_words WHERE user_id = sw.user_id);
+
+-- Print summary for all demo users (leaderboard order)
 SELECT 
-    'DEMO DATA SUMMARY' as info,
-    (SELECT COUNT(*) FROM saved_words WHERE user_id = '5E0DAFB6-756C-463E-8061-F88DEAC2E20B') as saved_words_count,
-    (SELECT COUNT(*) FROM reviews WHERE user_id = '5E0DAFB6-756C-463E-8061-F88DEAC2E20B') as total_reviews,
-    (SELECT COUNT(DISTINCT sw.id) 
-     FROM saved_words sw 
-     JOIN reviews r ON sw.id = r.word_id 
-     WHERE sw.user_id = '5E0DAFB6-756C-463E-8061-F88DEAC2E20B' 
-     AND r.next_review_date <= NOW()
-     AND r.id = (SELECT MAX(id) FROM reviews r2 WHERE r2.word_id = sw.id)
-    ) as words_due_for_review;
+    up.user_name,
+    up.learning_language,
+    COUNT(DISTINCT sw.id) as saved_words,
+    COUNT(r.id) as total_reviews,
+    COUNT(CASE WHEN r.response = true THEN 1 END) as successful_reviews
+FROM user_preferences up
+LEFT JOIN saved_words sw ON up.user_id = sw.user_id
+LEFT JOIN reviews r ON sw.id = r.word_id
+WHERE up.user_id IN (
+    '5E0DAFB6-756C-463E-8061-F88DEAC2E20B',
+    'A1B2C3D4-5678-90AB-CDEF-123456789001',
+    'A1B2C3D4-5678-90AB-CDEF-123456789002',
+    'A1B2C3D4-5678-90AB-CDEF-123456789003',
+    'A1B2C3D4-5678-90AB-CDEF-123456789004',
+    'A1B2C3D4-5678-90AB-CDEF-123456789005',
+    'A1B2C3D4-5678-90AB-CDEF-123456789006',
+    'A1B2C3D4-5678-90AB-CDEF-123456789007',
+    'A1B2C3D4-5678-90AB-CDEF-123456789008',
+    'A1B2C3D4-5678-90AB-CDEF-123456789009'
+)
+GROUP BY up.user_id, up.user_name, up.learning_language
+ORDER BY total_reviews DESC;

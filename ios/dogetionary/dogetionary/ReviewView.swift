@@ -243,6 +243,22 @@ struct ReviewSessionView: View {
     @State private var isLoadingDefinitions = false
     @State private var hasAnswered = false
     @State private var userResponse: Bool? = nil
+    @State private var exampleAudioData: Data?
+    @State private var isLoadingExampleAudio = false
+    
+    // Computed property to get the first available example
+    private var firstExample: String? {
+        for definition in wordDefinitions {
+            for meaning in definition.meanings {
+                for defDetail in meaning.definitions {
+                    if let example = defDetail.example, !example.isEmpty {
+                        return example
+                    }
+                }
+            }
+        }
+        return nil
+    }
     
     var body: some View {
         VStack(spacing: 24) {
@@ -263,31 +279,64 @@ struct ReviewSessionView: View {
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                     
-                    // Audio play button
-                    if !wordDefinitions.isEmpty, let audioData = wordDefinitions.first?.audioData {
-                        Button(action: {
-                            if audioPlayer.isPlaying {
-                                audioPlayer.stopAudio()
-                            } else {
-                                audioPlayer.playAudio(from: audioData)
+                    // Audio controls
+                    VStack(spacing: 8) {
+                        // Pronunciation audio button
+                        if !wordDefinitions.isEmpty, let audioData = wordDefinitions.first?.audioData {
+                            Button(action: {
+                                if audioPlayer.isPlaying {
+                                    audioPlayer.stopAudio()
+                                } else {
+                                    audioPlayer.playAudio(from: audioData)
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                                        .font(.title2)
+                                    Text("Pronunciation")
+                                        .font(.subheadline)
+                                }
+                                .foregroundColor(.blue)
                             }
-                        }) {
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            // Example audio button (if example is available)
+                            if let example = firstExample {
+                                Button(action: {
+                                    playExampleAudio(example)
+                                }) {
+                                    HStack {
+                                        if isLoadingExampleAudio {
+                                            ProgressView()
+                                                .scaleEffect(0.8)
+                                        } else {
+                                            Image(systemName: "speaker.wave.2")
+                                                .font(.title2)
+                                        }
+                                        Text("Example")
+                                            .font(.subheadline)
+                                    }
+                                    .foregroundColor(.green)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .disabled(isLoadingExampleAudio)
+                                
+                                // Show the example text
+                                Text("\"" + example + "\"")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 8)
+                            }
+                        } else if isLoadingAudio && wordDefinitions.isEmpty {
                             HStack {
-                                Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                                    .font(.title2)
-                                Text("Pronunciation")
-                                    .font(.subheadline)
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Loading audio...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            .foregroundColor(.blue)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    } else if isLoadingAudio && wordDefinitions.isEmpty {
-                        HStack {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                            Text("Loading audio...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
                         }
                     }
                 }
@@ -409,6 +458,8 @@ struct ReviewSessionView: View {
             hasAnswered = false
             userResponse = nil
             isLoadingDefinitions = false
+            exampleAudioData = nil
+            isLoadingExampleAudio = false
             loadWordAudio()
         }
     }
@@ -433,30 +484,83 @@ struct ReviewSessionView: View {
 //    }
     
     private func loadWordAudio() {
-        // Only show loading if we don't already have audio for this word
+        // Only show loading if we don't already have data for this word
         if wordDefinitions.isEmpty || wordDefinitions.first?.word != currentWord.word {
             isLoadingAudio = true
             
-            // Get user's learning language for audio
-            let learningLanguage = UserManager.shared.learningLanguage
-            
-            DictionaryService.shared.fetchAudioForText(currentWord.word, language: learningLanguage) { audioData in
-                DispatchQueue.main.async {
-                    self.isLoadingAudio = false
-                    
-                    if let audioData = audioData {
-                        // Create a simple definition with just the word and audio data
-                        let definition = Definition(
-                            id: UUID(),
-                            word: self.currentWord.word,
-                            phonetic: nil,
-                            translations: [],
-                            meanings: [],
-                            audioData: audioData,
-                            hasWordAudio: true,
-                            exampleAudioAvailability: [:]
-                        )
-                        self.wordDefinitions = [definition]
+            // Load both audio and definitions to get examples
+            loadWordDefinitionsWithAudio()
+        }
+    }
+    
+    private func loadWordDefinitionsWithAudio() {
+        let learningLanguage = UserManager.shared.learningLanguage
+        
+        // Load definitions first to get examples
+        DictionaryService.shared.searchWord(currentWord.word) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let definitions):
+                    if let definition = definitions.first {
+                        // Load audio for the word
+                        DictionaryService.shared.fetchAudioForText(self.currentWord.word, language: learningLanguage) { audioData in
+                            DispatchQueue.main.async {
+                                self.isLoadingAudio = false
+                                
+                                // Create definition with both full data and audio
+                                let updatedDefinition = Definition(
+                                    id: definition.id,
+                                    word: definition.word,
+                                    phonetic: definition.phonetic,
+                                    translations: definition.translations,
+                                    meanings: definition.meanings,
+                                    audioData: audioData,
+                                    hasWordAudio: audioData != nil,
+                                    exampleAudioAvailability: definition.exampleAudioAvailability
+                                )
+                                self.wordDefinitions = [updatedDefinition]
+                            }
+                        }
+                    } else {
+                        self.isLoadingAudio = false
+                        // Fallback: create minimal definition with just audio
+                        DictionaryService.shared.fetchAudioForText(self.currentWord.word, language: learningLanguage) { audioData in
+                            DispatchQueue.main.async {
+                                if let audioData = audioData {
+                                    let definition = Definition(
+                                        id: UUID(),
+                                        word: self.currentWord.word,
+                                        phonetic: nil,
+                                        translations: [],
+                                        meanings: [],
+                                        audioData: audioData,
+                                        hasWordAudio: true,
+                                        exampleAudioAvailability: [:]
+                                    )
+                                    self.wordDefinitions = [definition]
+                                }
+                            }
+                        }
+                    }
+                case .failure(_):
+                    // Fallback: load just audio without definitions
+                    DictionaryService.shared.fetchAudioForText(self.currentWord.word, language: learningLanguage) { audioData in
+                        DispatchQueue.main.async {
+                            self.isLoadingAudio = false
+                            if let audioData = audioData {
+                                let definition = Definition(
+                                    id: UUID(),
+                                    word: self.currentWord.word,
+                                    phonetic: nil,
+                                    translations: [],
+                                    meanings: [],
+                                    audioData: audioData,
+                                    hasWordAudio: true,
+                                    exampleAudioAvailability: [:]
+                                )
+                                self.wordDefinitions = [definition]
+                            }
+                        }
                     }
                 }
             }
@@ -496,6 +600,29 @@ struct ReviewSessionView: View {
                 case .failure(let error):
                     // Handle error silently or show user-friendly message
                     print("Failed to load word definitions: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func playExampleAudio(_ text: String) {
+        // If we already have audio data for this example, play it
+        if let audioData = exampleAudioData {
+            audioPlayer.playAudio(from: audioData)
+            return
+        }
+        
+        // Otherwise, fetch the audio data
+        isLoadingExampleAudio = true
+        let learningLanguage = UserManager.shared.learningLanguage
+        
+        DictionaryService.shared.fetchAudioForText(text, language: learningLanguage) { audioData in
+            DispatchQueue.main.async {
+                self.isLoadingExampleAudio = false
+                
+                if let audioData = audioData {
+                    self.exampleAudioData = audioData
+                    self.audioPlayer.playAudio(from: audioData)
                 }
             }
         }
