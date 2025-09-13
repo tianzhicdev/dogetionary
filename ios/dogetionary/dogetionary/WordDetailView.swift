@@ -257,31 +257,39 @@ struct ReviewHistorySection: View {
             LazyVStack(spacing: 8) {
                 // Show creation as the first entry
                 HStack(spacing: 12) {
-                    // Creation marker
-                    Text("📝")
+                    // Creation number (0 for creation)
+                    Text("0")
                         .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
                         .frame(width: 20)
                     
-                    // Status icon
+                    // Creation icon
                     Image(systemName: "plus.circle.fill")
+                        .font(.title3)
                         .foregroundColor(.blue)
-                        .font(.caption)
                     
+                    // Date and details
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Word Created")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                        
-                        Text(formatDate(createdAt))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        HStack {
+                            Text("Created")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.blue)
+                            
+                            Spacer()
+                            
+                            Text(formatDateShort(createdAt))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     
                     Spacer()
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
-                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .background(Color(.systemGray6))
                 .cornerRadius(8)
                 
                 // Show review history
@@ -295,10 +303,9 @@ struct ReviewHistorySection: View {
         }
     }
     
-    private func formatDate(_ dateString: String) -> String {
+    private func formatDateShort(_ dateString: String) -> String {
         // Parse the date string
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         
         // Try multiple formats
         let formats = [
@@ -318,9 +325,9 @@ struct ReviewHistorySection: View {
         
         guard let date = date else { return dateString }
         
-        // Format for display
+        // Format for display (short style to match ReviewHistoryRow)
         let displayFormatter = DateFormatter()
-        displayFormatter.dateStyle = .medium
+        displayFormatter.dateStyle = .short
         displayFormatter.timeStyle = .short
         return displayFormatter.string(from: date)
     }
