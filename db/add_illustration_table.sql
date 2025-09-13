@@ -6,7 +6,7 @@ CREATE TABLE illustrations (
     image_data BYTEA NOT NULL,
     content_type VARCHAR(50) DEFAULT 'image/png',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (word, language),
+    PRIMARY KEY (word, language)
 );
 
 -- Add index for better performance
