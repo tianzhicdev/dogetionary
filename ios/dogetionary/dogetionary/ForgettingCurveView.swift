@@ -147,7 +147,7 @@ struct ForgettingCurveView: View {
                         if let date = parseDateString(marker.date) {
                             PointMark(
                                 x: .value("Date", date),
-                                y: .value("Retention", 25.0)  // Always at 25% as requested
+                                y: .value("Retention", 100.0)  // Always at 25% as requested
                             )
                             .foregroundStyle(Color.orange)
                             .symbol(.diamond)

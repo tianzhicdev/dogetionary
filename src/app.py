@@ -1753,7 +1753,7 @@ def fix_next_review_dates():
     Reports statistics on correct vs incorrect records
     """
     try:
-        conn = get_db_connection()
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
         cur = conn.cursor()
         
         app.logger.info("Starting next_review_date fix process...")
@@ -1766,7 +1766,7 @@ def fix_next_review_dates():
                 WHERE next_review_date IS NOT NULL
                 GROUP BY word_id, user_id
             )
-            SELECT r.id, r.word_id, r.user_id, r.next_review_date, r.reviewed_at
+            SELECT r.id AS id, r.word_id AS word_id, r.user_id AS user_id, r.next_review_date AS next_review_date, r.reviewed_at AS reviewed_at
             FROM reviews r
             INNER JOIN latest_reviews lr ON 
                 r.word_id = lr.word_id AND 
@@ -1776,6 +1776,7 @@ def fix_next_review_dates():
         """)
         
         records_to_check = cur.fetchall()
+        print(records_to_check)
         app.logger.info(f"Found {len(records_to_check)} latest review records to check")
         
         stats = {
@@ -1794,11 +1795,14 @@ def fix_next_review_dates():
             current_next_review_date = record['next_review_date']
             reviewed_at = record['reviewed_at']
             stats['total_checked'] += 1
+
+            print("record:")
+            print(record)
             
             try:
                 # Get word creation date
                 cur.execute("""
-                    SELECT created_at FROM saved_words 
+                    SELECT created_at AS created_at FROM saved_words 
                     WHERE id = %s AND user_id = %s
                 """, (word_id, user_id))
                 
@@ -1808,10 +1812,12 @@ def fix_next_review_dates():
                     continue
                 
                 created_at = word_data['created_at']
+
+                print("created_at")
                 
                 # Get all review history for this word/user combination
                 cur.execute("""
-                    SELECT reviewed_at, response FROM reviews 
+                    SELECT reviewed_at AS reviewed_at, response AS response FROM reviews 
                     WHERE word_id = %s AND user_id = %s 
                     ORDER BY reviewed_at ASC
                 """, (word_id, user_id))
@@ -1819,25 +1825,31 @@ def fix_next_review_dates():
                 review_history = cur.fetchall()
                 
                 # Convert to format expected by get_next_review_date_new
-                numeric_reviews = []
+                review_list = []
                 for review in review_history:
-                    numeric_score = 1 if review['response'] else 0
-                    numeric_reviews.append((review['reviewed_at'], numeric_score))
+                    # Handle as tuple: (reviewed_at, response)
+                    reviewed_at = review['reviewed_at']
+                    response = review['response']
+                    review_list.append({
+                        'reviewed_at': reviewed_at,
+                        'response': response
+                    })
                 
                 # Calculate correct next_review_date
-                calculated_next_review_date = get_next_review_date_new(numeric_reviews, created_at)
+                calculated_next_review_date = get_next_review_date_new(review_list, created_at)
                 
                 # Compare with current value (allowing for small time differences)
                 current_date = datetime.fromisoformat(current_next_review_date.replace('Z', '+00:00')) if isinstance(current_next_review_date, str) else current_next_review_date
                 time_diff = abs((calculated_next_review_date - current_date).total_seconds())
-                
+                print("here 0")
                 # Consider dates within 1 minute as "correct" (to account for processing time differences)
                 if time_diff <= 60:
                     stats['correct_records'] += 1
                     app.logger.info(f"Record {record_id} (word_id={word_id}): CORRECT")
+                    print("here 1")
                 else:
                     stats['incorrect_records'] += 1
-                    
+                    print("here 2")
                     # Update the record with correct next_review_date
                     cur.execute("""
                         UPDATE reviews 
@@ -1846,7 +1858,7 @@ def fix_next_review_dates():
                     """, (calculated_next_review_date, record_id))
                     
                     stats['updated_records'] += 1
-                    
+                    print("here 3")
                     detail = {
                         'record_id': record_id,
                         'word_id': word_id,
@@ -1857,9 +1869,9 @@ def fix_next_review_dates():
                         'review_count': len(review_history)
                     }
                     stats['details'].append(detail)
-                    
+                    print("here 4")
                     app.logger.info(f"Record {record_id} (word_id={word_id}): UPDATED - was {current_date}, now {calculated_next_review_date} (diff: {time_diff:.1f}s)")
-                
+                    print("here 5")
             except Exception as e:
                 stats['error_records'] += 1
                 app.logger.error(f"Error processing record {record_id}: {str(e)}")
