@@ -99,8 +99,8 @@ struct ForgettingCurveView: View {
                             x: .value("Date", point.date),
                             y: .value("Retention", point.retention)
                         )
-                        .foregroundStyle(Color.blue.gradient)
-                        .lineStyle(StrokeStyle(lineWidth: 2))
+//                        .foregroundStyle(Color.blue.gradient)
+//                        .lineStyle(StrokeStyle(lineWidth: 2))
                     }
                     
                     // Projection curve (grey dotted line to next review)
@@ -109,8 +109,8 @@ struct ForgettingCurveView: View {
                             x: .value("Date", point.date),
                             y: .value("Retention", point.retention)
                         )
-                        .foregroundStyle(Color.gray)
-                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
+//                        .foregroundStyle(Color.gray)
+//                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
                     }
                     
                     // Creation markers

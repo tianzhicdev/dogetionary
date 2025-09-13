@@ -21,6 +21,17 @@ import sys
 DEFAULT_EASE_FACTOR = 2.5
 INITIAL_INTERVALS = [1, 6]  # First review: 1 day, Second review: 6 days
 
+# Forgetting Curve Configuration (easily tunable)
+# Decay rates for different time periods after last failure
+DECAY_RATE_WEEK_1 = 0.125    # 12.5% per day (days 0-6)
+DECAY_RATE_WEEK_2 = 0.0625   # 6.25% per day (days 7-13)
+DECAY_RATE_WEEK_3_4 = 0.03125  # 3.125% per day (days 14-27)
+DECAY_RATE_WEEK_5_8 = 0.015625  # 1.5625% per day (days 28-55)
+DECAY_RATE_WEEK_9_PLUS = 0.0078125  # 0.78125% per day (days 56+)
+
+# Retention threshold for scheduling next review
+RETENTION_THRESHOLD = 0.25  # Schedule next review when retention drops to 25%
+
 # Supported languages
 SUPPORTED_LANGUAGES = {
     'af', 'ar', 'hy', 'az', 'be', 'bs', 'bg', 'ca', 'zh', 'hr', 'cs', 'da',
@@ -478,29 +489,22 @@ def get_db_connection():
 def get_decay_rate(days_since_start_or_failure):
     """
     Calculate daily decay rate based on time elapsed since start or last failure.
-    
-    Decay schedule:
-    - 0-7 days: 12.5% per day
-    - 7-14 days: 6.25% per day  
-    - 14-28 days: 3.125% per day
-    - 28-56 days: 1.5625% per day
-    - 56-112 days: 0.78125% per day
-    - Continue halving every period doubling...
+    Uses configurable constants for easy tuning.
     """
     if days_since_start_or_failure < 7:
-        return 0.125  # 12.5%
+        return DECAY_RATE_WEEK_1
     elif days_since_start_or_failure < 14:
-        return 0.0625  # 6.25%
+        return DECAY_RATE_WEEK_2
     elif days_since_start_or_failure < 28:
-        return 0.03125  # 3.125%
+        return DECAY_RATE_WEEK_3_4
     elif days_since_start_or_failure < 56:
-        return 0.015625  # 1.5625%
+        return DECAY_RATE_WEEK_5_8
     elif days_since_start_or_failure < 112:
-        return 0.0078125  # 0.78125%
+        return DECAY_RATE_WEEK_9_PLUS
     else:
         # Continue halving for longer periods
         period = 112
-        rate = 0.0078125
+        rate = DECAY_RATE_WEEK_9_PLUS
         while days_since_start_or_failure >= period * 2:
             period *= 2
             rate /= 2
@@ -671,8 +675,8 @@ def get_next_review_date_new(review_history, created_at):
         # Apply daily decay: retention = retention * e^(-daily_rate)
         retention = retention * math.exp(-daily_decay_rate)
         
-        # Check if retention dropped below 25%
-        if retention <= 0.25:
+        # Check if retention dropped below the configured threshold
+        if retention <= RETENTION_THRESHOLD:
             return current_date
     
     # If retention never drops below 25% in 2 years, return max date
@@ -1466,6 +1470,125 @@ def get_forgetting_curve(word_id):
     except Exception as e:
         app.logger.error(f"Error getting forgetting curve: {str(e)}")
         return jsonify({"error": f"Failed to get forgetting curve: {str(e)}"}), 500
+
+@app.route('/test-review-intervals', methods=['GET'])
+def test_review_intervals():
+    """
+    Test endpoint to show review intervals if word is always reviewed at predicted time.
+    Shows the gaps between reviews for the first 10 reviews.
+    """
+    try:
+        from datetime import datetime, timedelta
+        import math
+        
+        # Start from today
+        created_at = datetime.now()
+        review_dates = []
+        intervals = []
+        
+        # Simulate 10 reviews where each is done exactly at the predicted time
+        current_date = created_at
+        review_history = []
+        
+        for review_num in range(10):
+            # Calculate next review date using the algorithm
+            next_review_date = get_next_review_date_new(review_history, created_at)
+            
+            # Calculate interval in days
+            if review_dates:
+                interval = (next_review_date - review_dates[-1]).days
+            else:
+                interval = (next_review_date - created_at).days
+            
+            intervals.append(interval)
+            review_dates.append(next_review_date)
+            
+            # Add this review to history (assume always successful)
+            review_history.append({
+                'reviewed_at': next_review_date,
+                'response': True  # Always successful review
+            })
+        
+        # Format the response
+        review_schedule = []
+        for i, (date, interval) in enumerate(zip(review_dates, intervals)):
+            review_schedule.append({
+                "review_number": i + 1,
+                "date": date.strftime('%Y-%m-%d'),
+                "days_from_previous": interval,
+                "total_days_from_creation": (date - created_at).days
+            })
+        
+        # Also test with some failures
+        review_history_with_failures = []
+        failure_schedule = []
+        failure_intervals = []
+        failure_dates = []
+        
+        for review_num in range(10):
+            # Calculate next review date
+            next_review_date = get_next_review_date_new(review_history_with_failures, created_at)
+            
+            # Calculate interval
+            if failure_dates:
+                interval = (next_review_date - failure_dates[-1]).days
+            else:
+                interval = (next_review_date - created_at).days
+            
+            failure_intervals.append(interval)
+            failure_dates.append(next_review_date)
+            
+            # Add review to history - fail every 3rd review
+            review_history_with_failures.append({
+                'reviewed_at': next_review_date,
+                'response': (review_num + 1) % 3 != 0  # Fail on reviews 3, 6, 9
+            })
+            
+            failure_schedule.append({
+                "review_number": review_num + 1,
+                "date": next_review_date.strftime('%Y-%m-%d'),
+                "days_from_previous": interval,
+                "total_days_from_creation": (next_review_date - created_at).days,
+                "result": "success" if (review_num + 1) % 3 != 0 else "failure"
+            })
+        
+        return jsonify({
+            "description": "Review intervals simulation",
+            "configuration": {
+                "retention_threshold": RETENTION_THRESHOLD,
+                "decay_rates": {
+                    "week_1": DECAY_RATE_WEEK_1,
+                    "week_2": DECAY_RATE_WEEK_2,
+                    "week_3_4": DECAY_RATE_WEEK_3_4,
+                    "week_5_8": DECAY_RATE_WEEK_5_8,
+                    "week_9_plus": DECAY_RATE_WEEK_9_PLUS
+                }
+            },
+            "perfect_reviews": {
+                "description": "All reviews done successfully at predicted time",
+                "schedule": review_schedule,
+                "intervals_summary": {
+                    "intervals_in_days": intervals,
+                    "average_interval": sum(intervals) / len(intervals) if intervals else 0,
+                    "max_interval": max(intervals) if intervals else 0,
+                    "min_interval": min(intervals) if intervals else 0
+                }
+            },
+            "reviews_with_failures": {
+                "description": "Reviews with failures every 3rd review",
+                "schedule": failure_schedule,
+                "intervals_summary": {
+                    "intervals_in_days": failure_intervals,
+                    "average_interval": sum(failure_intervals) / len(failure_intervals) if failure_intervals else 0,
+                    "max_interval": max(failure_intervals) if failure_intervals else 0,
+                    "min_interval": min(failure_intervals) if failure_intervals else 0
+                }
+            }
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error testing review intervals: {str(e)}")
+        return jsonify({"error": f"Failed to test review intervals: {str(e)}"}), 500
 
 @app.route('/words/<int:word_id>/details', methods=['GET'])
 def get_word_details(word_id):
