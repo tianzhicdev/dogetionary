@@ -48,10 +48,21 @@ TikTok ads campaign
 
 
 when the backend returns forgetting_curve, it should include the last review at 100% and make a dotted line between last review and the next review date. the next review date marker should always be at 25% of retention;
-on the retention curve, on x-axis we only show creation date, today and next review date;
+
+1. on the retention curve, on x-axis we only show creation date, today and next review date;
+1. rewrite CLAUDE.md to reflect current codebase; keep the principles; 
+2. the line between the last review to next review should be dotted, now it is a full line; if dotted line is not supported we can use a grey color;
+3. remove "historical" "projection" in the legends
+4. remove "learning timeline"
+5. the review history should show creation time 
+6. the decay rate and the threshold to set the next review date should be configurable at compile time, make them constants at the top for easy tuning; 
 
 
+--- done ---
 
 2. refactor the frontend and backend code -- use multiple files, one for each class, improve the reusability of the code, give every class a meaningful name, remove unused code;
 3. we should refactor integration test so all endpoints are properly tested
 4. we should create unit tests too so business logic heavy functions are tested too
+
+5. add a feedback section in the settings tab -- with a submit button; users can write what ever they want < 500 chars then submit it; we should have a table user_id, feedback, created_at to collect feedback;
+
