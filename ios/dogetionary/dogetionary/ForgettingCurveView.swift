@@ -83,10 +83,6 @@ struct ForgettingCurveView: View {
                     Text("Error: \(error)")
                         .font(.caption)
                         .foregroundColor(.red)
-                } else {
-                    Text("Reviews: \(reviewHistory.count), Points: \(curveData.count)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
             }
             

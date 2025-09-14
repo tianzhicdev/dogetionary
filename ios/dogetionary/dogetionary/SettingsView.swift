@@ -279,6 +279,10 @@ struct SettingsView: View {
                 #endif
             }
             .navigationTitle("Settings")
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside text fields
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
             .alert("Invalid Language Selection", isPresented: $showLanguageAlert) {
                 Button("OK") { }
             } message: {
