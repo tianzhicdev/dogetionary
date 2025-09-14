@@ -1263,31 +1263,6 @@ def get_review_stats():
         due_result = get_due_words_count(user_id, conn)
         due_today = due_result['due_count']
         
-        # Calculate streak days (consecutive days with reviews)
-        cur.execute("""
-            WITH daily_reviews AS (
-                SELECT DISTINCT DATE(reviewed_at) as review_date
-                FROM reviews
-                WHERE user_id = %s
-                AND reviewed_at >= CURRENT_DATE - INTERVAL '365 days'
-                ORDER BY review_date DESC
-            ),
-            date_series AS (
-                SELECT 
-                    review_date,
-                    CURRENT_DATE - review_date as days_ago,
-                    ROW_NUMBER() OVER (ORDER BY review_date DESC) as row_num
-                FROM daily_reviews
-            )
-            SELECT 
-                COUNT(*) as streak_days
-            FROM date_series
-            WHERE days_ago = row_num - 1
-            AND days_ago >= 0
-        """, (user_id,))
-        
-        streak_result = cur.fetchone()
-        streak_days = streak_result['streak_days'] if streak_result else 0
         
         cur.close()
         conn.close()
@@ -1297,8 +1272,7 @@ def get_review_stats():
             "total_words": total_words,
             "due_today": due_today,
             "reviews_today": reviews_today,
-            "success_rate_7_days": success_rate,
-            "streak_days": streak_days
+            "success_rate_7_days": success_rate
         })
         
     except Exception as e:
@@ -1919,25 +1893,6 @@ def get_review_statistics():
         cur.execute("SELECT COUNT(*) as count FROM reviews WHERE user_id = %s", (user_id,))
         total_reviews = cur.fetchone()['count'] or 0
         
-        # Streak days (continuous days with reviews)
-        cur.execute("""
-            WITH review_days AS (
-                SELECT DISTINCT DATE(reviewed_at) as review_date
-                FROM reviews
-                WHERE user_id = %s
-                ORDER BY review_date DESC
-            ),
-            streaks AS (
-                SELECT review_date,
-                       review_date - INTERVAL '1 day' * ROW_NUMBER() OVER (ORDER BY review_date DESC) as grp
-                FROM review_days
-            )
-            SELECT COUNT(*) as streak_length
-            FROM streaks
-            WHERE grp = (SELECT MAX(grp) FROM streaks WHERE review_date >= CURRENT_DATE - INTERVAL '1 day')
-        """, (user_id,))
-        result = cur.fetchone()
-        streak_days = result['streak_length'] if result and result['streak_length'] else 0
         
         # Average reviews per week (since first review)
         cur.execute("""
@@ -1985,7 +1940,6 @@ def get_review_statistics():
         
         return jsonify({
             "total_reviews": total_reviews,
-            "streak_days": streak_days,
             "avg_reviews_per_week": round(avg_reviews_per_week, 1),
             "avg_reviews_per_active_day": round(avg_reviews_per_active_day, 1),
             "week_over_week_change": round(week_over_week_change)
@@ -2417,6 +2371,138 @@ def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
+
+@app.route('/feedback', methods=['POST'])
+def submit_feedback():
+    """Submit user feedback"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        feedback = data.get('feedback')
+
+        # Validate inputs
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+
+        if not feedback:
+            return jsonify({"error": "feedback is required"}), 400
+
+        # Validate feedback length
+        if len(feedback) > 500:
+            return jsonify({"error": "Feedback must be 500 characters or less"}), 400
+
+        # Validate UUID format
+        try:
+            uuid.UUID(user_id)
+        except ValueError:
+            return jsonify({"error": "Invalid user_id format"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Insert feedback
+        cur.execute("""
+            INSERT INTO user_feedback (user_id, feedback)
+            VALUES (%s, %s)
+            RETURNING id, created_at
+        """, (user_id, feedback))
+
+        result = cur.fetchone()
+        feedback_id = result['id']
+        created_at = result['created_at']
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "message": "Thank you for your feedback!",
+            "feedback_id": feedback_id,
+            "created_at": created_at.isoformat()
+        }), 201
+
+    except Exception as e:
+        app.logger.error(f"Error submitting feedback: {str(e)}")
+        return jsonify({"error": f"Failed to submit feedback: {str(e)}"}), 500
+
+@app.route('/reviews/progress_stats', methods=['GET'])
+def get_review_progress_stats():
+    """Get review progress statistics for ReviewGoalAchievedView"""
+    try:
+        user_id = request.args.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Get reviews in the past 24 hours
+        cur.execute("""
+            SELECT
+                COUNT(*) as reviews_today,
+                SUM(CASE WHEN response = true THEN 1 ELSE 0 END) as correct_reviews
+            FROM reviews
+            WHERE user_id = %s
+            AND reviewed_at >= NOW() - INTERVAL '24 hours'
+        """, (user_id,))
+
+        review_stats = cur.fetchone()
+        reviews_today = review_stats['reviews_today'] or 0
+        correct_reviews = review_stats['correct_reviews'] or 0
+        success_rate_today = (correct_reviews / reviews_today * 100) if reviews_today > 0 else 0
+
+        # Get progression changes (words moving between familiarity levels)
+        # This is a simplified version - in reality you'd need to track state changes
+        # For now, we'll estimate based on review patterns
+        cur.execute("""
+            WITH word_reviews AS (
+                SELECT
+                    sw.word,
+                    COUNT(r.id) as total_reviews,
+                    SUM(CASE WHEN r.response = true THEN 1 ELSE 0 END) as correct_reviews,
+                    MAX(r.reviewed_at) as last_reviewed
+                FROM saved_words sw
+                LEFT JOIN reviews r ON sw.id = r.word_id
+                WHERE sw.user_id = %s
+                AND r.reviewed_at >= NOW() - INTERVAL '24 hours'
+                GROUP BY sw.word
+            )
+            SELECT
+                COUNT(CASE WHEN total_reviews = 1 AND correct_reviews = 1 THEN 1 END) as acquainted_to_familiar,
+                COUNT(CASE WHEN total_reviews >= 2 AND total_reviews < 5 AND correct_reviews = total_reviews THEN 1 END) as familiar_to_remembered,
+                COUNT(CASE WHEN total_reviews >= 5 AND correct_reviews = total_reviews THEN 1 END) as remembered_to_unforgettable
+            FROM word_reviews
+        """, (user_id,))
+
+        progression = cur.fetchone()
+
+        # Get total review count for the user
+        cur.execute("""
+            SELECT COUNT(*) as total_reviews
+            FROM reviews
+            WHERE user_id = %s
+        """, (user_id,))
+
+        total_reviews_result = cur.fetchone()
+        total_reviews = total_reviews_result['total_reviews'] or 0
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "reviews_today": reviews_today,
+            "success_rate_today": round(success_rate_today, 1),
+            "acquainted_to_familiar": progression['acquainted_to_familiar'] or 0,
+            "familiar_to_remembered": progression['familiar_to_remembered'] or 0,
+            "remembered_to_unforgettable": progression['remembered_to_unforgettable'] or 0,
+            "total_reviews": total_reviews
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error getting review progress stats: {str(e)}")
+        return jsonify({"error": f"Failed to get review progress stats: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

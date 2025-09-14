@@ -63,7 +63,7 @@ from app import (
     fix_next_review_dates, privacy_agreement, support_page,
     get_review_statistics, get_weekly_review_counts, get_progress_funnel,
     get_review_activity, get_leaderboard, generate_illustration,
-    get_illustration, health_check
+    get_illustration, health_check, submit_feedback, get_review_progress_stats
 )
 
 # Register all routes
@@ -91,6 +91,8 @@ app.route('/leaderboard', methods=['GET'])(get_leaderboard)
 app.route('/generate-illustration', methods=['POST'])(generate_illustration)
 app.route('/illustration', methods=['GET'])(get_illustration)
 app.route('/health', methods=['GET'])(health_check)
+app.route('/feedback', methods=['POST'])(submit_feedback)
+app.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

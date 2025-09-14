@@ -223,7 +223,15 @@ struct ReviewStats: Codable {
     let due_today: Int
     let reviews_today: Int
     let success_rate_7_days: Double
-    let streak_days: Int
+}
+
+struct ReviewProgressStats: Codable {
+    let reviews_today: Int
+    let success_rate_today: Double
+    let acquainted_to_familiar: Int
+    let familiar_to_remembered: Int
+    let remembered_to_unforgettable: Int
+    let total_reviews: Int
 }
 
 // Word Detail Models

@@ -14,6 +14,10 @@ struct SettingsView: View {
     @State private var showLanguageAlert = false
     @State private var pendingLanguageChange: (type: String, value: String)?
     @State private var searchText: String = ""
+    @State private var feedbackText: String = ""
+    @State private var isSubmittingFeedback = false
+    @State private var showFeedbackAlert = false
+    @State private var feedbackAlertMessage = ""
     @ObservedObject private var userManager = UserManager.shared
     
     private let availableLanguages = [
@@ -162,7 +166,50 @@ struct SettingsView: View {
                         .padding(.top, 8)
                     }
                 }
-                
+
+                Section(header: Text("Feedback")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Help us improve Dogetionary")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        TextField("Share your thoughts, suggestions, or report issues...", text: $feedbackText, axis: .vertical)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .lineLimit(3...6)
+                            .onChange(of: feedbackText) { _, newValue in
+                                if newValue.count > 500 {
+                                    feedbackText = String(newValue.prefix(500))
+                                }
+                            }
+
+                        HStack {
+                            Text("\(feedbackText.count)/500")
+                                .font(.caption2)
+                                .foregroundColor(feedbackText.count > 450 ? .orange : .secondary)
+
+                            Spacer()
+
+                            Button(action: submitFeedback) {
+                                HStack {
+                                    if isSubmittingFeedback {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "paperplane.fill")
+                                    }
+                                    Text(isSubmittingFeedback ? "Sending..." : "Submit")
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(feedbackText.isEmpty || isSubmittingFeedback ? Color.gray.opacity(0.3) : Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                            }
+                            .disabled(feedbackText.isEmpty || isSubmittingFeedback)
+                        }
+                    }
+                }
+
                 #if DEBUG
                 Section(header: Text("API Configuration")) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -237,6 +284,15 @@ struct SettingsView: View {
             } message: {
                 Text("Learning language and native language cannot be the same. Please choose different languages.")
             }
+            .alert("Feedback", isPresented: $showFeedbackAlert) {
+                Button("OK") {
+                    if feedbackAlertMessage.contains("Thank you") {
+                        feedbackText = ""
+                    }
+                }
+            } message: {
+                Text(feedbackAlertMessage)
+            }
         }
     }
     
@@ -286,6 +342,27 @@ struct SettingsView: View {
         return availableLanguages.first(where: { $0.0 == code })?.1 ?? code.uppercased()
     }
     
+    private func submitFeedback() {
+        guard !feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        isSubmittingFeedback = true
+
+        DictionaryService.shared.submitFeedback(feedback: feedbackText.trimmingCharacters(in: .whitespacesAndNewlines)) { result in
+            DispatchQueue.main.async {
+                isSubmittingFeedback = false
+
+                switch result {
+                case .success:
+                    feedbackAlertMessage = "Thank you for your feedback! We appreciate your input and will use it to improve Dogetionary."
+                    showFeedbackAlert = true
+                case .failure(let error):
+                    feedbackAlertMessage = "Failed to submit feedback. Please try again later. Error: \(error.localizedDescription)"
+                    showFeedbackAlert = true
+                }
+            }
+        }
+    }
+
     private func testConnection() {
         isTestingConnection = true
         connectionTestResult = ""

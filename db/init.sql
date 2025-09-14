@@ -68,6 +68,17 @@ CREATE TABLE illustrations (
 -- Add index for better performance
 CREATE INDEX idx_illustrations_word_lang ON illustrations(word, language);
 
+-- User Feedback Table
+CREATE TABLE user_feedback (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    feedback TEXT NOT NULL CHECK (LENGTH(feedback) <= 500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add index for feedback queries
+CREATE INDEX idx_user_feedback_user_id ON user_feedback(user_id);
+CREATE INDEX idx_user_feedback_created_at ON user_feedback(created_at);
 
 -- Indexes for performance
 CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);

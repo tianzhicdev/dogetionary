@@ -253,6 +253,13 @@ struct ReviewHistorySection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: "Review History")
+            // Show review history
+            ForEach(Array(reviewHistory.enumerated()), id: \.offset) { index, entry in
+                ReviewHistoryRow(
+                    entry: entry,
+                    reviewNumber: index + 1
+                )
+            }
             
             LazyVStack(spacing: 8) {
                 // Show creation as the first entry
@@ -279,7 +286,8 @@ struct ReviewHistorySection: View {
                             
                             Spacer()
                             
-                            Text(formatDateShort(createdAt))
+                        
+                            Text(formatDate(createdAt, style: .short))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -292,13 +300,6 @@ struct ReviewHistorySection: View {
                 .background(Color(.systemGray6))
                 .cornerRadius(8)
                 
-                // Show review history
-                ForEach(Array(reviewHistory.enumerated()), id: \.offset) { index, entry in
-                    ReviewHistoryRow(
-                        entry: entry,
-                        reviewNumber: index + 1
-                    )
-                }
             }
         }
     }

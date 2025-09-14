@@ -279,7 +279,6 @@ struct StatsView: View {
 
 struct ReviewStatsData: Codable {
     let total_reviews: Int
-    let streak_days: Int
     let avg_reviews_per_week: Double
     let avg_reviews_per_active_day: Double
     let week_over_week_change: Double
@@ -298,21 +297,10 @@ struct StatsCardsView: View {
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             StatCard(title: "Total Reviews", value: "\(stats.total_reviews)", icon: "checkmark.circle.fill", color: .blue)
-            StatCard(title: "Streak", value: "\(stats.streak_days) days", icon: "flame.fill", color: .orange)
+            StatCard(title: "Week Change", value: String(format: "%+.0f%%", stats.week_over_week_change), icon: stats.week_over_week_change >= 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill", color: stats.week_over_week_change >= 0 ? .green : .red)
             StatCard(title: "Avg/Week", value: String(format: "%.1f", stats.avg_reviews_per_week), icon: "calendar", color: .green)
             StatCard(title: "Avg/Day", value: String(format: "%.1f", stats.avg_reviews_per_active_day), icon: "chart.bar.fill", color: .purple)
         }
-        
-        // Week over week change
-        HStack {
-            Image(systemName: stats.week_over_week_change >= 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
-                .foregroundColor(stats.week_over_week_change >= 0 ? .green : .red)
-            Text(String(format: "%+.0f%% vs last week", stats.week_over_week_change))
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(stats.week_over_week_change >= 0 ? .green : .red)
-        }
-        .padding(.top, 8)
     }
 }
 

@@ -448,59 +448,59 @@ struct NextReviewBarView: View {
         return formatter.string(from: date)
     }
 }
-
-struct ReviewTimelineView: View {
-    let reviewHistory: [ReviewHistoryEntry]
-    let createdAt: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-Text("Review History")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-            
-            HStack(spacing: 4) {
-                // Start marker (word creation with date)
-                VStack(spacing: 2) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.caption2)
-                        .foregroundColor(.blue)
-                    if let creationDate = parseDateString(createdAt) {
-                        Text(formatShortDate(creationDate))
-                            .font(.system(size: 8))
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Created")
-                            .font(.system(size: 8))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                // Review markers
-                ForEach(Array(reviewHistory.prefix(10).enumerated()), id: \.offset) { index, review in
-                    VStack(spacing: 2) {
-                        Text("|")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(review.response ? .green : .red)
-                        Text("\(index + 1)")
-                            .font(.system(size: 8))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                if reviewHistory.count > 10 {
-                    Text("...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
-        }
-    }
-}
+//
+//struct ReviewTimelineView: View {
+//    let reviewHistory: [ReviewHistoryEntry]
+//    let createdAt: String
+//    
+//    var body: some View {
+//        VStack(alignment: .leading, spacing: 8) {
+//Text("Review History")
+//                .font(.caption)
+//                .fontWeight(.medium)
+//                .foregroundColor(.secondary)
+//            
+//            HStack(spacing: 4) {
+//                // Start marker (word creation with date)
+//                VStack(spacing: 2) {
+//                    Image(systemName: "plus.circle.fill")
+//                        .font(.caption2)
+//                        .foregroundColor(.blue)
+//                    if let creationDate = parseDateString(createdAt) {
+//                        Text(formatShortDate(creationDate))
+//                            .font(.system(size: 8))
+//                            .foregroundColor(.secondary)
+//                    } else {
+//                        Text("Created")
+//                            .font(.system(size: 8))
+//                            .foregroundColor(.secondary)
+//                    }
+//                }
+//                
+//                // Review markers
+//                ForEach(Array(reviewHistory.prefix(10).enumerated()), id: \.offset) { index, review in
+//                    VStack(spacing: 2) {
+//                        Text("|")
+//                            .font(.caption)
+//                            .fontWeight(.bold)
+//                            .foregroundColor(review.response ? .green : .red)
+//                        Text("\(index + 1)")
+//                            .font(.system(size: 8))
+//                            .foregroundColor(.secondary)
+//                    }
+//                }
+//                
+//                if reviewHistory.count > 10 {
+//                    Text("...")
+//                        .font(.caption)
+//                        .foregroundColor(.secondary)
+//                }
+//                
+//                Spacer()
+//            }
+//        }
+//    }
+//}
 
 // Fallback view for iOS 15 and below
 struct FallbackCurveView: View {
