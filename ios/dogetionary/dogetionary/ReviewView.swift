@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import StoreKit
 
 struct ReviewView: View {
     @State private var currentWord: ReviewWord?
@@ -16,6 +17,9 @@ struct ReviewView: View {
     @State private var reviewStartTime: Date?
     @State private var dueCounts: DueCountsResponse?
     @State private var isLoadingCounts = false
+    @State private var previousOverdueCount: Int? = nil
+    @State private var isGoalAchieved = false
+    @State private var reviewProgressStats: ReviewProgressStats?
     
     var body: some View {
         NavigationView {
@@ -38,6 +42,18 @@ struct ReviewView: View {
                 if isLoading {
                     ProgressView("Loading review...")
                         .padding()
+                } else if isGoalAchieved {
+                    ReviewGoalAchievedView(
+                        progressStats: reviewProgressStats,
+                        onContinue: {
+                            isGoalAchieved = false
+                            startReview()
+                        }
+                    )
+                } else if isSessionComplete {
+                    ReviewCompleteView(
+                        progressStats: reviewProgressStats
+                    )
                 } else if let currentWord = currentWord, !isSessionComplete {
                     ReviewSessionView(
                         currentWord: currentWord,
@@ -45,12 +61,6 @@ struct ReviewView: View {
                         onResponse: { response in
                             submitReview(response: response)
                         }
-                    )
-                } else if isSessionComplete {
-                    ReviewCompleteView(
-                        reviewStats: reviewStats,
-                        onStartNewReview: startReview,
-                        onStartAnyway: startReview
                     )
                 } else {
                     StartReviewState(
@@ -79,13 +89,36 @@ struct ReviewView: View {
     private func loadDueCounts() {
         isLoadingCounts = true
         errorMessage = nil
-        
+
         DictionaryService.shared.getDueCounts { result in
             DispatchQueue.main.async {
                 self.isLoadingCounts = false
-                
+
                 switch result {
                 case .success(let counts):
+                    // Check if we just achieved the goal (overdue went from >0 to 0)
+                    // Only trigger during review session, not on initial load
+                    if let prevCount = self.previousOverdueCount,
+                       prevCount > 0 && counts.overdue_count == 0 {
+                        // Goal achieved! Load progress stats
+                        print("🏆 Goal achieved! Previous: \(prevCount), Current: \(counts.overdue_count)")
+                        print("🏆 isGoalAchieved before: \(self.isGoalAchieved)")
+                        self.loadProgressStats {
+                            print("🏆 Setting isGoalAchieved = true")
+                            self.isGoalAchieved = true
+                            print("🏆 After setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
+                        }
+                    } else {
+                        if let prevCount = self.previousOverdueCount {
+                            print("📊 Due counts update - Previous: \(prevCount), Current: \(counts.overdue_count)")
+                            if prevCount > 0 && counts.overdue_count == 0 {
+                                print("⚠️ Should have triggered goal but didn't - condition check failed")
+                            }
+                        } else {
+                            print("📊 First due counts load - Current: \(counts.overdue_count)")
+                        }
+                    }
+                    self.previousOverdueCount = counts.overdue_count
                     self.dueCounts = counts
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
@@ -164,7 +197,13 @@ struct ReviewView: View {
                         self.reviewStartTime = Date()
                     } else {
                         // No more words - session complete
-                        self.fetchReviewStats()
+                        print("🔚 Setting isSessionComplete = true")
+                        print("🔚 Before setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
+                        self.isSessionComplete = true
+                        print("🔚 After setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
+                        self.loadProgressStats {
+                            // Stats loaded for complete view
+                        }
                     }
                 case .failure(let error):
                     // Show error but don't end session
@@ -174,17 +213,25 @@ struct ReviewView: View {
         }
     }
     
-    private func fetchReviewStats() {
-        DictionaryService.shared.getReviewStats { result in
+    private func loadProgressStats(completion: @escaping () -> Void) {
+        DictionaryService.shared.getReviewProgressStats { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let stats):
-                    self.reviewStats = stats
-                    self.isSessionComplete = true
+                    self.reviewProgressStats = stats
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
-                    self.isSessionComplete = true // Show completion even if stats fail
+                    // Create empty stats on failure
+                    self.reviewProgressStats = ReviewProgressStats(
+                        reviews_today: 0,
+                        success_rate_today: 0,
+                        acquainted_to_familiar: 0,
+                        familiar_to_remembered: 0,
+                        remembered_to_unforgettable: 0,
+                        total_reviews: 0
+                    )
                 }
+                completion()
             }
         }
     }
@@ -630,49 +677,197 @@ struct ReviewSessionView: View {
 }
 
 struct ReviewCompleteView: View {
-    let reviewStats: ReviewStats?
-    let onStartNewReview: () -> Void
-    let onStartAnyway: () -> Void
-    
+    let progressStats: ReviewProgressStats?
+
     var body: some View {
         VStack(spacing: 24) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.green)
-            
-            Text("Review Complete!")
+
+            Text("All Caught Up!")
                 .font(.title)
                 .fontWeight(.bold)
-            
-            if let stats = reviewStats {
-                VStack(spacing: 12) {
-                    StatRow(label: "Words reviewed today", value: "\(stats.reviews_today)")
-                    StatRow(label: "Total words", value: "\(stats.total_words)")
-                    StatRow(label: "Success rate (7 days)", value: "\(Int(stats.success_rate_7_days * 100))%")
-                    StatRow(label: "Current streak", value: "\(stats.streak_days) days")
+
+            Text("No more words to review right now")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            if let stats = progressStats {
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Reviews Today")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("\(stats.reviews_today)")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing) {
+                            Text("Success Rate")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("\(Int(stats.success_rate_today))%")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(stats.success_rate_today >= 80 ? .green : .orange)
+                        }
+                    }
+
+                    if stats.acquainted_to_familiar > 0 || stats.familiar_to_remembered > 0 || stats.remembered_to_unforgettable > 0 {
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Progress Today")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            if stats.acquainted_to_familiar > 0 {
+                                ProgressRow(label: "→ Familiar", count: stats.acquainted_to_familiar, color: .blue)
+                            }
+                            if stats.familiar_to_remembered > 0 {
+                                ProgressRow(label: "→ Remembered", count: stats.familiar_to_remembered, color: .purple)
+                            }
+                            if stats.remembered_to_unforgettable > 0 {
+                                ProgressRow(label: "→ Unforgettable", count: stats.remembered_to_unforgettable, color: .green)
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
             }
-            
-            VStack(spacing: 12) {
-                Button("Check for New Reviews") {
-                    onStartNewReview()
-                }
-                .buttonStyle(.borderedProminent)
-                
-                Button("Continue Review Mode") {
-                    onStartAnyway()
-                }
-                .buttonStyle(.bordered)
-                .foregroundColor(.blue)
-            }
-            
+
+
             Spacer()
         }
         .padding()
+    }
+}
+
+struct ReviewGoalAchievedView: View {
+    let progressStats: ReviewProgressStats?
+    let onContinue: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "trophy.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.yellow)
+
+            Text("Goal Achieved!")
+                .font(.title)
+                .fontWeight(.bold)
+
+            Text("You've cleared all overdue reviews!")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            if let stats = progressStats {
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Reviews Today")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("\(stats.reviews_today)")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing) {
+                            Text("Success Rate")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("\(Int(stats.success_rate_today))%")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(stats.success_rate_today >= 80 ? .green : .orange)
+                        }
+                    }
+
+                    if stats.acquainted_to_familiar > 0 || stats.familiar_to_remembered > 0 || stats.remembered_to_unforgettable > 0 {
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Words Progressed")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            if stats.acquainted_to_familiar > 0 {
+                                ProgressRow(label: "→ Familiar", count: stats.acquainted_to_familiar, color: .blue)
+                            }
+                            if stats.familiar_to_remembered > 0 {
+                                ProgressRow(label: "→ Remembered", count: stats.familiar_to_remembered, color: .purple)
+                            }
+                            if stats.remembered_to_unforgettable > 0 {
+                                ProgressRow(label: "→ Unforgettable", count: stats.remembered_to_unforgettable, color: .green)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+            }
+
+            HStack(spacing: 12) {
+                Button("Continue") {
+                    onContinue()
+                }
+                .buttonStyle(.bordered)
+                .foregroundColor(.blue)
+
+            }
+
+            Spacer()
+        }
+        .padding()
+        .onAppear {
+            // Check if we should show app rating request
+            if let stats = progressStats,
+               stats.total_reviews >= 40,
+               !UserManager.shared.hasRequestedAppRating {
+                // Small delay to let the view fully appear before showing rating
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    requestAppRating()
+                }
+            }
+        }
+    }
+
+    private func requestAppRating() {
+        // Request app store rating using native iOS API
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: windowScene)
+            // Mark that we've requested rating so we don't ask again
+            UserManager.shared.markAppRatingRequested()
+        }
+    }
+}
+
+struct ProgressRow: View {
+    let label: String
+    let count: Int
+    let color: Color
+
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.footnote)
+            Spacer()
+            Text("\(count) word\(count == 1 ? "" : "s")")
+                .font(.footnote)
+                .fontWeight(.medium)
+        }
     }
 }
 

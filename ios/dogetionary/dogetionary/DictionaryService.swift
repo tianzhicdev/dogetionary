@@ -1150,7 +1150,87 @@ class DictionaryService: ObservableObject {
             }
         }.resume()
     }
-    
+
+    func submitFeedback(feedback: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/feedback") else {
+            logger.error("Invalid URL for feedback endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "user_id": userID,
+            "feedback": feedback
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            logger.error("Failed to encode feedback request: \(error)")
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                self?.logger.error("Network error submitting feedback: \(error)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self?.logger.error("Invalid response type for feedback submission")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            if httpResponse.statusCode == 201 {
+                self?.logger.info("Successfully submitted feedback")
+                completion(.success(true))
+            } else {
+                self?.logger.error("Failed to submit feedback. Status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+            }
+        }.resume()
+    }
+
+    func getReviewProgressStats(completion: @escaping (Result<ReviewProgressStats, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/reviews/progress_stats?user_id=\(userID)") else {
+            logger.error("Invalid URL for review progress stats endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            if let error = error {
+                self?.logger.error("Network error fetching review progress stats: \(error)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                self?.logger.error("No data received for review progress stats")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            do {
+                let stats = try JSONDecoder().decode(ReviewProgressStats.self, from: data)
+                self?.logger.info("Successfully decoded review progress stats")
+                completion(.success(stats))
+            } catch {
+                self?.logger.error("Failed to decode review progress stats: \(error)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {

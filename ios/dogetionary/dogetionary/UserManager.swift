@@ -16,6 +16,7 @@ class UserManager: ObservableObject {
     private let nativeLanguageKey = "DogetionaryNativeLanguage"
     private let userNameKey = "DogetionaryUserName"
     private let userMottoKey = "DogetionaryUserMotto"
+    private let hasRequestedAppRatingKey = "DogetionaryHasRequestedAppRating"
     
     private var isSyncingFromServer = false
     
@@ -133,5 +134,16 @@ class UserManager: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - App Rating Management
+
+    var hasRequestedAppRating: Bool {
+        return UserDefaults.standard.bool(forKey: hasRequestedAppRatingKey)
+    }
+
+    func markAppRatingRequested() {
+        UserDefaults.standard.set(true, forKey: hasRequestedAppRatingKey)
+        logger.info("Marked app rating as requested")
     }
 }
