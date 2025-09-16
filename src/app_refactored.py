@@ -56,27 +56,40 @@ app.after_request(log_response_info)
 # Import and register all endpoints from original app
 # This allows us to keep all functionality while refactoring incrementally
 from app import (
-    save_word, get_next_review_word, get_due_counts, submit_review,
-    get_word_definition, get_saved_words, handle_user_preferences,
-    get_review_stats, get_forgetting_curve, test_review_intervals,
-    get_word_details, get_audio, get_supported_languages,
-    fix_next_review_dates, privacy_agreement, support_page,
-    get_review_statistics, get_weekly_review_counts, get_progress_funnel,
-    get_review_activity, get_leaderboard, generate_illustration,
-    get_illustration, health_check, submit_feedback, get_review_progress_stats
+    # save_word, get_next_review_word, 
+    # get_due_counts, submit_review,
+    # get_word_definition, get_saved_words,
+    #  handle_user_preferences,
+    # get_review_stats, get_forgetting_curve, 
+    # test_review_intervals,
+    # get_word_details, get_audio, get_supported_languages,
+    # fix_next_review_dates, 
+    privacy_agreement, support_page,
+    # get_review_statistics, get_weekly_review_counts, get_progress_funnel,
+    # get_review_activity, get_leaderboard, generate_illustration,
+    # get_illustration, 
+    health_check, 
+    # submit_feedback, get_review_progress_stats
 )
 
+from handlers.actions import save_word, get_next_review_word, submit_feedback, submit_review
+from handlers.users import handle_user_preferences
+from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
+from handlers.admin import test_review_intervals, fix_next_review_dates
+# Import word-related functions from original app temporarily
+from app import get_word_definition, get_saved_words, get_word_details, get_audio, get_supported_languages, generate_illustration, get_illustration
+
 # Register all routes
-app.route('/save', methods=['POST'])(save_word)
-app.route('/review_next', methods=['GET'])(get_next_review_word)
-app.route('/due_counts', methods=['GET'])(get_due_counts)
-app.route('/reviews/submit', methods=['POST'])(submit_review)
-app.route('/word', methods=['GET'])(get_word_definition)
-app.route('/saved_words', methods=['GET'])(get_saved_words)
-app.route('/users/<user_id>/preferences', methods=['GET', 'POST'])(handle_user_preferences)
-app.route('/reviews/stats', methods=['GET'])(get_review_stats)
-app.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forgetting_curve)
-app.route('/test-review-intervals', methods=['GET'])(test_review_intervals)
+app.route('/save', methods=['POST'])(save_word) 
+app.route('/review_next', methods=['GET'])(get_next_review_word)  
+app.route('/due_counts', methods=['GET'])(get_due_counts)  
+app.route('/reviews/submit', methods=['POST'])(submit_review) 
+app.route('/word', methods=['GET'])(get_word_definition) 
+app.route('/saved_words', methods=['GET'])(get_saved_words) 
+app.route('/users/<user_id>/preferences', methods=['GET', 'POST'])(handle_user_preferences) 
+app.route('/reviews/stats', methods=['GET'])(get_review_stats) 
+app.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forgetting_curve) 
+app.route('/test-review-intervals', methods=['GET'])(test_review_intervals) 
 app.route('/words/<int:word_id>/details', methods=['GET'])(get_word_details)
 app.route('/audio/<path:text>/<language>')(get_audio)
 app.route('/languages', methods=['GET'])(get_supported_languages)

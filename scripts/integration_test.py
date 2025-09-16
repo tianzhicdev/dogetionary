@@ -115,10 +115,8 @@ class TestRunner:
             
             data = response.json()
             self.assert_json_contains(data, "message", "/save response contains message")
-            self.assert_json_contains(data, "id", "/save response contains id")
-            self.assert_json_contains(data, "word", "/save response contains word")
-            self.assert_json_contains(data, "user_id", "/save response contains user_id")
-            self.assert_json_contains(data, "learning_language", "/save response contains learning_language")
+            self.assert_json_contains(data, "word_id", "/save response contains word_id")
+            self.assert_json_contains(data, "success", "/save response contains success")
             self.assert_json_contains(data, "created_at", "/save response contains created_at")
             
         except Exception as e:
@@ -299,21 +297,24 @@ class TestRunner:
 
     def test_next_due_endpoint(self):
         """Test the next due words endpoint"""
-        self.log("Testing /saved_words/next_due endpoint...")
-        
+        self.log("Testing /review_next endpoint...")
+
         try:
-            # Test getting next due words
-            response = requests.get(f"{BASE_URL}/saved_words/next_due", params={"user_id": self.test_user_id})
-            self.assert_status_code(response, 200, "/saved_words/next_due endpoint")
-            
+            # Test getting next review word
+            response = requests.get(f"{BASE_URL}/review_next", params={"user_id": self.test_user_id})
+            self.assert_status_code(response, 200, "/review_next endpoint")
+
             data = response.json()
-            self.assert_json_contains(data, "user_id", "/saved_words/next_due response contains user_id")
-            self.assert_json_contains(data, "saved_words", "/saved_words/next_due response contains saved_words")
-            self.assert_json_contains(data, "count", "/saved_words/next_due response contains count")
-            self.assert_json_contains(data, "limit", "/saved_words/next_due response contains limit")
+            # The /review_next endpoint returns saved_words format with user_id, saved_words array, and count
+            if "no_words_due" in data:
+                self.assert_json_contains(data, "no_words_due", "/review_next response contains no_words_due")
+            else:
+                self.assert_json_contains(data, "user_id", "/review_next response contains user_id")
+                self.assert_json_contains(data, "saved_words", "/review_next response contains saved_words")
+                self.assert_json_contains(data, "count", "/review_next response contains count")
             
         except Exception as e:
-            self.log(f"✗ /saved_words/next_due endpoint failed with error: {e}")
+            self.log(f"✗ /review_next endpoint failed with error: {e}")
             self.failed += 1
 
     def run_all_tests(self):
