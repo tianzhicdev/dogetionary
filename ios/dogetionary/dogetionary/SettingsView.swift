@@ -169,7 +169,7 @@ struct SettingsView: View {
 
                 Section(header: Text("Feedback")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Help us improve Dogetionary")
+                        Text("Help us improve Unforgettable Dictionary")
                             .font(.caption)
                             .foregroundColor(.secondary)
 
