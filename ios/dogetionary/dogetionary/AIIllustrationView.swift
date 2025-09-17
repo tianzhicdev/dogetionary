@@ -94,13 +94,19 @@ struct AIIllustrationView: View {
     }
     
     private func generateIllustration() {
+        // Track dictionary illustration generation
+        AnalyticsManager.shared.track(action: .dictionaryIllustration, metadata: [
+            "word": word,
+            "language": language
+        ])
+
         isGenerating = true
         error = nil
-        
+
         DictionaryService.shared.generateIllustration(word: word, language: language) { result in
             DispatchQueue.main.async {
                 self.isGenerating = false
-                
+
                 switch result {
                 case .success(let illustrationResponse):
                     self.illustration = illustrationResponse

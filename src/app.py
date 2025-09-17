@@ -269,6 +269,28 @@ WORD_DEFINITION_SCHEMA = {
     "required": ["word", "phonetic", "translations", "definitions"]
 }
 
+# JSON Schema for OpenAI structured output with validation (v2)
+WORD_DEFINITION_SCHEMA_V2 = {
+    "type": "object",
+    "properties": {
+        "definition": {"type": "string", "description": "Clear definition in native language"},
+        "examples": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "3 example sentences"
+        },
+        "validation": {
+            "type": "object",
+            "properties": {
+                "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Confidence that input is a valid word/phrase (0.0-1.0)"},
+                "suggested": {"type": ["string", "null"], "description": "Alternative suggestion if confidence < 0.9, null otherwise"}
+            },
+            "required": ["confidence", "suggested"]
+        }
+    },
+    "required": ["definition", "examples", "validation"]
+}
+
 def generate_audio_for_text(text: str) -> bytes:
     """Generate TTS audio for text using OpenAI"""
     try:
@@ -356,6 +378,73 @@ def get_cached_definition(word: str, learning_lang: str, native_lang: str) -> Op
     except Exception as e:
         app.logger.error(f"Error getting cached definition: {str(e)}")
         return None
+
+def build_definition_prompt_v2(word: str, learning_lang: str, native_lang: str) -> str:
+    """Build LLM prompt for bilingual definitions with word validation"""
+    lang_names = {
+        'af': 'Afrikaans', 'ar': 'Arabic', 'hy': 'Armenian', 'az': 'Azerbaijani',
+        'be': 'Belarusian', 'bs': 'Bosnian', 'bg': 'Bulgarian', 'ca': 'Catalan',
+        'zh': 'Chinese', 'hr': 'Croatian', 'cs': 'Czech', 'da': 'Danish',
+        'nl': 'Dutch', 'en': 'English', 'et': 'Estonian', 'fi': 'Finnish',
+        'fr': 'French', 'gl': 'Galician', 'de': 'German', 'el': 'Greek',
+        'he': 'Hebrew', 'hi': 'Hindi', 'hu': 'Hungarian', 'is': 'Icelandic',
+        'id': 'Indonesian', 'it': 'Italian', 'ja': 'Japanese', 'kn': 'Kannada',
+        'kk': 'Kazakh', 'ko': 'Korean', 'lv': 'Latvian', 'lt': 'Lithuanian',
+        'mk': 'Macedonian', 'ms': 'Malay', 'mr': 'Marathi', 'mi': 'Maori',
+        'ne': 'Nepali', 'no': 'Norwegian', 'fa': 'Persian', 'pl': 'Polish',
+        'pt': 'Portuguese', 'ro': 'Romanian', 'ru': 'Russian', 'sr': 'Serbian',
+        'sk': 'Slovak', 'sl': 'Slovenian', 'es': 'Spanish', 'sw': 'Swahili',
+        'sv': 'Swedish', 'tl': 'Tagalog', 'ta': 'Tamil', 'th': 'Thai',
+        'tr': 'Turkish', 'uk': 'Ukrainian', 'ur': 'Urdu', 'vi': 'Vietnamese',
+        'cy': 'Welsh'
+    }
+
+    learning_lang_name = lang_names.get(learning_lang, learning_lang)
+    native_lang_name = lang_names.get(native_lang, native_lang)
+
+    if learning_lang == native_lang:
+        raise ValueError("Learning language and native language cannot be the same")
+
+    return f"""You are a multilingual dictionary providing definitions from {learning_lang_name} to {native_lang_name}.
+
+IMPORTANT: You must ALWAYS respond with valid JSON in this exact format:
+{{
+  "definition": "clear definition in {native_lang_name}",
+  "examples": ["example 1", "example 2", "example 3"],
+  "validation": {{
+    "confidence": 0.0,
+    "suggested": null
+  }}
+}}
+
+Validation Rules for "{word}":
+- confidence: How confident you are this is a valid {learning_lang_name} word, phrase, or proper noun (0.0-1.0)
+  * 1.0 = Definitely valid (dictionary words, common phrases, well-known proper nouns like "iPhone", "New York")
+  * 0.9+ = Very likely valid (less common but legitimate words/phrases/names)
+  * 0.7-0.9 = Questionable but could be valid (slang, technical terms, uncommon proper nouns)
+  * 0.3-0.7 = Likely invalid but might be a typo
+  * 0.0-0.3 = Definitely invalid (gibberish, random characters)
+
+- suggested: If confidence < 0.9 AND you can suggest a correction, provide it. Otherwise null.
+
+ACCEPT as valid (confidence ≥ 0.9):
+- Dictionary words: "hello", "computer", "beautiful"
+- Common phrases: "how are you", "good morning", "thank you very much"
+- Well-known proper nouns: "iPhone", "McDonald's", "New York", "Google"
+- Brand names: "Coca-Cola", "Microsoft", "Tesla"
+- Common abbreviations: "CEO", "USA", "OK"
+
+QUESTION (confidence 0.7-0.9):
+- Slang: "gonna", "wanna"
+- Technical terms: "API", "blockchain"
+- Less common proper nouns: "Fibonacci", "Schrödinger"
+
+SUGGEST CORRECTIONS (confidence < 0.9 with suggestion):
+- Clear typos: "helllo" → "hello", "computor" → "computer"
+- Common misspellings: "definately" → "definitely"
+
+Word/phrase to define: "{word}"
+"""
 
 def build_definition_prompt(word: str, learning_lang: str, native_lang: str) -> str:
     """Build LLM prompt for bilingual definitions"""
@@ -801,6 +890,64 @@ def save_word():
         app.logger.error(f"Error saving word: {str(e)}")
         return jsonify({"error": f"Failed to save word: {str(e)}"}), 500
 
+@app.route('/unsave', methods=['POST'])
+def delete_saved_word():
+    """Delete a saved word and all associated reviews (cascade delete)"""
+    app.logger.info(f"UNSAVE ENDPOINT HIT - Method: {request.method}")
+    try:
+        data = request.get_json()
+
+        if not data or 'word' not in data or 'user_id' not in data:
+            return jsonify({"error": "Both 'word' and 'user_id' are required"}), 400
+
+        word = data['word'].strip().lower()
+        user_id = data['user_id']
+        learning_lang = data.get('learning_language', 'en')
+
+        if 'learning_language' not in data:
+            stored_learning_lang, _, _, _ = get_user_preferences(user_id)
+            learning_lang = stored_learning_lang
+
+        # Validate UUID
+        try:
+            uuid.UUID(user_id)
+        except ValueError:
+            return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Delete the saved word (reviews will cascade delete automatically)
+        cur.execute("""
+            DELETE FROM saved_words
+            WHERE user_id = %s AND word = %s AND learning_language = %s
+            RETURNING id
+        """, (user_id, word, learning_lang))
+
+        deleted = cur.fetchone()
+        conn.commit()
+        conn.close()
+
+        if deleted:
+            return jsonify({
+                "success": True,
+                "message": f"Word '{word}' removed from saved words",
+                "deleted_word_id": deleted['id']
+            }), 200
+        else:
+            return jsonify({
+                "error": f"Word '{word}' not found in saved words"
+            }), 404
+
+    except Exception as e:
+        app.logger.error(f"Error deleting saved word: {str(e)}")
+        return jsonify({"error": f"Failed to delete saved word: {str(e)}"}), 500
+
+@app.route('/test-unsave', methods=['GET'])
+def test_unsave_route():
+    """Test route to verify unsave deployment"""
+    return jsonify({"message": "Unsave route is deployed", "timestamp": "2025-09-17"})
+
 @app.route('/review_next', methods=['GET'])
 def get_next_review_word():
     try:
@@ -1057,6 +1204,61 @@ def get_word_definition():
         
     except Exception as e:
         app.logger.error(f"Error getting definition for word '{word_normalized}': {str(e)}")
+        return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
+
+@app.route('/v2/word', methods=['GET'])
+def get_word_definition_v2():
+    """Get word definition with validation using OpenAI integration (v2)"""
+    try:
+        user_id = request.args.get('user_id')
+        word = request.args.get('w')
+
+        if not word or not user_id:
+            return jsonify({"error": "w and user_id parameters are required"}), 400
+
+        word_normalized = word.strip().lower()
+
+        # Get user preferences
+        learning_lang, native_lang, _, _ = get_user_preferences(user_id)
+
+        app.logger.info(f"Generating definition with validation for '{word_normalized}'")
+        prompt = build_definition_prompt_v2(word_normalized, learning_lang, native_lang)
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a multilingual dictionary expert with word validation capabilities. Provide definitions and assess whether the input is a valid word or phrase."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "word_definition_with_validation",
+                    "schema": WORD_DEFINITION_SCHEMA_V2
+                }
+            },
+            temperature=0.3
+        )
+
+        definition_data = json.loads(response.choices[0].message.content)
+
+        return jsonify({
+            "word": word_normalized,
+            "learning_language": learning_lang,
+            "native_language": native_lang,
+            "definition": definition_data["definition"],
+            "examples": definition_data["examples"],
+            "validation": definition_data["validation"]
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error getting definition v2 for word '{word_normalized}': {str(e)}")
         return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
 
 @app.route('/saved_words', methods=['GET'])

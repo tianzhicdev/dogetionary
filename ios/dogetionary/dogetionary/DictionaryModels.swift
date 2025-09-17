@@ -348,3 +348,39 @@ struct AllMarker: Codable {
     let type: String // "creation", "review", "next_review"
     let success: Bool?
 }
+
+// MARK: - V2 API Models for Word Validation
+
+struct WordDefinitionV2Response: Codable {
+    let word: String
+    let learning_language: String
+    let native_language: String
+    let definition: String
+    let examples: [String]
+    let validation: WordValidation
+}
+
+struct WordValidation: Codable {
+    let confidence: Double
+    let suggested: String?
+}
+
+// UI-compatible model for v2 API
+struct DefinitionV2: Identifiable {
+    let id = UUID()
+    let word: String
+    let definition: String
+    let examples: [String]
+    let validation: WordValidation
+
+    init(from response: WordDefinitionV2Response) {
+        self.word = response.word
+        self.definition = response.definition
+        self.examples = response.examples
+        self.validation = response.validation
+    }
+
+    var isValid: Bool {
+        return validation.confidence >= 0.9
+    }
+}

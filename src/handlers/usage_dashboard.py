@@ -2,11 +2,12 @@
 Usage dashboard with HTML tables for monitoring user activity
 """
 
-from flask import Response
+from flask import Response, request
 from utils.database import get_db_connection
 from datetime import datetime, timedelta
 import logging
 import pytz
+from services.analytics_service import analytics_service
 
 logger = logging.getLogger(__name__)
 
@@ -105,8 +106,18 @@ def get_usage_dashboard():
         cur.close()
         conn.close()
 
+        # Get analytics data
+        daily_action_counts = analytics_service.get_daily_action_counts(7)
+        available_users = analytics_service.get_all_users()
+
+        # Get selected user actions if user_id provided
+        selected_user_id = request.args.get('user_id')
+        user_actions = []
+        if selected_user_id:
+            user_actions = analytics_service.get_user_actions(selected_user_id)
+
         # Generate HTML
-        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats)
+        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, daily_action_counts, available_users, selected_user_id, user_actions)
 
         return Response(html, mimetype='text/html')
 
@@ -131,7 +142,7 @@ def convert_to_ny_time(timestamp):
         return ny_time
     return None
 
-def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
+def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, daily_action_counts, available_users, selected_user_id, user_actions):
     """Generate HTML dashboard with tables"""
 
     # Get current time in NY
@@ -396,6 +407,129 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
         """
     else:
         html += '<div class="no-data">No saved words in the last 7 days</div>'
+
+    html += """
+        </div>
+
+        <div class="section">
+            <h2>📊 User Actions Analytics (Last 7 Days)</h2>
+    """
+
+    if daily_action_counts:
+        # Group actions by date for table display
+        actions_by_date = {}
+        for row in daily_action_counts:
+            date_str = row['action_date'].strftime('%Y-%m-%d')
+            if date_str not in actions_by_date:
+                actions_by_date[date_str] = []
+            actions_by_date[date_str].append({
+                'action': row['action'],
+                'category': row['category'],
+                'count': row['count']
+            })
+
+        html += """
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Action</th>
+                        <th>Category</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+
+        for date_str in sorted(actions_by_date.keys(), reverse=True):
+            for action_data in actions_by_date[date_str]:
+                category_color = {
+                    'dictionary': '#2196F3',
+                    'review': '#4CAF50',
+                    'navigation': '#FF9800',
+                    'profile': '#9C27B0',
+                    'settings': '#607D8B',
+                    'saved': '#795548',
+                    'feedback': '#E91E63',
+                    'app_lifecycle': '#009688'
+                }.get(action_data['category'], '#666')
+
+                html += f"""
+                    <tr>
+                        <td>{date_str}</td>
+                        <td class="word">{action_data['action']}</td>
+                        <td><span class="language" style="background-color: {category_color}20; color: {category_color};">{action_data['category'].upper()}</span></td>
+                        <td><strong>{action_data['count']}</strong></td>
+                    </tr>
+                """
+
+        html += """
+                </tbody>
+            </table>
+        """
+    else:
+        html += '<div class="no-data">No user actions in the last 7 days</div>'
+
+    html += """
+        </div>
+
+        <div class="section">
+            <h2>👤 User Actions Viewer</h2>
+            <form method="GET" style="margin-bottom: 20px;">
+                <label for="user_id" style="font-weight: 600; margin-right: 10px;">Select User:</label>
+                <select name="user_id" onchange="this.form.submit()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <option value="">-- Select a user --</option>
+    """
+
+    for user in available_users:
+        selected = 'selected' if selected_user_id == user['user_id'] else ''
+        html += f"""
+                    <option value="{user['user_id']}" {selected}>{user['user_name']} ({user['user_id'][:8]}...)</option>
+        """
+
+    html += """
+                </select>
+            </form>
+    """
+
+    if selected_user_id and user_actions:
+        html += """
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Action</th>
+                        <th>Category</th>
+                        <th>Metadata</th>
+                        <th>Session ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+
+        for action in user_actions:
+            ny_time = convert_to_ny_time(action['created_at'])
+            metadata_str = str(action['metadata']) if action['metadata'] else '{}'
+            session_id = action['session_id'][:8] + '...' if action['session_id'] else 'N/A'
+
+            html += f"""
+                    <tr>
+                        <td class="timestamp">{ny_time.strftime('%Y-%m-%d %H:%M:%S ET')}</td>
+                        <td class="word">{action['action']}</td>
+                        <td><span class="language">{action['category'].upper()}</span></td>
+                        <td style="max-width: 200px; word-wrap: break-word; font-size: 0.85em;">{metadata_str}</td>
+                        <td class="user-id">{session_id}</td>
+                    </tr>
+            """
+
+        html += """
+                </tbody>
+            </table>
+        """
+    elif selected_user_id:
+        html += '<div class="no-data">No actions found for this user</div>'
+    else:
+        html += '<div class="no-data">Select a user to view their actions</div>'
 
     html += """
         </div>

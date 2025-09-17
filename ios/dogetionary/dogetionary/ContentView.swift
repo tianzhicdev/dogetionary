@@ -78,6 +78,18 @@ struct ContentView: View {
             // Navigate to Review tab when notification is tapped
             selectedTab = 2
         }
+        .onChange(of: selectedTab) { oldTab, newTab in
+            // Track tab navigation
+            let action: AnalyticsAction = switch newTab {
+            case 0: .navTabDictionary
+            case 1: .navTabSaved
+            case 2: .navTabReview
+            case 3: .navTabLeaderboard
+            case 4: .navTabSettings
+            default: .navTabDictionary
+            }
+            AnalyticsManager.shared.track(action: action)
+        }
     }
 }
 

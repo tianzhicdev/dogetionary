@@ -268,9 +268,126 @@ class DictionaryService: ObservableObject {
             }
         }.resume()
     }
-    
+
+    func unsaveWord(_ word: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/unsave") else {
+            logger.error("Invalid URL for unsave endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Unsaving word: \(word) for user: \(userID)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestBody = [
+            "word": word,
+            "user_id": userID,
+            "learning_language": UserManager.shared.learningLanguage
+        ] as [String : Any]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            logger.error("Failed to encode unsave request: \(error.localizedDescription)")
+            completion(.failure(DictionaryError.decodingError(error)))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.logger.error("Network error unsaving word: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for unsave")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("Unsave response status code: \(httpResponse.statusCode)")
+
+            if httpResponse.statusCode == 200 {
+                self.logger.info("Successfully unsaved word: \(word)")
+                completion(.success(true))
+            } else if httpResponse.statusCode == 404 {
+                self.logger.info("Word not found in saved words: \(word)")
+                completion(.success(false))
+            } else {
+                self.logger.error("Server error unsaving word: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+            }
+        }.resume()
+    }
+
+    func searchWordV2(_ word: String, completion: @escaping (Result<DefinitionV2, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+
+        guard let url = URL(string: "\(baseURL)/v2/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
+            logger.error("Invalid URL for v2 word: \(word)")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Making v2 request to: \(url.absoluteString)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.logger.error("Network error: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("V2 response status code: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("Server error with status code: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data else {
+                self.logger.error("No data received")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            // Log raw response for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                self.logger.info("Raw v2 response: \(responseString)")
+            }
+
+            do {
+                let response = try JSONDecoder().decode(WordDefinitionV2Response.self, from: data)
+                let definition = DefinitionV2(from: response)
+
+                self.logger.info("Successfully decoded v2 word definition for: \(response.word) with confidence: \(response.validation.confidence)")
+                completion(.success(definition))
+            } catch {
+                self.logger.error("Failed to decode v2 response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
     // MARK: - Audio Methods
-    
+
     func fetchAudioForText(_ text: String, language: String, completion: @escaping (Data?) -> Void) {
         // URL encode the text to handle special characters and spaces
         guard let encodedText = text.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),

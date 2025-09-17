@@ -104,6 +104,12 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                             TextField("Enter your name", text: $userManager.userName)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .onSubmit {
+                                    // Track profile name update
+                                    AnalyticsManager.shared.track(action: .profileNameUpdate, metadata: [
+                                        "name_length": userManager.userName.count
+                                    ])
+                                }
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
@@ -112,6 +118,12 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                             TextField("Enter your motto", text: $userManager.userMotto)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .onSubmit {
+                                    // Track profile motto update
+                                    AnalyticsManager.shared.track(action: .profileMottoUpdate, metadata: [
+                                        "motto_length": userManager.userMotto.count
+                                    ])
+                                }
                         }
                     }
                 }
@@ -190,6 +202,8 @@ struct SettingsView: View {
 
                         if !notificationManager.hasPermission {
                             Button("Enable Notifications") {
+                                // Track settings notification enable
+                                AnalyticsManager.shared.track(action: .settingsNotificationEnable)
                                 notificationManager.requestPermission()
                             }
                             .buttonStyle(.borderedProminent)
@@ -360,6 +374,11 @@ struct SettingsView: View {
                 if newValue == userManager.nativeLanguage {
                     showLanguageAlert = true
                 } else {
+                    // Track profile language learning update
+                    AnalyticsManager.shared.track(action: .profileLanguageLearning, metadata: [
+                        "old_language": userManager.learningLanguage,
+                        "new_language": newValue
+                    ])
                     userManager.learningLanguage = newValue
                 }
             }
@@ -373,6 +392,11 @@ struct SettingsView: View {
                 if newValue == userManager.learningLanguage {
                     showLanguageAlert = true
                 } else {
+                    // Track profile language native update
+                    AnalyticsManager.shared.track(action: .profileLanguageNative, metadata: [
+                        "old_language": userManager.nativeLanguage,
+                        "new_language": newValue
+                    ])
                     userManager.nativeLanguage = newValue
                 }
             }
@@ -386,9 +410,16 @@ struct SettingsView: View {
     private func submitFeedback() {
         guard !feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
+        let trimmedFeedback = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Track feedback submit
+        AnalyticsManager.shared.track(action: .feedbackSubmit, metadata: [
+            "feedback_length": trimmedFeedback.count
+        ])
+
         isSubmittingFeedback = true
 
-        DictionaryService.shared.submitFeedback(feedback: feedbackText.trimmingCharacters(in: .whitespacesAndNewlines)) { result in
+        DictionaryService.shared.submitFeedback(feedback: trimmedFeedback) { result in
             DispatchQueue.main.async {
                 isSubmittingFeedback = false
 

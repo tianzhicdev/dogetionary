@@ -72,20 +72,23 @@ from app import (
     # submit_feedback, get_review_progress_stats
 )
 
-from handlers.actions import save_word, get_next_review_word, submit_feedback, submit_review
+from handlers.actions import save_word, delete_saved_word, get_next_review_word, submit_feedback, submit_review
 from handlers.users import handle_user_preferences
 from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
 from handlers.admin import test_review_intervals, fix_next_review_dates
 from handlers.usage_dashboard import get_usage_dashboard
+from handlers.analytics import track_user_action, get_analytics_data
 # Import word-related functions from original app temporarily
-from app import get_word_definition, get_saved_words, get_word_details, get_audio, get_supported_languages, generate_illustration, get_illustration
+from app import get_word_definition, get_word_definition_v2, get_saved_words, get_word_details, get_audio, get_supported_languages, generate_illustration, get_illustration
 
 # Register all routes
-app.route('/save', methods=['POST'])(save_word) 
+app.route('/save', methods=['POST'])(save_word)
+app.route('/unsave', methods=['POST'])(delete_saved_word)
 app.route('/review_next', methods=['GET'])(get_next_review_word)  
 app.route('/due_counts', methods=['GET'])(get_due_counts)  
-app.route('/reviews/submit', methods=['POST'])(submit_review) 
-app.route('/word', methods=['GET'])(get_word_definition) 
+app.route('/reviews/submit', methods=['POST'])(submit_review)
+app.route('/word', methods=['GET'])(get_word_definition)
+app.route('/v2/word', methods=['GET'])(get_word_definition_v2)
 app.route('/saved_words', methods=['GET'])(get_saved_words) 
 app.route('/users/<user_id>/preferences', methods=['GET', 'POST'])(handle_user_preferences) 
 app.route('/reviews/stats', methods=['GET'])(get_review_stats) 
@@ -108,6 +111,8 @@ app.route('/health', methods=['GET'])(health_check)
 app.route('/feedback', methods=['POST'])(submit_feedback)
 app.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats)
 app.route('/usage', methods=['GET'])(get_usage_dashboard)
+app.route('/analytics/track', methods=['POST'])(track_user_action)
+app.route('/analytics/data', methods=['GET'])(get_analytics_data)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
