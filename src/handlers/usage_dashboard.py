@@ -37,17 +37,16 @@ def get_usage_dashboard():
 
         new_users = cur.fetchall()
 
-        # 2. Lookups table - we'll track saved words as proxy for lookups since we don't track individual lookups
-        # For real lookups, we'd need a separate lookup_history table
+        # 2. Lookups table - using definitions table data (no user_id since definitions are cached globally)
         cur.execute("""
-            SELECT DISTINCT
-                sw.user_id,
-                sw.word,
-                MIN(sw.created_at) as first_lookup
-            FROM saved_words sw
-            WHERE sw.created_at >= %s
-            GROUP BY sw.user_id, sw.word
-            ORDER BY first_lookup DESC
+            SELECT
+                word,
+                learning_language,
+                native_language,
+                created_at as lookup_time
+            FROM definitions
+            WHERE created_at >= %s
+            ORDER BY created_at DESC
             LIMIT 100
         """, (seven_days_ago,))
 
@@ -330,7 +329,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
 
         <div class="section">
             <h2>🔍 Recent Lookups</h2>
-            <p style="color: #666; font-size: 0.9em;">Note: Showing saved words as proxy for lookups</p>
+            <p style="color: #666; font-size: 0.9em;">Cached word definitions from all users</p>
     """
 
     if lookups:
@@ -338,19 +337,19 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
             <table>
                 <thead>
                     <tr>
-                        <th>User ID</th>
                         <th>Word</th>
+                        <th>Languages</th>
                         <th>Timestamp</th>
                     </tr>
                 </thead>
                 <tbody>
         """
         for lookup in lookups:
-            ny_time = convert_to_ny_time(lookup['first_lookup'])
+            ny_time = convert_to_ny_time(lookup['lookup_time'])
             html += f"""
                     <tr>
-                        <td class="user-id">{lookup['user_id']}</td>
                         <td class="word">{lookup['word']}</td>
+                        <td><span class="language">{lookup['learning_language'].upper()}</span> → <span class="language">{lookup['native_language'].upper()}</span></td>
                         <td class="timestamp">{ny_time.strftime('%Y-%m-%d %H:%M:%S ET')}</td>
                     </tr>
             """
