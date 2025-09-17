@@ -128,13 +128,19 @@ struct ReviewView: View {
     }
     
     private func startReview() {
+        // Track review start
+        AnalyticsManager.shared.track(action: .reviewStart, metadata: [
+            "overdue_count": dueCounts?.overdue_count ?? 0,
+            "total_count": dueCounts?.total_count ?? 0
+        ])
+
         isLoading = true
         errorMessage = nil
-        
+
         DictionaryService.shared.getNextReviewWord { result in
             DispatchQueue.main.async {
                 self.isLoading = false
-                
+
                 switch result {
                 case .success(let words):
                     if !words.isEmpty {
@@ -164,6 +170,19 @@ struct ReviewView: View {
 
         let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
 
+        // Track review answer
+        if response {
+            AnalyticsManager.shared.track(action: .reviewAnswerCorrect, metadata: [
+                "word": currentWord.word,
+                "response_time_ms": responseTime ?? 0
+            ])
+        } else {
+            AnalyticsManager.shared.track(action: .reviewAnswerIncorrect, metadata: [
+                "word": currentWord.word,
+                "response_time_ms": responseTime ?? 0
+            ])
+        }
+
         DictionaryService.shared.submitReview(
             wordID: currentWord.id,
             response: response
@@ -182,15 +201,18 @@ struct ReviewView: View {
     }
     
     private func moveToNextWord() {
+        // Track review next action
+        AnalyticsManager.shared.track(action: .reviewNext)
+
         // Refresh due counts after each review
         loadDueCounts()
-        
+
         // Get the next word to review
         isLoading = true
         DictionaryService.shared.getNextReviewWord { result in
             DispatchQueue.main.async {
                 self.isLoading = false
-                
+
                 switch result {
                 case .success(let words):
                     if !words.isEmpty {
@@ -203,6 +225,10 @@ struct ReviewView: View {
                         print("🔚 Before setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
                         self.isSessionComplete = true
                         print("🔚 After setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
+
+                        // Track review complete
+                        AnalyticsManager.shared.track(action: .reviewComplete)
+
                         self.loadProgressStats {
                             // Stats loaded for complete view
                         }
@@ -333,6 +359,12 @@ struct ReviewSessionView: View {
                         // Pronunciation audio button
                         if !wordDefinitions.isEmpty, let audioData = wordDefinitions.first?.audioData {
                             Button(action: {
+                                // Track review audio action
+                                AnalyticsManager.shared.track(action: .reviewAudio, metadata: [
+                                    "word": currentWord.word,
+                                    "audio_type": "pronunciation"
+                                ])
+
                                 if audioPlayer.isPlaying {
                                     audioPlayer.stopAudio()
                                 } else {
@@ -352,6 +384,13 @@ struct ReviewSessionView: View {
                             // Example audio button (if example is available)
                             if let example = firstExample {
                                 Button(action: {
+                                    // Track review audio action for examples
+                                    AnalyticsManager.shared.track(action: .reviewAudio, metadata: [
+                                        "word": currentWord.word,
+                                        "audio_type": "example",
+                                        "example_text": example
+                                    ])
+
                                     playExampleAudio(example)
                                 }) {
                                     HStack {

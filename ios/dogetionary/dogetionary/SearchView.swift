@@ -15,6 +15,10 @@ struct SearchView: View {
     @State private var definitions: [Definition] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showValidationAlert = false
+    @State private var validationSuggestion: String?
+    @State private var currentSearchQuery = ""
+    @State private var currentWordConfidence: Double = 1.0
     
     private var isSearchActive: Bool {
         return !definitions.isEmpty || errorMessage != nil || isLoading
@@ -83,6 +87,31 @@ struct SearchView: View {
                 // Dismiss keyboard when tapping outside text field
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
+            .alert("Word Validation", isPresented: $showValidationAlert) {
+                if let suggestion = validationSuggestion {
+                    // Has suggestion - show suggestion and original options
+                    Button(suggestion) {
+                        searchSuggestedWord()
+                    }
+                    Button(currentSearchQuery) {
+                        searchOriginalWord()
+                    }
+                } else {
+                    // No suggestion - show cancel and lookup anyway options
+                    Button("Cancel", role: .cancel) {
+                        cancelSearch()
+                    }
+                    Button("Lookup anyway") {
+                        searchOriginalWord()
+                    }
+                }
+            } message: {
+                if let suggestion = validationSuggestion {
+                    Text("Hmm, \"\(currentSearchQuery)\" doesn't look quite right. Did you mean \"\(suggestion)\"?")
+                } else {
+                    Text("We couldn't find \"\(currentSearchQuery)\" in our dictionary. You can still look it up, but the definition might not be accurate.")
+                }
+            }
         }
     }
     
@@ -131,21 +160,159 @@ struct SearchView: View {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
-        
+
+        let searchQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        currentSearchQuery = searchQuery
+
+        // Track dictionary search
+        AnalyticsManager.shared.track(action: .dictionarySearch, metadata: [
+            "query": searchQuery,
+            "language": UserManager.shared.learningLanguage
+        ])
+
         isLoading = true
         errorMessage = nil
-        
-        DictionaryService.shared.searchWord(searchText) { result in
+
+        // FIRST check validation to determine if we should show definition
+        DictionaryService.shared.searchWordV2(searchQuery) { result in
             DispatchQueue.main.async {
-                isLoading = false
-                
+                switch result {
+                case .success(let definitionV2):
+                    // Store confidence and suggestion
+                    self.currentWordConfidence = definitionV2.validation.confidence
+                    self.validationSuggestion = definitionV2.validation.suggested
+
+                    if definitionV2.isValid {
+                        // High confidence (≥0.9) - show definition immediately + auto-save
+                        self.fetchAndDisplayDefinition(searchQuery, autoSave: true)
+                    } else {
+                        // Low confidence (<0.9) - show alert, NO definition
+                        self.isLoading = false
+                        self.showValidationAlert = true
+
+                        // Track validation event
+                        AnalyticsManager.shared.track(action: .validationInvalid, metadata: [
+                            "original_query": searchQuery,
+                            "confidence": definitionV2.validation.confidence,
+                            "suggested": definitionV2.validation.suggested ?? "none",
+                            "language": UserManager.shared.learningLanguage
+                        ])
+                    }
+
+                case .failure(_):
+                    // Validation service failed - default to showing definition + auto-save
+                    self.currentWordConfidence = 1.0
+                    self.validationSuggestion = nil
+                    self.fetchAndDisplayDefinition(searchQuery, autoSave: true)
+                }
+            }
+        }
+    }
+
+    private func fetchAndDisplayDefinition(_ word: String, autoSave: Bool) {
+        DictionaryService.shared.searchWord(word) { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+
                 switch result {
                 case .success(let definitions):
                     self.definitions = definitions
+
+                    // Auto-save only if requested and we have definitions
+                    if autoSave, let firstDefinition = definitions.first {
+                        self.autoSaveWord(firstDefinition.word)
+                    }
+
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     self.definitions = []
                 }
+            }
+        }
+    }
+
+
+    private func searchOriginalWord() {
+        // Track user choosing original word
+        AnalyticsManager.shared.track(action: .validationUseOriginal, metadata: [
+            "original_query": currentSearchQuery,
+            "suggested": validationSuggestion ?? "none",
+            "language": UserManager.shared.learningLanguage
+        ])
+
+        showValidationAlert = false
+        isLoading = true
+
+        // Fetch and show definition for original word but DON'T auto-save
+        fetchAndDisplayDefinition(currentSearchQuery, autoSave: false)
+    }
+
+    private func searchSuggestedWord() {
+        guard let suggestion = validationSuggestion else { return }
+
+        // Track user accepting suggestion
+        AnalyticsManager.shared.track(action: .validationAcceptSuggestion, metadata: [
+            "original_query": currentSearchQuery,
+            "accepted_suggestion": suggestion,
+            "language": UserManager.shared.learningLanguage
+        ])
+
+        showValidationAlert = false
+        searchText = suggestion
+        isLoading = true
+
+        // Fetch and show definition for suggested word AND auto-save it
+        fetchAndDisplayDefinition(suggestion, autoSave: true)
+    }
+
+    private func cancelSearch() {
+        // Track user canceling validation
+        AnalyticsManager.shared.track(action: .validationCancel, metadata: [
+            "original_query": currentSearchQuery,
+            "suggested": validationSuggestion ?? "none",
+            "language": UserManager.shared.learningLanguage
+        ])
+
+        // Clear everything and return to landing page
+        showValidationAlert = false
+        searchText = ""
+        definitions = []
+        errorMessage = nil
+        currentSearchQuery = ""
+        validationSuggestion = nil
+        currentWordConfidence = 1.0
+    }
+
+    private func autoSaveWord(_ word: String) {
+        // Check if word is already saved to avoid duplicates
+        DictionaryService.shared.getSavedWords { result in
+            switch result {
+            case .success(let savedWords):
+                let isAlreadySaved = savedWords.contains { $0.word.lowercased() == word.lowercased() }
+
+                if !isAlreadySaved {
+                    // Auto-save the word
+                    DictionaryService.shared.saveWord(word) { saveResult in
+                        DispatchQueue.main.async {
+                            switch saveResult {
+                            case .success:
+                                // Track auto-save event
+                                AnalyticsManager.shared.track(action: .dictionaryAutoSave, metadata: [
+                                    "word": word,
+                                    "language": UserManager.shared.learningLanguage
+                                ])
+
+                                // Notify DefinitionCards to update their bookmark state
+                                NotificationCenter.default.post(name: .wordAutoSaved, object: word)
+
+                            case .failure(let error):
+                                print("Auto-save failed for word '\(word)': \(error.localizedDescription)")
+                            }
+                        }
+                    }
+                }
+            case .failure(let error):
+                print("Failed to check saved words for auto-save: \(error.localizedDescription)")
             }
         }
     }
@@ -178,7 +345,6 @@ struct DefinitionCard: View {
     @State private var illustration: IllustrationResponse?
     @State private var isGeneratingIllustration = false
     @State private var illustrationError: String?
-    @State private var bounceAnimation = false
     @ObservedObject private var userManager = UserManager.shared
     
     var body: some View {
@@ -197,10 +363,10 @@ struct DefinitionCard: View {
                 Spacer()
                 
                 HStack(spacing: 12) {
-                    // Save button
+                    // Save/Unsave toggle button
                     Button(action: {
                         if isSaved {
-                            // Could implement unsave functionality here
+                            unsaveWord()
                         } else {
                             saveWord()
                         }
@@ -208,13 +374,6 @@ struct DefinitionCard: View {
                         Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                             .font(.title3)
                             .foregroundColor(isSaved ? .blue : .secondary)
-                            .scaleEffect(bounceAnimation && !isSaved ? 1.3 : 1.0)
-                            .animation(
-                                bounceAnimation && !isSaved ?
-                                    Animation.interpolatingSpring(stiffness: 200, damping: 10)
-                                        .repeatCount(2, autoreverses: false) : nil,
-                                value: bounceAnimation
-                            )
                     }
                     .disabled(isSaving || isCheckingStatus)
                     .buttonStyle(PlainButtonStyle())
@@ -308,31 +467,24 @@ struct DefinitionCard: View {
             checkIfWordIsSaved()
             loadWordAudioIfNeeded()
 
-            // Start bounce animation after checking saved status
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                if !isSaved && !isCheckingStatus {
-                    // Initial bounce animation
-                    withAnimation {
-                        bounceAnimation = true
-                    }
-
-                    // Repeat bounce animation every 4 seconds if still not saved
-                    Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { timer in
-                        if isSaved {
-                            timer.invalidate()
-                        } else {
-                            withAnimation {
-                                bounceAnimation.toggle()
-                            }
-                        }
-                    }
-                }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { notification in
+            if let autoSavedWord = notification.object as? String,
+               autoSavedWord.lowercased() == definition.word.lowercased() {
+                // Update bookmark state for auto-saved word
+                isSaved = true
             }
         }
     }
     
     private func saveWord() {
         isSaving = true
+
+        // Track dictionary save action
+        AnalyticsManager.shared.track(action: .dictionarySave, metadata: [
+            "word": definition.word,
+            "language": UserManager.shared.learningLanguage
+        ])
 
         DictionaryService.shared.saveWord(definition.word) { result in
             DispatchQueue.main.async {
@@ -341,9 +493,25 @@ struct DefinitionCard: View {
                 switch result {
                 case .success:
                     isSaved = true
-                    bounceAnimation = false  // Stop bouncing when saved
                 case .failure(let error):
                     print("Failed to save word: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func unsaveWord() {
+        isSaving = true
+
+        DictionaryService.shared.unsaveWord(definition.word) { result in
+            DispatchQueue.main.async {
+                isSaving = false
+
+                switch result {
+                case .success:
+                    isSaved = false
+                case .failure(let error):
+                    print("Failed to unsave word: \(error.localizedDescription)")
                 }
             }
         }
@@ -380,6 +548,12 @@ struct DefinitionCard: View {
     }
     
     private func playWordAudio() {
+        // Track dictionary search audio action
+        AnalyticsManager.shared.track(action: .dictionarySearchAudio, metadata: [
+            "word": definition.word,
+            "language": UserManager.shared.learningLanguage
+        ])
+
         if let audioData = wordAudioData {
             audioPlayer.playAudio(from: audioData)
         } else {
@@ -398,6 +572,13 @@ struct DefinitionCard: View {
     }
     
     private func playExampleAudio(_ text: String) {
+        // Track dictionary example audio action
+        AnalyticsManager.shared.track(action: .dictionaryExampleAudio, metadata: [
+            "word": definition.word,
+            "example_text": text,
+            "language": UserManager.shared.learningLanguage
+        ])
+
         loadExampleAudio(for: text) { audioData in
             if let audioData = audioData {
                 self.audioPlayer.playAudio(from: audioData)

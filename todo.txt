@@ -57,12 +57,64 @@ when the backend returns forgetting_curve, it should include the last review at 
 5. the review history should show creation time 
 6. the decay rate and the threshold to set the next review date should be configurable at compile time, make them constants at the top for easy tuning; 
 
-
---- done ---
-
 2. refactor the frontend and backend code -- use multiple files, one for each class, improve the reusability of the code, give every class a meaningful name, remove unused code;
 3. we should refactor integration test so all endpoints are properly tested
 4. we should create unit tests too so business logic heavy functions are tested too
 
-5. add a feedback section in the settings tab -- with a submit button; users can write what ever they want < 500 chars then submit it; we should have a table user_id, feedback, created_at to collect feedback;
 
+1. add a feedback section in the settings tab -- with a submit button; users can write what ever they want < 500 chars then submit it; we should have a table user_id, feedback, created_at to collect feedback;
+
+
+2.
+in review mode there is a "review complete" ReviewCompleteView, we should add a similar ReviewGoalAchievedView;
+we should show ReviewGoalAchievedView when review overdue count reach 0 from 1 or more; 
+it should show "reviews today" (reviews in the past 24 hours), success rate today (n the past 24 hours), 
+changes from acquainted -> familiar, familiar -> remembered, remembered to unforgettable;
+2 buttons: "Continue", "Review Stats"
+ "Review Stats" should take users to saved words -> review stats;
+
+ ReviewCompleteView right now only show up when there is no more words to review (all have been reviewed in the past 24h)
+ keep this behaviour but change the stats to be the same as ReviewGoalAchievedView and there is only one button "Review Stats"
+
+
+we should ask users to rate our app when he has > 100 reviews on the ReviewGoalAchievedView page; we should only trigger rating ask once ever; how can this be implemented? no code, discuss
+
+
+1. create analytics system
+
+for every user action, every button or tab click on the UI, we need to generate a user action
+user_id, action enum, metadata
+
+
+'action enum' should be save, lookup_search, lookup_search_audio, tab_leaderborad ,tab_review, review_yes, review_no, review_audio, username_update, usermotton_update, feedback_submit
+basically category_action we can use   category_action_subaction if needed, plz design all the action enum
+
+the /usage should show a table of counts by day by action in the past 7 days;
+
+the /usage should show a table of all the actions for a user; a dropdown menu to select from all the users should be present
+
+
+show me your plan, DDL sql and action enum
+
+
+1. because users can be on any version of the app, everything we do must be backward compatible;
+
+2. we should add a feature to show the users if the word they look up is not word. -- this will require a breaking ios change;
+-- ios should call new version of the endpoint;
+there must be a way to force an app upgrade
+
+when users search a word, we should automatically save the word. show me how you would want to implement this. no code yet
+
+
+
+1. we should allow people to remove saved words, add a new field in saved words 'removed', then every call must use removed filter;
+2. or we can just really remove it from db and reivews, keep everything simple;
+
+
+--- done ---
+
+
+
+
+
+2. create better metrics for review

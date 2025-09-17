@@ -20,6 +20,10 @@ struct dogetionaryApp: App {
 
         // Register background tasks
         BackgroundTaskManager.shared.registerBackgroundTasks()
+
+        // Initialize analytics with new session
+        AnalyticsManager.shared.newSession()
+        AnalyticsManager.shared.track(action: .appLaunch)
     }
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -44,10 +48,18 @@ struct dogetionaryApp: App {
             case .active:
                 // Start foreground timer when app becomes active
                 BackgroundTaskManager.shared.startForegroundTimer()
+
+                // Generate new session when app becomes active from background
+                if oldPhase == .background || oldPhase == .inactive {
+                    AnalyticsManager.shared.newSession()
+                }
+
+                AnalyticsManager.shared.track(action: .appForeground)
             case .background:
                 // Schedule background refresh when entering background
                 BackgroundTaskManager.shared.scheduleAppRefresh()
                 BackgroundTaskManager.shared.stopForegroundTimer()
+                AnalyticsManager.shared.track(action: .appBackground)
             case .inactive:
                 break
             @unknown default:

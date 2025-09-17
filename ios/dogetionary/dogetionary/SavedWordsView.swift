@@ -110,6 +110,14 @@ struct SavedWordsListView: View {
                     NavigationLink(destination: WordDetailView(savedWord: savedWord)) {
                         SavedWordRow(savedWord: savedWord)
                     }
+                    .onTapGesture {
+                        // Track saved word view details
+                        AnalyticsManager.shared.track(action: .savedViewDetails, metadata: [
+                            "word": savedWord.word,
+                            "review_count": savedWord.review_count,
+                            "is_overdue": isOverdue(savedWord.next_review_date ?? "")
+                        ])
+                    }
                 }
             }
             
@@ -122,6 +130,14 @@ struct SavedWordsListView: View {
         .refreshable {
             await onRefresh()
         }
+    }
+
+    private func isOverdue(_ dateString: String) -> Bool {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            return date < Date()
+        }
+        return false
     }
 }
 
