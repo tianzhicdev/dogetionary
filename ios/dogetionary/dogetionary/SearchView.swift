@@ -208,11 +208,11 @@ struct DefinitionCard: View {
                         Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                             .font(.title3)
                             .foregroundColor(isSaved ? .blue : .secondary)
-                            .scaleEffect(bounceAnimation && !isSaved ? 1.2 : 1.0)
+                            .scaleEffect(bounceAnimation && !isSaved ? 1.3 : 1.0)
                             .animation(
                                 bounceAnimation && !isSaved ?
-                                    Animation.easeInOut(duration: 0.6)
-                                        .repeatCount(1, autoreverses: true) : nil,
+                                    Animation.interpolatingSpring(stiffness: 200, damping: 10)
+                                        .repeatCount(2, autoreverses: false) : nil,
                                 value: bounceAnimation
                             )
                     }
@@ -307,19 +307,41 @@ struct DefinitionCard: View {
         .onAppear {
             checkIfWordIsSaved()
             loadWordAudioIfNeeded()
+
+            // Start bounce animation after checking saved status
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                if !isSaved && !isCheckingStatus {
+                    // Initial bounce animation
+                    withAnimation {
+                        bounceAnimation = true
+                    }
+
+                    // Repeat bounce animation every 4 seconds if still not saved
+                    Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { timer in
+                        if isSaved {
+                            timer.invalidate()
+                        } else {
+                            withAnimation {
+                                bounceAnimation.toggle()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     
     private func saveWord() {
         isSaving = true
-        
+
         DictionaryService.shared.saveWord(definition.word) { result in
             DispatchQueue.main.async {
                 isSaving = false
-                
+
                 switch result {
                 case .success:
                     isSaved = true
+                    bounceAnimation = false  // Stop bouncing when saved
                 case .failure(let error):
                     print("Failed to save word: \(error.localizedDescription)")
                 }
