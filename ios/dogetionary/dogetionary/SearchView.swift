@@ -178,6 +178,7 @@ struct DefinitionCard: View {
     @State private var illustration: IllustrationResponse?
     @State private var isGeneratingIllustration = false
     @State private var illustrationError: String?
+    @State private var bounceAnimation = false
     @ObservedObject private var userManager = UserManager.shared
     
     var body: some View {
@@ -207,6 +208,13 @@ struct DefinitionCard: View {
                         Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                             .font(.title3)
                             .foregroundColor(isSaved ? .blue : .secondary)
+                            .scaleEffect(bounceAnimation && !isSaved ? 1.2 : 1.0)
+                            .animation(
+                                bounceAnimation && !isSaved ?
+                                    Animation.easeInOut(duration: 0.6)
+                                        .repeatCount(1, autoreverses: true) : nil,
+                                value: bounceAnimation
+                            )
                     }
                     .disabled(isSaving || isCheckingStatus)
                     .buttonStyle(PlainButtonStyle())

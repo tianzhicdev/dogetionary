@@ -8,13 +8,18 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import BackgroundTasks
 
 @main
 struct dogetionaryApp: App {
+    @Environment(\.scenePhase) var scenePhase
 
     init() {
         // Set up notification center delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
+
+        // Register background tasks
+        BackgroundTaskManager.shared.registerBackgroundTasks()
     }
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -34,5 +39,20 @@ struct dogetionaryApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            switch newPhase {
+            case .active:
+                // Start foreground timer when app becomes active
+                BackgroundTaskManager.shared.startForegroundTimer()
+            case .background:
+                // Schedule background refresh when entering background
+                BackgroundTaskManager.shared.scheduleAppRefresh()
+                BackgroundTaskManager.shared.stopForegroundTimer()
+            case .inactive:
+                break
+            @unknown default:
+                break
+            }
+        }
     }
 }

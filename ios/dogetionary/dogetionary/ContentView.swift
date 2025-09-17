@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var userManager = UserManager.shared
     @StateObject private var notificationManager = NotificationManager.shared
     @State private var selectedTab = 0
+    @State private var reviewBadgeCount = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -35,6 +36,7 @@ struct ContentView: View {
                     Text("Review")
                 }
                 .tag(2)
+                .badge(reviewBadgeCount)
             
             LeaderboardView()
                 .tabItem {
@@ -62,6 +64,14 @@ struct ContentView: View {
                 if granted {
                     print("✅ User granted notification permission")
                 }
+            }
+
+            // Set initial badge count from cache
+            reviewBadgeCount = BackgroundTaskManager.shared.cachedOverdueCount
+
+            // Start listening for badge updates
+            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                reviewBadgeCount = BackgroundTaskManager.shared.cachedOverdueCount
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .shouldNavigateToReview)) { _ in
