@@ -7,9 +7,15 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct dogetionaryApp: App {
+
+    init() {
+        // Set up notification center delegate
+        UNUserNotificationCenter.current().delegate = NotificationManager.shared
+    }
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,

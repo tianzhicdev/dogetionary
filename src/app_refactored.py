@@ -76,6 +76,7 @@ from handlers.actions import save_word, get_next_review_word, submit_feedback, s
 from handlers.users import handle_user_preferences
 from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
 from handlers.admin import test_review_intervals, fix_next_review_dates
+from handlers.usage import get_usage_analytics
 # Import word-related functions from original app temporarily
 from app import get_word_definition, get_saved_words, get_word_details, get_audio, get_supported_languages, generate_illustration, get_illustration
 
@@ -106,6 +107,7 @@ app.route('/illustration', methods=['GET'])(get_illustration)
 app.route('/health', methods=['GET'])(health_check)
 app.route('/feedback', methods=['POST'])(submit_feedback)
 app.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats)
+app.route('/usage', methods=['GET'])(get_usage_analytics)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
