@@ -6,8 +6,12 @@ from flask import Response
 from utils.database import get_db_connection
 from datetime import datetime, timedelta
 import logging
+import pytz
 
 logger = logging.getLogger(__name__)
+
+# Define NY timezone
+NY_TZ = pytz.timezone('America/New_York')
 
 def get_usage_dashboard():
     """
@@ -17,8 +21,9 @@ def get_usage_dashboard():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Get data for the past 7 days
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        # Get data for the past 7 days (in NY time)
+        now_ny = datetime.now(NY_TZ)
+        seven_days_ago = (now_ny - timedelta(days=7)).astimezone(pytz.UTC).replace(tzinfo=None)
 
         # 1. New users table (user_id, registration time)
         cur.execute("""
@@ -119,8 +124,19 @@ def get_usage_dashboard():
         """
         return Response(error_html, mimetype='text/html', status=500)
 
+def convert_to_ny_time(timestamp):
+    """Convert UTC timestamp to NY timezone"""
+    if timestamp:
+        utc_time = pytz.UTC.localize(timestamp)
+        ny_time = utc_time.astimezone(NY_TZ)
+        return ny_time
+    return None
+
 def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
     """Generate HTML dashboard with tables"""
+
+    # Get current time in NY
+    now_ny = datetime.now(NY_TZ)
 
     html = """
     <!DOCTYPE html>
@@ -231,7 +247,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
     </head>
     <body>
         <h1>🐕 Dogetionary Usage Dashboard</h1>
-        <p style="color: #666;">Last 7 days activity • Updated: """ + datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC') + """</p>
+        <p style="color: #666;">Last 7 days activity • Updated: """ + now_ny.strftime('%Y-%m-%d %H:%M:%S ET') + """</p>
 
         <div class="summary-box">
             <h3 style="margin-top: 0;">Weekly Summary</h3>
@@ -295,10 +311,11 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
                 <tbody>
         """
         for user in new_users:
+            ny_time = convert_to_ny_time(user['created_at'])
             html += f"""
                     <tr>
                         <td class="user-id">{user['user_id']}</td>
-                        <td class="timestamp">{user['created_at'].strftime('%Y-%m-%d %H:%M:%S')}</td>
+                        <td class="timestamp">{ny_time.strftime('%Y-%m-%d %H:%M:%S ET')}</td>
                     </tr>
             """
         html += """
@@ -329,11 +346,12 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
                 <tbody>
         """
         for lookup in lookups:
+            ny_time = convert_to_ny_time(lookup['first_lookup'])
             html += f"""
                     <tr>
                         <td class="user-id">{lookup['user_id']}</td>
                         <td class="word">{lookup['word']}</td>
-                        <td class="timestamp">{lookup['first_lookup'].strftime('%Y-%m-%d %H:%M:%S')}</td>
+                        <td class="timestamp">{ny_time.strftime('%Y-%m-%d %H:%M:%S ET')}</td>
                     </tr>
             """
         html += """
@@ -364,12 +382,13 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats):
                 <tbody>
         """
         for word in saved_words:
+            ny_time = convert_to_ny_time(word['created_at'])
             html += f"""
                     <tr>
                         <td class="user-id">{word['user_id']}</td>
                         <td class="word">{word['word']}</td>
                         <td><span class="language">{word['learning_language'].upper()}</span></td>
-                        <td class="timestamp">{word['created_at'].strftime('%Y-%m-%d %H:%M:%S')}</td>
+                        <td class="timestamp">{ny_time.strftime('%Y-%m-%d %H:%M:%S ET')}</td>
                     </tr>
             """
         html += """

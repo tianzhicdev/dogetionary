@@ -161,9 +161,9 @@ struct ReviewView: View {
     
     private func submitReview(response: Bool) {
         guard let currentWord = currentWord else { return }
-        
+
         let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
-        
+
         DictionaryService.shared.submitReview(
             wordID: currentWord.id,
             response: response
@@ -172,6 +172,8 @@ struct ReviewView: View {
                 switch result {
                 case .success(_):
                     self.moveToNextWord()
+                    // Update badge count after successful review
+                    BackgroundTaskManager.shared.updateDueCountsAfterReview()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
