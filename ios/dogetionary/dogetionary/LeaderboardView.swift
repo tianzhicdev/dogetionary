@@ -14,8 +14,7 @@ struct LeaderboardView: View {
     @ObservedObject private var userManager = UserManager.shared
     
     var body: some View {
-        NavigationView {
-            Group {
+        Group {
                 if isLoading {
                     ProgressView("Loading leaderboard...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -63,11 +62,9 @@ struct LeaderboardView: View {
                     }
                     .listStyle(.plain)
                 }
-            }
-            .navigationTitle("Leaderboard")
-            .refreshable {
-                await loadLeaderboard()
-            }
+        }
+        .refreshable {
+            await loadLeaderboard()
         }
         .onAppear {
             Task {

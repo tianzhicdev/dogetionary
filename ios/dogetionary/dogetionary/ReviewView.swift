@@ -22,8 +22,7 @@ struct ReviewView: View {
     @State private var reviewProgressStats: ReviewProgressStats?
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
+        VStack(spacing: 20) {
                 // Always show overdue count at top
                 if isLoadingCounts {
                     HStack {
@@ -74,15 +73,13 @@ struct ReviewView: View {
                     Text(errorMessage)
                         .foregroundColor(.red)
                         .padding()
-                }
             }
-            .navigationTitle("Review")
-            .onAppear {
-                loadDueCounts()
-            }
-            .refreshable {
-                await loadDueCountsAsync()
-            }
+        }
+        .onAppear {
+            loadDueCounts()
+        }
+        .refreshable {
+            await loadDueCountsAsync()
         }
     }
     

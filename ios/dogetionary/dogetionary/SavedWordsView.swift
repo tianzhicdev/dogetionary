@@ -13,8 +13,7 @@ struct SavedWordsView: View {
     @State private var errorMessage: String?
     
     var body: some View {
-        NavigationView {
-            TabView {
+        TabView {
                 // Stats Tab (now first)
                 StatsView()
                     .tabItem {
@@ -33,11 +32,10 @@ struct SavedWordsView: View {
                     Image(systemName: "list.bullet")
                     Text("Words")
                 }
-            }
-            .onAppear {
-                Task {
-                    await loadSavedWords()
-                }
+        }
+        .onAppear {
+            Task {
+                await loadSavedWords()
             }
         }
     }

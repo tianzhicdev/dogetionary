@@ -82,8 +82,7 @@ struct SettingsView: View {
     ]
     
     var body: some View {
-        NavigationView {
-            Form {
+        Form {
                 #if DEBUG
                 Section(header: Text("User Information")) {
                     HStack {
@@ -328,26 +327,24 @@ struct SettingsView: View {
                     }
                 }
                 #endif
-            }
-            .navigationTitle("Settings")
-            .onTapGesture {
-                // Dismiss keyboard when tapping outside text fields
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-            .alert("Invalid Language Selection", isPresented: $showLanguageAlert) {
-                Button("OK") { }
-            } message: {
-                Text("Learning language and native language cannot be the same. Please choose different languages.")
-            }
-            .alert("Feedback", isPresented: $showFeedbackAlert) {
-                Button("OK") {
-                    if feedbackAlertMessage.contains("Thank you") {
-                        feedbackText = ""
-                    }
+        }
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text fields
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        .alert("Invalid Language Selection", isPresented: $showLanguageAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Learning language and native language cannot be the same. Please choose different languages.")
+        }
+        .alert("Feedback", isPresented: $showFeedbackAlert) {
+            Button("OK") {
+                if feedbackAlertMessage.contains("Thank you") {
+                    feedbackText = ""
                 }
-            } message: {
-                Text(feedbackAlertMessage)
             }
+        } message: {
+            Text(feedbackAlertMessage)
         }
     }
     

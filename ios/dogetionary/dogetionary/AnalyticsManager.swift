@@ -69,6 +69,8 @@ class AnalyticsManager: ObservableObject {
             if let httpResponse = response as? HTTPURLResponse {
                 if httpResponse.statusCode == 200 {
                     // Success - no logging needed for production
+                } else if httpResponse.statusCode == 404 {
+                    // Analytics endpoint not implemented - fail silently
                 } else {
                     print("❌ Analytics failed: \(httpResponse.statusCode)")
                 }
@@ -127,6 +129,9 @@ enum AnalyticsAction: String, CaseIterable {
 
     // Feedback actions
     case feedbackSubmit = "feedback_submit"
+
+    // Pronunciation actions
+    case pronunciationPractice = "pronunciation_practice"
 
     // App lifecycle actions
     case appLaunch = "app_launch"

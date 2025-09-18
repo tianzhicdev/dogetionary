@@ -25,8 +25,7 @@ struct SearchView: View {
     }
 
     var body: some View {
-        NavigationView {
-            ZStack {
+        ZStack {
                 if isSearchActive {
                     // Active search layout - search bar at top
                     VStack(spacing: 20) {
@@ -83,34 +82,33 @@ struct SearchView: View {
                 }
             }
             .contentShape(Rectangle())
-            .onTapGesture {
-                // Dismiss keyboard when tapping outside text field
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text field
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        .alert("Word Validation", isPresented: $showValidationAlert) {
+            if let suggestion = validationSuggestion {
+                // Has suggestion - show suggestion and original options
+                Button(suggestion) {
+                    searchSuggestedWord()
+                }
+                Button(currentSearchQuery) {
+                    searchOriginalWord()
+                }
+            } else {
+                // No suggestion - show cancel and lookup anyway options
+                Button("Cancel", role: .cancel) {
+                    cancelSearch()
+                }
+                Button("Lookup anyway") {
+                    searchOriginalWord()
+                }
             }
-            .alert("Word Validation", isPresented: $showValidationAlert) {
-                if let suggestion = validationSuggestion {
-                    // Has suggestion - show suggestion and original options
-                    Button(suggestion) {
-                        searchSuggestedWord()
-                    }
-                    Button(currentSearchQuery) {
-                        searchOriginalWord()
-                    }
-                } else {
-                    // No suggestion - show cancel and lookup anyway options
-                    Button("Cancel", role: .cancel) {
-                        cancelSearch()
-                    }
-                    Button("Lookup anyway") {
-                        searchOriginalWord()
-                    }
-                }
-            } message: {
-                if let suggestion = validationSuggestion {
-                    Text("Hmm, \"\(currentSearchQuery)\" doesn't look quite right. Did you mean \"\(suggestion)\"?")
-                } else {
-                    Text("We couldn't find \"\(currentSearchQuery)\" in our dictionary. You can still look it up, but the definition might not be accurate.")
-                }
+        } message: {
+            if let suggestion = validationSuggestion {
+                Text("Hmm, \"\(currentSearchQuery)\" doesn't look quite right. Did you mean \"\(suggestion)\"?")
+            } else {
+                Text("We couldn't find \"\(currentSearchQuery)\" in our dictionary. You can still look it up, but the definition might not be accurate.")
             }
         }
     }
@@ -397,6 +395,13 @@ struct DefinitionCard: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                     .disabled(loadingAudio)
+
+                    // Pronunciation practice button
+                    PronunciationPracticeView(
+                        originalText: definition.word,
+                        source: "word",
+                        wordId: nil
+                    )
                 }
             }
             
@@ -451,6 +456,13 @@ struct DefinitionCard: View {
                                             .foregroundColor(.blue)
                                     }
                                     .buttonStyle(PlainButtonStyle())
+
+                                    // Pronunciation practice for examples
+                                    PronunciationPracticeView(
+                                        originalText: example,
+                                        source: "example",
+                                        wordId: nil
+                                    )
                                 }
                             }
                         }

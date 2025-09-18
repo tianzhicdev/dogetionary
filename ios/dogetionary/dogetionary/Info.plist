@@ -33,5 +33,7 @@
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app uses the microphone to help you practice pronunciation of words and phrases. Your audio is sent to our servers for pronunciation analysis and feedback.</string>
 </dict>
 </plist>
