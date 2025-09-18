@@ -15,7 +15,11 @@ struct ContentView: View {
     @State private var reviewBadgeCount = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        VStack(spacing: 0) {
+            // App banner at the top
+            AppBanner()
+
+            TabView(selection: $selectedTab) {
             SearchView()
                 .tabItem {
                     Image(systemName: "magnifyingglass")
@@ -51,6 +55,7 @@ struct ContentView: View {
                     Text("Settings")
                 }
                 .tag(4)
+            }
         }
         .onAppear {
             // Initialize user manager to generate UUID if needed

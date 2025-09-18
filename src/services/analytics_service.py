@@ -51,6 +51,8 @@ class AnalyticsService:
 
             'feedback_submit': 'feedback',
 
+            'pronunciation_practice': 'pronunciation',
+
             'app_launch': 'app_lifecycle',
             'app_background': 'app_lifecycle',
             'app_foreground': 'app_lifecycle'

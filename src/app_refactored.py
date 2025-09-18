@@ -78,6 +78,7 @@ from handlers.reads import get_due_counts, get_review_progress_stats, get_review
 from handlers.admin import test_review_intervals, fix_next_review_dates
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
+from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
 # Import word-related functions from original app temporarily
 from app import get_word_definition, get_word_definition_v2, get_saved_words, get_word_details, get_audio, get_supported_languages, generate_illustration, get_illustration
 
@@ -113,6 +114,9 @@ app.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats)
 app.route('/usage', methods=['GET'])(get_usage_dashboard)
 app.route('/analytics/track', methods=['POST'])(track_user_action)
 app.route('/analytics/data', methods=['GET'])(get_analytics_data)
+app.route('/pronunciation/practice', methods=['POST'])(practice_pronunciation)
+app.route('/pronunciation/history', methods=['GET'])(get_pronunciation_history)
+app.route('/pronunciation/stats', methods=['GET'])(get_pronunciation_stats)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

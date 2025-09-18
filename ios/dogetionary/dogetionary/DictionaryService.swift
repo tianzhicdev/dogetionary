@@ -1348,6 +1348,103 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    // MARK: - Pronunciation Practice
+
+    func practicePronunciation(originalText: String, audioData: Data, metadata: [String: Any], completion: @escaping (Result<PronunciationResult, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/pronunciation/practice") else {
+            logger.error("Invalid URL for pronunciation practice endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Submitting pronunciation practice for text: '\(originalText)'")
+
+        let audioBase64 = audioData.base64EncodedString()
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "original_text": originalText,
+            "audio_data": audioBase64,
+            "metadata": metadata
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            logger.error("Failed to encode pronunciation practice request")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = jsonData
+        request.timeoutInterval = 30.0
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                self?.logger.error("Network error in pronunciation practice: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self?.logger.error("Invalid response type for pronunciation practice")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self?.logger.info("Pronunciation practice response status: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                self?.logger.error("Server error in pronunciation practice: \(httpResponse.statusCode)")
+
+                // Handle speech recognition failures from server
+                if httpResponse.statusCode == 500, let data = data,
+                   let responseDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = responseDict["error"] as? String {
+
+                    // Return a "failed" result instead of an error for speech recognition issues
+                    let result = PronunciationResult(
+                        result: false,
+                        similarityScore: 0.0,
+                        recognizedText: "",
+                        feedback: errorMessage
+                    )
+                    self?.logger.info("Speech recognition failed, returning negative result")
+                    completion(.success(result))
+                    return
+                }
+
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data else {
+                self?.logger.error("No data received for pronunciation practice")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            do {
+                let responseDict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                let result = PronunciationResult(
+                    result: responseDict?["result"] as? Bool ?? false,
+                    similarityScore: responseDict?["similarity_score"] as? Double ?? 0.0,
+                    recognizedText: responseDict?["recognized_text"] as? String ?? "",
+                    feedback: responseDict?["feedback"] as? String ?? ""
+                )
+
+                self?.logger.info("Successfully processed pronunciation practice")
+                completion(.success(result))
+            } catch {
+                self?.logger.error("Failed to decode pronunciation practice response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {
