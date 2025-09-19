@@ -188,11 +188,6 @@ struct SettingsView: View {
                         TextField("Share your thoughts, suggestions, or report issues...", text: $feedbackText, axis: .vertical)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .lineLimit(3...6)
-                            .onChange(of: feedbackText) { _, newValue in
-                                if newValue.count > 500 {
-                                    feedbackText = String(newValue.prefix(500))
-                                }
-                            }
 
                         HStack {
                             Text("\(feedbackText.count)/500")
@@ -201,23 +196,20 @@ struct SettingsView: View {
 
                             Spacer()
 
-                            Button(action: submitFeedback) {
+                            if isSubmittingFeedback {
                                 HStack {
-                                    if isSubmittingFeedback {
-                                        ProgressView()
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "paperplane.fill")
-                                    }
-                                    Text(isSubmittingFeedback ? "Sending..." : "Submit")
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Submitting...")
+                                        .font(.caption)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(feedbackText.isEmpty || isSubmittingFeedback ? Color.gray.opacity(0.3) : Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
+                            } else {
+                                Button("Submit") {
+                                    submitFeedback()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             }
-                            .disabled(feedbackText.isEmpty || isSubmittingFeedback)
                         }
                     }
                 }
@@ -367,28 +359,35 @@ struct SettingsView: View {
     }
     
     private func submitFeedback() {
-        guard !feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        print("🔍 submitFeedback() called")
+        print("🔍 feedbackText: '\(feedbackText)'")
 
-        let trimmedFeedback = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines)
+        print("🔍 trimmed: '\(trimmed)'")
 
-        // Track feedback submit
-        AnalyticsManager.shared.track(action: .feedbackSubmit, metadata: [
-            "feedback_length": trimmedFeedback.count
-        ])
+        guard !trimmed.isEmpty else {
+            print("🔍 trimmed is empty, returning")
+            return
+        }
 
+        print("🔍 Setting isSubmittingFeedback = true")
         isSubmittingFeedback = true
 
-        DictionaryService.shared.submitFeedback(feedback: trimmedFeedback) { result in
+        print("🔍 Calling DictionaryService.submitFeedback")
+        DictionaryService.shared.submitFeedback(feedback: trimmed) { result in
             DispatchQueue.main.async {
-                isSubmittingFeedback = false
+                print("🔍 Got result from submitFeedback")
+                self.isSubmittingFeedback = false
 
                 switch result {
                 case .success:
-                    feedbackAlertMessage = "Thank you for your feedback! We appreciate your input and will use it to improve Dogetionary."
-                    showFeedbackAlert = true
+                    print("🔍 SUCCESS!")
+                    self.feedbackAlertMessage = "Feedback submitted successfully!"
+                    self.showFeedbackAlert = true
                 case .failure(let error):
-                    feedbackAlertMessage = "Failed to submit feedback. Please try again later. Error: \(error.localizedDescription)"
-                    showFeedbackAlert = true
+                    print("🔍 FAILURE: \(error)")
+                    self.feedbackAlertMessage = "Failed to submit feedback: \(error.localizedDescription)"
+                    self.showFeedbackAlert = true
                 }
             }
         }

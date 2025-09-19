@@ -452,7 +452,7 @@ struct DefinitionCard: View {
                                         playExampleAudio(example)
                                     }) {
                                         Image(systemName: "speaker.wave.2")
-                                            .font(.caption2)
+                                            .font(.title3)
                                             .foregroundColor(.blue)
                                     }
                                     .buttonStyle(PlainButtonStyle())
