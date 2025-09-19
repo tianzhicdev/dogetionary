@@ -13,25 +13,28 @@ struct SavedWordsView: View {
     @State private var errorMessage: String?
     
     var body: some View {
-        TabView {
-                // Stats Tab (now first)
-                StatsView()
+        NavigationView {
+            TabView {
+                    // Stats Tab (now first)
+                    StatsView()
+                        .tabItem {
+                            Image(systemName: "chart.bar.fill")
+                            Text("Stats")
+                        }
+
+                    // Words Tab
+                    SavedWordsListView(
+                        savedWords: savedWords,
+                        isLoading: isLoading,
+                        errorMessage: errorMessage,
+                        onRefresh: { await loadSavedWords() }
+                    )
                     .tabItem {
-                        Image(systemName: "chart.bar.fill")
-                        Text("Stats")
+                        Image(systemName: "list.bullet")
+                        Text("Words")
                     }
-                
-                // Words Tab
-                SavedWordsListView(
-                    savedWords: savedWords,
-                    isLoading: isLoading,
-                    errorMessage: errorMessage,
-                    onRefresh: { await loadSavedWords() }
-                )
-                .tabItem {
-                    Image(systemName: "list.bullet")
-                    Text("Words")
-                }
+            }
+            .navigationBarTitleDisplayMode(.large)
         }
         .onAppear {
             Task {
@@ -105,16 +108,17 @@ struct SavedWordsListView: View {
                 .padding()
             } else {
                 List(savedWords) { savedWord in
-                    NavigationLink(destination: WordDetailView(savedWord: savedWord)) {
+                    NavigationLink(destination: WordDetailView(savedWord: savedWord)
+                        .onAppear {
+                            // Track saved word view details when navigation happens
+                            AnalyticsManager.shared.track(action: .savedViewDetails, metadata: [
+                                "word": savedWord.word,
+                                "review_count": savedWord.review_count,
+                                "is_overdue": isOverdue(savedWord.next_review_date ?? "")
+                            ])
+                        }
+                    ) {
                         SavedWordRow(savedWord: savedWord)
-                    }
-                    .onTapGesture {
-                        // Track saved word view details
-                        AnalyticsManager.shared.track(action: .savedViewDetails, metadata: [
-                            "word": savedWord.word,
-                            "review_count": savedWord.review_count,
-                            "is_overdue": isOverdue(savedWord.next_review_date ?? "")
-                        ])
                     }
                 }
             }

@@ -46,12 +46,28 @@ def practice_pronunciation():
             logger.error(f"Failed to decode audio data: {str(e)}")
             return jsonify({'error': 'Invalid audio data encoding'}), 400
 
+        # Get user's learning language from database
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT learning_language
+            FROM user_preferences
+            WHERE user_id = %s
+        """, (user_id,))
+
+        row = cur.fetchone()
+        learning_language = row['learning_language'] if row else 'en'
+
+        cur.close()
+        conn.close()
+
         # Process pronunciation with OpenAI
         result = pronunciation_service.evaluate_pronunciation(
             original_text=original_text,
             audio_data=audio_data,
             user_id=user_id,
-            metadata=metadata
+            metadata=metadata,
+            language=learning_language
         )
 
         if result['success']:

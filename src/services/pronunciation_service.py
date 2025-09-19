@@ -17,16 +17,24 @@ class PronunciationService:
         self.client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
     def evaluate_pronunciation(self, original_text: str, audio_data: bytes,
-                              user_id: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+                              user_id: str, metadata: Dict[str, Any],
+                              language: str = 'en') -> Dict[str, Any]:
         """
         Evaluate user pronunciation using OpenAI Whisper and GPT-4
+
+        Args:
+            original_text: Text the user is trying to pronounce
+            audio_data: Audio recording in bytes
+            user_id: User ID for database storage
+            metadata: Additional metadata to store
+            language: Language code for speech recognition (e.g. 'en', 'zh', 'es')
 
         Returns:
             Dict with success, result, similarity_score, recognized_text, feedback
         """
         try:
             # Step 1: Speech-to-text using Whisper
-            recognized_text = self._speech_to_text(audio_data)
+            recognized_text = self._speech_to_text(audio_data, language)
 
             if not recognized_text:
                 return {
@@ -63,9 +71,13 @@ class PronunciationService:
                 'error': f'Failed to process pronunciation: {str(e)}'
             }
 
-    def _speech_to_text(self, audio_data: bytes) -> str:
+    def _speech_to_text(self, audio_data: bytes, language: str = 'en') -> str:
         """
         Convert audio to text using OpenAI Whisper
+
+        Args:
+            audio_data: Audio recording in bytes
+            language: Language code for speech recognition (ISO 639-1 code)
         """
         try:
             # Save audio data to temporary file
@@ -78,14 +90,14 @@ class PronunciationService:
                 transcript = self.client.audio.transcriptions.create(
                     model="whisper-1",
                     file=audio_file,
-                    language="en"  # Assuming English for now
+                    language=language  # Use user's learning language
                 )
 
             # Clean up temp file
             os.unlink(tmp_file_path)
 
             recognized_text = transcript.text.strip()
-            logger.info(f"Whisper recognized: '{recognized_text}'")
+            logger.info(f"Whisper recognized (language={language}): '{recognized_text}'")
 
             return recognized_text
 
