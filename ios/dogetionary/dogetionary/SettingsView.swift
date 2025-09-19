@@ -19,7 +19,6 @@ struct SettingsView: View {
     @State private var showFeedbackAlert = false
     @State private var feedbackAlertMessage = ""
     @ObservedObject private var userManager = UserManager.shared
-    @ObservedObject private var notificationManager = NotificationManager.shared
     
     private let availableLanguages = [
         ("af", "Afrikaans"),
@@ -179,43 +178,6 @@ struct SettingsView: View {
                     }
                 }
 
-                Section(header: Text("Notifications")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Daily Review Reminders")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-
-                                Text("Get notified at 11:59 AM when you have words ready for review")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer()
-
-                            Text(notificationManager.hasPermission ? "✅ Enabled" : "❌ Disabled")
-                                .font(.caption)
-                                .foregroundColor(notificationManager.hasPermission ? .green : .orange)
-                        }
-
-                        if !notificationManager.hasPermission {
-                            Button("Enable Notifications") {
-                                // Track settings notification enable
-                                AnalyticsManager.shared.track(action: .settingsNotificationEnable)
-                                notificationManager.requestPermission()
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-
-                        #if DEBUG
-                        Button("Test Notification") {
-                            notificationManager.triggerTestNotification()
-                        }
-                        .buttonStyle(.bordered)
-                        #endif
-                    }
-                }
 
                 Section(header: Text("Feedback")) {
                     VStack(alignment: .leading, spacing: 12) {
