@@ -14,6 +14,7 @@ class AudioRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var audioData: Data?
     @Published var currentVolume: Float = 0.0
+    @Published var recordingURL: URL?
 
     private var audioRecorder: AVAudioRecorder?
     private var recordingSession: AVAudioSession = AVAudioSession.sharedInstance()
@@ -96,6 +97,9 @@ class AudioRecorder: NSObject, ObservableObject {
 
         isRecording = false
 
+        // Save the recording URL
+        recordingURL = recorder.url
+
         // Read the audio data
         if let data = try? Data(contentsOf: recorder.url) {
             audioData = data
@@ -104,7 +108,7 @@ class AudioRecorder: NSObject, ObservableObject {
             logger.error("Failed to read audio data from: \(recorder.url)")
         }
 
-        // Clean up
+        // Clean up recorder but keep the file
         audioRecorder = nil
 
         // Deactivate audio session

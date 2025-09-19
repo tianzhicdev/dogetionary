@@ -13,60 +13,57 @@ struct PronunciationPracticeView: View {
     let wordId: String?
 
     @StateObject private var audioRecorder = AudioRecorder()
+    @StateObject private var originalAudioPlayer = AudioPlayer()
+    @StateObject private var recordedAudioPlayer = AudioPlayer()
+
     @State private var isProcessing = false
     @State private var result: PronunciationResult?
-    @State private var showingResult = false
-    @State private var showingRecordingModal = false
+    @State private var recordedAudioURL: URL?
+    @State private var showingPractice = false
 
     var body: some View {
         Button(action: {
-            showingRecordingModal = true
+            showingPractice.toggle()
         }) {
             Image(systemName: "mic.circle.fill")
                 .font(.title3)
                 .foregroundColor(.orange)
         }
-        .disabled(isProcessing)
         .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $showingRecordingModal) {
-            RecordingModalView(
+        .sheet(isPresented: $showingPractice) {
+            PronunciationPracticeSheet(
                 originalText: originalText,
                 source: source,
                 wordId: wordId,
                 audioRecorder: audioRecorder,
+                originalAudioPlayer: originalAudioPlayer,
+                recordedAudioPlayer: recordedAudioPlayer,
                 isProcessing: $isProcessing,
                 result: $result,
-                showingResult: $showingResult,
-                showingModal: $showingRecordingModal
+                recordedAudioURL: $recordedAudioURL,
+                showingPractice: $showingPractice
             )
-        }
-        .alert("Pronunciation Result", isPresented: $showingResult) {
-            Button("OK") {
-                result = nil
-            }
-        } message: {
-            if let result = result {
-                Text(result.result ? "Great pronunciation! 🎉" : "Keep practicing! \(result.feedback)")
-            }
         }
     }
 }
 
-struct RecordingModalView: View {
+struct PronunciationPracticeSheet: View {
     let originalText: String
     let source: String
     let wordId: String?
+
     @ObservedObject var audioRecorder: AudioRecorder
+    @ObservedObject var originalAudioPlayer: AudioPlayer
+    @ObservedObject var recordedAudioPlayer: AudioPlayer
+
     @Binding var isProcessing: Bool
     @Binding var result: PronunciationResult?
-    @Binding var showingResult: Bool
-    @Binding var showingModal: Bool
+    @Binding var recordedAudioURL: URL?
+    @Binding var showingPractice: Bool
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
-                Spacer()
-
+            VStack(spacing: 24) {
                 // Text to practice
                 VStack(spacing: 8) {
                     Text("Practice saying:")
@@ -80,53 +77,173 @@ struct RecordingModalView: View {
                         .padding(.horizontal)
                 }
 
+                // Audio controls
+                HStack(spacing: 30) {
+                    // Play original audio
+                    Button(action: playOriginalAudio) {
+                        VStack {
+                            Image(systemName: originalAudioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.blue)
+
+                            Text(originalAudioPlayer.isPlaying ? "Stop" : "Original")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    // Record pronunciation
+                    Button(action: handleRecording) {
+                        VStack {
+                            Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(audioRecorder.isRecording ? .red : .orange)
+
+                            Text(audioRecorder.isRecording ? "Stop" : "Record")
+                                .font(.caption)
+                                .foregroundColor(audioRecorder.isRecording ? .red : .orange)
+                        }
+                    }
+                    .disabled(isProcessing)
+                    .buttonStyle(PlainButtonStyle())
+
+                    // Play recorded audio (only show if user has recorded)
+                    if recordedAudioURL != nil {
+                        Button(action: playRecordedAudio) {
+                            VStack {
+                                Image(systemName: recordedAudioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.green)
+
+                                Text(recordedAudioPlayer.isPlaying ? "Stop" : "My Audio")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+
+                // Volume indicator when recording
+                if audioRecorder.isRecording {
+                    VStack(spacing: 12) {
+                        Text("Recording...")
+                            .font(.caption)
+                            .foregroundColor(.red)
+
+                        // Prettier volume bars
+                        HStack(spacing: 3) {
+                            ForEach(0..<15, id: \.self) { index in
+                                let threshold = Float(index) / 15.0
+                                let isActive = audioRecorder.currentVolume > threshold
+                                let barHeight: CGFloat = CGFloat(8 + index * 2)
+
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(isActive ?
+                                          LinearGradient(gradient: Gradient(colors: [.green, .yellow, .red]),
+                                                        startPoint: .bottom, endPoint: .top) :
+                                          LinearGradient(gradient: Gradient(colors: [.gray.opacity(0.3)]),
+                                                        startPoint: .bottom, endPoint: .top))
+                                    .frame(width: 4, height: barHeight)
+                            }
+                        }
+                        .frame(height: 40)
+                    }
+                    .padding()
+                }
+
+                // Processing indicator
                 if isProcessing {
-                    // Processing state
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         ProgressView()
-                            .scaleEffect(1.5)
+                            .scaleEffect(1.2)
 
                         Text("Analyzing your pronunciation...")
                             .font(.headline)
                             .foregroundColor(.secondary)
                     }
-                } else if audioRecorder.isRecording {
-                    // Recording state
-                    VStack(spacing: 20) {
-                        // Volume visualization
-                        VolumeVisualizerView(volume: audioRecorder.currentVolume)
+                    .padding()
+                }
 
-                        Text("Recording...")
-                            .font(.headline)
-                            .foregroundColor(.red)
-
-                        // Stop recording button
-                        Button(action: {
-                            stopRecordingAndProcess()
-                        }) {
-                            Image(systemName: "stop.circle.fill")
-                                .font(.system(size: 80))
-                                .foregroundColor(.red)
+                // Evaluation results (inline)
+                if let result = result {
+                    VStack(spacing: 16) {
+                        // Header with icon
+                        HStack {
+                            Image(systemName: result.result ? "checkmark.circle.fill" : "info.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(result.result ? .green : .orange)
+                            Text("Your Pronunciation")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
                         }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                } else {
-                    // Ready to record state
-                    VStack(spacing: 20) {
-                        Text("Tap to start recording")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
 
-                        // Start recording button
-                        Button(action: {
-                            startRecording()
-                        }) {
-                            Image(systemName: "mic.circle.fill")
-                                .font(.system(size: 80))
-                                .foregroundColor(.orange)
+                        VStack(spacing: 12) {
+                            // Accuracy score with visual indicator
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Accuracy")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+
+                                    HStack {
+                                        Text("\(Int(result.similarityScore * 100))%")
+                                            .font(.title2)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(result.result ? .green : .orange)
+
+                                        // Visual progress bar
+                                        ProgressView(value: result.similarityScore, total: 1.0)
+                                            .progressViewStyle(LinearProgressViewStyle(tint: result.result ? .green : .orange))
+                                            .frame(height: 8)
+                                            .cornerRadius(4)
+                                    }
+                                }
+                                Spacer()
+                            }
+
+                            Divider()
+
+                            // What you said
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("You said")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+
+                                    Text("\"\(result.recognizedText)\"")
+                                        .font(.body)
+                                        .italic()
+                                        .foregroundColor(.primary)
+                                }
+                                Spacer()
+                            }
+
+                            Divider()
+
+                            // Feedback without title
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(result.feedback)
+                                        .font(.body)
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                Spacer()
+                            }
                         }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    )
+                    .padding(.horizontal)
                 }
 
                 Spacer()
@@ -135,13 +252,35 @@ struct RecordingModalView: View {
             .navigationTitle("Pronunciation Practice")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
-                leading: Button("Cancel") {
-                    if audioRecorder.isRecording {
-                        audioRecorder.stopRecording()
-                    }
-                    showingModal = false
+                trailing: Button("Done") {
+                    stopAllAudio()
+                    showingPractice = false
                 }
             )
+        }
+    }
+
+    private func playOriginalAudio() {
+        if originalAudioPlayer.isPlaying {
+            originalAudioPlayer.stopAudio()
+        } else {
+            // Fetch and play original audio
+            DictionaryService.shared.fetchAudioForText(originalText, language: UserManager.shared.learningLanguage) { audioData in
+                DispatchQueue.main.async {
+                    if let audioData = audioData {
+                        self.originalAudioPlayer.playAudio(from: audioData)
+                    }
+                }
+            }
+        }
+    }
+
+    private func handleRecording() {
+        if audioRecorder.isRecording {
+            audioRecorder.stopRecording()
+            processRecording()
+        } else {
+            startRecording()
         }
     }
 
@@ -155,12 +294,11 @@ struct RecordingModalView: View {
         audioRecorder.startRecording()
     }
 
-    private func stopRecordingAndProcess() {
-        audioRecorder.stopRecording()
+    private func processRecording() {
+        guard let audioData = audioRecorder.audioData else { return }
 
-        guard let audioData = audioRecorder.audioData else {
-            return
-        }
+        // Save the recorded audio URL for playback
+        recordedAudioURL = audioRecorder.recordingURL
 
         isProcessing = true
 
@@ -175,8 +313,6 @@ struct RecordingModalView: View {
                 switch result {
                 case .success(let pronunciationResult):
                     self.result = pronunciationResult
-                    self.showingModal = false
-                    self.showingResult = true
 
                     AnalyticsManager.shared.track(action: .pronunciationPractice, metadata: [
                         "action": "completed",
@@ -188,7 +324,6 @@ struct RecordingModalView: View {
 
                 case .failure(let error):
                     print("Pronunciation practice failed: \(error)")
-                    self.showingModal = false
 
                     AnalyticsManager.shared.track(action: .pronunciationPractice, metadata: [
                         "action": "failed",
@@ -200,50 +335,30 @@ struct RecordingModalView: View {
             }
         }
     }
-}
 
-struct VolumeVisualizerView: View {
-    let volume: Float
-
-    var body: some View {
-        VStack(spacing: 16) {
-            // Circular volume indicator
-            ZStack {
-                Circle()
-                    .stroke(Color.gray.opacity(0.3), lineWidth: 8)
-                    .frame(width: 120, height: 120)
-
-                Circle()
-                    .trim(from: 0, to: CGFloat(volume))
-                    .stroke(
-                        LinearGradient(
-                            gradient: Gradient(colors: [.green, .yellow, .red]),
-                            startPoint: .bottom,
-                            endPoint: .top
-                        ),
-                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                    )
-                    .frame(width: 120, height: 120)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 0.1), value: volume)
-
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 30))
-                    .foregroundColor(.primary)
-            }
-
-            // Volume bars
-            HStack(spacing: 4) {
-                ForEach(0..<20, id: \.self) { index in
-                    Rectangle()
-                        .fill(volume > Float(index) * 0.05 ? .green : .gray.opacity(0.3))
-                        .frame(width: 3, height: CGFloat(8 + index * 2))
-                        .animation(.easeInOut(duration: 0.1), value: volume)
-                }
+    private func playRecordedAudio() {
+        if recordedAudioPlayer.isPlaying {
+            recordedAudioPlayer.stopAudio()
+        } else if let url = recordedAudioURL {
+            // Read the recorded audio file and play it
+            do {
+                let audioData = try Data(contentsOf: url)
+                recordedAudioPlayer.playAudio(from: audioData)
+            } catch {
+                // Failed to read recorded audio file
             }
         }
     }
+
+    private func stopAllAudio() {
+        originalAudioPlayer.stopAudio()
+        recordedAudioPlayer.stopAudio()
+        if audioRecorder.isRecording {
+            audioRecorder.stopRecording()
+        }
+    }
 }
+
 
 struct PronunciationResult {
     let result: Bool
