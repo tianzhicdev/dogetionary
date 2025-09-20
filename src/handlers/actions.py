@@ -41,15 +41,21 @@ def save_word():
         word = data['word'].strip().lower()
         user_id = data['user_id']
         learning_lang = data.get('learning_language', 'en')
+        native_lang = data.get('native_language', 'zh')
         metadata = data.get('metadata', {})
-        
-        if 'learning_language' not in data:
-            stored_learning_lang, _, _, _ = get_user_preferences(user_id)
-            learning_lang = stored_learning_lang
+
+        if 'learning_language' not in data or 'native_language' not in data:
+            stored_learning_lang, stored_native_lang, _, _ = get_user_preferences(user_id)
+            if 'learning_language' not in data:
+                learning_lang = stored_learning_lang
+            if 'native_language' not in data:
+                native_lang = stored_native_lang
         else:
-            # Validate provided learning language
+            # Validate provided languages
             if not validate_language(learning_lang):
                 return jsonify({"error": f"Unsupported learning language: {learning_lang}"}), 400
+            if not validate_language(native_lang):
+                return jsonify({"error": f"Unsupported native language: {native_lang}"}), 400
         
         try:
             uuid.UUID(user_id)
@@ -60,12 +66,12 @@ def save_word():
         cur = conn.cursor()
         
         cur.execute("""
-            INSERT INTO saved_words (user_id, word, learning_language, metadata)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (user_id, word, learning_language)
+            INSERT INTO saved_words (user_id, word, learning_language, native_language, metadata)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT ON CONSTRAINT saved_words_user_id_word_learning_language_native_language_key
             DO UPDATE SET metadata = EXCLUDED.metadata
             RETURNING id, created_at
-        """, (user_id, word, learning_lang, json.dumps(metadata)))
+        """, (user_id, word, learning_lang, native_lang, json.dumps(metadata)))
         
         result = cur.fetchone()
         conn.commit()
@@ -87,12 +93,11 @@ def delete_saved_word():
     try:
         data = request.get_json()
 
-        if not data or 'word' not in data or 'user_id' not in data:
-            return jsonify({"error": "Both 'word' and 'user_id' are required"}), 400
+        if not data or 'word_id' not in data or 'user_id' not in data:
+            return jsonify({"error": "Both 'word_id' and 'user_id' are required"}), 400
 
-        word = data['word'].strip().lower()
+        word_id = data['word_id']
         user_id = data['user_id']
-        learning_lang = data.get('learning_language', 'en')
 
         # Validate UUID
         try:
@@ -100,15 +105,22 @@ def delete_saved_word():
         except ValueError:
             return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
 
+        # Validate word_id is integer
+        try:
+            word_id = int(word_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid word_id format. Must be an integer"}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
 
         # Delete the saved word (reviews will cascade delete automatically)
+        # Include user_id check for security
         cur.execute("""
             DELETE FROM saved_words
-            WHERE user_id = %s AND word = %s AND learning_language = %s
-            RETURNING id
-        """, (user_id, word, learning_lang))
+            WHERE id = %s AND user_id = %s
+            RETURNING id, word
+        """, (word_id, user_id))
 
         deleted = cur.fetchone()
         conn.commit()
@@ -117,12 +129,12 @@ def delete_saved_word():
         if deleted:
             return jsonify({
                 "success": True,
-                "message": f"Word '{word}' removed from saved words",
+                "message": f"Word '{deleted['word']}' removed from saved words",
                 "deleted_word_id": deleted['id']
             }), 200
         else:
             return jsonify({
-                "error": f"Word '{word}' not found in saved words"
+                "error": f"Word with ID {word_id} not found in saved words"
             }), 404
 
     except Exception as e:
@@ -141,11 +153,12 @@ def get_next_review_word():
         
         # Find word with earliest next review date (due now or overdue)
         cur.execute("""
-            SELECT 
-                sw.id, 
-                sw.word, 
-                sw.learning_language, 
-                sw.metadata, 
+            SELECT
+                sw.id,
+                sw.word,
+                sw.learning_language,
+                sw.native_language,
+                sw.metadata,
                 sw.created_at,
                 COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
                 COALESCE(latest_review.review_count, 0) as review_count,
@@ -191,7 +204,9 @@ def get_next_review_word():
             "user_id": user_id,
             "saved_words": [{
                 "id": word['id'],
-                "word": word['word']
+                "word": word['word'],
+                "learning_language": word['learning_language'],
+                "native_language": word['native_language']
             }],
             "count": 1
         })

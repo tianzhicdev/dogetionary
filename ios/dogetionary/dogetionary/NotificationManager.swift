@@ -198,4 +198,5 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
 extension Notification.Name {
     static let shouldNavigateToReview = Notification.Name("shouldNavigateToReview")
     static let wordAutoSaved = Notification.Name("wordAutoSaved")
+    static let wordUnsaved = Notification.Name("wordUnsaved")
 }

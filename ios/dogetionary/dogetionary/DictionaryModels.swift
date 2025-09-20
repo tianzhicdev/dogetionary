@@ -54,6 +54,8 @@ struct Definition: Identifiable {
     let id: UUID
     let word: String
     let phonetic: String?
+    let learning_language: String
+    let native_language: String
     let translations: [String] // Direct translations from learning to native language
     let meanings: [Meaning]
     let audioData: Data? // Decoded audio data ready for playback
@@ -64,6 +66,8 @@ struct Definition: Identifiable {
         self.id = UUID()
         self.word = response.word
         self.phonetic = response.definition_data.phonetic
+        self.learning_language = response.learning_language
+        self.native_language = response.native_language
         self.translations = response.definition_data.translations ?? []
         
         // Always show native definition if it exists and is different from main definition
@@ -102,10 +106,12 @@ struct Definition: Identifiable {
     }
     
     // Custom initializer for updating with audio data
-    init(id: UUID = UUID(), word: String, phonetic: String?, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:]) {
+    init(id: UUID = UUID(), word: String, phonetic: String?, learning_language: String, native_language: String, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:]) {
         self.id = id
         self.word = word
         self.phonetic = phonetic
+        self.learning_language = learning_language
+        self.native_language = native_language
         self.translations = translations
         self.meanings = meanings
         self.audioData = audioData
@@ -138,6 +144,7 @@ struct SavedWord: Identifiable, Codable {
     let id: Int
     let word: String
     let learning_language: String
+    let native_language: String
     let metadata: [String: Any]?
     let created_at: String
     // Calculated fields from review history (backend provides these)
@@ -146,9 +153,9 @@ struct SavedWord: Identifiable, Codable {
     let interval_days: Int
     let next_review_date: String?
     let last_reviewed_at: String?
-    
+
     private enum CodingKeys: String, CodingKey {
-        case id, word, learning_language, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at
+        case id, word, learning_language, native_language, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at
     }
     
     init(from decoder: Decoder) throws {
@@ -156,6 +163,7 @@ struct SavedWord: Identifiable, Codable {
         id = try container.decode(Int.self, forKey: .id)
         word = try container.decode(String.self, forKey: .word)
         learning_language = try container.decode(String.self, forKey: .learning_language)
+        native_language = try container.decode(String.self, forKey: .native_language)
         created_at = try container.decode(String.self, forKey: .created_at)
         review_count = try container.decodeIfPresent(Int.self, forKey: .review_count) ?? 0
         ease_factor = try container.decodeIfPresent(Double.self, forKey: .ease_factor) ?? 2.5
@@ -166,10 +174,11 @@ struct SavedWord: Identifiable, Codable {
     }
     
     // Convenience initializer for testing
-    init(id: Int, word: String, learning_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, ease_factor: Double, interval_days: Int, next_review_date: String?, last_reviewed_at: String?) {
+    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, ease_factor: Double, interval_days: Int, next_review_date: String?, last_reviewed_at: String?) {
         self.id = id
         self.word = word
         self.learning_language = learning_language
+        self.native_language = native_language
         self.metadata = metadata
         self.created_at = created_at
         self.review_count = review_count
@@ -215,6 +224,8 @@ struct ReviewWordsResponse: Codable {
 struct ReviewWord: Identifiable, Codable {
     let id: Int
     let word: String
+    let learning_language: String
+    let native_language: String
 }
 
 struct ReviewStats: Codable {
@@ -319,6 +330,14 @@ struct DueCountsResponse: Codable {
     let user_id: String
     let overdue_count: Int
     let total_count: Int
+}
+
+// Save Word Response Model
+struct SaveWordResponse: Codable {
+    let success: Bool
+    let message: String
+    let word_id: Int
+    let created_at: String
 }
 
 // Forgetting Curve Models

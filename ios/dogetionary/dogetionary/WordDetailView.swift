@@ -30,7 +30,7 @@ struct WordDetailView: View {
             TabView(selection: $selectedTab) {
                 // Definition tab
                 DefinitionTabView(
-                    word: savedWord.word,
+                    savedWord: savedWord,
                     definitions: definitions,
                     isLoading: isLoadingDefinitions,
                     errorMessage: errorMessage
@@ -68,11 +68,15 @@ struct WordDetailView: View {
     private func loadDefinitions() {
         isLoadingDefinitions = true
         errorMessage = nil
-        
-        DictionaryService.shared.searchWord(savedWord.word) { result in
+
+        DictionaryService.shared.searchWord(
+            savedWord.word,
+            learningLanguage: savedWord.learning_language,
+            nativeLanguage: savedWord.native_language
+        ) { result in
             DispatchQueue.main.async {
                 isLoadingDefinitions = false
-                
+
                 switch result {
                 case .success(let definitions):
                     self.definitions = definitions
@@ -103,7 +107,7 @@ struct WordDetailView: View {
 }
 
 struct DefinitionTabView: View {
-    let word: String
+    let savedWord: SavedWord
     let definitions: [Definition]
     let isLoading: Bool
     let errorMessage: String?
@@ -118,7 +122,7 @@ struct DefinitionTabView: View {
             VStack(spacing: 16) {
 //                // AI Illustration Section
 //                AIIllustrationView(
-//                    word: word,
+//                    word: savedWord.word,
 //                    language: userManager.learningLanguage,
 //                    illustration: $illustration,
 //                    isGenerating: $isGeneratingIllustration,
@@ -595,6 +599,7 @@ private enum DateStyle {
             id: 1,
             word: "example",
             learning_language: "en",
+            native_language: "zh",
             metadata: nil,
             created_at: "2025-09-06T10:00:00Z",
             review_count: 2,

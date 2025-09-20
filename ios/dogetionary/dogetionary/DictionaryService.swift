@@ -88,7 +88,7 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func saveWord(_ word: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+    func saveWord(_ word: String, completion: @escaping (Result<Int, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         guard let url = URL(string: "\(baseURL)/save") else {
             logger.error("Invalid URL for save endpoint")
@@ -106,6 +106,7 @@ class DictionaryService: ObservableObject {
             "word": word,
             "user_id": userID,
             "learning_language": UserManager.shared.learningLanguage,
+            "native_language": UserManager.shared.nativeLanguage,
             "metadata": ["saved_at": Date().timeIntervalSince1970]
         ] as [String : Any]
         
@@ -131,10 +132,22 @@ class DictionaryService: ObservableObject {
             }
             
             self.logger.info("Save response status code: \(httpResponse.statusCode)")
-            
+
             if httpResponse.statusCode == 201 {
-                self.logger.info("Successfully saved word: \(word)")
-                completion(.success(true))
+                guard let data = data else {
+                    self.logger.error("No data received from save endpoint")
+                    completion(.failure(DictionaryError.noData))
+                    return
+                }
+
+                do {
+                    let saveResponse = try JSONDecoder().decode(SaveWordResponse.self, from: data)
+                    self.logger.info("Successfully saved word: \(word) with ID: \(saveResponse.word_id)")
+                    completion(.success(saveResponse.word_id))
+                } catch {
+                    self.logger.error("Failed to decode save response: \(error.localizedDescription)")
+                    completion(.failure(DictionaryError.decodingError(error)))
+                }
             } else {
                 self.logger.error("Server error saving word: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
@@ -205,8 +218,13 @@ class DictionaryService: ObservableObject {
         let userID = UserManager.shared.getUserID()
         let learningLang = UserManager.shared.learningLanguage
         let nativeLang = UserManager.shared.nativeLanguage
+        searchWord(word, learningLanguage: learningLang, nativeLanguage: nativeLang, completion: completion)
+    }
+
+    func searchWord(_ word: String, learningLanguage: String, nativeLanguage: String, completion: @escaping (Result<[Definition], Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
         
-        guard let url = URL(string: "\(baseURL)/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&learning_lang=\(learningLang)&native_lang=\(nativeLang)") else {
+        guard let url = URL(string: "\(baseURL)/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&learning_lang=\(learningLanguage)&native_lang=\(nativeLanguage)") else {
             logger.error("Invalid URL for word: \(word)")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -256,7 +274,7 @@ class DictionaryService: ObservableObject {
                 let definition = Definition(from: response)
                 
                 // Preload word audio for better UX
-                self.fetchAudioForText(definition.word, language: learningLang) { audioData in
+                self.fetchAudioForText(definition.word, language: learningLanguage) { audioData in
                     // Audio loading happens in background, UI already has the definition
                 }
                 
@@ -269,7 +287,7 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
-    func unsaveWord(_ word: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+    func unsaveWord(wordID: Int, completion: @escaping (Result<Bool, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         guard let url = URL(string: "\(baseURL)/unsave") else {
             logger.error("Invalid URL for unsave endpoint")
@@ -277,16 +295,15 @@ class DictionaryService: ObservableObject {
             return
         }
 
-        logger.info("Unsaving word: \(word) for user: \(userID)")
+        logger.info("Unsaving word ID: \(wordID) for user: \(userID)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody = [
-            "word": word,
-            "user_id": userID,
-            "learning_language": UserManager.shared.learningLanguage
+            "word_id": wordID,
+            "user_id": userID
         ] as [String : Any]
 
         do {
@@ -313,10 +330,10 @@ class DictionaryService: ObservableObject {
             self.logger.info("Unsave response status code: \(httpResponse.statusCode)")
 
             if httpResponse.statusCode == 200 {
-                self.logger.info("Successfully unsaved word: \(word)")
+                self.logger.info("Successfully unsaved word ID: \(wordID)")
                 completion(.success(true))
             } else if httpResponse.statusCode == 404 {
-                self.logger.info("Word not found in saved words: \(word)")
+                self.logger.info("Word ID not found in saved words: \(wordID)")
                 completion(.success(false))
             } else {
                 self.logger.error("Server error unsaving word: \(httpResponse.statusCode)")
