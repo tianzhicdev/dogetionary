@@ -86,10 +86,10 @@ struct SavedWordsListView: View {
     let onRefresh: () async -> Void
     
     var body: some View {
-        VStack {
+        Group {
             if isLoading {
                 ProgressView("Loading saved words...")
-                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if savedWords.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "book.closed")
@@ -106,6 +106,16 @@ struct SavedWordsListView: View {
                         .multilineTextAlignment(.center)
                 }
                 .padding()
+            } else if let errorMessage = errorMessage {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(.orange)
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(savedWords) { savedWord in
                     NavigationLink(destination: WordDetailView(savedWord: savedWord)
@@ -121,12 +131,6 @@ struct SavedWordsListView: View {
                         SavedWordRow(savedWord: savedWord)
                     }
                 }
-            }
-            
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .padding()
             }
         }
         .refreshable {

@@ -39,9 +39,10 @@ CREATE TABLE saved_words (
     user_id UUID NOT NULL,
     word VARCHAR(255) NOT NULL,
     learning_language VARCHAR(10) NOT NULL,
+    native_language VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}'::jsonb,
-    UNIQUE(user_id, word, learning_language)
+    UNIQUE(user_id, word, learning_language, native_language)
 );
 
 -- Minimal Review History Table (track all review responses)

@@ -282,11 +282,15 @@ struct SearchView: View {
     }
 
     private func autoSaveWord(_ word: String) {
-        // Check if word is already saved to avoid duplicates
+        // Check if word is already saved with current language pair to avoid duplicates
         DictionaryService.shared.getSavedWords { result in
             switch result {
             case .success(let savedWords):
-                let isAlreadySaved = savedWords.contains { $0.word.lowercased() == word.lowercased() }
+                let isAlreadySaved = savedWords.contains {
+                    $0.word.lowercased() == word.lowercased() &&
+                    $0.learning_language == UserManager.shared.learningLanguage &&
+                    $0.native_language == UserManager.shared.nativeLanguage
+                }
 
                 if !isAlreadySaved {
                     // Auto-save the word
@@ -337,6 +341,7 @@ struct DefinitionCard: View {
     @State private var isSaved = false
     @State private var isSaving = false
     @State private var isCheckingStatus = true
+    @State private var savedWordId: Int?
     @State private var wordAudioData: Data?
     @State private var exampleAudioData: [String: Data] = [:]
     @State private var loadingAudio = false
@@ -357,15 +362,17 @@ struct DefinitionCard: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
                 
                 HStack(spacing: 12) {
                     // Save/Unsave toggle button
                     Button(action: {
                         if isSaved {
+                            // Unsave the existing saved word (regardless of its language pair)
                             unsaveWord()
                         } else {
+                            // Save with current language settings
                             saveWord()
                         }
                     }) {
@@ -404,20 +411,39 @@ struct DefinitionCard: View {
                     )
                 }
             }
-            
+
+            // Show language pair from definition (always available)
+            HStack(spacing: 4) {
+                Text(definition.learning_language.uppercased())
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(4)
+
+                Image(systemName: "arrow.right")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                Text(definition.native_language.uppercased())
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.1))
+                    .foregroundColor(.green)
+                    .cornerRadius(4)
+            }
+            .padding(.bottom, 8)
+
             // Show translations if available
             if !definition.translations.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Translations:")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                    
-                    Text(definition.translations.joined(separator: " • "))
-                        .font(.body)
-                        .foregroundColor(.primary)
-                }
-                .padding(.bottom, 8)
+                Text(definition.translations.joined(separator: " • "))
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .padding(.bottom, 8)
             }
             
             // AI Illustration Section
@@ -503,8 +529,9 @@ struct DefinitionCard: View {
                 isSaving = false
 
                 switch result {
-                case .success:
+                case .success(let wordId):
                     isSaved = true
+                    savedWordId = wordId
                 case .failure(let error):
                     print("Failed to save word: \(error.localizedDescription)")
                 }
@@ -513,15 +540,25 @@ struct DefinitionCard: View {
     }
 
     private func unsaveWord() {
+        guard let wordId = savedWordId else {
+            print("Cannot unsave word: no saved word ID available")
+            return
+        }
+
         isSaving = true
 
-        DictionaryService.shared.unsaveWord(definition.word) { result in
+        DictionaryService.shared.unsaveWord(wordID: wordId) { result in
             DispatchQueue.main.async {
                 isSaving = false
 
                 switch result {
                 case .success:
+                    // Word completely removed from saved words
                     isSaved = false
+                    savedWordId = nil
+
+                    // Post notification for SavedWordsView to update
+                    NotificationCenter.default.post(name: .wordUnsaved, object: definition.word)
                 case .failure(let error):
                     print("Failed to unsave word: \(error.localizedDescription)")
                 }
@@ -531,17 +568,31 @@ struct DefinitionCard: View {
     
     private func checkIfWordIsSaved() {
         isCheckingStatus = true
-        
+
         DictionaryService.shared.getSavedWords { result in
             DispatchQueue.main.async {
                 isCheckingStatus = false
-                
+
                 switch result {
                 case .success(let savedWords):
-                    isSaved = savedWords.contains { $0.word.lowercased() == definition.word.lowercased() }
+                    // Check if word is saved with current user language settings
+                    if let foundWord = savedWords.first(where: {
+                        $0.word.lowercased() == definition.word.lowercased() &&
+                        $0.learning_language == definition.learning_language &&
+                        $0.native_language == definition.native_language
+                    }) {
+                        // Word is saved with definition's language settings
+                        isSaved = true
+                        savedWordId = foundWord.id
+                    } else {
+                        // Word is not saved with definition's language settings
+                        isSaved = false
+                        savedWordId = nil
+                    }
                 case .failure:
                     // If we can't check, assume not saved
                     isSaved = false
+                    savedWordId = nil
                 }
             }
         }

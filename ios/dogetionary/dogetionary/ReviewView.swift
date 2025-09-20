@@ -350,7 +350,32 @@ struct ReviewSessionView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
-                    
+
+                    // Language pair display
+                    HStack(spacing: 4) {
+                        Text(currentWord.learning_language.uppercased())
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(4)
+
+                        Image(systemName: "arrow.right")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+
+                        Text(currentWord.native_language.uppercased())
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.1))
+                            .foregroundColor(.green)
+                            .cornerRadius(4)
+                    }
+
                     // Audio controls
                     VStack(spacing: 8) {
                         // Pronunciation audio button
@@ -579,10 +604,14 @@ struct ReviewSessionView: View {
     }
     
     private func loadWordDefinitionsWithAudio() {
-        let learningLanguage = UserManager.shared.learningLanguage
+        let learningLanguage = currentWord.learning_language
         
         // Load definitions first to get examples
-        DictionaryService.shared.searchWord(currentWord.word) { result in
+        DictionaryService.shared.searchWord(
+            currentWord.word,
+            learningLanguage: currentWord.learning_language,
+            nativeLanguage: currentWord.native_language
+        ) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let definitions):
@@ -597,6 +626,8 @@ struct ReviewSessionView: View {
                                     id: definition.id,
                                     word: definition.word,
                                     phonetic: definition.phonetic,
+                                    learning_language: definition.learning_language,
+                                    native_language: definition.native_language,
                                     translations: definition.translations,
                                     meanings: definition.meanings,
                                     audioData: audioData,
@@ -616,6 +647,8 @@ struct ReviewSessionView: View {
                                         id: UUID(),
                                         word: self.currentWord.word,
                                         phonetic: nil,
+                                        learning_language: self.currentWord.learning_language,
+                                        native_language: self.currentWord.native_language,
                                         translations: [],
                                         meanings: [],
                                         audioData: audioData,
@@ -637,6 +670,8 @@ struct ReviewSessionView: View {
                                     id: UUID(),
                                     word: self.currentWord.word,
                                     phonetic: nil,
+                                    learning_language: self.currentWord.learning_language,
+                                    native_language: self.currentWord.native_language,
                                     translations: [],
                                     meanings: [],
                                     audioData: audioData,
@@ -654,7 +689,11 @@ struct ReviewSessionView: View {
     
     private func loadWordDefinitions() {
         // Fetch full word definitions for display when user doesn't know the word
-        DictionaryService.shared.searchWord(currentWord.word) { result in
+        DictionaryService.shared.searchWord(
+            currentWord.word,
+            learningLanguage: currentWord.learning_language,
+            nativeLanguage: currentWord.native_language
+        ) { result in
             DispatchQueue.main.async {
                 self.isLoadingDefinitions = false
                 
@@ -670,6 +709,8 @@ struct ReviewSessionView: View {
                                 id: fullDef.id,
                                 word: fullDef.word,
                                 phonetic: fullDef.phonetic,
+                                learning_language: fullDef.learning_language,
+                                native_language: fullDef.native_language,
                                 translations: fullDef.translations,
                                 meanings: fullDef.meanings,
                                 audioData: audioData, // Keep existing audio
@@ -699,8 +740,8 @@ struct ReviewSessionView: View {
         
         // Otherwise, fetch the audio data
         isLoadingExampleAudio = true
-        let learningLanguage = UserManager.shared.learningLanguage
-        
+        let learningLanguage = currentWord.learning_language
+
         DictionaryService.shared.fetchAudioForText(text, language: learningLanguage) { audioData in
             DispatchQueue.main.async {
                 self.isLoadingExampleAudio = false
