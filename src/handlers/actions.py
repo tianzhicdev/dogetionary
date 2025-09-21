@@ -41,21 +41,22 @@ def save_word():
         word = data['word'].strip().lower()
         user_id = data['user_id']
         learning_lang = data.get('learning_language', 'en')
-        native_lang = data.get('native_language', 'zh')
+        native_lang = data.get('native_language')  # Can be None for v1.0.9 clients
         metadata = data.get('metadata', {})
 
-        if 'learning_language' not in data or 'native_language' not in data:
+        # Get user preferences if any language is missing
+        if 'learning_language' not in data or native_lang is None:
             stored_learning_lang, stored_native_lang, _, _ = get_user_preferences(user_id)
             if 'learning_language' not in data:
                 learning_lang = stored_learning_lang
-            if 'native_language' not in data:
+            if native_lang is None:  # Fallback for v1.0.9 clients
                 native_lang = stored_native_lang
-        else:
-            # Validate provided languages
-            if not validate_language(learning_lang):
-                return jsonify({"error": f"Unsupported learning language: {learning_lang}"}), 400
-            if not validate_language(native_lang):
-                return jsonify({"error": f"Unsupported native language: {native_lang}"}), 400
+
+        # Validate provided languages
+        if not validate_language(learning_lang):
+            return jsonify({"error": f"Unsupported learning language: {learning_lang}"}), 400
+        if not validate_language(native_lang):
+            return jsonify({"error": f"Unsupported native language: {native_lang}"}), 400
         
         try:
             uuid.UUID(user_id)
@@ -93,11 +94,15 @@ def delete_saved_word():
     try:
         data = request.get_json()
 
-        if not data or 'word_id' not in data or 'user_id' not in data:
-            return jsonify({"error": "Both 'word_id' and 'user_id' are required"}), 400
+        if not data or 'user_id' not in data:
+            return jsonify({"error": "user_id is required"}), 400
+
+        if 'word_id' not in data:
+            return jsonify({"error": "word_id is required"}), 400
 
         word_id = data['word_id']
         user_id = data['user_id']
+        # Ignore learning_language if provided (for backward compatibility)
 
         # Validate UUID
         try:
