@@ -72,18 +72,20 @@ from app import (
     # submit_feedback, get_review_progress_stats
 )
 
-from handlers.actions import save_word, delete_saved_word, get_next_review_word, submit_feedback, submit_review
-from handlers.users import handle_user_preferences
+from handlers.actions import save_word, delete_saved_word, delete_saved_word_v2, get_next_review_word, submit_feedback, submit_review
+from handlers.users import handle_user_preferences, get_supported_languages
 from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
 from handlers.admin import test_review_intervals, fix_next_review_dates
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
-# Import word-related functions from original app temporarily
-from app import get_word_definition, get_word_definition_v2, get_saved_words, get_word_details, get_audio, get_supported_languages, generate_illustration, get_illustration
+
+from handlers.words import get_saved_words, get_word_definition, get_word_definition_v2, get_word_details, get_audio, generate_illustration, get_illustration
 
 # Register all routes
 app.route('/save', methods=['POST'])(save_word)
+
+app.route('/v2/unsave', methods=['POST'])(delete_saved_word_v2)
 app.route('/unsave', methods=['POST'])(delete_saved_word)
 app.route('/review_next', methods=['GET'])(get_next_review_word)  
 app.route('/due_counts', methods=['GET'])(get_due_counts)  

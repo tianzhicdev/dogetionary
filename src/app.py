@@ -917,15 +917,14 @@ def save_word():
 
 @app.route('/unsave', methods=['POST'])
 def delete_saved_word():
-    """Delete a saved word and all associated reviews (cascade delete)"""
+    """Delete a saved word - supports both v1.0.9 (word+language) and v1.0.10 (word_id) formats"""
     app.logger.info(f"UNSAVE ENDPOINT HIT - Method: {request.method}")
     try:
         data = request.get_json()
 
-        if not data or 'word_id' not in data or 'user_id' not in data:
-            return jsonify({"error": "Both 'word_id' and 'user_id' are required"}), 400
+        if not data or 'user_id' not in data:
+            return jsonify({"error": "'user_id' is required"}), 400
 
-        word_id = data['word_id']
         user_id = data['user_id']
 
         # Validate UUID
@@ -934,22 +933,40 @@ def delete_saved_word():
         except ValueError:
             return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
 
-        # Validate word_id is integer
-        try:
-            word_id = int(word_id)
-        except (ValueError, TypeError):
-            return jsonify({"error": "Invalid word_id format. Must be an integer"}), 400
-
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Delete the saved word (reviews will cascade delete automatically)
-        # Include user_id check for security
-        cur.execute("""
-            DELETE FROM saved_words
-            WHERE id = %s AND user_id = %s
-            RETURNING id, word
-        """, (word_id, user_id))
+        # Check if this is v1.0.10 format (word_id) or v1.0.9 format (word + learning_language)
+        if 'word_id' in data:
+            # v1.0.10 format: use word_id directly
+            word_id = data['word_id']
+            try:
+                word_id = int(word_id)
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid word_id format. Must be an integer"}), 400
+
+            cur.execute("""
+                DELETE FROM saved_words
+                WHERE id = %s AND user_id = %s
+                RETURNING id, word
+            """, (word_id, user_id))
+
+        elif 'word' in data and 'learning_language' in data:
+            # v1.0.9 format: lookup by word + learning_language
+            word = data['word']
+            learning_language = data['learning_language']
+
+            if not validate_language(learning_language):
+                return jsonify({"error": f"Unsupported learning language: {learning_language}"}), 400
+
+            cur.execute("""
+                DELETE FROM saved_words
+                WHERE word = %s AND learning_language = %s AND user_id = %s
+                RETURNING id, word
+            """, (word, learning_language, user_id))
+
+        else:
+            return jsonify({"error": "Either 'word_id' or both 'word' and 'learning_language' are required"}), 400
 
         deleted = cur.fetchone()
         conn.commit()
@@ -963,7 +980,7 @@ def delete_saved_word():
             }), 200
         else:
             return jsonify({
-                "error": f"Word with ID {word_id} not found in saved words"
+                "error": "Word not found in saved words"
             }), 404
 
     except Exception as e:
