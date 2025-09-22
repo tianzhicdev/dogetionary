@@ -1064,6 +1064,82 @@ def get_next_review_word():
         app.logger.error(f"Error getting next review word: {str(e)}")
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
 
+@app.route('/v2/review_next', methods=['GET'])
+def get_next_review_word_v2():
+    """Get next review word with language information for v1.0.10+ clients"""
+    try:
+        user_id = request.args.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Find word with earliest next review date (due now or overdue)
+        cur.execute("""
+            SELECT
+                sw.id,
+                sw.word,
+                sw.learning_language,
+                sw.native_language,
+                sw.metadata,
+                sw.created_at,
+                COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
+                COALESCE(latest_review.review_count, 0) as review_count,
+                latest_review.last_reviewed_at,
+                CASE
+                    WHEN latest_review.last_reviewed_at IS NOT NULL AND latest_review.next_review_date IS NOT NULL
+                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - latest_review.last_reviewed_at)) / 86400
+                    WHEN latest_review.next_review_date IS NOT NULL
+                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - sw.created_at)) / 86400
+                    ELSE 1
+                END as interval_days
+            FROM saved_words sw
+            LEFT JOIN (
+                SELECT
+                    word_id,
+                    next_review_date,
+                    reviewed_at as last_reviewed_at,
+                    COUNT(*) as review_count,
+                    ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                FROM reviews
+                GROUP BY word_id, next_review_date, reviewed_at
+            ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+            WHERE sw.user_id = %s
+            -- Exclude words reviewed in the past 24 hours
+            AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
+            -- AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
+            ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
+            LIMIT 1
+        """, (user_id,))
+
+        word = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not word:
+            return jsonify({
+                "user_id": user_id,
+                "saved_words": [],
+                "count": 0
+            })
+
+        return jsonify({
+            "user_id": user_id,
+            "saved_words": [{
+                "id": word['id'],
+                "word": word['word'],
+                "learning_language": word['learning_language'],
+                "native_language": word['native_language']
+            }],
+            "count": 1
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error getting next review word (v2): {str(e)}")
+        return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
+
 @app.route('/due_counts', methods=['GET'])
 def get_due_counts():
     try:

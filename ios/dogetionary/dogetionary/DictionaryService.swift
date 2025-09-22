@@ -814,7 +814,7 @@ class DictionaryService: ObservableObject {
     
     func getNextReviewWord(completion: @escaping (Result<[ReviewWord], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/review_next?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v2/review_next?user_id=\(userID)") else {
             logger.error("Invalid URL for next review word endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
