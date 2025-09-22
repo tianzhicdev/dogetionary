@@ -289,8 +289,8 @@ class DictionaryService: ObservableObject {
 
     func unsaveWord(wordID: Int, completion: @escaping (Result<Bool, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/unsave") else {
-            logger.error("Invalid URL for unsave endpoint")
+        guard let url = URL(string: "\(baseURL)/v2/unsave") else {
+            logger.error("Invalid URL for v2/unsave endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
         }
