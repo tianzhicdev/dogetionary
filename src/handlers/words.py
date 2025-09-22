@@ -37,6 +37,31 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://dogeuser:dogepass@localho
 audio_generation_queue = queue.Queue()
 audio_generation_status = {}
 
+def audio_generation_worker():
+    """Background worker for processing audio generation - simplified"""
+    while True:
+        try:
+            task = audio_generation_queue.get(timeout=1)
+            if task is None:
+                break
+                
+            text, language = task
+            
+            try:
+                app.logger.info(f"Generating audio for: '{text}' in {language}")
+                audio_data = generate_audio_for_text(text)
+                store_audio(text, language, audio_data)
+                app.logger.info(f"Successfully generated audio for: '{text}'")
+            except Exception as e:
+                app.logger.error(f"Failed to generate audio for '{text}': {str(e)}")
+                
+            audio_generation_queue.task_done()
+            
+        except queue.Empty:
+            continue
+        except Exception as e:
+            app.logger.error(f"Error in audio generation worker: {str(e)}")
+
 WORD_DEFINITION_SCHEMA = {
     "type": "object",
     "properties": {
@@ -282,6 +307,46 @@ def get_cached_definition(word: str, learning_lang: str, native_lang: str) -> Op
     except Exception as e:
         app.logger.error(f"Error getting cached definition: {str(e)}")
         return None
+
+def calculate_spaced_repetition(reviews_data, current_review_time=None):
+    """
+    DEPRECATED: Simple calculation for backward compatibility - SQL handles the logic now
+    
+    This function is deprecated and should not be used for new code.
+    Use get_next_review_date_new from app.py instead.
+    This function is maintained only for get_word_review_data compatibility.
+    """
+    if not reviews_data:
+        return 0, 1, datetime.now() + timedelta(days=1), None
+    
+    reviews_data.sort(key=lambda r: r['reviewed_at'])
+    review_count = len(reviews_data)
+    last_reviewed_at = reviews_data[-1]['reviewed_at']
+    current_time = current_review_time or datetime.now()
+    
+    # Simple interval calculation for API compatibility
+    # Actual logic is now in SQL
+    consecutive_correct = 0
+    for review in reversed(reviews_data):
+        if review['response']:
+            consecutive_correct += 1
+        else:
+            break
+    
+    if not reviews_data[-1]['response']:
+        interval_days = 1
+    elif consecutive_correct == 1:
+        interval_days = 5  # Updated to match new logic
+    elif consecutive_correct >= 2 and len(reviews_data) >= 2:
+        # Calculate based on time difference like SQL does
+        previous_review_time = reviews_data[-2]['reviewed_at']
+        time_diff_days = (last_reviewed_at - previous_review_time).total_seconds() / 86400
+        interval_days = max(1, int(2.5 * time_diff_days))
+    else:
+        interval_days = 1
+    
+    next_review_date = current_time + timedelta(days=interval_days)
+    return review_count, interval_days, next_review_date, last_reviewed_at
 
 def get_word_review_data(user_id: str, word_id: int):
     try:
@@ -610,6 +675,52 @@ def get_saved_words():
         return jsonify({"error": f"Failed to get saved words: {str(e)}"}), 500
 
 
+
+def generate_audio_for_text(text: str) -> bytes:
+    """Generate TTS audio for text using OpenAI"""
+    try:
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice="alloy", 
+            input=text,
+            response_format="mp3"
+        )
+        
+        return response.content
+        
+    except Exception as e:
+        logger.error(f"Failed to generate audio: {str(e)}")
+        raise
+
+def store_audio(text: str, language: str, audio_data: bytes) -> str:
+    """Store audio, return the created_at timestamp"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # First try to insert
+        cur.execute("""
+            INSERT INTO audio (text_content, language, audio_data, content_type)
+            VALUES (%s, %s, %s, 'audio/mpeg')
+            ON CONFLICT (text_content, language) 
+            DO UPDATE SET audio_data = EXCLUDED.audio_data, content_type = EXCLUDED.content_type
+        """, (text, language, audio_data))
+        
+        # Then get the actual timestamp from database
+        cur.execute("""
+            SELECT created_at FROM audio 
+            WHERE text_content = %s AND language = %s
+        """, (text, language))
+        
+        result = cur.fetchone()
+        conn.commit()
+        conn.close()
+        
+        return result['created_at'].isoformat() if result else datetime.now().isoformat()
+        
+    except Exception as e:
+        app.logger.error(f"Error storing audio: {str(e)}")
+        raise
 
 def get_audio(text, language):
     """Get or generate audio for text+language"""
