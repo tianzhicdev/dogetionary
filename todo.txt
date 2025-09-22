@@ -110,11 +110,23 @@ when users search a word, we should automatically save the word. show me how you
 1. we should allow people to remove saved words, add a new field in saved words 'removed', then every call must use removed filter;
 2. or we can just really remove it from db and reivews, keep everything simple;
 
+1. when we display word definitions in the contentview, if image loading should not stop new definition being rendered.
+there is a problem when i search for a new word, it does not display definition, it reverted back to the landing view;
+let's keep the logic simple: when a user search, or search a new word where there is already a definiton being displayed, or the user select to display a wrong word on the alert popup window. we IMEEDAITELY display the new word definitoin with no delay. 
 
 --- done ---
 
+1. ios app change: let's use ios/dogetionary/dogetionary/resources/logo.png as a logo to make a banner it should just be "<logo> Unforgettable Dictionary";
+the banner should be on top of every page in the ios app
+
+2. develop a feature on the definition on the frontend, we should let the user practice pronuncing the word or example sentences; 
+the ui has a button to start recording, it sends back to backend; audio send to open ai to speech to text; the we ask open ai if the original and new audio recognized text are the similar enough; if yes, we report back to ui as success or no for failure; db should record user voice and results and time stamp; 
+db should be id, original_text (could be just a word or an example sentence), user_audio, speech_to_text, result (boolean), created_at, metadata json
 
 
 
+3. 404 is ok for submit_review
+4. when unsave, we go back to list view
+5. detail view when pronuciation is done
 
 2. create better metrics for review
