@@ -37,6 +37,82 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://dogeuser:dogepass@localho
 audio_generation_queue = queue.Queue()
 audio_generation_status = {}
 
+
+def get_next_review_word_v2():
+    """Get next review word with language information for v1.0.10+ clients"""
+    try:
+        user_id = request.args.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Find word with earliest next review date (due now or overdue)
+        cur.execute("""
+            SELECT
+                sw.id,
+                sw.word,
+                sw.learning_language,
+                sw.native_language,
+                sw.metadata,
+                sw.created_at,
+                COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
+                COALESCE(latest_review.review_count, 0) as review_count,
+                latest_review.last_reviewed_at,
+                CASE
+                    WHEN latest_review.last_reviewed_at IS NOT NULL AND latest_review.next_review_date IS NOT NULL
+                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - latest_review.last_reviewed_at)) / 86400
+                    WHEN latest_review.next_review_date IS NOT NULL
+                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - sw.created_at)) / 86400
+                    ELSE 1
+                END as interval_days
+            FROM saved_words sw
+            LEFT JOIN (
+                SELECT
+                    word_id,
+                    next_review_date,
+                    reviewed_at as last_reviewed_at,
+                    COUNT(*) as review_count,
+                    ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                FROM reviews
+                GROUP BY word_id, next_review_date, reviewed_at
+            ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+            WHERE sw.user_id = %s
+            -- Exclude words reviewed in the past 24 hours
+            AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
+            -- AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
+            ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
+            LIMIT 1
+        """, (user_id,))
+
+        word = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not word:
+            return jsonify({
+                "user_id": user_id,
+                "saved_words": [],
+                "count": 0
+            })
+
+        return jsonify({
+            "user_id": user_id,
+            "saved_words": [{
+                "id": word['id'],
+                "word": word['word'],
+                "learning_language": word['learning_language'],
+                "native_language": word['native_language']
+            }],
+            "count": 1
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting next review word (v2): {str(e)}")
+        return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
+
 def audio_generation_worker():
     """Background worker for processing audio generation - simplified"""
     while True:
@@ -48,19 +124,19 @@ def audio_generation_worker():
             text, language = task
             
             try:
-                app.logger.info(f"Generating audio for: '{text}' in {language}")
+                logger.info(f"Generating audio for: '{text}' in {language}")
                 audio_data = generate_audio_for_text(text)
                 store_audio(text, language, audio_data)
-                app.logger.info(f"Successfully generated audio for: '{text}'")
+                logger.info(f"Successfully generated audio for: '{text}'")
             except Exception as e:
-                app.logger.error(f"Failed to generate audio for '{text}': {str(e)}")
+                logger.error(f"Failed to generate audio for '{text}': {str(e)}")
                 
             audio_generation_queue.task_done()
             
         except queue.Empty:
             continue
         except Exception as e:
-            app.logger.error(f"Error in audio generation worker: {str(e)}")
+            logger.error(f"Error in audio generation worker: {str(e)}")
 
 WORD_DEFINITION_SCHEMA = {
     "type": "object",
@@ -244,7 +320,7 @@ def get_word_definition_v2():
         # Get user preferences
         learning_lang, native_lang, _, _ = get_user_preferences(user_id)
 
-        app.logger.info(f"Generating definition with validation for '{word_normalized}'")
+        logger.info(f"Generating definition with validation for '{word_normalized}'")
         prompt = build_definition_prompt_v2(word_normalized, learning_lang, native_lang)
 
         response = client.chat.completions.create(
@@ -281,7 +357,7 @@ def get_word_definition_v2():
         })
 
     except Exception as e:
-        app.logger.error(f"Error getting definition v2 for word '{word_normalized}': {str(e)}")
+        logger.error(f"Error getting definition v2 for word '{word_normalized}': {str(e)}")
         return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
 
 
@@ -305,7 +381,7 @@ def get_cached_definition(word: str, learning_lang: str, native_lang: str) -> Op
         return None
         
     except Exception as e:
-        app.logger.error(f"Error getting cached definition: {str(e)}")
+        logger.error(f"Error getting cached definition: {str(e)}")
         return None
 
 def calculate_spaced_repetition(reviews_data, current_review_time=None):
@@ -386,7 +462,7 @@ def audio_exists(text: str, language: str) -> bool:
         
         return result is not None
     except Exception as e:
-        app.logger.error(f"Error checking audio existence: {str(e)}")
+        logger.error(f"Error checking audio existence: {str(e)}")
         return False
 
 def collect_audio_references(definition_data: dict, learning_lang: str) -> dict:
@@ -719,7 +795,7 @@ def store_audio(text: str, language: str, audio_data: bytes) -> str:
         return result['created_at'].isoformat() if result else datetime.now().isoformat()
         
     except Exception as e:
-        app.logger.error(f"Error storing audio: {str(e)}")
+        logger.error(f"Error storing audio: {str(e)}")
         raise
 
 def get_audio(text, language):

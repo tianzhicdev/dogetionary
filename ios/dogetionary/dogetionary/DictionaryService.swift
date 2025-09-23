@@ -563,7 +563,24 @@ class DictionaryService: ObservableObject {
             }
             
             self.logger.info("Review submission response status code: \(httpResponse.statusCode)")
-            
+
+            if httpResponse.statusCode == 404 {
+                // Word not found (likely already deleted or not in user's list)
+                // Treat as success to allow UI to continue
+                self.logger.info("Review submission returned 404 - treating as success (word may have been deleted)")
+                let mockResponse = ReviewSubmissionResponse(
+                    success: true,
+                    word_id: wordID,
+                    response: reviewRequest.response,
+                    review_count: 0,
+                    ease_factor: 2.5,
+                    interval_days: 1,
+                    next_review_date: ""
+                )
+                completion(.success(mockResponse))
+                return
+            }
+
             guard httpResponse.statusCode == 200 else {
                 self.logger.error("Server error submitting review: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))

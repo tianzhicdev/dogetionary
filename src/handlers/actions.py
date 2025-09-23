@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.config import *
 from utils.database import validate_language, get_db_connection
 from services.user_service import get_user_preferences
-from app import get_next_review_date_new
+from handlers.admin import get_next_review_date_new
 
 # Get logger from current app context
 import logging
