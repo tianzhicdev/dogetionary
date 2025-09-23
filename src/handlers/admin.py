@@ -32,6 +32,25 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def health_check():
+    """Health check endpoint"""
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+
+def support_page():
+    """Support page with app information and contact details"""
+    
+    return Response(SUPPORT_HTML, mimetype='text/html')
+
+def privacy_agreement():
+    """Display comprehensive privacy agreement and terms of service"""
+    privacy_policy = PRIVACY_POLICY
+    # Replace timestamp placeholder
+    privacy_policy = privacy_policy.replace('{timestamp}', datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
+    
+    return Response(privacy_policy, mimetype='text/html')
+
+
+
 def test_review_intervals():
     """
     Test endpoint to show review intervals if word is always reviewed at predicted time.

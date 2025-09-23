@@ -16,30 +16,6 @@ from utils.database import validate_language, get_db_connection
 # Import service functions
 from services.user_service import generate_user_profile, get_user_preferences
 
-# Import all the remaining functions from the original app for now
-# This allows us to refactor incrementally
-# from app import (
-#     # Spaced repetition functions
-#     # calculate_spaced_repetition, 
-#     # get_word_review_data,
-
-#     #  ========  ?unused?  ========
-#     # get_decay_rate,
-#     # calculate_retention, get_next_review_date_new, get_due_words_count,
-
-#     # Audio functions
-#     # audio_exists, 
-#     # store_audio,
-#     # collect_audio_references, queue_missing_audio, audio_generation_worker,
-
-#     # Dictionary functions
-#     # get_cached_definition, build_definition_prompt,
-
-#     # Middleware functions
-#     # log_request_info, log_response_info
-# )
-
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -121,7 +97,7 @@ app.after_request(log_response_info)
 
 # Import and register all endpoints from original app
 # This allows us to keep all functionality while refactoring incrementally
-from app import (
+from handlers.admin import (
     # save_word, get_next_review_word, 
     # get_due_counts, submit_review,
     # get_word_definition, get_saved_words,
