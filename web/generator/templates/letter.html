@@ -26,7 +26,7 @@
                 "@type": "DefinedTerm",
                 "position": {{ loop.index + (page - 1) * words_per_page }},
                 "name": "{{ word.word }}",
-                "url": "https://unforgettable-dictionary.com/words/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html"
+                "url": "https://unforgettable-dictionary.com/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0:1].lower() if word.word else 'a' }}/{{ word.word.lower() }}.html"
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         ]
@@ -92,7 +92,7 @@
             {% for word in words %}
             <div class="word-item" data-word="{{ word.word.lower() }}">
                 <h3>
-                    <a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html">
+                    <a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0:1].lower() if word.word else 'a' }}/{{ word.word.lower() }}.html">
                         {{ word.word|title }}
                     </a>
                 </h3>
@@ -100,7 +100,7 @@
                 <div class="phonetic">{{ word.phonetic }}</div>
                 {% endif %}
                 {% if word.short_definition %}
-                <p class="preview">{{ word.short_definition|truncate(100) }}</p>
+                <p class="preview">{{ word.short_definition[:100] }}{% if word.short_definition|length > 100 %}...{% endif %}</p>
                 {% endif %}
                 <div class="word-meta">
                     <span class="lang-pair">{{ word.learning_language.upper() }} → {{ word.native_language.upper() }}</span>
@@ -154,6 +154,7 @@
         <h3>Browse Other Letters</h3>
         <div class="letter-links">
             {% set alphabet = 'abcdefghijklmnopqrstuvwxyz' %}
+            {% if letter.lower() in alphabet %}
             {% set current_index = alphabet.index(letter.lower()) %}
             {% if current_index > 0 %}
             {% set prev_letter = alphabet[current_index - 1] %}
@@ -166,6 +167,7 @@
             <a href="/letters/{{ next_letter }}.html" class="letter-link next">
                 {{ next_letter.upper() }} →
             </a>
+            {% endif %}
             {% endif %}
         </div>
     </nav>
