@@ -41,6 +41,11 @@ struct SavedWordsView: View {
                 await loadSavedWords()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshSavedWords)) { _ in
+            Task {
+                await loadSavedWords()
+            }
+        }
     }
     
     @MainActor

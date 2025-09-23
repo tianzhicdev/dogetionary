@@ -30,7 +30,13 @@ struct PronunciationPracticeView: View {
                 .foregroundColor(.orange)
         }
         .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $showingPractice) {
+        .sheet(isPresented: $showingPractice, onDismiss: {
+            // Ensure proper cleanup when sheet is dismissed
+            audioRecorder.stopRecording()
+            originalAudioPlayer.stopAudio()
+            recordedAudioPlayer.stopAudio()
+            isProcessing = false
+        }) {
             PronunciationPracticeSheet(
                 originalText: originalText,
                 source: source,
@@ -43,6 +49,7 @@ struct PronunciationPracticeView: View {
                 recordedAudioURL: $recordedAudioURL,
                 showingPractice: $showingPractice
             )
+            .interactiveDismissDisabled(false)
         }
     }
 }
@@ -258,6 +265,7 @@ struct PronunciationPracticeSheet: View {
                 }
             )
         }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 
     private func playOriginalAudio() {
