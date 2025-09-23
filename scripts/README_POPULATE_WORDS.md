@@ -1,12 +1,13 @@
-# Word Population Script
+# Word Definition Generator Script
 
-This script populates the backend database with common English words and their Chinese definitions, bypassing OpenAI API calls for better performance and cost savings.
+This script generates and stores English-Chinese definitions using OpenAI API for common words, perfect for building SEO content quickly.
 
 ## Features
 
-✅ **New API Endpoint**: `POST /api/words/definitions`
-✅ **2000+ Common Words**: Pre-defined English words with Chinese translations
-✅ **Batch Processing**: Efficient bulk import with rate limiting
+✅ **New API Endpoint**: `POST /api/words/generate`
+✅ **2000+ Common Words**: List of most common English words
+✅ **OpenAI Integration**: Generates high-quality definitions and translations
+✅ **Batch Processing**: Efficient bulk generation with rate limiting
 ✅ **Duplicate Prevention**: Automatically skips existing definitions
 ✅ **Error Handling**: Comprehensive error reporting and retry logic
 ✅ **Progress Tracking**: Real-time progress updates and statistics
@@ -19,17 +20,17 @@ cd /Users/biubiu/projects/dogetionary/src
 python app_refactored.py
 ```
 
-### 2. Run the population script
+### 2. Run the definition generator script
 ```bash
 cd /Users/biubiu/projects/dogetionary/scripts
 
-# Populate all words (local development)
+# Generate all words (local development)
 python populate_en_zh_words.py
 
-# Populate to production API
+# Generate using production API
 python populate_en_zh_words.py --api-url https://dogetionary.webhop.net
 
-# Populate only first 100 words (for testing)
+# Generate only first 100 words (for testing)
 python populate_en_zh_words.py --limit 100
 
 # Slower requests (0.5s delay between requests)
@@ -38,49 +39,48 @@ python populate_en_zh_words.py --delay 0.5
 
 ## API Usage
 
-### Add Single Definition
+### Generate Single Definition
 ```bash
-curl -X POST https://dogetionary.webhop.net/api/words/definitions \
+curl -X POST https://dogetionary.webhop.net/api/words/generate \
   -H "Content-Type: application/json" \
   -d '{
     "word": "hello",
     "learning_language": "en",
-    "native_language": "zh",
-    "definition_data": {
-      "word": "hello",
-      "phonetic": "/həˈloʊ/",
-      "part_of_speech": "interjection",
-      "definition": "used as a greeting or to begin a phone conversation",
-      "translation": "你好",
-      "examples": [
-        {
-          "english": "Hello, how are you?",
-          "translation": "你好，你好吗？"
-        }
-      ]
-    }
+    "native_language": "zh"
   }'
 ```
 
 ### Response Format
 ```json
 {
-  "message": "Definition added successfully",
+  "message": "Definition generated and stored successfully",
   "definition_id": 123,
   "word": "hello",
   "learning_language": "en",
   "native_language": "zh",
-  "definition_data": { ... }
+  "definition_data": {
+    "word": "hello",
+    "phonetic": "/həˈloʊ/",
+    "part_of_speech": "interjection",
+    "definition": "used as a greeting or to begin a phone conversation",
+    "translation": "你好",
+    "examples": [
+      {
+        "english": "Hello, how are you?",
+        "translation": "你好，你好吗？"
+      }
+    ]
+  }
 }
 ```
 
 ## Benefits
 
-1. **Cost Savings**: No OpenAI API calls for common words
-2. **Performance**: Direct database insertion is much faster
-3. **SEO Ready**: Immediate content availability for static site generation
-4. **Consistent Quality**: Pre-verified definitions and translations
-5. **Bulk Operations**: Can import thousands of words quickly
+1. **High Quality**: OpenAI-generated definitions with proper translations
+2. **SEO Ready**: Immediately available content for static site generation
+3. **Consistent Format**: Standardized definition structure
+4. **Bulk Operations**: Can generate thousands of words efficiently
+5. **Smart Caching**: Avoids regenerating existing definitions
 
 ## Script Options
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script to populate the backend with 2000 common English words and their Chinese definitions.
-This script calls the new /api/words/definitions endpoint to add words directly to the database.
+Script to generate English-Chinese definitions using OpenAI API for 2000 common words.
+This script calls the /api/words/generate endpoint to generate and store definitions.
 
 Usage:
     python populate_en_zh_words.py [--api-url API_URL] [--limit LIMIT]
@@ -266,31 +266,17 @@ def create_example_sentences(word: str, translation: str) -> List[Dict[str, str]
 def create_definition_payload(word_data: Dict) -> Dict:
     """Create the JSON payload for the API"""
     word = word_data["word"]
-    translation = word_data["translation"]
-    definition = word_data["definition"]
-    part_of_speech = word_data.get("part_of_speech", "noun")
-    phonetic = word_data.get("phonetic", "")
-
-    examples = create_example_sentences(word, translation)
 
     return {
         "word": word,
         "learning_language": "en",
-        "native_language": "zh",
-        "definition_data": {
-            "word": word,
-            "phonetic": phonetic,
-            "part_of_speech": part_of_speech,
-            "definition": definition,
-            "translation": translation,
-            "examples": examples
-        }
+        "native_language": "zh"
     }
 
 
 def add_word_to_backend(api_url: str, word_data: Dict) -> bool:
-    """Add a single word to the backend via API"""
-    endpoint = f"{api_url}/api/words/definitions"
+    """Generate a single word definition via API"""
+    endpoint = f"{api_url}/api/words/generate"
     payload = create_definition_payload(word_data)
 
     try:
@@ -298,10 +284,10 @@ def add_word_to_backend(api_url: str, word_data: Dict) -> bool:
 
         if response.status_code in [200, 201]:
             result = response.json()
-            print(f"✅ Added: {word_data['word']} -> {word_data['translation']}")
+            print(f"✅ Generated: {word_data['word']}")
             return True
         elif response.status_code == 200 and "already exists" in response.text:
-            print(f"⚠️  Exists: {word_data['word']} -> {word_data['translation']}")
+            print(f"⚠️  Exists: {word_data['word']}")
             return True
         else:
             print(f"❌ Failed: {word_data['word']} - {response.status_code}: {response.text}")
@@ -323,7 +309,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"🚀 Starting to populate {min(args.limit, len(COMMON_WORDS))} English-Chinese words")
+    print(f"🚀 Starting to generate {min(args.limit, len(COMMON_WORDS))} English-Chinese definitions using OpenAI")
     print(f"📡 API URL: {args.api_url}")
     print(f"⏱️  Delay: {args.delay}s between requests")
     print("-" * 60)
