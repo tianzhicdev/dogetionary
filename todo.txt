@@ -114,7 +114,6 @@ when users search a word, we should automatically save the word. show me how you
 there is a problem when i search for a new word, it does not display definition, it reverted back to the landing view;
 let's keep the logic simple: when a user search, or search a new word where there is already a definiton being displayed, or the user select to display a wrong word on the alert popup window. we IMEEDAITELY display the new word definitoin with no delay. 
 
---- done ---
 
 1. ios app change: let's use ios/dogetionary/dogetionary/resources/logo.png as a logo to make a banner it should just be "<logo> Unforgettable Dictionary";
 the banner should be on top of every page in the ios app
@@ -124,9 +123,15 @@ the ui has a button to start recording, it sends back to backend; audio send to 
 db should be id, original_text (could be just a word or an example sentence), user_audio, speech_to_text, result (boolean), created_at, metadata json
 
 
-2. test 1.0.9 frontend again
+--- done ---
+
+
+1. get rid of app
+2. test 1.0.9 and 1.0.12(latest tag) frontend again
 3. 404 is ok for submit_review
 4. when unsave, we go back to list view
 5. detail view when pronuciation is done
+
+
 
 2. create better metrics for review
