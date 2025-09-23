@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Unforgettable Dictionary - Learn Words That Stick | Definitions, Pronunciations & Examples{% endblock %}
+
+{% block description %}Master vocabulary with our comprehensive dictionary featuring clear definitions, accurate pronunciations, and memorable examples. Perfect for language learners and students.{% endblock %}
+
+{% block keywords %}dictionary, vocabulary, language learning, definitions, pronunciations, examples, English words, study tools{% endblock %}
+
+{% block canonical %}/{% endblock %}
+{% block og_url %}/{% endblock %}
+{% block twitter_url %}/{% endblock %}
+
+{% block schema %}
+{
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Unforgettable Dictionary",
+    "description": "A comprehensive dictionary with definitions, pronunciations, and examples for language learners",
+    "url": "https://unforgettable-dictionary.com",
+    "mainEntity": {
+        "@type": "DataCatalog",
+        "name": "Dictionary Database",
+        "description": "Comprehensive collection of word definitions with examples",
+        "numberOfItems": "{{ total_words }}"
+    },
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://unforgettable-dictionary.com/words/{search_term_string}",
+        "query-input": "required name=search_term_string"
+    },
+    "offers": {
+        "@type": "Offer",
+        "category": "Educational Resource",
+        "availability": "https://schema.org/InStock",
+        "price": "0",
+        "priceCurrency": "USD"
+    }
+}
+{% endblock %}
+
+{% block content %}
+<div class="homepage">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Unforgettable Dictionary</h1>
+            <p class="hero-subtitle">Master vocabulary with spaced repetition learning</p>
+
+            <!-- Primary App Download CTA -->
+            <div class="app-cta-primary">
+                <h2>📱 Download the iOS App</h2>
+                <p>The complete learning experience with spaced repetition, offline access, and progress tracking</p>
+                <a href="https://apps.apple.com/app/id6752226667" class="download-btn-primary" target="_blank" rel="noopener">
+                    Download Free App
+                </a>
+                <p class="download-note">Available on iPhone and iPad</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Words -->
+    {% if featured_words %}
+    <section class="featured-words">
+        <h2>Word of the Day</h2>
+        <div class="featured-grid">
+            {% for word in featured_words[:3] %}
+            <div class="featured-word-card">
+                <h3><a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html">{{ word.word|title }}</a></h3>
+                {% if word.phonetic %}
+                <div class="phonetic">{{ word.phonetic }}</div>
+                {% endif %}
+                <p class="short-definition">{{ word.short_definition|truncate(120) }}</p>
+                <a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html" class="read-more">Read More →</a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Browse by Letter -->
+    <section class="browse-section">
+        <h2>Browse Words by Letter</h2>
+        <div class="letter-grid">
+            {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}
+            <a href="/letters/{{ letter.lower() }}.html" class="letter-card">
+                <span class="letter">{{ letter }}</span>
+                <span class="count">{{ letter_counts[letter]|default(0) }} words</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- App Features Section -->
+    <section class="app-features">
+        <h2>Why Download the App?</h2>
+        <div class="features-grid">
+            <div class="feature">
+                <div class="feature-icon">🧠</div>
+                <h3>Spaced Repetition</h3>
+                <p>Smart algorithm ensures you review words just before you forget them.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <h3>Offline Learning</h3>
+                <p>Study anywhere, anytime - no internet connection required.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <h3>Progress Tracking</h3>
+                <p>Detailed statistics show your learning progress and streaks.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔔</div>
+                <h3>Smart Reminders</h3>
+                <p>Personalized notifications keep you on track with your goals.</p>
+            </div>
+        </div>
+
+        <!-- Secondary CTA -->
+        <div class="app-cta-secondary">
+            <a href="https://apps.apple.com/app/id6752226667" class="download-btn-secondary" target="_blank" rel="noopener">
+                Get the App Now
+            </a>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta">
+        <div class="cta-content">
+            <h2>🚀 Start Learning Smarter Today</h2>
+            <p class="cta-subtitle">Join thousands of learners who've mastered vocabulary with spaced repetition</p>
+            <a href="https://apps.apple.com/app/id6752226667" class="download-btn-final" target="_blank" rel="noopener">
+                📱 Download Free - iOS App
+            </a>
+            <div class="app-benefits">
+                <span>✓ Free to download</span>
+                <span>✓ No ads</span>
+                <span>✓ Works offline</span>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

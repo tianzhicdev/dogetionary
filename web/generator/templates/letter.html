@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Words Starting with {{ letter.upper() }} - Page {{ page }} | Unforgettable Dictionary{% endblock %}
+
+{% block description %}Browse all words starting with the letter {{ letter.upper() }} in our comprehensive dictionary. Find definitions, pronunciations, and examples for {{ letter.upper() }}-words.{% endblock %}
+
+{% block keywords %}words starting with {{ letter }}, {{ letter }} words, dictionary, definitions, {{ letter.upper() }}-words, vocabulary{% endblock %}
+
+{% block canonical %}/letters/{{ letter.lower() }}.html{% if page > 1 %}?page={{ page }}{% endif %}{% endblock %}
+{% block og_url %}/letters/{{ letter.lower() }}.html{% if page > 1 %}?page={{ page }}{% endif %}{% endblock %}
+{% block twitter_url %}/letters/{{ letter.lower() }}.html{% if page > 1 %}?page={{ page }}{% endif %}{% endblock %}
+
+{% block schema %}
+{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Words Starting with {{ letter.upper() }}",
+    "description": "Dictionary entries for all words beginning with the letter {{ letter.upper() }}",
+    "url": "https://unforgettable-dictionary.com/letters/{{ letter.lower() }}.html",
+    "mainEntity": {
+        "@type": "ItemList",
+        "numberOfItems": {{ total_words }},
+        "itemListElement": [
+            {% for word in words %}
+            {
+                "@type": "DefinedTerm",
+                "position": {{ loop.index + (page - 1) * words_per_page }},
+                "name": "{{ word.word }}",
+                "url": "https://unforgettable-dictionary.com/words/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    },
+    "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://unforgettable-dictionary.com"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Words Starting with {{ letter.upper() }}",
+                "item": "https://unforgettable-dictionary.com/letters/{{ letter.lower() }}.html"
+            }
+        ]
+    }
+}
+{% endblock %}
+
+{% block content %}
+<div class="letter-page">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="/">Home</a></li>
+            <li aria-current="page">Words starting with {{ letter.upper() }}</li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="letter-header">
+        <h1>Words Starting with {{ letter.upper() }}</h1>
+        <p class="letter-description">
+            Explore {{ total_words }} words beginning with the letter {{ letter.upper() }}.
+            Each entry includes definitions, pronunciations, and example sentences.
+        </p>
+
+        <!-- Letter Navigation -->
+        <nav class="letter-nav">
+            {% for nav_letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}
+            {% if nav_letter.lower() == letter.lower() %}
+            <span class="current-letter">{{ nav_letter }}</span>
+            {% else %}
+            <a href="/letters/{{ nav_letter.lower() }}.html">{{ nav_letter }}</a>
+            {% endif %}
+            {% endfor %}
+        </nav>
+    </header>
+
+    <!-- Search within letter -->
+    <div class="letter-search">
+        <input type="text" id="filter-words" placeholder="Filter {{ letter.upper() }}-words..." class="filter-input">
+    </div>
+
+    <!-- Word List -->
+    <section class="word-list">
+        <div class="words-grid">
+            {% for word in words %}
+            <div class="word-item" data-word="{{ word.word.lower() }}">
+                <h3>
+                    <a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html">
+                        {{ word.word|title }}
+                    </a>
+                </h3>
+                {% if word.phonetic %}
+                <div class="phonetic">{{ word.phonetic }}</div>
+                {% endif %}
+                {% if word.short_definition %}
+                <p class="preview">{{ word.short_definition|truncate(100) }}</p>
+                {% endif %}
+                <div class="word-meta">
+                    <span class="lang-pair">{{ word.learning_language.upper() }} → {{ word.native_language.upper() }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <nav class="pagination" aria-label="Page navigation">
+        <ol class="pagination-list">
+            {% if page > 1 %}
+            <li>
+                <a href="/letters/{{ letter.lower() }}.html{% if page > 2 %}?page={{ page - 1 }}{% endif %}"
+                   class="pagination-link"
+                   aria-label="Previous page">
+                    ← Previous
+                </a>
+            </li>
+            {% endif %}
+
+            {% for p in range(max(1, page - 2), min(total_pages + 1, page + 3)) %}
+            {% if p == page %}
+            <li><span class="pagination-current" aria-current="page">{{ p }}</span></li>
+            {% else %}
+            <li>
+                <a href="/letters/{{ letter.lower() }}.html{% if p > 1 %}?page={{ p }}{% endif %}"
+                   class="pagination-link">{{ p }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <li>
+                <a href="/letters/{{ letter.lower() }}.html?page={{ page + 1 }}"
+                   class="pagination-link"
+                   aria-label="Next page">
+                    Next →
+                </a>
+            </li>
+            {% endif %}
+        </ol>
+    </nav>
+    {% endif %}
+
+
+    <!-- Related Letters -->
+    <nav class="related-letters">
+        <h3>Browse Other Letters</h3>
+        <div class="letter-links">
+            {% set alphabet = 'abcdefghijklmnopqrstuvwxyz' %}
+            {% set current_index = alphabet.index(letter.lower()) %}
+            {% if current_index > 0 %}
+            {% set prev_letter = alphabet[current_index - 1] %}
+            <a href="/letters/{{ prev_letter }}.html" class="letter-link prev">
+                ← {{ prev_letter.upper() }}
+            </a>
+            {% endif %}
+            {% if current_index < 25 %}
+            {% set next_letter = alphabet[current_index + 1] %}
+            <a href="/letters/{{ next_letter }}.html" class="letter-link next">
+                {{ next_letter.upper() }} →
+            </a>
+            {% endif %}
+        </div>
+    </nav>
+</div>
+
+<script>
+// Filter words functionality
+document.getElementById('filter-words').addEventListener('input', function(e) {
+    const filter = e.target.value.toLowerCase();
+    const wordItems = document.querySelectorAll('.word-item');
+
+    wordItems.forEach(item => {
+        const word = item.dataset.word;
+        if (word.includes(filter)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}
