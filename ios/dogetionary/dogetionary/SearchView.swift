@@ -450,6 +450,7 @@ struct DefinitionCard: View {
             AIIllustrationView(
                 word: definition.word,
                 language: userManager.learningLanguage,
+                definition: definition,
                 illustration: $illustration,
                 isGenerating: $isGeneratingIllustration,
                 error: $illustrationError

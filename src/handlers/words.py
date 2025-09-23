@@ -299,10 +299,10 @@ def build_definition_prompt(word: str, learning_lang: str, native_lang: str) -> 
         
         For each definition:
         - Provide definition in {learning_lang_name} (in 'definition' field)
-        - Provide translation/explanation in {native_lang_name} (in 'definition_native' field)  
-        - Include 2-3 example sentences in {learning_lang_name} only (in 'examples' field)
+        - Provide translation/explanation in {native_lang_name} (in 'definition_native' field)
+        - Include 2-3 example sentences in {learning_lang_name} only (in 'examples' field) - make these examples humorous, related to recent news, or memorable in some way to help with learning
         - Add cultural context and usage notes
-        
+
         Examples should always be in {learning_lang_name} since that's what the user is learning."""
 
 
