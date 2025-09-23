@@ -122,7 +122,7 @@ from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
 
-from handlers.words import get_next_review_word_v2, audio_generation_worker, get_saved_words, get_word_definition, get_word_definition_v2, get_word_details, get_audio, generate_illustration, get_illustration, add_word_definition
+from handlers.words import get_next_review_word_v2, audio_generation_worker, get_saved_words, get_word_definition, get_word_definition_v2, get_word_details, get_audio, generate_illustration, get_illustration, generate_word_definition
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
 
 # Register all routes
@@ -171,7 +171,7 @@ app.route('/words/summary', methods=['GET'])(get_words_summary)
 app.route('/words/featured', methods=['GET'])(get_featured_words)
 
 # Bulk data management endpoints
-app.route('/api/words/definitions', methods=['POST'])(add_word_definition)
+app.route('/api/words/generate', methods=['POST'])(generate_word_definition)
 
 if __name__ == '__main__':
     audio_worker_thread = threading.Thread(target=audio_generation_worker, daemon=True)

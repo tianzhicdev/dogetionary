@@ -1092,31 +1092,20 @@ def get_word_details(word_id):
         return jsonify({"error": f"Failed to get word details: {str(e)}"}), 500
 
 
-def add_word_definition():
-    """Add a word definition to the backend database
+def generate_word_definition():
+    """Generate and store a word definition using OpenAI API
 
-    This endpoint creates word definitions directly in the database without using OpenAI.
-    Perfect for bulk importing common words with pre-written definitions.
+    This endpoint generates word definitions using OpenAI and stores them in the database.
+    Perfect for bulk generating definitions for SEO content.
 
     Expected JSON payload:
     {
         "word": "hello",
         "learning_language": "en",
-        "native_language": "zh",
-        "definition_data": {
-            "word": "hello",
-            "phonetic": "/həˈloʊ/",
-            "part_of_speech": "interjection",
-            "definition": "used as a greeting or to begin a phone conversation",
-            "translation": "你好",
-            "examples": [
-                {
-                    "english": "Hello, how are you?",
-                    "translation": "你好，你好吗？"
-                }
-            ]
-        }
+        "native_language": "zh"
     }
+
+    Returns the generated definition data without audio or images.
     """
     try:
         # Get JSON data from request
@@ -1125,7 +1114,7 @@ def add_word_definition():
             return jsonify({"error": "No JSON data provided"}), 400
 
         # Validate required fields
-        required_fields = ['word', 'learning_language', 'native_language', 'definition_data']
+        required_fields = ['word', 'learning_language', 'native_language']
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
@@ -1133,24 +1122,17 @@ def add_word_definition():
         word = data['word'].strip().lower()
         learning_lang = data['learning_language']
         native_lang = data['native_language']
-        definition_data = data['definition_data']
 
         # Validate languages
         if not validate_language(learning_lang) or not validate_language(native_lang):
             return jsonify({"error": "Invalid language code"}), 400
-
-        # Validate definition_data structure
-        required_def_fields = ['word', 'definition', 'translation']
-        for field in required_def_fields:
-            if field not in definition_data:
-                return jsonify({"error": f"Missing required definition field: {field}"}), 400
 
         conn = get_db_connection()
         cur = conn.cursor()
 
         # Check if definition already exists
         cur.execute("""
-            SELECT id FROM definitions
+            SELECT id, definition_data FROM definitions
             WHERE word = %s AND learning_language = %s AND native_language = %s
         """, (word, learning_lang, native_lang))
 
@@ -1163,10 +1145,42 @@ def add_word_definition():
                 "definition_id": existing_def['id'],
                 "word": word,
                 "learning_language": learning_lang,
-                "native_language": native_lang
+                "native_language": native_lang,
+                "definition_data": existing_def['definition_data']
             }), 200
 
-        # Insert new definition
+        # Generate definition using OpenAI (reuse existing prompt logic)
+        try:
+            prompt = build_definition_prompt_v2(word, learning_lang, native_lang)
+
+            # Call OpenAI API
+            client = openai.OpenAI()
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that creates dictionary definitions."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=1000,
+                temperature=0.3
+            )
+
+            definition_content = response.choices[0].message.content.strip()
+
+            # Parse the JSON response from OpenAI
+            definition_data = json.loads(definition_content)
+
+            # Ensure the word field matches the input
+            definition_data['word'] = word
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse OpenAI response for word '{word}': {str(e)}")
+            return jsonify({"error": "Failed to parse AI response"}), 500
+        except Exception as e:
+            logger.error(f"OpenAI API error for word '{word}': {str(e)}")
+            return jsonify({"error": "Failed to generate definition"}), 500
+
+        # Insert new definition into database
         cur.execute("""
             INSERT INTO definitions (word, learning_language, native_language, definition_data, created_at)
             VALUES (%s, %s, %s, %s, %s)
@@ -1179,10 +1193,10 @@ def add_word_definition():
         cur.close()
         conn.close()
 
-        logger.info(f"Successfully added definition for word: {word} ({learning_lang}->{native_lang})")
+        logger.info(f"Successfully generated and stored definition for word: {word} ({learning_lang}->{native_lang})")
 
         return jsonify({
-            "message": "Definition added successfully",
+            "message": "Definition generated and stored successfully",
             "definition_id": definition_id,
             "word": word,
             "learning_language": learning_lang,
@@ -1191,5 +1205,5 @@ def add_word_definition():
         }), 201
 
     except Exception as e:
-        logger.error(f"Error adding word definition: {str(e)}")
-        return jsonify({"error": f"Failed to add definition: {str(e)}"}), 500
+        logger.error(f"Error generating word definition: {str(e)}")
+        return jsonify({"error": f"Failed to generate definition: {str(e)}"}), 500
