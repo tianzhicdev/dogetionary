@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Static site generator
+  generator:
+    build:
+      context: .
+      target: generator
+    environment:
+      - API_BASE_URL=${API_BASE_URL:-https://dogetionary.webhop.net/api}
+      - API_TIMEOUT=${API_TIMEOUT:-30}
+      - API_BATCH_SIZE=${API_BATCH_SIZE:-1000}
+      - SITE_BASE_URL=${SITE_BASE_URL:-https://unforgettable-dictionary.com}
+    volumes:
+      - ./dist:/app/dist
+      - ./.env:/app/.env:ro
+    command: python generator/generate.py
+    networks:
+      - dictionary-network
+
+  # Web server with SSL
+  web:
+    build:
+      context: .
+      target: production
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # Cloudflare certificates
+      - ./nginx/ssl.conf:/etc/nginx/conf.d/default.conf:ro  # SSL config
+    depends_on:
+      - generator
+    restart: unless-stopped
+    networks:
+      - dictionary-network
+
+networks:
+  dictionary-network:
+    driver: bridge
