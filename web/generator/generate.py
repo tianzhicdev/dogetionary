@@ -47,6 +47,9 @@ class DictionaryGenerator:
             'batch_size': int(os.getenv('API_BATCH_SIZE', '1000')),
         }
 
+        # Debug: print the API configuration
+        logger.info(f"API Configuration: {self.api_config}")
+
         # Site configuration
         self.site_config = {
             'base_url': 'https://unforgettable-dictionary.com',
@@ -261,7 +264,14 @@ class DictionaryGenerator:
     def render_and_save(self, template_name: str, context: Dict, output_path: Path):
         """Render template and save to file"""
         template = self.jinja_env.get_template(template_name)
-        html_content = template.render(**context)
+        try:
+            html_content = template.render(**context)
+        except Exception as e:
+            logger.error(f"Template rendering failed for {template_name}: {e}")
+            logger.error(f"Context keys: {list(context.keys())}")
+            if 'words' in context and context['words']:
+                logger.error(f"First word structure: {list(context['words'][0].keys())}")
+            raise
 
         # Minify HTML if enabled
         if self.site_config['minify_html']:
@@ -334,6 +344,7 @@ class DictionaryGenerator:
         logger.info("Generating letter pages...")
 
         for letter, words in grouped_words.items():
+            logger.info(f"Generating pages for letter: '{letter}'")
             # Sort words alphabetically
             words.sort(key=lambda x: x['word'].lower())
 
