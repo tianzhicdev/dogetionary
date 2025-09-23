@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO Meta Tags -->
+    <title>{% block title %}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{% endblock %}">
+    <meta name="keywords" content="{% block keywords %}dictionary, definition, pronunciation, examples, vocabulary, language learning{% endblock %}">
+    <link rel="canonical" href="https://unforgettable-dictionary.com{% block canonical %}{% endblock %}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://unforgettable-dictionary.com{% block og_url %}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
+    <meta property="og:image" content="https://unforgettable-dictionary.com/static/images/og-image.jpg">
+    <meta property="og:site_name" content="Unforgettable Dictionary">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://unforgettable-dictionary.com{% block twitter_url %}{% endblock %}">
+    <meta property="twitter:title" content="{% block twitter_title %}{{ self.title() }}{% endblock %}">
+    <meta property="twitter:description" content="{% block twitter_description %}{{ self.description() }}{% endblock %}">
+    <meta property="twitter:image" content="https://unforgettable-dictionary.com/static/images/og-image.jpg">
+
+    <!-- Schema.org markup -->
+    <script type="application/ld+json">
+    {% block schema %}
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Unforgettable Dictionary",
+        "description": "A comprehensive dictionary with definitions, pronunciations, and examples for language learners",
+        "url": "https://unforgettable-dictionary.com",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://unforgettable-dictionary.com/words/{search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    {% endblock %}
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Preconnects for performance -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <a href="/" class="logo">
+                📚 Unforgettable Dictionary
+            </a>
+            <ul class="nav-links">
+                {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}
+                <li><a href="/letters/{{ letter.lower() }}.html">{{ letter }}</a></li>
+                {% endfor %}
+            </ul>
+        </nav>
+    </header>
+
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2025 Unforgettable Dictionary. All rights reserved.</p>
+            <p>
+                <a href="/about.html">About</a> |
+                <a href="/privacy.html">Privacy</a> |
+                <a href="/terms.html">Terms</a> |
+                <a href="https://apps.apple.com/app/id6752226667" target="_blank" rel="noopener">Download iOS App</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Minimal JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

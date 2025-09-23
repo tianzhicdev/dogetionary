@@ -123,6 +123,7 @@ from handlers.analytics import track_user_action, get_analytics_data
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
 
 from handlers.words import get_next_review_word_v2, audio_generation_worker, get_saved_words, get_word_definition, get_word_definition_v2, get_word_details, get_audio, generate_illustration, get_illustration
+from handlers.static_site import get_all_words, get_words_summary, get_featured_words
 
 # Register all routes
 app.route('/save', methods=['POST'])(save_word)
@@ -163,6 +164,11 @@ app.route('/pronunciation/history', methods=['GET'])(get_pronunciation_history)
 app.route('/pronunciation/stats', methods=['GET'])(get_pronunciation_stats)
 
 app.route('/v2/review_next', methods=['GET'])(get_next_review_word_v2)
+
+# Static site generation endpoints
+app.route('/api/words', methods=['GET'])(get_all_words)
+app.route('/api/words/summary', methods=['GET'])(get_words_summary)
+app.route('/api/words/featured', methods=['GET'])(get_featured_words)
 
 if __name__ == '__main__':
     audio_worker_thread = threading.Thread(target=audio_generation_worker, daemon=True)

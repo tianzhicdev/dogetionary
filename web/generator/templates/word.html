@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}{{ word.word|title }} - Definition, Pronunciation & Examples | Unforgettable Dictionary{% endblock %}
+
+{% block description %}Learn the meaning of "{{ word.word }}" with clear definitions, pronunciation guide, and example sentences. Perfect for language learners and vocabulary building.{% endblock %}
+
+{% block keywords %}{{ word.word }}, definition, pronunciation, examples, meaning, {{ word.learning_language }}, {{ word.native_language }}, dictionary{% endblock %}
+
+{% block canonical %}/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html{% endblock %}
+{% block og_url %}/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html{% endblock %}
+{% block twitter_url %}/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html{% endblock %}
+
+{% block schema %}
+{
+    "@context": "https://schema.org",
+    "@type": "DefinedTerm",
+    "name": "{{ word.word }}",
+    "identifier": "{{ word.word.lower() }}",
+    "url": "https://unforgettable-dictionary.com/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html",
+    {% if definition_data.phonetic %}
+    "pronunciation": "{{ definition_data.phonetic }}",
+    {% endif %}
+    "definition": [
+        {% for definition in definition_data.definitions %}
+        {
+            "@type": "DefinedTerm",
+            "name": "{{ word.word }} ({{ definition.type }})",
+            "definition": "{{ definition.definition|replace('"', '\\"') }}",
+            {% if definition.examples %}
+            "example": [
+                {% for example in definition.examples %}
+                "{{ example|replace('"', '\\"') }}"{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]
+            {% endif %}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    "inLanguage": "{{ word.learning_language }}",
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://unforgettable-dictionary.com/{{ word.learning_language }}/{{ word.native_language }}/{{ word.word[0].lower() }}/{{ word.word.lower() }}.html"
+    }
+}
+{% endblock %}
+
+{% block content %}
+<article class="word-page">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="/">Home</a></li>
+            <li><a href="/letters/{{ word.word[0].lower() }}.html">Words starting with {{ word.word[0].upper() }}</a></li>
+            <li aria-current="page">{{ word.word|title }}</li>
+        </ol>
+    </nav>
+
+    <!-- Word Header -->
+    <header class="word-header">
+        <h1 class="word-title">{{ word.word|title }}</h1>
+        {% if definition_data.phonetic %}
+        <div class="pronunciation">
+            <span class="pronunciation-label">Pronunciation:</span>
+            <span class="phonetic">{{ definition_data.phonetic }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Language Pair Badge -->
+        <div class="language-pair">
+            <span class="lang learning">{{ word.learning_language.upper() }}</span>
+            <span class="arrow">→</span>
+            <span class="lang native">{{ word.native_language.upper() }}</span>
+        </div>
+    </header>
+
+    <!-- Quick Translations -->
+    {% if definition_data.translations %}
+    <section class="translations">
+        <h2>Quick Translations</h2>
+        <ul class="translation-list">
+            {% for translation in definition_data.translations %}
+            <li>{{ translation }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <!-- Detailed Definitions -->
+    <section class="definitions">
+        <h2>Definitions</h2>
+        {% for definition in definition_data.definitions %}
+        <div class="definition-block">
+            <div class="part-of-speech">{{ definition.type }}</div>
+
+            <div class="definition-content">
+                <h3>Definition</h3>
+                <p class="definition-text">{{ definition.definition }}</p>
+
+                {% if definition.definition_native %}
+                <div class="native-definition">
+                    <h4>In {{ word.native_language.upper() }}</h4>
+                    <p>{{ definition.definition_native }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if definition.examples %}
+            <div class="examples">
+                <h4>Examples</h4>
+                <ul class="example-list">
+                    {% for example in definition.examples %}
+                    <li>
+                        <span class="example-text">{{ example }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if definition.cultural_notes %}
+            <div class="cultural-notes">
+                <h4>Cultural Notes</h4>
+                <p>{{ definition.cultural_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- Related Words -->
+    {% if related_words %}
+    <section class="related-words">
+        <h2>Related Words</h2>
+        <ul class="related-word-list">
+            {% for related in related_words %}
+            <li><a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ related[0].lower() }}/{{ related.lower() }}.html">{{ related|title }}</a></li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <!-- Navigation -->
+    <nav class="word-navigation">
+        {% if prev_word %}
+        <a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ prev_word[0].lower() }}/{{ prev_word.lower() }}.html" class="nav-link prev">
+            ← {{ prev_word|title }}
+        </a>
+        {% endif %}
+        {% if next_word %}
+        <a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ next_word[0].lower() }}/{{ next_word.lower() }}.html" class="nav-link next">
+            {{ next_word|title }} →
+        </a>
+        {% endif %}
+    </nav>
+
+    <!-- Call to Action -->
+    <aside class="cta">
+        <h3>Want to Learn More Words?</h3>
+        <p>Download our iOS app for spaced repetition learning and track your vocabulary progress!</p>
+        <a href="https://apps.apple.com/app/id6752226667" class="cta-button" target="_blank" rel="noopener">
+            Download iOS App
+        </a>
+    </aside>
+</article>
+
+{% endblock %}

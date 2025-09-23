@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Static site generator
+  generator:
+    build:
+      context: .
+      target: generator
+    environment:
+      - API_BASE_URL=${API_BASE_URL:-https://dogetionary.webhop.net/api}
+      - API_TIMEOUT=${API_TIMEOUT:-30}
+      - API_BATCH_SIZE=${API_BATCH_SIZE:-1000}
+      - SITE_BASE_URL=${SITE_BASE_URL:-https://unforgettable-dictionary.com}
+    volumes:
+      - ./dist:/app/dist
+      - ./.env:/app/.env:ro
+    command: python generator/generate.py
+    networks:
+      - dictionary-network
+
+  # Web server
+  web:
+    build:
+      context: .
+      target: production
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # For SSL certificates
+    depends_on:
+      - generator
+    restart: unless-stopped
+    networks:
+      - dictionary-network
+
+  # Database (optional - only for local development)
+  # In production, the generator connects to the existing API
+  # db:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     - POSTGRES_DB=${DB_NAME:-dogetionary}
+  #     - POSTGRES_USER=${DB_USER:-postgres}
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ../db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - dictionary-network
+
+  # Optional: Redis for caching (future enhancement)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - dictionary-network
+
+volumes:
+  postgres_data:
+
+networks:
+  dictionary-network:
+    driver: bridge
