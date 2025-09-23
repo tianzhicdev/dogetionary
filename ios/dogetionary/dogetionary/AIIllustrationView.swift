@@ -10,9 +10,11 @@ import SwiftUI
 struct AIIllustrationView: View {
     let word: String
     let language: String
+    let definition: Definition?
     @Binding var illustration: IllustrationResponse?
     @Binding var isGenerating: Bool
     @Binding var error: String?
+    @State private var showFullscreen = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -35,6 +37,9 @@ struct AIIllustrationView: View {
                             .aspectRatio(contentMode: .fit)
                             .frame(maxHeight: 180)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .onTapGesture {
+                                showFullscreen = true
+                            }
                     }
 
                 }
@@ -76,6 +81,18 @@ struct AIIllustrationView: View {
             // Try to load existing illustration, if not found, auto-generate
             loadExistingIllustration()
         }
+        .sheet(isPresented: $showFullscreen) {
+            if let illustration = illustration,
+               let imageData = Data(base64Encoded: illustration.image_data),
+               let uiImage = UIImage(data: imageData) {
+                FullscreenWordCardView(
+                    word: word,
+                    phonetic: definition?.phonetic,
+                    firstDefinition: definition?.meanings.first?.definitions.first?.definition,
+                    illustration: uiImage
+                )
+            }
+        }
     }
     
     private func loadExistingIllustration() {
@@ -116,5 +133,70 @@ struct AIIllustrationView: View {
                 }
             }
         }
+    }
+}
+
+struct FullscreenWordCardView: View {
+    let word: String
+    let phonetic: String?
+    let firstDefinition: String?
+    let illustration: UIImage
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                // Main illustration
+                Image(uiImage: illustration)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxHeight: 400)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(radius: 10)
+
+                // Word card content
+                VStack(spacing: 16) {
+                    // Word and pronunciation
+                    VStack(spacing: 8) {
+                        Text(word)
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+
+                        if let phonetic = phonetic {
+                            Text(phonetic)
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    // First definition
+                    if let firstDefinition = firstDefinition {
+                        Text(firstDefinition)
+                            .font(.title3)
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(nil)
+                            .padding(.horizontal)
+                    }
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(16)
+                .padding(.horizontal)
+
+                Spacer()
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 }
