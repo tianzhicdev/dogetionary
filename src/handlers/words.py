@@ -1132,7 +1132,7 @@ def generate_word_definition():
 
         # Check if definition already exists
         cur.execute("""
-            SELECT id, definition_data FROM definitions
+            SELECT definition_data FROM definitions
             WHERE word = %s AND learning_language = %s AND native_language = %s
         """, (word, learning_lang, native_lang))
 
@@ -1142,7 +1142,6 @@ def generate_word_definition():
             conn.close()
             return jsonify({
                 "message": "Definition already exists",
-                "definition_id": existing_def['id'],
                 "word": word,
                 "learning_language": learning_lang,
                 "native_language": native_lang,
@@ -1184,10 +1183,7 @@ def generate_word_definition():
         cur.execute("""
             INSERT INTO definitions (word, learning_language, native_language, definition_data, created_at)
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING id
         """, (word, learning_lang, native_lang, json.dumps(definition_data), datetime.now()))
-
-        definition_id = cur.fetchone()['id']
 
         conn.commit()
         cur.close()
@@ -1197,7 +1193,6 @@ def generate_word_definition():
 
         return jsonify({
             "message": "Definition generated and stored successfully",
-            "definition_id": definition_id,
             "word": word,
             "learning_language": learning_lang,
             "native_language": native_lang,
