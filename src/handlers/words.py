@@ -1090,3 +1090,106 @@ def get_word_details(word_id):
     except Exception as e:
         logger.error(f"Error getting word details: {str(e)}")
         return jsonify({"error": f"Failed to get word details: {str(e)}"}), 500
+
+
+def add_word_definition():
+    """Add a word definition to the backend database
+
+    This endpoint creates word definitions directly in the database without using OpenAI.
+    Perfect for bulk importing common words with pre-written definitions.
+
+    Expected JSON payload:
+    {
+        "word": "hello",
+        "learning_language": "en",
+        "native_language": "zh",
+        "definition_data": {
+            "word": "hello",
+            "phonetic": "/həˈloʊ/",
+            "part_of_speech": "interjection",
+            "definition": "used as a greeting or to begin a phone conversation",
+            "translation": "你好",
+            "examples": [
+                {
+                    "english": "Hello, how are you?",
+                    "translation": "你好，你好吗？"
+                }
+            ]
+        }
+    }
+    """
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+
+        # Validate required fields
+        required_fields = ['word', 'learning_language', 'native_language', 'definition_data']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        word = data['word'].strip().lower()
+        learning_lang = data['learning_language']
+        native_lang = data['native_language']
+        definition_data = data['definition_data']
+
+        # Validate languages
+        if not validate_language(learning_lang) or not validate_language(native_lang):
+            return jsonify({"error": "Invalid language code"}), 400
+
+        # Validate definition_data structure
+        required_def_fields = ['word', 'definition', 'translation']
+        for field in required_def_fields:
+            if field not in definition_data:
+                return jsonify({"error": f"Missing required definition field: {field}"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if definition already exists
+        cur.execute("""
+            SELECT id FROM definitions
+            WHERE word = %s AND learning_language = %s AND native_language = %s
+        """, (word, learning_lang, native_lang))
+
+        existing_def = cur.fetchone()
+        if existing_def:
+            cur.close()
+            conn.close()
+            return jsonify({
+                "message": "Definition already exists",
+                "definition_id": existing_def['id'],
+                "word": word,
+                "learning_language": learning_lang,
+                "native_language": native_lang
+            }), 200
+
+        # Insert new definition
+        cur.execute("""
+            INSERT INTO definitions (word, learning_language, native_language, definition_data, created_at)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
+        """, (word, learning_lang, native_lang, json.dumps(definition_data), datetime.now()))
+
+        definition_id = cur.fetchone()['id']
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        logger.info(f"Successfully added definition for word: {word} ({learning_lang}->{native_lang})")
+
+        return jsonify({
+            "message": "Definition added successfully",
+            "definition_id": definition_id,
+            "word": word,
+            "learning_language": learning_lang,
+            "native_language": native_lang,
+            "definition_data": definition_data
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error adding word definition: {str(e)}")
+        return jsonify({"error": f"Failed to add definition: {str(e)}"}), 500
