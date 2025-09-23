@@ -166,9 +166,9 @@ app.route('/pronunciation/stats', methods=['GET'])(get_pronunciation_stats)
 app.route('/v2/review_next', methods=['GET'])(get_next_review_word_v2)
 
 # Static site generation endpoints
-app.route('/api/words', methods=['GET'])(get_all_words)
-app.route('/api/words/summary', methods=['GET'])(get_words_summary)
-app.route('/api/words/featured', methods=['GET'])(get_featured_words)
+app.route('/words', methods=['GET'])(get_all_words)
+app.route('/words/summary', methods=['GET'])(get_words_summary)
+app.route('/words/featured', methods=['GET'])(get_featured_words)
 
 if __name__ == '__main__':
     audio_worker_thread = threading.Thread(target=audio_generation_worker, daemon=True)
