@@ -44,7 +44,7 @@ COPY --from=generator /app/dist /usr/share/nginx/html
 COPY --from=generator /app/static /usr/share/nginx/html/static
 
 # Add custom nginx configuration for SEO
-RUN echo 'server_tokens off;' >> /etc/nginx/nginx.conf
+RUN sed -i '/http {/a\    server_tokens off;' /etc/nginx/nginx.conf
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
