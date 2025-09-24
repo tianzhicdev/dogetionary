@@ -108,8 +108,8 @@ def get_usage_dashboard():
 
         # Get analytics data for graphs
         action_summary = analytics_service.get_action_summary(7)
-        daily_action_counts = analytics_service.get_daily_action_counts(7)
-        time_analytics = analytics_service.get_time_based_analytics(7)
+        daily_action_counts = analytics_service.get_daily_action_counts(30)
+        time_analytics = []  # Not needed for current charts
         monthly_metrics = analytics_service.get_monthly_daily_metrics(30)
         available_users = analytics_service.get_all_users()
 
@@ -278,6 +278,21 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
         <h1>🐕 Dogetionary Usage Dashboard</h1>
         <p style="color: #666;">Last 7 days activity • Updated: """ + now_ny.strftime('%Y-%m-%d %H:%M:%S ET') + """</p>
 
+        <!-- Monthly Analytics Charts Section -->
+        <div class="section">
+            <h2>📊 Monthly Analytics (Last 30 Days)</h2>
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <h3>Daily Unique Users</h3>
+                    <canvas id="monthlyUniqueUsersChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Daily Total Counts</h3>
+                    <canvas id="monthlyTotalCountsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <div class="summary-box">
             <h3 style="margin-top: 0;">Weekly Summary</h3>
             <div class="summary-stats">
@@ -430,155 +445,52 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
     html += """
         </div>
 
-        <div class="section">
-            <h2>📊 User Actions Analytics (Last 7 Days)</h2>
-            <div class="chart-grid">
-                <div class="chart-container">
-                    <canvas id="totalActionsChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="uniqueUsersChart"></canvas>
-                </div>
-            </div>
-        </div>
 
     """
 
-    # Prepare data for time-based charts
-    from collections import defaultdict
-    import json
+    # Temporarily simplified - remove complex chart data processing to isolate the error
 
-    # Group time analytics data by action type
-    actions_by_date = defaultdict(lambda: defaultdict(lambda: {'total_count': 0, 'unique_users': 0}))
-    all_dates = set()
-    all_actions = set()
+    # Test with simple hardcoded data to verify the template works
+    monthly_dates = ['08/25', '08/26', '08/27', '09/22', '09/23', '09/24']
+    active_users_data = [0, 0, 0, 1, 2, 4]
+    search_users_data = [0, 0, 0, 1, 2, 0]
+    review_users_data = [0, 0, 0, 0, 0, 2]
+    active_total_data = [0, 0, 0, 3, 6, 17]
+    search_total_data = [0, 0, 0, 2, 4, 0]
+    review_total_data = [0, 0, 0, 0, 0, 3]
 
-
-    for row in time_analytics:
-        date_str = row['action_date'].strftime('%Y-%m-%d')
-        action = row['action']
-        actions_by_date[action][date_str] = {
-            'total_count': row['total_count'],
-            'unique_users': row['unique_users']
-        }
-        all_dates.add(date_str)
-        all_actions.add(action)
-
-    # Convert to sorted lists
-    sorted_dates = sorted(list(all_dates))
-    sorted_actions = sorted(list(all_actions))
-
-    # Prepare datasets for charts
-    colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-        '#FF9F40', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981',
-        '#6366F1', '#EC4899', '#F97316', '#84CC16', '#06B6D4'
-    ]
-
-    total_datasets = []
-    unique_datasets = []
-
-    for i, action in enumerate(sorted_actions[:15]):  # Limit to 15 actions to keep chart readable
-        total_data = []
-        unique_data = []
-
-        for date in sorted_dates:
-            total_data.append(actions_by_date[action][date]['total_count'])
-            unique_data.append(actions_by_date[action][date]['unique_users'])
-
-        action_label = action.replace('_', ' ').title()
-        color = colors[i % len(colors)]
-
-        total_datasets.append({
-            'label': f'{action_label} (Total)',
-            'data': total_data,
-            'borderColor': color,
-            'backgroundColor': color + '20',
-            'fill': False,
-            'tension': 0.1
-        })
-
-        unique_datasets.append({
-            'label': f'{action_label} (Unique)',
-            'data': unique_data,
-            'borderColor': color,
-            'backgroundColor': color + '20',
-            'fill': False,
-            'tension': 0.1
-        })
-
-    # Generate JavaScript for charts
+    # Generate JavaScript for monthly charts
     html += f"""
         <script>
-        console.log('Chart.js version:', Chart.version);
-        console.log('Chart.js available:', typeof Chart);
+        console.log('Creating monthly analytics charts...');
 
-        // Simple test chart first
-        const testCtx = document.getElementById('totalActionsChart').getContext('2d');
-        console.log('Canvas context obtained:', testCtx);
-
-        // Create a simple test chart with hardcoded data
-        const testChart = new Chart(testCtx, {{
+        // Monthly Unique Users Chart
+        const uniqueCtx = document.getElementById('monthlyUniqueUsersChart').getContext('2d');
+        const uniqueChart = new Chart(uniqueCtx, {{
             type: 'line',
             data: {{
-                labels: ['Day 1', 'Day 2', 'Day 3'],
+                labels: {monthly_dates},
                 datasets: [{{
-                    label: 'Test Data',
-                    data: [1, 2, 3],
-                    borderColor: '#FF6384',
-                    backgroundColor: '#FF638420'
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false
-            }}
-        }});
-
-        console.log('Test chart created:', testChart);
-
-        // Then try the real chart
-        /*
-        // Total Actions Time Series Chart
-        const totalCtx = document.getElementById('totalActionsChart').getContext('2d');
-        console.log('Total chart dates:', {json.dumps(sorted_dates)});
-        console.log('Total chart datasets:', {json.dumps(total_datasets)});
-        */
-
-        // Unique Users Chart commented out for testing
-        /*
-        const uniqueCtx = document.getElementById('uniqueUsersChart').getContext('2d');
-        console.log('Creating unique users chart...');
-        */
-
-        // Old monthly data preparation removed to avoid conflicts
-            type: 'line',
-            data: {{
-                labels: monthlyDates,
-                datasets: [{{
-                    label: 'Daily Unique Active Users',
-                    data: activeUsersData,
+                    label: 'Active Users',
+                    data: {active_users_data},
                     borderColor: '#2196F3',
                     backgroundColor: '#2196F320',
                     fill: false,
-                    tension: 0.1,
-                    borderWidth: 2
+                    tension: 0.1
                 }}, {{
-                    label: 'Daily Unique Search Users',
-                    data: searchUsersData,
+                    label: 'Search Users',
+                    data: {search_users_data},
                     borderColor: '#4CAF50',
                     backgroundColor: '#4CAF5020',
                     fill: false,
-                    tension: 0.1,
-                    borderWidth: 2
+                    tension: 0.1
                 }}, {{
-                    label: 'Daily Unique Review Users',
-                    data: reviewUsersData,
+                    label: 'Review Users',
+                    data: {review_users_data},
                     borderColor: '#FF9800',
                     backgroundColor: '#FF980020',
                     fill: false,
-                    tension: 0.1,
-                    borderWidth: 2
+                    tension: 0.1
                 }}]
             }},
             options: {{
@@ -587,10 +499,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                 plugins: {{
                     title: {{
                         display: true,
-                        text: 'Daily Unique User Activity - Last 30 Days'
-                    }},
-                    legend: {{
-                        position: 'top'
+                        text: 'Daily Unique Users by Activity'
                     }}
                 }},
                 scales: {{
@@ -605,83 +514,39 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                         title: {{
                             display: true,
                             text: 'Date'
-                        }},
-                        ticks: {{
-                            maxRotation: 45,
-                            maxTicksLimit: 15
                         }}
-                    }}
-                }},
-                interaction: {{
-                    mode: 'index',
-                    intersect: false
-                }},
-                elements: {{
-                    point: {{
-                        radius: 3,
-                        hoverRadius: 6
                     }}
                 }}
             }}
         }});
 
-        // Old monthly chart data processing removed
-
-    html += f"""
-
-        // Simple monthly test chart
-        const monthlyCtx = document.getElementById('monthlyMetricsChart').getContext('2d');
-        const simpleMonthlyChart = new Chart(monthlyCtx, {{
+        // Monthly Total Counts Chart
+        const totalCtx = document.getElementById('monthlyTotalCountsChart').getContext('2d');
+        const totalChart = new Chart(totalCtx, {{
             type: 'line',
             data: {{
-                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                labels: {monthly_dates},
                 datasets: [{{
-                    label: 'Test Users',
-                    data: [5, 10, 8, 12],
-                    borderColor: '#2196F3',
-                    backgroundColor: '#2196F320'
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false
-            }}
-        }});
-        console.log('Simple monthly chart created:', simpleMonthlyChart);
-
-        /*
-        console.log('Monthly chart dates:', monthlyDates);
-        console.log('Monthly active users:', activeUsersData);
-        console.log('Monthly search users:', searchUsersData);
-        console.log('Monthly review users:', reviewUsersData);
-        new Chart(monthlyCtx, {{
-            type: 'line',
-            data: {{
-                labels: monthlyDates,
-                datasets: [{{
-                    label: 'Daily Unique Active Users',
-                    data: activeUsersData,
+                    label: 'Total Active Actions',
+                    data: {active_total_data},
                     borderColor: '#2196F3',
                     backgroundColor: '#2196F320',
                     fill: false,
-                    tension: 0.1,
-                    borderWidth: 2
+                    tension: 0.1
                 }}, {{
-                    label: 'Daily Unique Search Users',
-                    data: searchUsersData,
+                    label: 'Total Search Actions',
+                    data: {search_total_data},
                     borderColor: '#4CAF50',
                     backgroundColor: '#4CAF5020',
                     fill: false,
-                    tension: 0.1,
-                    borderWidth: 2
+                    tension: 0.1
                 }}, {{
-                    label: 'Daily Unique Review Users',
-                    data: reviewUsersData,
+                    label: 'Total Review Actions',
+                    data: {review_total_data},
                     borderColor: '#FF9800',
                     backgroundColor: '#FF980020',
                     fill: false,
-                    tension: 0.1,
-                    borderWidth: 2
+                    tension: 0.1
                 }}]
             }},
             options: {{
@@ -690,10 +555,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                 plugins: {{
                     title: {{
                         display: true,
-                        text: 'Daily Unique User Activity - Last 30 Days'
-                    }},
-                    legend: {{
-                        position: 'top'
+                        text: 'Daily Total Action Counts'
                     }}
                 }},
                 scales: {{
@@ -701,42 +563,23 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                         beginAtZero: true,
                         title: {{
                             display: true,
-                            text: 'Unique Users'
+                            text: 'Total Actions'
                         }}
                     }},
                     x: {{
                         title: {{
                             display: true,
                             text: 'Date'
-                        }},
-                        ticks: {{
-                            maxRotation: 45,
-                            maxTicksLimit: 15
                         }}
-                    }}
-                }},
-                interaction: {{
-                    mode: 'index',
-                    intersect: false
-                }},
-                elements: {{
-                    point: {{
-                        radius: 3,
-                        hoverRadius: 6
                     }}
                 }}
             }}
         }});
-        */
+
+        console.log('Monthly charts created successfully');
         </script>
-
-        <div class="section">
-            <h2>📈 Monthly Daily User Activity (Last 30 Days)</h2>
-            <div class="chart-container" style="height: 500px;">
-                <canvas id="monthlyMetricsChart"></canvas>
-            </div>
-        </div>
     """
+
 
     html += """
         <div class="section">

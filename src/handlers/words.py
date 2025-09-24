@@ -324,7 +324,7 @@ def get_word_definition_v2():
         prompt = build_definition_prompt_v2(word_normalized, learning_lang, native_lang)
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             messages=[
                 {
                     "role": "system",
@@ -598,59 +598,6 @@ def get_word_definition():
         return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
 
 
-def get_word_definition_v2():
-    """Get word definition with validation using OpenAI integration (v2)"""
-    try:
-        user_id = request.args.get('user_id')
-        word = request.args.get('w')
-
-        if not word or not user_id:
-            return jsonify({"error": "w and user_id parameters are required"}), 400
-
-        word_normalized = word.strip().lower()
-
-        # Get user preferences
-        learning_lang, native_lang, _, _ = get_user_preferences(user_id)
-
-        logger.info(f"Generating definition with validation for '{word_normalized}'")
-        prompt = build_definition_prompt_v2(word_normalized, learning_lang, native_lang)
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a multilingual dictionary expert with word validation capabilities. Provide definitions and assess whether the input is a valid word or phrase."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "word_definition_with_validation",
-                    "schema": WORD_DEFINITION_SCHEMA_V2
-                }
-            },
-            temperature=0.3
-        )
-
-        definition_data = json.loads(response.choices[0].message.content)
-
-        return jsonify({
-            "word": word_normalized,
-            "learning_language": learning_lang,
-            "native_language": native_lang,
-            "definition": definition_data["definition"],
-            "examples": definition_data["examples"],
-            "validation": definition_data["validation"]
-        })
-
-    except Exception as e:
-        logger.error(f"Error getting definition v2 for word '{word_normalized}': {str(e)}")
-        return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
 
 def get_saved_words():
     """Get user's saved words with calculated review data"""
@@ -736,9 +683,7 @@ def get_saved_words():
                 "ease_factor": DEFAULT_EASE_FACTOR,  # Hardcoded as requested
                 "interval_days": int(float(interval_days)) if interval_days else 1,
                 "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
-                "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
-                "is_toefl": row['is_toefl'] if row['is_toefl'] is not None else False,
-                "is_ielts": row['is_ielts'] if row['is_ielts'] is not None else False
+                "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None
             })
         
         cur.close()
