@@ -680,10 +680,12 @@ def get_saved_words():
                 sw.created_at,
                 COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
                 COALESCE(review_counts.total_reviews, 0) as review_count,
-                latest_review.last_reviewed_at
+                latest_review.last_reviewed_at,
+                tv.is_toefl,
+                tv.is_ielts
             FROM saved_words sw
             LEFT JOIN (
-                SELECT 
+                SELECT
                     word_id,
                     next_review_date,
                     reviewed_at as last_reviewed_at,
@@ -691,12 +693,13 @@ def get_saved_words():
                 FROM reviews
             ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
             LEFT JOIN (
-                SELECT 
+                SELECT
                     word_id,
                     COUNT(*) as total_reviews
                 FROM reviews
                 GROUP BY word_id
             ) review_counts ON sw.id = review_counts.word_id
+            LEFT JOIN test_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
             WHERE sw.user_id = %s
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
         """, (user_id,))
@@ -733,7 +736,9 @@ def get_saved_words():
                 "ease_factor": DEFAULT_EASE_FACTOR,  # Hardcoded as requested
                 "interval_days": int(float(interval_days)) if interval_days else 1,
                 "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
-                "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None
+                "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
+                "is_toefl": row['is_toefl'] if row['is_toefl'] is not None else False,
+                "is_ielts": row['is_ielts'] if row['is_ielts'] is not None else False
             })
         
         cur.close()

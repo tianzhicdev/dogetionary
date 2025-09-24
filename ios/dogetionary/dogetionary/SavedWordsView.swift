@@ -635,15 +635,21 @@ struct CalendarDayView: View {
 
 struct SavedWordRow: View {
     let savedWord: SavedWord
-    
+    @ObservedObject private var userManager = UserManager.shared
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(savedWord.word)
-                    .font(.title3)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                
+                HStack {
+                    Text(savedWord.word)
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+
+                    // Show test labels only if user has enabled tests
+                    testLabels
+                }
+
                 HStack {
                     if let nextReviewDate = savedWord.next_review_date {
                         Text("Next review \(formatDateOnly(nextReviewDate))")
@@ -654,20 +660,47 @@ struct SavedWordRow: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Text("•")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text("\(savedWord.review_count) review\(savedWord.review_count == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
         }
         .padding(.vertical, 6)
+    }
+
+    @ViewBuilder
+    private var testLabels: some View {
+        HStack(spacing: 4) {
+            if userManager.toeflEnabled && (savedWord.is_toefl == true) {
+                Text("TOEFL")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue)
+                    .cornerRadius(4)
+            }
+
+            if userManager.ieltsEnabled && (savedWord.is_ielts == true) {
+                Text("IELTS")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green)
+                    .cornerRadius(4)
+            }
+        }
     }
     
     private func formatDateOnly(_ dateString: String) -> String {

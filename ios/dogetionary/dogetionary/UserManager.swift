@@ -19,6 +19,8 @@ class UserManager: ObservableObject {
     private let hasRequestedAppRatingKey = "DogetionaryHasRequestedAppRating"
     private let toeflEnabledKey = "DogetionaryToeflEnabled"
     private let ieltsEnabledKey = "DogetionaryIeltsEnabled"
+    private let toeflTargetDaysKey = "DogetionaryToeflTargetDays"
+    private let ieltsTargetDaysKey = "DogetionaryIeltsTargetDays"
     
     private var isSyncingFromServer = false
     
@@ -71,6 +73,22 @@ class UserManager: ObservableObject {
             }
         }
     }
+    @Published var toeflTargetDays: Int {
+        didSet {
+            UserDefaults.standard.set(toeflTargetDays, forKey: toeflTargetDaysKey)
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+            }
+        }
+    }
+    @Published var ieltsTargetDays: Int {
+        didSet {
+            UserDefaults.standard.set(ieltsTargetDays, forKey: ieltsTargetDaysKey)
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+            }
+        }
+    }
     
     private init() {
         // Try to load existing user ID from UserDefaults
@@ -96,6 +114,12 @@ class UserManager: ObservableObject {
         // Load test preparation settings or set defaults
         self.toeflEnabled = UserDefaults.standard.bool(forKey: toeflEnabledKey)
         self.ieltsEnabled = UserDefaults.standard.bool(forKey: ieltsEnabledKey)
+
+        // Load target days with default of 30 days
+        let savedToeflTargetDays = UserDefaults.standard.integer(forKey: toeflTargetDaysKey)
+        self.toeflTargetDays = savedToeflTargetDays > 0 ? savedToeflTargetDays : 30
+        let savedIeltsTargetDays = UserDefaults.standard.integer(forKey: ieltsTargetDaysKey)
+        self.ieltsTargetDays = savedIeltsTargetDays > 0 ? savedIeltsTargetDays : 30
         
         logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage)")
     }
@@ -124,12 +148,14 @@ class UserManager: ObservableObject {
     }
 
     private func syncTestSettingsToServer() {
-        logger.info("Syncing test settings to server - TOEFL: \(self.toeflEnabled), IELTS: \(self.ieltsEnabled)")
+        logger.info("Syncing test settings to server - TOEFL: \(self.toeflEnabled) (\(self.toeflTargetDays) days), IELTS: \(self.ieltsEnabled) (\(self.ieltsTargetDays) days)")
 
         DictionaryService.shared.updateTestSettings(
             userID: self.userID,
             toeflEnabled: self.toeflEnabled,
-            ieltsEnabled: self.ieltsEnabled
+            ieltsEnabled: self.ieltsEnabled,
+            toeflTargetDays: self.toeflTargetDays,
+            ieltsTargetDays: self.ieltsTargetDays
         ) { result in
             switch result {
             case .success(_):
@@ -151,7 +177,9 @@ class UserManager: ObservableObject {
 
                     // Update local settings if they're different from server
                     if self.toeflEnabled != response.settings.toefl_enabled ||
-                       self.ieltsEnabled != response.settings.ielts_enabled {
+                       self.ieltsEnabled != response.settings.ielts_enabled ||
+                       self.toeflTargetDays != response.settings.toefl_target_days ||
+                       self.ieltsTargetDays != response.settings.ielts_target_days {
                         self.logger.info("Updating local test settings to match server")
 
                         // Set flag to prevent sync loop
@@ -160,6 +188,8 @@ class UserManager: ObservableObject {
                         // Update published properties
                         self.toeflEnabled = response.settings.toefl_enabled
                         self.ieltsEnabled = response.settings.ielts_enabled
+                        self.toeflTargetDays = response.settings.toefl_target_days
+                        self.ieltsTargetDays = response.settings.ielts_target_days
 
                         // Reset flag
                         self.isSyncingFromServer = false

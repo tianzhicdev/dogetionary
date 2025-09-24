@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS test_vocabularies (
 ALTER TABLE user_preferences
 ADD COLUMN IF NOT EXISTS toefl_enabled BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS ielts_enabled BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS last_test_words_added DATE;
+ADD COLUMN IF NOT EXISTS last_test_words_added DATE,
+ADD COLUMN IF NOT EXISTS toefl_target_days INTEGER DEFAULT 30,
+ADD COLUMN IF NOT EXISTS ielts_target_days INTEGER DEFAULT 30;
 
 -- Index for efficient queries
 CREATE INDEX IF NOT EXISTS idx_test_vocab_toefl ON test_vocabularies(is_toefl) WHERE is_toefl = TRUE;
@@ -71,20 +73,77 @@ RETURNS INTEGER AS $$
 DECLARE
     v_words_added INTEGER := 0;
     v_word RECORD;
+    v_toefl_enabled BOOLEAN;
+    v_ielts_enabled BOOLEAN;
+    v_toefl_target_days INTEGER;
+    v_ielts_target_days INTEGER;
+    v_toefl_words_per_day INTEGER := 0;
+    v_ielts_words_per_day INTEGER := 0;
+    v_total_toefl INTEGER;
+    v_total_ielts INTEGER;
+    v_saved_toefl INTEGER;
+    v_saved_ielts INTEGER;
+    v_toefl_remaining INTEGER;
+    v_ielts_remaining INTEGER;
 BEGIN
+    -- Get user settings
+    SELECT toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days
+    INTO v_toefl_enabled, v_ielts_enabled, v_toefl_target_days, v_ielts_target_days
+    FROM user_preferences
+    WHERE user_id = p_user_id;
+
     -- Check if user has test mode enabled and hasn't added words today
-    IF NOT EXISTS (
-        SELECT 1 FROM user_preferences
-        WHERE user_id = p_user_id
-        AND (toefl_enabled = TRUE OR ielts_enabled = TRUE)
-        AND (last_test_words_added IS NULL OR last_test_words_added < CURRENT_DATE)
-    ) THEN
+    IF NOT (v_toefl_enabled = TRUE OR v_ielts_enabled = TRUE) OR
+       EXISTS (
+           SELECT 1 FROM user_preferences
+           WHERE user_id = p_user_id
+           AND last_test_words_added >= CURRENT_DATE
+       ) THEN
         RETURN 0;
     END IF;
 
-    -- Get random test words and add them
+    -- Get total vocabulary counts
+    SELECT
+        COUNT(DISTINCT CASE WHEN is_toefl THEN word END),
+        COUNT(DISTINCT CASE WHEN is_ielts THEN word END)
+    INTO v_total_toefl, v_total_ielts
+    FROM test_vocabularies
+    WHERE language = p_learning_language;
+
+    -- Get current saved counts
+    SELECT
+        COUNT(DISTINCT CASE WHEN tv.is_toefl THEN sw.word END),
+        COUNT(DISTINCT CASE WHEN tv.is_ielts THEN sw.word END)
+    INTO v_saved_toefl, v_saved_ielts
+    FROM saved_words sw
+    LEFT JOIN test_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
+    WHERE sw.user_id = p_user_id AND sw.learning_language = p_learning_language;
+
+    -- Calculate words per day based on remaining words and target days
+    IF v_toefl_enabled THEN
+        v_toefl_remaining := GREATEST(0, v_total_toefl - COALESCE(v_saved_toefl, 0));
+        v_toefl_words_per_day := CASE
+            WHEN v_toefl_target_days > 0 THEN CEIL(v_toefl_remaining::float / v_toefl_target_days)
+            ELSE 10
+        END;
+    END IF;
+
+    IF v_ielts_enabled THEN
+        v_ielts_remaining := GREATEST(0, v_total_ielts - COALESCE(v_saved_ielts, 0));
+        v_ielts_words_per_day := CASE
+            WHEN v_ielts_target_days > 0 THEN CEIL(v_ielts_remaining::float / v_ielts_target_days)
+            ELSE 10
+        END;
+    END IF;
+
+    -- Get and add words based on calculated daily targets
     FOR v_word IN
-        SELECT * FROM get_random_test_words(p_user_id, p_learning_language, p_native_language, 10)
+        SELECT * FROM get_random_test_words(
+            p_user_id,
+            p_learning_language,
+            p_native_language,
+            v_toefl_words_per_day + v_ielts_words_per_day
+        )
     LOOP
         INSERT INTO saved_words (user_id, word, learning_language, native_language)
         VALUES (p_user_id, v_word.word, p_learning_language, p_native_language)

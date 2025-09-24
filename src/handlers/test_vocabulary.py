@@ -21,7 +21,7 @@ DAILY_TEST_WORDS = 10  # Number of words to add per day (compile-time configurab
 
 def update_test_settings():
     """
-    Update user's test preparation settings (enable/disable TOEFL/IELTS)
+    Update user's test preparation settings (enable/disable TOEFL/IELTS, target days)
     """
     try:
         data = request.get_json()
@@ -33,8 +33,10 @@ def update_test_settings():
         # Get optional parameters
         toefl_enabled = data.get('toefl_enabled')
         ielts_enabled = data.get('ielts_enabled')
+        toefl_target_days = data.get('toefl_target_days')
+        ielts_target_days = data.get('ielts_target_days')
 
-        if toefl_enabled is None and ielts_enabled is None:
+        if all(param is None for param in [toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days]):
             return jsonify({"error": "At least one setting must be provided"}), 400
 
         conn = get_db_connection()
@@ -53,6 +55,14 @@ def update_test_settings():
                 update_fields.append("ielts_enabled = %s")
                 params.append(ielts_enabled)
 
+            if toefl_target_days is not None:
+                update_fields.append("toefl_target_days = %s")
+                params.append(toefl_target_days)
+
+            if ielts_target_days is not None:
+                update_fields.append("ielts_target_days = %s")
+                params.append(ielts_target_days)
+
             # If disabling all tests, clear the last_test_words_added date
             if toefl_enabled == False and ielts_enabled == False:
                 update_fields.append("last_test_words_added = NULL")
@@ -64,7 +74,7 @@ def update_test_settings():
                 UPDATE user_preferences
                 SET {', '.join(update_fields)}
                 WHERE user_id = %s
-                RETURNING toefl_enabled, ielts_enabled, last_test_words_added
+                RETURNING toefl_enabled, ielts_enabled, last_test_words_added, toefl_target_days, ielts_target_days
             """, params)
 
             result = cur.fetchone()
@@ -76,7 +86,9 @@ def update_test_settings():
                     "settings": {
                         "toefl_enabled": result[0],
                         "ielts_enabled": result[1],
-                        "last_test_words_added": result[2].isoformat() if result[2] else None
+                        "last_test_words_added": result[2].isoformat() if result[2] else None,
+                        "toefl_target_days": result[3],
+                        "ielts_target_days": result[4]
                     }
                 }), 200
             else:
@@ -113,7 +125,9 @@ def get_test_settings():
                         up.ielts_enabled,
                         up.last_test_words_added,
                         up.learning_language,
-                        up.native_language
+                        up.native_language,
+                        up.toefl_target_days,
+                        up.ielts_target_days
                     FROM user_preferences up
                     WHERE up.user_id = %s
                 ),
@@ -152,18 +166,20 @@ def get_test_settings():
                         "ielts_enabled": result[1],
                         "last_test_words_added": result[2].isoformat() if result[2] else None,
                         "learning_language": result[3],
-                        "native_language": result[4]
+                        "native_language": result[4],
+                        "toefl_target_days": result[5],
+                        "ielts_target_days": result[6]
                     },
                     "progress": {
                         "toefl": {
-                            "saved": result[5],
-                            "total": result[7],
-                            "percentage": round(100 * result[5] / result[7], 1) if result[7] > 0 else 0
+                            "saved": result[7],
+                            "total": result[9],
+                            "percentage": round(100 * result[7] / result[9], 1) if result[9] > 0 else 0
                         },
                         "ielts": {
-                            "saved": result[6],
-                            "total": result[8],
-                            "percentage": round(100 * result[6] / result[8], 1) if result[8] > 0 else 0
+                            "saved": result[8],
+                            "total": result[10],
+                            "percentage": round(100 * result[8] / result[10], 1) if result[10] > 0 else 0
                         }
                     }
                 }), 200
