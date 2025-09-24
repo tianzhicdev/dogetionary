@@ -448,16 +448,71 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
 
     """
 
-    # Temporarily simplified - remove complex chart data processing to isolate the error
+    # Generate daily data for the last 30 days
+    import json
 
-    # Test with simple hardcoded data to verify the template works
-    monthly_dates = ['08/25', '08/26', '08/27', '09/22', '09/23', '09/24']
-    active_users_data = [0, 0, 0, 1, 2, 4]
-    search_users_data = [0, 0, 0, 1, 2, 0]
-    review_users_data = [0, 0, 0, 0, 0, 2]
-    active_total_data = [0, 0, 0, 3, 6, 17]
-    search_total_data = [0, 0, 0, 2, 4, 0]
-    review_total_data = [0, 0, 0, 0, 0, 3]
+    # Create 30-day date range
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=29)  # 30 days total including today
+
+    monthly_dates = []
+    date_to_metrics = {}
+    date_to_actions = {}
+
+    # Create lookup dictionaries from analytics data
+    for row in monthly_metrics:
+        date_to_metrics[row['metric_date']] = row
+
+    # Process daily action counts (multiple rows per date, one per action type)
+    for row in daily_action_counts:
+        date = row['action_date']
+        if date not in date_to_actions:
+            date_to_actions[date] = {'active': 0, 'search': 0, 'review': 0}
+
+        # Categorize actions
+        action = row['action']
+        if action.startswith('dictionary'):
+            date_to_actions[date]['search'] += row['count']
+        elif action.startswith('review'):
+            date_to_actions[date]['review'] += row['count']
+        else:
+            date_to_actions[date]['active'] += row['count']
+
+    # Generate arrays for all 30 days
+    active_users_data = []
+    search_users_data = []
+    review_users_data = []
+    active_total_data = []
+    search_total_data = []
+    review_total_data = []
+
+    current_date = start_date
+    while current_date <= end_date:
+        # Format date for display
+        monthly_dates.append(current_date.strftime('%m/%d'))
+
+        # Get metrics for this date (default to 0 if no data)
+        metrics = date_to_metrics.get(current_date, {})
+        actions = date_to_actions.get(current_date, {'active': 0, 'search': 0, 'review': 0})
+
+        active_users_data.append(metrics.get('unique_active_users', 0))
+        search_users_data.append(metrics.get('unique_search_users', 0))
+        review_users_data.append(metrics.get('unique_review_users', 0))
+
+        active_total_data.append(actions['active'])
+        search_total_data.append(actions['search'])
+        review_total_data.append(actions['review'])
+
+        current_date += timedelta(days=1)
+
+    # Convert to JSON for JavaScript
+    monthly_dates_json = json.dumps(monthly_dates)
+    active_users_json = json.dumps(active_users_data)
+    search_users_json = json.dumps(search_users_data)
+    review_users_json = json.dumps(review_users_data)
+    active_total_json = json.dumps(active_total_data)
+    search_total_json = json.dumps(search_total_data)
+    review_total_json = json.dumps(review_total_data)
 
     # Generate JavaScript for monthly charts
     html += f"""
@@ -469,24 +524,24 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
         const uniqueChart = new Chart(uniqueCtx, {{
             type: 'line',
             data: {{
-                labels: {monthly_dates},
+                labels: {monthly_dates_json},
                 datasets: [{{
                     label: 'Active Users',
-                    data: {active_users_data},
+                    data: {active_users_json},
                     borderColor: '#2196F3',
                     backgroundColor: '#2196F320',
                     fill: false,
                     tension: 0.1
                 }}, {{
                     label: 'Search Users',
-                    data: {search_users_data},
+                    data: {search_users_json},
                     borderColor: '#4CAF50',
                     backgroundColor: '#4CAF5020',
                     fill: false,
                     tension: 0.1
                 }}, {{
                     label: 'Review Users',
-                    data: {review_users_data},
+                    data: {review_users_json},
                     borderColor: '#FF9800',
                     backgroundColor: '#FF980020',
                     fill: false,
@@ -499,7 +554,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                 plugins: {{
                     title: {{
                         display: true,
-                        text: 'Daily Unique Users by Activity'
+                        text: 'Daily Unique Users by Activity (Last 30 Days)'
                     }}
                 }},
                 scales: {{
@@ -525,24 +580,24 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
         const totalChart = new Chart(totalCtx, {{
             type: 'line',
             data: {{
-                labels: {monthly_dates},
+                labels: {monthly_dates_json},
                 datasets: [{{
                     label: 'Total Active Actions',
-                    data: {active_total_data},
+                    data: {active_total_json},
                     borderColor: '#2196F3',
                     backgroundColor: '#2196F320',
                     fill: false,
                     tension: 0.1
                 }}, {{
                     label: 'Total Search Actions',
-                    data: {search_total_data},
+                    data: {search_total_json},
                     borderColor: '#4CAF50',
                     backgroundColor: '#4CAF5020',
                     fill: false,
                     tension: 0.1
                 }}, {{
                     label: 'Total Review Actions',
-                    data: {review_total_data},
+                    data: {review_total_json},
                     borderColor: '#FF9800',
                     backgroundColor: '#FF980020',
                     fill: false,
@@ -555,7 +610,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                 plugins: {{
                     title: {{
                         display: true,
-                        text: 'Daily Total Action Counts'
+                        text: 'Daily Total Action Counts (Last 30 Days)'
                     }}
                 }},
                 scales: {{
