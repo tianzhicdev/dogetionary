@@ -106,7 +106,8 @@ def get_usage_dashboard():
         cur.close()
         conn.close()
 
-        # Get analytics data
+        # Get analytics data for graphs
+        action_summary = analytics_service.get_action_summary(7)
         daily_action_counts = analytics_service.get_daily_action_counts(7)
         available_users = analytics_service.get_all_users()
 
@@ -117,7 +118,7 @@ def get_usage_dashboard():
             user_actions = analytics_service.get_user_actions(selected_user_id)
 
         # Generate HTML
-        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, daily_action_counts, available_users, selected_user_id, user_actions)
+        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, available_users, selected_user_id, user_actions)
 
         return Response(html, mimetype='text/html')
 
@@ -142,7 +143,7 @@ def convert_to_ny_time(timestamp):
         return ny_time
     return None
 
-def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, daily_action_counts, available_users, selected_user_id, user_actions):
+def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, available_users, selected_user_id, user_actions):
     """Generate HTML dashboard with tables"""
 
     # Get current time in NY
@@ -153,6 +154,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, daily_
     <html>
     <head>
         <title>Dogetionary Usage Dashboard</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -252,6 +254,21 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, daily_
                 padding: 20px;
                 color: #999;
                 font-style: italic;
+            }
+            .chart-container {
+                background-color: white;
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                position: relative;
+                height: 400px;
+            }
+            .chart-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 20px;
             }
         </style>
     </head>
@@ -413,66 +430,109 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, daily_
 
         <div class="section">
             <h2>📊 User Actions Analytics (Last 7 Days)</h2>
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <canvas id="totalActionsChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="uniqueUsersChart"></canvas>
+                </div>
+            </div>
+        </div>
     """
 
-    if daily_action_counts:
-        # Group actions by date for table display
-        actions_by_date = {}
-        for row in daily_action_counts:
-            date_str = row['action_date'].strftime('%Y-%m-%d')
-            if date_str not in actions_by_date:
-                actions_by_date[date_str] = []
-            actions_by_date[date_str].append({
-                'action': row['action'],
-                'category': row['category'],
-                'count': row['count']
-            })
+    # Prepare data for charts
+    actions = []
+    total_counts = []
+    unique_users = []
+    colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+    ]
 
-        html += """
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Action</th>
-                        <th>Category</th>
-                        <th>Count</th>
-                    </tr>
-                </thead>
-                <tbody>
-        """
+    for i, row in enumerate(action_summary):
+        actions.append(row['action'].replace('_', ' ').title())
+        total_counts.append(row['total_count'])
+        unique_users.append(row['unique_users'])
 
-        for date_str in sorted(actions_by_date.keys(), reverse=True):
-            for action_data in actions_by_date[date_str]:
-                category_color = {
-                    'dictionary': '#2196F3',
-                    'review': '#4CAF50',
-                    'navigation': '#FF9800',
-                    'profile': '#9C27B0',
-                    'settings': '#607D8B',
-                    'saved': '#795548',
-                    'feedback': '#E91E63',
-                    'app_lifecycle': '#009688'
-                }.get(action_data['category'], '#666')
+    # Generate JavaScript for charts
+    html += """
+        <script>
+        // Total Actions Chart
+        const totalCtx = document.getElementById('totalActionsChart').getContext('2d');
+        new Chart(totalCtx, {
+            type: 'bar',
+            data: {
+                labels: """ + str(actions[:10]) + """,
+                datasets: [{
+                    label: 'Total Actions',
+                    data: """ + str(total_counts[:10]) + """,
+                    backgroundColor: '""" + colors[0] + """',
+                    borderColor: '""" + colors[0] + """',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Total Action Count by Type'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45
+                        }
+                    }
+                }
+            }
+        });
 
-                html += f"""
-                    <tr>
-                        <td>{date_str}</td>
-                        <td class="word">{action_data['action']}</td>
-                        <td><span class="language" style="background-color: {category_color}20; color: {category_color};">{action_data['category'].upper()}</span></td>
-                        <td><strong>{action_data['count']}</strong></td>
-                    </tr>
-                """
-
-        html += """
-                </tbody>
-            </table>
-        """
-    else:
-        html += '<div class="no-data">No user actions in the last 7 days</div>'
+        // Unique Users Chart
+        const uniqueCtx = document.getElementById('uniqueUsersChart').getContext('2d');
+        new Chart(uniqueCtx, {
+            type: 'bar',
+            data: {
+                labels: """ + str(actions[:10]) + """,
+                datasets: [{
+                    label: 'Unique Users',
+                    data: """ + str(unique_users[:10]) + """,
+                    backgroundColor: '""" + colors[1] + """',
+                    borderColor: '""" + colors[1] + """',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Unique Users by Action Type'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+        </script>
+    """
 
     html += """
-        </div>
-
         <div class="section">
             <h2>👤 User Actions Viewer</h2>
             <form method="GET" style="margin-bottom: 20px;">

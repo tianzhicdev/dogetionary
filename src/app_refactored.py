@@ -7,6 +7,9 @@ import logging
 import sys
 import json
 import threading
+import schedule
+import time as time_module
+from datetime import datetime
 # Load environment variables
 load_dotenv('.env.secrets')
 
@@ -173,9 +176,115 @@ app.route('/words/featured', methods=['GET'])(get_featured_words)
 # Bulk data management endpoints
 app.route('/api/words/generate', methods=['POST'])(generate_word_definition)
 
+# Test vocabulary endpoints (TOEFL/IELTS)
+from handlers.test_vocabulary import (
+    update_test_settings,
+    get_test_settings,
+    add_daily_test_words,
+    get_test_vocabulary_stats
+)
+
+app.route('/api/test-prep/settings', methods=['PUT'])(update_test_settings)
+app.route('/api/test-prep/settings', methods=['GET'])(get_test_settings)
+app.route('/api/test-prep/add-words', methods=['POST'])(add_daily_test_words)
+app.route('/api/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
+
+@app.route('/api/test-prep/run-daily-job', methods=['POST'])
+def manual_daily_job():
+    """
+    Manual trigger for daily test vocabulary job (for testing/admin use)
+    """
+    try:
+        app.logger.info("Manual trigger of daily test vocabulary job")
+        add_daily_test_words_for_all_users()
+        return jsonify({"success": True, "message": "Daily job completed successfully"}), 200
+    except Exception as e:
+        app.logger.error(f"Manual daily job failed: {e}")
+        return jsonify({"error": "Failed to run daily job"}), 500
+
+def daily_test_words_worker():
+    """
+    Background worker that adds daily test vocabulary words for all enabled users.
+    Runs at midnight every day.
+    """
+    while True:
+        try:
+            schedule.run_pending()
+            time_module.sleep(60)  # Check every minute
+        except Exception as e:
+            app.logger.error(f"Error in daily test words scheduler: {e}")
+            time_module.sleep(300)  # Wait 5 minutes on error before retrying
+
+def add_daily_test_words_for_all_users():
+    """
+    Add daily test vocabulary words for all users who have test mode enabled
+    """
+    try:
+        app.logger.info("🚀 Starting daily test vocabulary word addition for all users")
+
+        from utils.database import get_db_connection
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Get all users who have test mode enabled and haven't received words today
+        cur.execute("""
+            SELECT
+                user_id,
+                learning_language,
+                native_language,
+                toefl_enabled,
+                ielts_enabled
+            FROM user_preferences
+            WHERE (toefl_enabled = TRUE OR ielts_enabled = TRUE)
+            AND (last_test_words_added IS NULL OR last_test_words_added < CURRENT_DATE)
+        """)
+
+        users = cur.fetchall()
+        app.logger.info(f"Found {len(users)} users needing daily test words")
+
+        total_users = 0
+        total_words = 0
+
+        for user in users:
+            try:
+                # Use the database function to add words
+                cur.execute("SELECT add_daily_test_words(%s, %s, %s)",
+                          (user['user_id'], user['learning_language'], user['native_language']))
+                result = cur.fetchone()
+                words_added = result['add_daily_test_words'] if result else 0
+                conn.commit()
+
+                if words_added > 0:
+                    total_users += 1
+                    total_words += words_added
+                    app.logger.info(f"Added {words_added} words for user {user['user_id']}")
+
+            except Exception as e:
+                app.logger.error(f"Failed to add words for user {user['user_id']}: {e}")
+                conn.rollback()
+
+        cur.close()
+        conn.close()
+
+        app.logger.info(f"✅ Daily test words completed: {total_users} users, {total_words} words added")
+
+    except Exception as e:
+        app.logger.error(f"❌ Error in daily test words job: {e}")
+
 if __name__ == '__main__':
+    # Start background workers
     audio_worker_thread = threading.Thread(target=audio_generation_worker, daemon=True)
     audio_worker_thread.start()
+
+    # Schedule daily test vocabulary words at midnight
+    schedule.every().day.at("00:00").do(add_daily_test_words_for_all_users)
+    app.logger.info("📅 Scheduled daily test vocabulary words at midnight")
+
+    # Start daily test words scheduler
+    test_words_scheduler_thread = threading.Thread(target=daily_test_words_worker, daemon=True)
+    test_words_scheduler_thread.start()
+    app.logger.info("🕒 Daily test vocabulary scheduler started")
 
     port = int(os.environ.get('PORT', 5000))
     app.logger.info(f"Starting Dogetionary Refactored API server on port {port}")
