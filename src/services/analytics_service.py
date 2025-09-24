@@ -134,6 +134,68 @@ class AnalyticsService:
             logger.error(f"Error getting daily action counts: {str(e)}")
             return []
 
+    def get_action_analytics(self, days: int = 7):
+        """
+        Get analytics with unique user counts and total action counts for each action
+        Returns data suitable for graph visualization
+        """
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                SELECT
+                    action,
+                    category,
+                    COUNT(*) as total_count,
+                    COUNT(DISTINCT user_id) as unique_users,
+                    DATE(created_at) as action_date
+                FROM user_actions
+                WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
+                GROUP BY action, category, DATE(created_at)
+                ORDER BY action_date DESC, total_count DESC
+            """, (days,))
+
+            results = cur.fetchall()
+            cur.close()
+            conn.close()
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error getting action analytics: {str(e)}")
+            return []
+
+    def get_action_summary(self, days: int = 7):
+        """
+        Get summary analytics for each action type across the time period
+        """
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                SELECT
+                    action,
+                    category,
+                    COUNT(*) as total_count,
+                    COUNT(DISTINCT user_id) as unique_users
+                FROM user_actions
+                WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
+                GROUP BY action, category
+                ORDER BY total_count DESC
+            """, (days,))
+
+            results = cur.fetchall()
+            cur.close()
+            conn.close()
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error getting action summary: {str(e)}")
+            return []
+
     def get_user_actions(self, user_id: str, limit: int = 100):
         """
         Get recent actions for a specific user

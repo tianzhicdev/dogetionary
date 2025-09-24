@@ -57,10 +57,11 @@ def get_analytics_data():
     try:
         days = int(request.args.get('days', 7))
         user_id = request.args.get('user_id')
+        format_type = request.args.get('format', 'detailed')  # detailed or summary
 
         response = {}
 
-        # Daily action counts
+        # Daily action counts (legacy support)
         daily_counts = analytics_service.get_daily_action_counts(days)
         response['daily_counts'] = []
 
@@ -71,6 +72,33 @@ def get_analytics_data():
                 'category': row['category'],
                 'count': row['count']
             })
+
+        # New analytics data with unique users and total counts
+        if format_type == 'summary':
+            # Summary view for graphs
+            action_summary = analytics_service.get_action_summary(days)
+            response['action_summary'] = []
+
+            for row in action_summary:
+                response['action_summary'].append({
+                    'action': row['action'],
+                    'category': row['category'],
+                    'total_count': row['total_count'],
+                    'unique_users': row['unique_users']
+                })
+        else:
+            # Detailed view with daily breakdown
+            action_analytics = analytics_service.get_action_analytics(days)
+            response['action_analytics'] = []
+
+            for row in action_analytics:
+                response['action_analytics'].append({
+                    'date': row['action_date'].isoformat(),
+                    'action': row['action'],
+                    'category': row['category'],
+                    'total_count': row['total_count'],
+                    'unique_users': row['unique_users']
+                })
 
         # User actions if user_id provided
         if user_id:
