@@ -258,5 +258,57 @@ class AnalyticsService:
             logger.error(f"Error getting users: {str(e)}")
             return []
 
+    def get_time_based_analytics(self, days: int = 7):
+        """
+        Get time-based analytics data for line charts
+        Returns data formatted for time series visualization with dates on x-axis
+        """
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                WITH date_series AS (
+                    SELECT generate_series(
+                        CURRENT_DATE - INTERVAL '%s days',
+                        CURRENT_DATE,
+                        '1 day'::interval
+                    )::date as action_date
+                ),
+                actions AS (
+                    SELECT DISTINCT action FROM user_actions
+                    WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
+                ),
+                daily_data AS (
+                    SELECT
+                        DATE(created_at) as action_date,
+                        action,
+                        COUNT(*) as total_count,
+                        COUNT(DISTINCT user_id) as unique_users
+                    FROM user_actions
+                    WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
+                    GROUP BY DATE(created_at), action
+                )
+                SELECT
+                    ds.action_date,
+                    a.action,
+                    COALESCE(dd.total_count, 0) as total_count,
+                    COALESCE(dd.unique_users, 0) as unique_users
+                FROM date_series ds
+                CROSS JOIN actions a
+                LEFT JOIN daily_data dd ON ds.action_date = dd.action_date AND a.action = dd.action
+                ORDER BY ds.action_date ASC, a.action
+            """, (days, days, days))
+
+            results = cur.fetchall()
+            cur.close()
+            conn.close()
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error getting time-based analytics: {str(e)}")
+            return []
+
 # Global instance
 analytics_service = AnalyticsService()
