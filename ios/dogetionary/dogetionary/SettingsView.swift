@@ -209,6 +209,23 @@ struct SettingsView: View {
                                     }
                             }
 
+                            if userManager.toeflEnabled {
+                                HStack {
+                                    Text("Complete in:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Picker("TOEFL Target Days", selection: $userManager.toeflTargetDays) {
+                                        ForEach([7, 14, 21, 30, 45, 60, 90], id: \.self) { days in
+                                            Text("\(days) days")
+                                                .tag(days)
+                                        }
+                                    }
+                                    .pickerStyle(MenuPickerStyle())
+                                    .tint(.blue)
+                                }
+                            }
+
                             if let progress = testProgress?.toefl, userManager.toeflEnabled {
                                 HStack {
                                     Text("Progress:")
@@ -244,6 +261,23 @@ struct SettingsView: View {
                                     }
                             }
 
+                            if userManager.ieltsEnabled {
+                                HStack {
+                                    Text("Complete in:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Picker("IELTS Target Days", selection: $userManager.ieltsTargetDays) {
+                                        ForEach([7, 14, 21, 30, 45, 60, 90], id: \.self) { days in
+                                            Text("\(days) days")
+                                                .tag(days)
+                                        }
+                                    }
+                                    .pickerStyle(MenuPickerStyle())
+                                    .tint(.green)
+                                }
+                            }
+
                             if let progress = testProgress?.ielts, userManager.ieltsEnabled {
                                 HStack {
                                     Text("Progress:")
@@ -262,7 +296,9 @@ struct SettingsView: View {
                                 Text("Daily Words")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("10 test vocabulary words are automatically added to your review list daily")
+
+                                let dailyWordsText = buildDailyWordsText()
+                                Text(dailyWordsText)
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -539,6 +575,28 @@ struct SettingsView: View {
                     connectionTestResult = "❌ Connection failed: \(error.localizedDescription)"
                 }
             }
+        }
+    }
+
+    private func buildDailyWordsText() -> String {
+        var parts: [String] = []
+
+        if userManager.toeflEnabled, let progress = testProgress?.toefl, let stats = vocabularyStats {
+            let remaining = max(0, stats.toefl_words - progress.saved)
+            let dailyWords = max(1, Int(ceil(Double(remaining) / Double(userManager.toeflTargetDays))))
+            parts.append("TOEFL: ~\(dailyWords)/day")
+        }
+
+        if userManager.ieltsEnabled, let progress = testProgress?.ielts, let stats = vocabularyStats {
+            let remaining = max(0, stats.ielts_words - progress.saved)
+            let dailyWords = max(1, Int(ceil(Double(remaining) / Double(userManager.ieltsTargetDays))))
+            parts.append("IELTS: ~\(dailyWords)/day")
+        }
+
+        if parts.isEmpty {
+            return "Test vocabulary words are automatically added to your review list daily based on your target completion timeline"
+        } else {
+            return parts.joined(separator: ", ") + " words are automatically added daily to meet your target timeline"
         }
     }
 

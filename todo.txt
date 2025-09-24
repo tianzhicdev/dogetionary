@@ -129,14 +129,22 @@ db should be id, original_text (could be just a word or an example sentence), us
 4. when unsave, we go back to list view
 5. detail view when pronuciation is done
 
-
---- done ---
-
-
-
 2. test 1.0.9 and 1.0.12(latest tag) frontend again
 
 
+2. use /<learning_language>/<native_language>/<letter>/<word>
+2.  
+test_vocabularies -- the table we keep it simple, just word, langauge, is_toefl, is_ielts for now, we can alway extend
+user_preferences -- we also just use toefl_enabled, ielts_enabled for easy extensibility;
+get_daily_test_words -- if user enabled any test, we add 10 (make it configurable at compile tile, by dev not users), the 10 should be random, and not part of users already saved words;
 
+
+--- done ---
+1. code clean up
+2. beckward compatible
+1. generate words, no audio no image 
+
+
+in the usage page: User Actions Analytics (Last 7 Days) should show unique user count and total action count (can from the same user) graph for each action, not just a list;
 
 2. create better metrics for review

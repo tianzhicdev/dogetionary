@@ -310,5 +310,55 @@ class AnalyticsService:
             logger.error(f"Error getting time-based analytics: {str(e)}")
             return []
 
+    def get_monthly_daily_metrics(self, days: int = 30):
+        """
+        Get monthly daily metrics for unique users, searches, and reviews
+        Returns data for monthly line chart showing daily unique active users, searches, and reviews
+        """
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                WITH date_series AS (
+                    SELECT generate_series(
+                        CURRENT_DATE - INTERVAL '%s days',
+                        CURRENT_DATE,
+                        '1 day'::interval
+                    )::date as metric_date
+                ),
+                daily_metrics AS (
+                    SELECT
+                        DATE(created_at) as metric_date,
+                        -- Daily unique active users (any action)
+                        COUNT(DISTINCT user_id) as unique_active_users,
+                        -- Daily unique users who searched (dictionary actions)
+                        COUNT(DISTINCT CASE WHEN action LIKE 'dictionary%%' THEN user_id END) as unique_search_users,
+                        -- Daily unique users who reviewed
+                        COUNT(DISTINCT CASE WHEN action LIKE 'review%%' THEN user_id END) as unique_review_users
+                    FROM user_actions
+                    WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
+                    GROUP BY DATE(created_at)
+                )
+                SELECT
+                    ds.metric_date,
+                    COALESCE(dm.unique_active_users, 0) as unique_active_users,
+                    COALESCE(dm.unique_search_users, 0) as unique_search_users,
+                    COALESCE(dm.unique_review_users, 0) as unique_review_users
+                FROM date_series ds
+                LEFT JOIN daily_metrics dm ON ds.metric_date = dm.metric_date
+                ORDER BY ds.metric_date ASC
+            """, (days, days))
+
+            results = cur.fetchall()
+            cur.close()
+            conn.close()
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error getting monthly daily metrics: {str(e)}")
+            return []
+
 # Global instance
 analytics_service = AnalyticsService()

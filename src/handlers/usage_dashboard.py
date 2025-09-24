@@ -110,6 +110,7 @@ def get_usage_dashboard():
         action_summary = analytics_service.get_action_summary(7)
         daily_action_counts = analytics_service.get_daily_action_counts(7)
         time_analytics = analytics_service.get_time_based_analytics(7)
+        monthly_metrics = analytics_service.get_monthly_daily_metrics(30)
         available_users = analytics_service.get_all_users()
 
         # Get selected user actions if user_id provided
@@ -119,7 +120,7 @@ def get_usage_dashboard():
             user_actions = analytics_service.get_user_actions(selected_user_id)
 
         # Generate HTML
-        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, available_users, selected_user_id, user_actions)
+        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, monthly_metrics, available_users, selected_user_id, user_actions)
 
         return Response(html, mimetype='text/html')
 
@@ -144,7 +145,7 @@ def convert_to_ny_time(timestamp):
         return ny_time
     return None
 
-def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, available_users, selected_user_id, user_actions):
+def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, monthly_metrics, available_users, selected_user_id, user_actions):
     """Generate HTML dashboard with tables"""
 
     # Get current time in NY
@@ -440,6 +441,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                 </div>
             </div>
         </div>
+
     """
 
     # Prepare data for time-based charts
@@ -508,62 +510,76 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
     # Generate JavaScript for charts
     html += f"""
         <script>
-        // Total Actions Time Series Chart
-        const totalCtx = document.getElementById('totalActionsChart').getContext('2d');
-        new Chart(totalCtx, {{
+        console.log('Chart.js version:', Chart.version);
+        console.log('Chart.js available:', typeof Chart);
+
+        // Simple test chart first
+        const testCtx = document.getElementById('totalActionsChart').getContext('2d');
+        console.log('Canvas context obtained:', testCtx);
+
+        // Create a simple test chart with hardcoded data
+        const testChart = new Chart(testCtx, {{
             type: 'line',
             data: {{
-                labels: {json.dumps(sorted_dates)},
-                datasets: {json.dumps(total_datasets)}
+                labels: ['Day 1', 'Day 2', 'Day 3'],
+                datasets: [{{
+                    label: 'Test Data',
+                    data: [1, 2, 3],
+                    borderColor: '#FF6384',
+                    backgroundColor: '#FF638420'
+                }}]
             }},
             options: {{
                 responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    title: {{
-                        display: true,
-                        text: 'Total Action Count Over Time (Last 7 Days)'
-                    }},
-                    legend: {{
-                        position: 'right',
-                        labels: {{
-                            boxWidth: 12,
-                            fontSize: 10
-                        }}
-                    }}
-                }},
-                scales: {{
-                    y: {{
-                        beginAtZero: true,
-                        title: {{
-                            display: true,
-                            text: 'Count'
-                        }}
-                    }},
-                    x: {{
-                        title: {{
-                            display: true,
-                            text: 'Date'
-                        }},
-                        ticks: {{
-                            maxRotation: 45
-                        }}
-                    }}
-                }},
-                interaction: {{
-                    mode: 'index',
-                    intersect: false
-                }}
+                maintainAspectRatio: false
             }}
         }});
 
-        // Unique Users Time Series Chart
+        console.log('Test chart created:', testChart);
+
+        // Then try the real chart
+        /*
+        // Total Actions Time Series Chart
+        const totalCtx = document.getElementById('totalActionsChart').getContext('2d');
+        console.log('Total chart dates:', {json.dumps(sorted_dates)});
+        console.log('Total chart datasets:', {json.dumps(total_datasets)});
+        */
+
+        // Unique Users Chart commented out for testing
+        /*
         const uniqueCtx = document.getElementById('uniqueUsersChart').getContext('2d');
-        new Chart(uniqueCtx, {{
+        console.log('Creating unique users chart...');
+        */
+
+        // Old monthly data preparation removed to avoid conflicts
             type: 'line',
             data: {{
-                labels: {json.dumps(sorted_dates)},
-                datasets: {json.dumps(unique_datasets)}
+                labels: monthlyDates,
+                datasets: [{{
+                    label: 'Daily Unique Active Users',
+                    data: activeUsersData,
+                    borderColor: '#2196F3',
+                    backgroundColor: '#2196F320',
+                    fill: false,
+                    tension: 0.1,
+                    borderWidth: 2
+                }}, {{
+                    label: 'Daily Unique Search Users',
+                    data: searchUsersData,
+                    borderColor: '#4CAF50',
+                    backgroundColor: '#4CAF5020',
+                    fill: false,
+                    tension: 0.1,
+                    borderWidth: 2
+                }}, {{
+                    label: 'Daily Unique Review Users',
+                    data: reviewUsersData,
+                    borderColor: '#FF9800',
+                    backgroundColor: '#FF980020',
+                    fill: false,
+                    tension: 0.1,
+                    borderWidth: 2
+                }}]
             }},
             options: {{
                 responsive: true,
@@ -571,14 +587,10 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                 plugins: {{
                     title: {{
                         display: true,
-                        text: 'Unique Users Over Time (Last 7 Days)'
+                        text: 'Daily Unique User Activity - Last 30 Days'
                     }},
                     legend: {{
-                        position: 'right',
-                        labels: {{
-                            boxWidth: 12,
-                            fontSize: 10
-                        }}
+                        position: 'top'
                     }}
                 }},
                 scales: {{
@@ -595,17 +607,135 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                             text: 'Date'
                         }},
                         ticks: {{
-                            maxRotation: 45
+                            maxRotation: 45,
+                            maxTicksLimit: 15
                         }}
                     }}
                 }},
                 interaction: {{
                     mode: 'index',
                     intersect: false
+                }},
+                elements: {{
+                    point: {{
+                        radius: 3,
+                        hoverRadius: 6
+                    }}
                 }}
             }}
         }});
+
+        // Old monthly chart data processing removed
+
+    html += f"""
+
+        // Simple monthly test chart
+        const monthlyCtx = document.getElementById('monthlyMetricsChart').getContext('2d');
+        const simpleMonthlyChart = new Chart(monthlyCtx, {{
+            type: 'line',
+            data: {{
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{{
+                    label: 'Test Users',
+                    data: [5, 10, 8, 12],
+                    borderColor: '#2196F3',
+                    backgroundColor: '#2196F320'
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false
+            }}
+        }});
+        console.log('Simple monthly chart created:', simpleMonthlyChart);
+
+        /*
+        console.log('Monthly chart dates:', monthlyDates);
+        console.log('Monthly active users:', activeUsersData);
+        console.log('Monthly search users:', searchUsersData);
+        console.log('Monthly review users:', reviewUsersData);
+        new Chart(monthlyCtx, {{
+            type: 'line',
+            data: {{
+                labels: monthlyDates,
+                datasets: [{{
+                    label: 'Daily Unique Active Users',
+                    data: activeUsersData,
+                    borderColor: '#2196F3',
+                    backgroundColor: '#2196F320',
+                    fill: false,
+                    tension: 0.1,
+                    borderWidth: 2
+                }}, {{
+                    label: 'Daily Unique Search Users',
+                    data: searchUsersData,
+                    borderColor: '#4CAF50',
+                    backgroundColor: '#4CAF5020',
+                    fill: false,
+                    tension: 0.1,
+                    borderWidth: 2
+                }}, {{
+                    label: 'Daily Unique Review Users',
+                    data: reviewUsersData,
+                    borderColor: '#FF9800',
+                    backgroundColor: '#FF980020',
+                    fill: false,
+                    tension: 0.1,
+                    borderWidth: 2
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    title: {{
+                        display: true,
+                        text: 'Daily Unique User Activity - Last 30 Days'
+                    }},
+                    legend: {{
+                        position: 'top'
+                    }}
+                }},
+                scales: {{
+                    y: {{
+                        beginAtZero: true,
+                        title: {{
+                            display: true,
+                            text: 'Unique Users'
+                        }}
+                    }},
+                    x: {{
+                        title: {{
+                            display: true,
+                            text: 'Date'
+                        }},
+                        ticks: {{
+                            maxRotation: 45,
+                            maxTicksLimit: 15
+                        }}
+                    }}
+                }},
+                interaction: {{
+                    mode: 'index',
+                    intersect: false
+                }},
+                elements: {{
+                    point: {{
+                        radius: 3,
+                        hoverRadius: 6
+                    }}
+                }}
+            }}
+        }});
+        */
         </script>
+
+        <div class="section">
+            <h2>📈 Monthly Daily User Activity (Last 30 Days)</h2>
+            <div class="chart-container" style="height: 500px;">
+                <canvas id="monthlyMetricsChart"></canvas>
+            </div>
+        </div>
     """
 
     html += """

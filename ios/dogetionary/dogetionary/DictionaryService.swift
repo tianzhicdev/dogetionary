@@ -1490,7 +1490,7 @@ class DictionaryService: ObservableObject {
         performNetworkRequest(url: url, responseType: TestSettingsResponse.self, completion: completion)
     }
 
-    func updateTestSettings(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
+    func updateTestSettings(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/api/test-prep/settings") else {
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -1499,7 +1499,9 @@ class DictionaryService: ObservableObject {
         let requestBody = TestSettingsUpdateRequest(
             user_id: userID,
             toefl_enabled: toeflEnabled,
-            ielts_enabled: ieltsEnabled
+            ielts_enabled: ieltsEnabled,
+            toefl_target_days: toeflTargetDays,
+            ielts_target_days: ieltsTargetDays
         )
 
         guard let body = try? JSONEncoder().encode(requestBody) else {

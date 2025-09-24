@@ -153,9 +153,11 @@ struct SavedWord: Identifiable, Codable {
     let interval_days: Int
     let next_review_date: String?
     let last_reviewed_at: String?
+    let is_toefl: Bool?
+    let is_ielts: Bool?
 
     private enum CodingKeys: String, CodingKey {
-        case id, word, learning_language, native_language, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at
+        case id, word, learning_language, native_language, created_at, review_count, ease_factor, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts
     }
     
     init(from decoder: Decoder) throws {
@@ -170,11 +172,13 @@ struct SavedWord: Identifiable, Codable {
         interval_days = try container.decodeIfPresent(Int.self, forKey: .interval_days) ?? 1
         next_review_date = try container.decodeIfPresent(String.self, forKey: .next_review_date)
         last_reviewed_at = try container.decodeIfPresent(String.self, forKey: .last_reviewed_at)
+        is_toefl = try container.decodeIfPresent(Bool.self, forKey: .is_toefl)
+        is_ielts = try container.decodeIfPresent(Bool.self, forKey: .is_ielts)
         metadata = nil // We'll skip decoding metadata for now
     }
     
     // Convenience initializer for testing
-    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, ease_factor: Double, interval_days: Int, next_review_date: String?, last_reviewed_at: String?) {
+    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, ease_factor: Double, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil) {
         self.id = id
         self.word = word
         self.learning_language = learning_language
@@ -186,6 +190,8 @@ struct SavedWord: Identifiable, Codable {
         self.interval_days = interval_days
         self.next_review_date = next_review_date
         self.last_reviewed_at = last_reviewed_at
+        self.is_toefl = is_toefl
+        self.is_ielts = is_ielts
     }
 }
 
@@ -376,6 +382,8 @@ struct TestSettings: Codable {
     let last_test_words_added: String?
     let learning_language: String
     let native_language: String
+    let toefl_target_days: Int
+    let ielts_target_days: Int
 }
 
 struct TestProgress: Codable {
@@ -398,6 +406,8 @@ struct TestSettingsUpdateRequest: Codable {
     let user_id: String
     let toefl_enabled: Bool?
     let ielts_enabled: Bool?
+    let toefl_target_days: Int?
+    let ielts_target_days: Int?
 }
 
 struct TestSettingsUpdateResponse: Codable {
