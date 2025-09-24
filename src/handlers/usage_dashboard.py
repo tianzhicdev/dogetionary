@@ -109,6 +109,7 @@ def get_usage_dashboard():
         # Get analytics data for graphs
         action_summary = analytics_service.get_action_summary(7)
         daily_action_counts = analytics_service.get_daily_action_counts(7)
+        time_analytics = analytics_service.get_time_based_analytics(7)
         available_users = analytics_service.get_all_users()
 
         # Get selected user actions if user_id provided
@@ -118,7 +119,7 @@ def get_usage_dashboard():
             user_actions = analytics_service.get_user_actions(selected_user_id)
 
         # Generate HTML
-        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, available_users, selected_user_id, user_actions)
+        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, available_users, selected_user_id, user_actions)
 
         return Response(html, mimetype='text/html')
 
@@ -143,7 +144,7 @@ def convert_to_ny_time(timestamp):
         return ny_time
     return None
 
-def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, available_users, selected_user_id, user_actions):
+def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, available_users, selected_user_id, user_actions):
     """Generate HTML dashboard with tables"""
 
     # Get current time in NY
@@ -441,94 +442,169 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
         </div>
     """
 
-    # Prepare data for charts
-    actions = []
-    total_counts = []
-    unique_users = []
+    # Prepare data for time-based charts
+    from collections import defaultdict
+    import json
+
+    # Group time analytics data by action type
+    actions_by_date = defaultdict(lambda: defaultdict(lambda: {'total_count': 0, 'unique_users': 0}))
+    all_dates = set()
+    all_actions = set()
+
+
+    for row in time_analytics:
+        date_str = row['action_date'].strftime('%Y-%m-%d')
+        action = row['action']
+        actions_by_date[action][date_str] = {
+            'total_count': row['total_count'],
+            'unique_users': row['unique_users']
+        }
+        all_dates.add(date_str)
+        all_actions.add(action)
+
+    # Convert to sorted lists
+    sorted_dates = sorted(list(all_dates))
+    sorted_actions = sorted(list(all_actions))
+
+    # Prepare datasets for charts
     colors = [
         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+        '#FF9F40', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981',
+        '#6366F1', '#EC4899', '#F97316', '#84CC16', '#06B6D4'
     ]
 
-    for i, row in enumerate(action_summary):
-        actions.append(row['action'].replace('_', ' ').title())
-        total_counts.append(row['total_count'])
-        unique_users.append(row['unique_users'])
+    total_datasets = []
+    unique_datasets = []
+
+    for i, action in enumerate(sorted_actions[:15]):  # Limit to 15 actions to keep chart readable
+        total_data = []
+        unique_data = []
+
+        for date in sorted_dates:
+            total_data.append(actions_by_date[action][date]['total_count'])
+            unique_data.append(actions_by_date[action][date]['unique_users'])
+
+        action_label = action.replace('_', ' ').title()
+        color = colors[i % len(colors)]
+
+        total_datasets.append({
+            'label': f'{action_label} (Total)',
+            'data': total_data,
+            'borderColor': color,
+            'backgroundColor': color + '20',
+            'fill': False,
+            'tension': 0.1
+        })
+
+        unique_datasets.append({
+            'label': f'{action_label} (Unique)',
+            'data': unique_data,
+            'borderColor': color,
+            'backgroundColor': color + '20',
+            'fill': False,
+            'tension': 0.1
+        })
 
     # Generate JavaScript for charts
-    html += """
+    html += f"""
         <script>
-        // Total Actions Chart
+        // Total Actions Time Series Chart
         const totalCtx = document.getElementById('totalActionsChart').getContext('2d');
-        new Chart(totalCtx, {
-            type: 'bar',
-            data: {
-                labels: """ + str(actions[:10]) + """,
-                datasets: [{
-                    label: 'Total Actions',
-                    data: """ + str(total_counts[:10]) + """,
-                    backgroundColor: '""" + colors[0] + """',
-                    borderColor: '""" + colors[0] + """',
-                    borderWidth: 1
-                }]
-            },
-            options: {
+        new Chart(totalCtx, {{
+            type: 'line',
+            data: {{
+                labels: {json.dumps(sorted_dates)},
+                datasets: {json.dumps(total_datasets)}
+            }},
+            options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    title: {
+                plugins: {{
+                    title: {{
                         display: true,
-                        text: 'Total Action Count by Type'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    },
-                    x: {
-                        ticks: {
+                        text: 'Total Action Count Over Time (Last 7 Days)'
+                    }},
+                    legend: {{
+                        position: 'right',
+                        labels: {{
+                            boxWidth: 12,
+                            fontSize: 10
+                        }}
+                    }}
+                }},
+                scales: {{
+                    y: {{
+                        beginAtZero: true,
+                        title: {{
+                            display: true,
+                            text: 'Count'
+                        }}
+                    }},
+                    x: {{
+                        title: {{
+                            display: true,
+                            text: 'Date'
+                        }},
+                        ticks: {{
                             maxRotation: 45
-                        }
-                    }
-                }
-            }
-        });
+                        }}
+                    }}
+                }},
+                interaction: {{
+                    mode: 'index',
+                    intersect: false
+                }}
+            }}
+        }});
 
-        // Unique Users Chart
+        // Unique Users Time Series Chart
         const uniqueCtx = document.getElementById('uniqueUsersChart').getContext('2d');
-        new Chart(uniqueCtx, {
-            type: 'bar',
-            data: {
-                labels: """ + str(actions[:10]) + """,
-                datasets: [{
-                    label: 'Unique Users',
-                    data: """ + str(unique_users[:10]) + """,
-                    backgroundColor: '""" + colors[1] + """',
-                    borderColor: '""" + colors[1] + """',
-                    borderWidth: 1
-                }]
-            },
-            options: {
+        new Chart(uniqueCtx, {{
+            type: 'line',
+            data: {{
+                labels: {json.dumps(sorted_dates)},
+                datasets: {json.dumps(unique_datasets)}
+            }},
+            options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    title: {
+                plugins: {{
+                    title: {{
                         display: true,
-                        text: 'Unique Users by Action Type'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    },
-                    x: {
-                        ticks: {
+                        text: 'Unique Users Over Time (Last 7 Days)'
+                    }},
+                    legend: {{
+                        position: 'right',
+                        labels: {{
+                            boxWidth: 12,
+                            fontSize: 10
+                        }}
+                    }}
+                }},
+                scales: {{
+                    y: {{
+                        beginAtZero: true,
+                        title: {{
+                            display: true,
+                            text: 'Unique Users'
+                        }}
+                    }},
+                    x: {{
+                        title: {{
+                            display: true,
+                            text: 'Date'
+                        }},
+                        ticks: {{
                             maxRotation: 45
-                        }
-                    }
-                }
-            }
-        });
+                        }}
+                    }}
+                }},
+                interaction: {{
+                    mode: 'index',
+                    intersect: false
+                }}
+            }}
+        }});
         </script>
     """
 

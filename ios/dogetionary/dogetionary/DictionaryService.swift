@@ -1479,6 +1479,53 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    // MARK: - Test Preparation Methods
+
+    func getTestSettings(userID: String, completion: @escaping (Result<TestSettingsResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/api/test-prep/settings?user_id=\(userID)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        performNetworkRequest(url: url, responseType: TestSettingsResponse.self, completion: completion)
+    }
+
+    func updateTestSettings(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/api/test-prep/settings") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        let requestBody = TestSettingsUpdateRequest(
+            user_id: userID,
+            toefl_enabled: toeflEnabled,
+            ielts_enabled: ieltsEnabled
+        )
+
+        guard let body = try? JSONEncoder().encode(requestBody) else {
+            logger.error("Failed to encode test settings update request")
+            completion(.failure(DictionaryError.decodingError(NSError(domain: "EncodingError", code: 0))))
+            return
+        }
+
+        performNetworkRequest(
+            url: url,
+            method: "PUT",
+            body: body,
+            responseType: TestSettingsUpdateResponse.self,
+            completion: completion
+        )
+    }
+
+    func getTestVocabularyStats(language: String = "en", completion: @escaping (Result<TestVocabularyStatsResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/api/test-prep/stats?language=\(language)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        performNetworkRequest(url: url, responseType: TestVocabularyStatsResponse.self, completion: completion)
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {

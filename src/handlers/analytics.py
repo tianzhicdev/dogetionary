@@ -57,7 +57,7 @@ def get_analytics_data():
     try:
         days = int(request.args.get('days', 7))
         user_id = request.args.get('user_id')
-        format_type = request.args.get('format', 'detailed')  # detailed or summary
+        format_type = request.args.get('format', 'detailed')  # detailed, summary, or timeseries
 
         response = {}
 
@@ -86,6 +86,23 @@ def get_analytics_data():
                     'total_count': row['total_count'],
                     'unique_users': row['unique_users']
                 })
+        elif format_type == 'timeseries':
+            # Time-based view for line charts
+            try:
+                time_analytics = analytics_service.get_time_based_analytics(days)
+                response['time_analytics'] = []
+
+                for row in time_analytics:
+                    response['time_analytics'].append({
+                        'date': row['action_date'].isoformat(),
+                        'action': row['action'],
+                        'total_count': row['total_count'],
+                        'unique_users': row['unique_users']
+                    })
+                response['debug'] = f"Processed {len(time_analytics)} time_analytics rows"
+            except Exception as e:
+                response['error'] = f"Time analytics error: {str(e)}"
+                response['time_analytics'] = []
         else:
             # Detailed view with daily breakdown
             action_analytics = analytics_service.get_action_analytics(days)

@@ -17,6 +17,8 @@ class UserManager: ObservableObject {
     private let userNameKey = "DogetionaryUserName"
     private let userMottoKey = "DogetionaryUserMotto"
     private let hasRequestedAppRatingKey = "DogetionaryHasRequestedAppRating"
+    private let toeflEnabledKey = "DogetionaryToeflEnabled"
+    private let ieltsEnabledKey = "DogetionaryIeltsEnabled"
     
     private var isSyncingFromServer = false
     
@@ -53,6 +55,22 @@ class UserManager: ObservableObject {
             }
         }
     }
+    @Published var toeflEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(toeflEnabled, forKey: toeflEnabledKey)
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+            }
+        }
+    }
+    @Published var ieltsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(ieltsEnabled, forKey: ieltsEnabledKey)
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+            }
+        }
+    }
     
     private init() {
         // Try to load existing user ID from UserDefaults
@@ -74,6 +92,10 @@ class UserManager: ObservableObject {
         // Load user profile or set defaults
         self.userName = UserDefaults.standard.string(forKey: userNameKey) ?? ""
         self.userMotto = UserDefaults.standard.string(forKey: userMottoKey) ?? ""
+
+        // Load test preparation settings or set defaults
+        self.toeflEnabled = UserDefaults.standard.bool(forKey: toeflEnabledKey)
+        self.ieltsEnabled = UserDefaults.standard.bool(forKey: ieltsEnabledKey)
         
         logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage)")
     }
@@ -100,7 +122,55 @@ class UserManager: ObservableObject {
             }
         }
     }
-    
+
+    private func syncTestSettingsToServer() {
+        logger.info("Syncing test settings to server - TOEFL: \(self.toeflEnabled), IELTS: \(self.ieltsEnabled)")
+
+        DictionaryService.shared.updateTestSettings(
+            userID: self.userID,
+            toeflEnabled: self.toeflEnabled,
+            ieltsEnabled: self.ieltsEnabled
+        ) { result in
+            switch result {
+            case .success(_):
+                self.logger.info("Successfully synced test settings to server")
+            case .failure(let error):
+                self.logger.error("Failed to sync test settings to server: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func syncTestSettingsFromServer() {
+        logger.info("Syncing test settings from server for user: \(self.userID)")
+
+        DictionaryService.shared.getTestSettings(userID: self.userID) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self.logger.info("Successfully fetched test settings from server: toefl=\(response.settings.toefl_enabled), ielts=\(response.settings.ielts_enabled)")
+
+                    // Update local settings if they're different from server
+                    if self.toeflEnabled != response.settings.toefl_enabled ||
+                       self.ieltsEnabled != response.settings.ielts_enabled {
+                        self.logger.info("Updating local test settings to match server")
+
+                        // Set flag to prevent sync loop
+                        self.isSyncingFromServer = true
+
+                        // Update published properties
+                        self.toeflEnabled = response.settings.toefl_enabled
+                        self.ieltsEnabled = response.settings.ielts_enabled
+
+                        // Reset flag
+                        self.isSyncingFromServer = false
+                    }
+                case .failure(let error):
+                    self.logger.error("Failed to fetch test settings from server: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     func syncPreferencesFromServer() {
         logger.info("Syncing preferences from server for user: \(self.userID)")
         

@@ -368,6 +368,57 @@ struct AllMarker: Codable {
     let success: Bool?
 }
 
+// MARK: - Test Preparation Models
+
+struct TestSettings: Codable {
+    let toefl_enabled: Bool
+    let ielts_enabled: Bool
+    let last_test_words_added: String?
+    let learning_language: String
+    let native_language: String
+}
+
+struct TestProgress: Codable {
+    let saved: Int
+    let total: Int
+    let percentage: Double
+}
+
+struct TestSettingsResponse: Codable {
+    let settings: TestSettings
+    let progress: TestProgressData
+}
+
+struct TestProgressData: Codable {
+    let toefl: TestProgress?
+    let ielts: TestProgress?
+}
+
+struct TestSettingsUpdateRequest: Codable {
+    let user_id: String
+    let toefl_enabled: Bool?
+    let ielts_enabled: Bool?
+}
+
+struct TestSettingsUpdateResponse: Codable {
+    let success: Bool
+    let settings: TestSettings
+}
+
+struct TestVocabularyStatsResponse: Codable {
+    let language: String
+    let statistics: TestVocabularyStatistics
+}
+
+struct TestVocabularyStatistics: Codable {
+    let total_unique_words: Int
+    let toefl_words: Int
+    let ielts_words: Int
+    let words_in_both: Int
+    let toefl_exclusive: Int
+    let ielts_exclusive: Int
+}
+
 // MARK: - V2 API Models for Word Validation
 
 struct WordDefinitionV2Response: Codable {

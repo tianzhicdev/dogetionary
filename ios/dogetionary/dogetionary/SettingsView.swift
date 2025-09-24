@@ -19,6 +19,9 @@ struct SettingsView: View {
     @State private var showFeedbackAlert = false
     @State private var feedbackAlertMessage = ""
     @ObservedObject private var userManager = UserManager.shared
+    @State private var testProgress: TestProgressData?
+    @State private var vocabularyStats: TestVocabularyStatistics?
+    @State private var isLoadingTestStats = false
     
     private let availableLanguages = [
         ("af", "Afrikaans"),
@@ -178,6 +181,126 @@ struct SettingsView: View {
                     }
                 }
 
+                Section(header: Text("Test Preparation")) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Enable daily vocabulary practice for standardized tests")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        VStack(spacing: 12) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text("TOEFL Preparation")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Text("Test of English as a Foreign Language")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Toggle("", isOn: $userManager.toeflEnabled)
+                                    .labelsHidden()
+                                    .onChange(of: userManager.toeflEnabled) { _, newValue in
+                                        // Track test preparation changes
+                                        AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
+                                            "test_type": "toefl",
+                                            "enabled": newValue
+                                        ])
+                                    }
+                            }
+
+                            if let progress = testProgress?.toefl, userManager.toeflEnabled {
+                                HStack {
+                                    Text("Progress:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
+                            }
+
+                            Divider()
+
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text("IELTS Preparation")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Text("International English Language Testing System")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Toggle("", isOn: $userManager.ieltsEnabled)
+                                    .labelsHidden()
+                                    .onChange(of: userManager.ieltsEnabled) { _, newValue in
+                                        // Track test preparation changes
+                                        AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
+                                            "test_type": "ielts",
+                                            "enabled": newValue
+                                        ])
+                                    }
+                            }
+
+                            if let progress = testProgress?.ielts, userManager.ieltsEnabled {
+                                HStack {
+                                    Text("Progress:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+
+                        if userManager.toeflEnabled || userManager.ieltsEnabled {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Daily Words")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("10 test vocabulary words are automatically added to your review list daily")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        if let stats = vocabularyStats {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Vocabulary Database")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                HStack {
+                                    Text("TOEFL: \(stats.toefl_words) words")
+                                        .font(.caption2)
+                                        .foregroundColor(.blue)
+                                    Spacer()
+                                    Text("IELTS: \(stats.ielts_words) words")
+                                        .font(.caption2)
+                                        .foregroundColor(.green)
+                                }
+
+                                Text("Shared: \(stats.words_in_both) words")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        if isLoadingTestStats {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Loading test statistics...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
 
                 Section(header: Text("Feedback")) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -300,6 +423,9 @@ struct SettingsView: View {
         } message: {
             Text(feedbackAlertMessage)
         }
+        .onAppear {
+            loadTestStatistics()
+        }
     }
     
     private var currentEnvironment: String {
@@ -411,6 +537,35 @@ struct SettingsView: View {
                     }
                 case .failure(let error):
                     connectionTestResult = "❌ Connection failed: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    private func loadTestStatistics() {
+        isLoadingTestStats = true
+
+        // Load test settings and progress
+        DictionaryService.shared.getTestSettings(userID: userManager.userID) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self.testProgress = response.progress
+                case .failure(let error):
+                    print("Failed to load test settings: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // Load vocabulary statistics
+        DictionaryService.shared.getTestVocabularyStats() { result in
+            DispatchQueue.main.async {
+                self.isLoadingTestStats = false
+                switch result {
+                case .success(let response):
+                    self.vocabularyStats = response.statistics
+                case .failure(let error):
+                    print("Failed to load vocabulary stats: \(error.localizedDescription)")
                 }
             }
         }

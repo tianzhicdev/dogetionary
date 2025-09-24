@@ -117,6 +117,7 @@ enum AnalyticsAction: String, CaseIterable {
     case profileMottoUpdate = "profile_motto_update"
     case profileLanguageLearning = "profile_language_learning"
     case profileLanguageNative = "profile_language_native"
+    case profileTestPrep = "profile_test_prep"
 
     // Settings actions
     case settingsNotificationEnable = "settings_notification_enable"
