@@ -33,8 +33,8 @@ CREATE OR REPLACE FUNCTION get_random_test_words(
     p_limit INTEGER DEFAULT 10
 )
 RETURNS TABLE (
-    word VARCHAR,
-    language VARCHAR
+    test_word VARCHAR,
+    test_language VARCHAR
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -49,7 +49,7 @@ BEGIN
         WHERE sw.user_id = p_user_id
         AND sw.learning_language = p_learning_language
     )
-    SELECT DISTINCT tv.word, tv.language
+    SELECT DISTINCT tv.word AS test_word, tv.language AS test_language
     FROM test_vocabularies tv
     CROSS JOIN user_settings us
     WHERE tv.language = p_learning_language
@@ -146,7 +146,7 @@ BEGIN
         )
     LOOP
         INSERT INTO saved_words (user_id, word, learning_language, native_language)
-        VALUES (p_user_id, v_word.word, p_learning_language, p_native_language)
+        VALUES (p_user_id, v_word.test_word, p_learning_language, p_native_language)
         ON CONFLICT DO NOTHING;
 
         v_words_added := v_words_added + 1;
