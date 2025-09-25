@@ -253,7 +253,7 @@ def add_daily_test_words():
                     (%s = TRUE AND tv.is_toefl = TRUE) OR
                     (%s = TRUE AND tv.is_ielts = TRUE)
                 )
-                AND tv.word NOT IN (SELECT word FROM existing_words)
+                AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
                 ORDER BY RANDOM()
                 LIMIT %s
             """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled, DAILY_TEST_WORDS))
