@@ -248,11 +248,11 @@ def add_daily_test_words_for_all_users():
 
         for user in users:
             try:
-                user_id = user[0]
-                learning_language = user[1]
-                native_language = user[2]
-                toefl_enabled = user[3]
-                ielts_enabled = user[4]
+                user_id = user['user_id']
+                learning_language = user['learning_language']
+                native_language = user['native_language']
+                toefl_enabled = user['toefl_enabled']
+                ielts_enabled = user['ielts_enabled']
 
                 # Get random test words not already saved
                 cur.execute("""
@@ -301,7 +301,7 @@ def add_daily_test_words_for_all_users():
                     app.logger.info(f"Added {words_added} words for user {user_id}")
 
             except Exception as e:
-                app.logger.error(f"Failed to add words for user {user[0]}: {e}")
+                app.logger.error(f"Failed to add words for user {user['user_id']}: {e}")
                 conn.rollback()
 
         cur.close()
