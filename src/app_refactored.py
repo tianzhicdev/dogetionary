@@ -248,20 +248,60 @@ def add_daily_test_words_for_all_users():
 
         for user in users:
             try:
-                # Use the database function to add words
-                cur.execute("SELECT add_daily_test_words(%s, %s, %s)",
-                          (user['user_id'], user['learning_language'], user['native_language']))
-                result = cur.fetchone()
-                words_added = result['add_daily_test_words'] if result else 0
-                conn.commit()
+                user_id = user[0]
+                learning_language = user[1]
+                native_language = user[2]
+                toefl_enabled = user[3]
+                ielts_enabled = user[4]
 
+                # Get random test words not already saved
+                cur.execute("""
+                    WITH existing_words AS (
+                        SELECT word
+                        FROM saved_words
+                        WHERE user_id = %s
+                        AND learning_language = %s
+                    )
+                    SELECT DISTINCT tv.word
+                    FROM test_vocabularies tv
+                    WHERE tv.language = %s
+                    AND (
+                        (%s = TRUE AND tv.is_toefl = TRUE) OR
+                        (%s = TRUE AND tv.is_ielts = TRUE)
+                    )
+                    AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
+                    ORDER BY RANDOM()
+                    LIMIT 10
+                """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled))
+
+                words_to_add = cur.fetchall()
+                words_added = 0
+
+                # Add words to saved_words
+                for (word,) in words_to_add:
+                    cur.execute("""
+                        INSERT INTO saved_words (user_id, word, learning_language, native_language)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT DO NOTHING
+                    """, (user_id, word, learning_language, native_language))
+                    if cur.rowcount > 0:
+                        words_added += 1
+
+                # Update last_test_words_added date
                 if words_added > 0:
+                    cur.execute("""
+                        UPDATE user_preferences
+                        SET last_test_words_added = CURRENT_DATE
+                        WHERE user_id = %s
+                    """, (user_id,))
+
+                    conn.commit()
                     total_users += 1
                     total_words += words_added
-                    app.logger.info(f"Added {words_added} words for user {user['user_id']}")
+                    app.logger.info(f"Added {words_added} words for user {user_id}")
 
             except Exception as e:
-                app.logger.error(f"Failed to add words for user {user['user_id']}: {e}")
+                app.logger.error(f"Failed to add words for user {user[0]}: {e}")
                 conn.rollback()
 
         cur.close()
