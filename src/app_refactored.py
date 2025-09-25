@@ -261,15 +261,18 @@ def add_daily_test_words_for_all_users():
                         FROM saved_words
                         WHERE user_id = %s
                         AND learning_language = %s
+                    ),
+                    available_words AS (
+                        SELECT DISTINCT tv.word
+                        FROM test_vocabularies tv
+                        WHERE tv.language = %s
+                        AND (
+                            (%s = TRUE AND tv.is_toefl = TRUE) OR
+                            (%s = TRUE AND tv.is_ielts = TRUE)
+                        )
+                        AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
                     )
-                    SELECT DISTINCT tv.word
-                    FROM test_vocabularies tv
-                    WHERE tv.language = %s
-                    AND (
-                        (%s = TRUE AND tv.is_toefl = TRUE) OR
-                        (%s = TRUE AND tv.is_ielts = TRUE)
-                    )
-                    AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
+                    SELECT word FROM available_words
                     ORDER BY RANDOM()
                     LIMIT 10
                 """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled))
@@ -278,7 +281,8 @@ def add_daily_test_words_for_all_users():
                 words_added = 0
 
                 # Add words to saved_words
-                for (word,) in words_to_add:
+                for word_row in words_to_add:
+                    word = word_row['word']
                     cur.execute("""
                         INSERT INTO saved_words (user_id, word, learning_language, native_language)
                         VALUES (%s, %s, %s, %s)
