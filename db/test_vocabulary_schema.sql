@@ -57,7 +57,7 @@ BEGIN
         (us.toefl_enabled = TRUE AND tv.is_toefl = TRUE) OR
         (us.ielts_enabled = TRUE AND tv.is_ielts = TRUE)
     )
-    AND tv.word NOT IN (SELECT word FROM existing_words)
+    AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
     ORDER BY RANDOM()
     LIMIT p_limit;
 END;
