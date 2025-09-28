@@ -1,52 +1,144 @@
 # Dogetionary Development TODO List
-# This file contains tasks to be executed by exec_todo.sh with Claude Code
+# Claude Code Autonomous Execution Format
 #
-# Format:
-# [TASKS] - List numbered tasks
-# [TESTING] - List testing criteria/commands
+# Each task follows the pattern: implement() -> test() -> eval_result()
+# Only when eval_result() returns true do we move to the next task
 #
 # Usage: ./exec_todo.sh [task_number]
-# Example: ./exec_todo.sh 1    # Execute only task 1
-# Example: ./exec_todo.sh      # Execute all tasks
 
-[TASKS]
-1. reorg app_refactored.py: move functions out to other files;
-2. categorize endpoints to diff categories: ios, web, admin, test and etc
-3. when the dockers are running. the logs should be visible from outside, make a ./logs dir and keep the logs there, set max size to be 1gb for each container; add the logs to .gitignore
+[TASK_1]
+IMPLEMENT_INSTRUCTION: |
+  Reorganize app_refactored.py by moving functions to appropriate handler files.
 
+  GOALS:
+  - Move daily test vocabulary functions to handlers/test_vocabulary.py
+  - Move logging setup to middleware/logging.py
+  - Move worker functions to workers/ directory
+  - Keep only route registrations and main app setup in app_refactored.py
+  - Ensure all imports are properly updated
+  - Maintain backward compatibility
 
-[TESTING]
-# COMPREHENSIVE TESTING WORKFLOW
-# The exec_todo.sh script now implements comprehensive testing automatically:
-#
-# 1. For each task attempt:
-#    - Backend health check (curl -f http://localhost:5000/health)
-#    - Database connection test (docker exec dogetionary-postgres-1 psql -U dogeuser -d dogetionary -c "SELECT 1;")
-#    - Integration tests (python src/tests/test_integration_comprehensive.py)
-#    - iOS compilation (xcodebuild -project dogetionary.xcodeproj -scheme dogetionary -destination 'platform=iOS Simulator,name=iPhone 16' build)
-#    - Docker services status check (docker-compose ps)
-#
-# 2. Iterative Claude Code evaluation:
-#    - Up to 3 attempts per task
-#    - Claude Code reviews test results after each attempt
-#    - Provides failure context for retry attempts
-#    - Final success confirmation required
-#
-# 3. Final validation:
-#    - Comprehensive system health check after all tasks
-#    - Claude Code final assessment of project state
-#
-# 4. Enhanced logging:
-#    - Separate logs for execution and testing
-#    - Detailed test result summaries
-#    - Failure analysis and recommendations
-#
-# USAGE:
-# ./exec_todo.sh           # Execute all tasks with comprehensive testing
-# ./exec_todo.sh 1         # Execute only task 1 with comprehensive testing
-# ./exec_todo.sh --help    # Show usage information
-#
-# LOGS LOCATION: ./todo_logs/
-# - task_N_TIMESTAMP.log       (execution logs)
-# - task_N_tests_TIMESTAMP.log (test results)
-# - final_validation_TIMESTAMP.log (final assessment)
+  REQUIREMENTS:
+  - Create new files as needed following existing project structure
+  - Update all import statements
+  - Test that the refactored app still starts and functions correctly
+  - Follow the project's architectural patterns
+
+TEST_INSTRUCTION: |
+  Verify the reorganization was successful by testing:
+
+  1. Backend starts without errors: Start the Docker containers and verify the Flask app initializes properly
+  2. All endpoints respond: Test critical endpoints like /health, /word, /save, /v2/review_next
+  3. Integration tests pass: Run the comprehensive integration test suite
+  4. iOS compilation works: Ensure the iOS app can still compile and connect to the backend
+  5. Code organization: Verify functions were moved to appropriate files and imports are correct
+
+  SPECIFIC TESTS:
+  - docker-compose up -d should start without errors
+  - curl http://localhost:5000/health should return {"status": "healthy"}
+  - python src/tests/test_integration_comprehensive.py should pass all critical tests
+  - xcodebuild test for iOS project should compile successfully
+  - Check that moved functions are in correct files and properly imported
+
+EVAL_CRITERIA: |
+  Return TRUE only if ALL of the following are met:
+  1. app_refactored.py is significantly smaller and only contains app setup + route registrations
+  2. Functions are moved to logical, appropriately named files
+  3. All imports are working correctly
+  4. Backend starts and responds to requests
+  5. Integration tests pass
+  6. iOS compilation succeeds
+  7. No functionality is broken
+
+[TASK_2]
+IMPLEMENT_INSTRUCTION: |
+  Categorize API endpoints into different categories and organize the route registrations.
+
+  GOALS:
+  - Group endpoints by purpose: ios, web, admin, test, analytics
+  - Reorganize route registrations in app_refactored.py by category
+  - Add clear section headers and comments
+  - Document which endpoints are used by which clients
+
+  CATEGORIES:
+  - iOS: Endpoints primarily used by the iOS app
+  - Web: Endpoints for web interface/static content
+  - Admin: Administrative and maintenance endpoints
+  - Test: Test vocabulary and TOEFL/IELTS related endpoints
+  - Analytics: Data analysis and reporting endpoints
+
+  REQUIREMENTS:
+  - Add section comments in app_refactored.py
+  - Group related route registrations together
+  - Document endpoint usage in comments
+  - Maintain all existing functionality
+
+TEST_INSTRUCTION: |
+  Verify endpoint categorization and organization:
+
+  1. Code organization: Check that routes are grouped logically in app_refactored.py
+  2. Documentation: Verify that each section has clear headers and endpoint descriptions
+  3. Functionality: Ensure all endpoints still work after reorganization
+  4. iOS compatibility: Test that iOS-specific endpoints respond correctly
+  5. Admin endpoints: Verify admin functions like health checks work
+
+  SPECIFIC TESTS:
+  - Review app_refactored.py for clear section organization
+  - Test sample endpoints from each category
+  - Run integration tests to ensure no endpoints were broken
+  - Verify iOS app can still connect and function
+  - Check admin endpoints like /health, /usage respond correctly
+
+EVAL_CRITERIA: |
+  Return TRUE only if ALL of the following are met:
+  1. Routes are clearly organized into logical categories in app_refactored.py
+  2. Each section has descriptive comments and headers
+  3. All endpoints still function correctly
+  4. iOS app compatibility is maintained
+  5. Admin and test endpoints work properly
+  6. Code is more readable and maintainable
+
+[TASK_3]
+IMPLEMENT_INSTRUCTION: |
+  Configure Docker containers to output logs to a ./logs directory with proper log rotation.
+
+  GOALS:
+  - Create ./logs directory for container logs
+  - Update docker-compose.yml to use file logging with log rotation
+  - Set maximum log size to 1GB per container
+  - Configure log retention (keep last 3 files)
+  - Add logs/ directory to .gitignore
+  - Ensure logs are accessible from host system
+
+  REQUIREMENTS:
+  - Modify docker-compose.yml logging configuration
+  - Create logs directory structure
+  - Set up log rotation with size limits
+  - Test that logs are properly written and rotated
+  - Verify log files are not committed to git
+
+TEST_INSTRUCTION: |
+  Verify Docker logging configuration:
+
+  1. Directory creation: Check that ./logs directory exists and is properly structured
+  2. Log generation: Start containers and verify logs are written to ./logs
+  3. Log rotation: Test that log files respect size limits and rotation
+  4. Container health: Ensure logging changes don't affect container functionality
+  5. Git ignore: Verify logs directory is properly ignored by git
+
+  SPECIFIC TESTS:
+  - docker-compose up -d should create log files in ./logs
+  - Check that each container (app, postgres, nginx) has its own log files
+  - Verify log files are created with proper rotation settings
+  - Test that containers still function normally
+  - git status should not show logs/ directory as untracked
+
+EVAL_CRITERIA: |
+  Return TRUE only if ALL of the following are met:
+  1. ./logs directory exists and contains container log files
+  2. docker-compose.yml has proper logging configuration with rotation
+  3. Log files are properly rotated with 1GB size limit
+  4. All containers start and function normally
+  5. logs/ is added to .gitignore
+  6. Logs are accessible from host system
+  7. No logging-related errors occur
