@@ -342,66 +342,6 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
-    func searchWordV2(_ word: String, completion: @escaping (Result<DefinitionV2, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-
-        guard let url = URL(string: "\(baseURL)/v2/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
-            logger.error("Invalid URL for v2 word: \(word)")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Making v2 request to: \(url.absoluteString)")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Network error: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            self.logger.info("V2 response status code: \(httpResponse.statusCode)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error with status code: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            // Log raw response for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                self.logger.info("Raw v2 response: \(responseString)")
-            }
-
-            do {
-                let response = try JSONDecoder().decode(WordDefinitionV2Response.self, from: data)
-                let definition = DefinitionV2(from: response)
-
-                self.logger.info("Successfully decoded v2 word definition for: \(response.word) with confidence: \(response.validation.confidence)")
-                completion(.success(definition))
-            } catch {
-                self.logger.error("Failed to decode v2 response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
 
     // MARK: - Audio Methods
 
@@ -573,7 +513,6 @@ class DictionaryService: ObservableObject {
                     word_id: wordID,
                     response: reviewRequest.response,
                     review_count: 0,
-                    ease_factor: 2.5,
                     interval_days: 1,
                     next_review_date: ""
                 )
@@ -604,57 +543,6 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func getReviewStats(completion: @escaping (Result<ReviewStats, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/reviews/stats?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
-            logger.error("Invalid URL for review stats endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("Fetching review stats for user: \(userID)")
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Network error fetching review stats: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for review stats")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            self.logger.info("Review stats response status code: \(httpResponse.statusCode)")
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error fetching review stats: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                self.logger.error("No data received for review stats")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let reviewStats = try JSONDecoder().decode(ReviewStats.self, from: data)
-                self.logger.info("Successfully fetched review stats")
-                completion(.success(reviewStats))
-            } catch {
-                self.logger.error("Failed to decode review stats response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
     
     func getWordDetails(wordID: Int, completion: @escaping (Result<WordDetails, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
@@ -1191,59 +1079,63 @@ class DictionaryService: ObservableObject {
         )
     }
     
-    func generateIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/generate-illustration") else {
+    func getIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/get-illustration") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
-        
+
         let requestBody: [String: Any] = [
             "word": word,
             "language": language
         ]
-        
+
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = jsonData
-        request.timeoutInterval = 60.0  // Longer timeout for AI generation
-        
-        logger.info("🎨 Generating AI illustration for word: \(word)")
-        
+        request.timeoutInterval = 60.0  // Longer timeout for potential AI generation
+
+        logger.info("🎨 Getting illustration for word: \(word) (cache-first with generation fallback)")
+
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
-            
+
             if let error = error {
-                self.logger.error("❌ Generate illustration request failed: \(error.localizedDescription)")
+                self.logger.error("❌ Get illustration request failed: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
-            
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 completion(.failure(DictionaryError.invalidResponse))
                 return
             }
-            
+
             guard httpResponse.statusCode == 200 else {
-                self.logger.error("❌ Generate illustration failed with status: \(httpResponse.statusCode)")
+                self.logger.error("❌ Get illustration failed with status: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
                 return
             }
-            
+
             guard let data = data else {
                 completion(.failure(DictionaryError.noData))
                 return
             }
-            
+
             do {
                 let illustrationResponse = try JSONDecoder().decode(IllustrationResponse.self, from: data)
-                self.logger.info("✅ AI illustration generated successfully for: \(word)")
+                if illustrationResponse.cached == true {
+                    self.logger.info("✅ Cached illustration retrieved for: \(word)")
+                } else {
+                    self.logger.info("✅ New illustration generated for: \(word)")
+                }
                 completion(.success(illustrationResponse))
             } catch {
                 self.logger.error("Failed to decode illustration response: \(error.localizedDescription)")
@@ -1251,55 +1143,10 @@ class DictionaryService: ObservableObject {
             }
         }.resume()
     }
-    
-    func getIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
-        guard let encodedWord = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let encodedLanguage = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)/illustration?word=\(encodedWord)&lang=\(encodedLanguage)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("🖼️ Fetching existing illustration for word: \(word)")
-        
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                self.logger.error("❌ Get illustration request failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                if httpResponse.statusCode == 404 {
-                    completion(.failure(DictionaryError.noData))
-                } else {
-                    self.logger.error("❌ Get illustration failed with status: \(httpResponse.statusCode)")
-                    completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                }
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let illustrationResponse = try JSONDecoder().decode(IllustrationResponse.self, from: data)
-                self.logger.info("✅ Illustration fetched successfully for: \(word)")
-                completion(.success(illustrationResponse))
-            } catch {
-                self.logger.error("Failed to decode illustration response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
+
+    // Backward compatibility: generateIllustration now just calls getIllustration
+    func generateIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
+        getIllustration(word: word, language: language, completion: completion)
     }
 
     func submitFeedback(feedback: String, completion: @escaping (Result<Bool, Error>) -> Void) {

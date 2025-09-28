@@ -441,10 +441,6 @@ struct ReviewStatsSection: View {
                     value: "\(details.interval_days) day\(details.interval_days == 1 ? "" : "s")"
                 )
                 
-                InfoRow(
-                    label: "Ease Factor",
-                    value: String(format: "%.2f", details.ease_factor)
-                )
             }
         }
     }
@@ -616,7 +612,6 @@ private enum DateStyle {
             metadata: nil,
             created_at: "2025-09-06T10:00:00Z",
             review_count: 2,
-            ease_factor: 2.3,
             interval_days: 6,
             next_review_date: "2025-09-13",
             last_reviewed_at: "2025-09-07T14:30:00Z"
