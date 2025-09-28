@@ -186,7 +186,3 @@ CREATE INDEX idx_pronunciation_user_id ON pronunciation_practice(user_id);
 CREATE INDEX idx_pronunciation_word ON pronunciation_practice(word);
 CREATE INDEX idx_notification_logs_user_id ON notification_logs(user_id);
 CREATE INDEX idx_notification_logs_type ON notification_logs(notification_type);
-
--- Sample data
-INSERT INTO user_preferences (user_id, learning_language, native_language)
-VALUES ('00000000-0000-0000-0000-000000000001', 'en', 'zh');

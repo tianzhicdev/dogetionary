@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgres:
+    volumes:
+      - ./logs/postgres:/var/log/postgresql
+    command: postgres -c logging_collector=on -c log_directory='/var/log/postgresql' -c log_filename='postgresql-%Y-%m-%d_%H%M%S.log' -c log_rotation_age=1d -c log_rotation_size=100MB
+
+  app:
+    volumes:
+      - ./logs/app:/app/logs
+    environment:
+      - LOG_FILE=/app/logs/app.log
+
+  nginx:
+    volumes:
+      - ./logs/nginx:/var/log/nginx

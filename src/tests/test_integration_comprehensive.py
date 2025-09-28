@@ -261,23 +261,26 @@ class ComprehensiveTestRunner:
 
     def test_review_next_endpoint(self):
         """Test the next review word endpoint"""
-        self.log("Testing /review_next endpoint...")
+        self.log("Testing /v2/review_next endpoint...")
 
         try:
-            response = requests.get(f"{BASE_URL}/review_next", params={"user_id": self.test_user_id})
+            response = requests.get(f"{BASE_URL}/v2/review_next", params={"user_id": self.test_user_id})
             # Could be 200 (word found) or 404 (no words due)
             if response.status_code in [200, 404]:
-                self.log(f"✓ /review_next endpoint returned {response.status_code}")
+                self.log(f"✓ /v2/review_next endpoint returned {response.status_code}")
                 self.passed += 1
 
                 if response.status_code == 200:
                     data = response.json()
-                    self.assert_json_contains(data, "id", "/review_next response contains id")
-                    self.assert_json_contains(data, "word", "/review_next response contains word")
-                    self.assert_json_contains(data, "learning_language", "/review_next response contains learning_language")
+                    self.assert_json_contains(data, "saved_words", "/v2/review_next response contains saved_words")
+                    if data.get("saved_words"):
+                        word = data["saved_words"][0]
+                        self.assert_json_contains(word, "id", "/v2/review_next word contains id")
+                        self.assert_json_contains(word, "word", "/v2/review_next word contains word")
+                        self.assert_json_contains(word, "learning_language", "/v2/review_next word contains learning_language")
 
         except Exception as e:
-            self.log(f"✗ /review_next endpoint failed with error: {e}")
+            self.log(f"✗ /v2/review_next endpoint failed with error: {e}")
             self.failed += 1
 
     def test_submit_review_endpoint(self):
