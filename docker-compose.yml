@@ -38,6 +38,8 @@ services:
       - "5000"
     ports:
       - "5000:5000"
+    volumes:
+      - ./logs/app:/app/logs
     logging:
       driver: "json-file"
       options:

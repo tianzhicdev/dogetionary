@@ -2,7 +2,9 @@ import logging
 import sys
 import json
 import time
+import os
 from flask import request, g, current_app
+from logging.handlers import RotatingFileHandler
 
 def setup_logging(app):
     """Configure application logging"""
@@ -12,9 +14,40 @@ def setup_logging(app):
     )
 
     app.logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    app.logger.addHandler(handler)
+
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    app.logger.addHandler(console_handler)
+
+    # File handler
+    try:
+        # Create logs directory if it doesn't exist
+        logs_dir = '/app/logs'
+        os.makedirs(logs_dir, exist_ok=True)
+
+        # Test write permissions
+        test_file = f'{logs_dir}/test.log'
+        with open(test_file, 'w') as f:
+            f.write('test\n')
+        os.remove(test_file)
+
+        # Add rotating file handler
+        file_handler = RotatingFileHandler(
+            f'{logs_dir}/app.log',
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=5
+        )
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        app.logger.addHandler(file_handler)
+
+        # Force a log entry to test file handler
+        app.logger.info("File handler test - this should appear in app.log")
+
+        app.logger.info("=== DOGETIONARY REFACTORED LOGGING INITIALIZED (Console + File) ===")
+    except Exception as e:
+        app.logger.info(f"=== DOGETIONARY REFACTORED LOGGING INITIALIZED (Console only - File error: {e}) ===")
 
     app.logger.info("=== DOGETIONARY REFACTORED LOGGING INITIALIZED ===")
 
