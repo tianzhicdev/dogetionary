@@ -19,7 +19,7 @@ app.after_request(log_response_info)
 
 from handlers.actions import save_word, delete_saved_word, delete_saved_word_v2, submit_feedback, submit_review
 from handlers.users import handle_user_preferences, get_supported_languages
-from handlers.reads import get_due_counts, get_review_progress_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
+from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
 from handlers.admin import test_review_intervals, fix_next_review_dates, privacy_agreement, support_page, health_check
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
@@ -49,7 +49,9 @@ app.route('/progress_funnel', methods=['GET'])(get_progress_funnel) # ok
 app.route('/review_activity', methods=['GET'])(get_review_activity) # ok
 app.route('/leaderboard', methods=['GET'])(get_leaderboard) # ok
 app.route('/get-illustration', methods=['GET', 'POST'])(get_illustration) # merged: cache-first illustration endpoint
+app.route('/generate-illustration', methods=['POST'])(get_illustration) # backward compatibility for old iOS versions
 app.route('/feedback', methods=['POST'])(submit_feedback) # ok
+app.route('/reviews/stats', methods=['GET'])(get_review_stats) # backward compatibility for old iOS versions
 app.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats) # ok
 
 app.route('/pronunciation/practice', methods=['POST'])(practice_pronunciation) # learning lang should be word-specific but ok for now
