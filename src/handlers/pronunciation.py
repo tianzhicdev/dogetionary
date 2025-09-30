@@ -7,12 +7,19 @@ import base64
 import json
 import logging
 from utils.database import get_db_connection
-from services.pronunciation_service import PronunciationService
 import uuid
 
 logger = logging.getLogger(__name__)
 
-pronunciation_service = PronunciationService()
+# Lazy initialization of pronunciation service to avoid import errors
+pronunciation_service = None
+
+def get_pronunciation_service():
+    global pronunciation_service
+    if pronunciation_service is None:
+        from services.pronunciation_service import PronunciationService
+        pronunciation_service = PronunciationService()
+    return pronunciation_service
 
 def practice_pronunciation():
     """
@@ -62,7 +69,7 @@ def practice_pronunciation():
         conn.close()
 
         # Process pronunciation with OpenAI
-        result = pronunciation_service.evaluate_pronunciation(
+        result = get_pronunciation_service().evaluate_pronunciation(
             original_text=original_text,
             audio_data=audio_data,
             user_id=user_id,

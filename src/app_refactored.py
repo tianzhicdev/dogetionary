@@ -12,7 +12,6 @@ app = Flask(__name__)
 from middleware.logging import setup_logging, log_request_info, log_response_info
 setup_logging(app)
 
-
 # Register middleware
 app.before_request(log_request_info)
 app.after_request(log_response_info)
@@ -94,6 +93,16 @@ app.route('/analytics/data', methods=['GET'])(get_analytics_data) # perhaps we d
 app.route('/pronunciation/history', methods=['GET'])(get_pronunciation_history) # not used by ios
 
 app.route('/api/test-prep/run-daily-job', methods=['POST'])(manual_daily_job)
+
+# Register v3 API blueprint
+try:
+    from app_v3 import v3_api
+    app.register_blueprint(v3_api)
+    print("✅ V3 API registered successfully")  # Use print since logger may not work at module level
+except Exception as e:
+    print(f"❌ Failed to register V3 API: {e}")
+    import traceback
+    traceback.print_exc()
 
 if __name__ == '__main__':
     # Import workers
