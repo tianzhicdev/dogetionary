@@ -90,7 +90,7 @@ class DictionaryService: ObservableObject {
     
     func saveWord(_ word: String, completion: @escaping (Result<Int, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/save") else {
+        guard let url = URL(string: "\(baseURL)/v3/save") else {
             logger.error("Invalid URL for save endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -158,7 +158,7 @@ class DictionaryService: ObservableObject {
     func getSavedWords(dueOnly: Bool = false, completion: @escaping (Result<[SavedWord], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         let dueOnlyParam = dueOnly ? "&due_only=true" : ""
-        guard let url = URL(string: "\(baseURL)/saved_words?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)\(dueOnlyParam)") else {
+        guard let url = URL(string: "\(baseURL)/v3/saved_words?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)\(dueOnlyParam)") else {
             logger.error("Invalid URL for saved words endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -224,7 +224,7 @@ class DictionaryService: ObservableObject {
     func searchWord(_ word: String, learningLanguage: String, nativeLanguage: String, completion: @escaping (Result<[Definition], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         
-        guard let url = URL(string: "\(baseURL)/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&learning_lang=\(learningLanguage)&native_lang=\(nativeLanguage)") else {
+        guard let url = URL(string: "\(baseURL)/v3/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&learning_lang=\(learningLanguage)&native_lang=\(nativeLanguage)") else {
             logger.error("Invalid URL for word: \(word)")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -289,7 +289,7 @@ class DictionaryService: ObservableObject {
 
     func unsaveWord(wordID: Int, completion: @escaping (Result<Bool, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v2/unsave") else {
+        guard let url = URL(string: "\(baseURL)/v3/unsave") else {
             logger.error("Invalid URL for v2/unsave endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -342,73 +342,13 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
-    func searchWordV2(_ word: String, completion: @escaping (Result<DefinitionV2, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-
-        guard let url = URL(string: "\(baseURL)/v2/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
-            logger.error("Invalid URL for v2 word: \(word)")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Making v2 request to: \(url.absoluteString)")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Network error: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            self.logger.info("V2 response status code: \(httpResponse.statusCode)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error with status code: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            // Log raw response for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                self.logger.info("Raw v2 response: \(responseString)")
-            }
-
-            do {
-                let response = try JSONDecoder().decode(WordDefinitionV2Response.self, from: data)
-                let definition = DefinitionV2(from: response)
-
-                self.logger.info("Successfully decoded v2 word definition for: \(response.word) with confidence: \(response.validation.confidence)")
-                completion(.success(definition))
-            } catch {
-                self.logger.error("Failed to decode v2 response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
 
     // MARK: - Audio Methods
 
     func fetchAudioForText(_ text: String, language: String, completion: @escaping (Data?) -> Void) {
         // URL encode the text to handle special characters and spaces
         guard let encodedText = text.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let url = URL(string: "\(baseURL)/audio/\(encodedText)/\(language)") else {
+              let url = URL(string: "\(baseURL)/v3/audio/\(encodedText)/\(language)") else {
             logger.error("Invalid URL for text: '\(text)' language: \(language)")
             completion(nil)
             return
@@ -471,7 +411,7 @@ class DictionaryService: ObservableObject {
     
     func getNextDueWords(limit: Int = 10, completion: @escaping (Result<[SavedWord], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/saved_words/next_due?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&limit=\(limit)") else {
+        guard let url = URL(string: "\(baseURL)/v3/saved_words/next_due?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&limit=\(limit)") else {
             logger.error("Invalid URL for next due words endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -523,7 +463,7 @@ class DictionaryService: ObservableObject {
     
     func submitReview(wordID: Int, response: Bool, completion: @escaping (Result<ReviewSubmissionResponse, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/reviews/submit") else {
+        guard let url = URL(string: "\(baseURL)/v3/reviews/submit") else {
             logger.error("Invalid URL for review submission endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -573,7 +513,6 @@ class DictionaryService: ObservableObject {
                     word_id: wordID,
                     response: reviewRequest.response,
                     review_count: 0,
-                    ease_factor: 2.5,
                     interval_days: 1,
                     next_review_date: ""
                 )
@@ -604,61 +543,10 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func getReviewStats(completion: @escaping (Result<ReviewStats, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/reviews/stats?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
-            logger.error("Invalid URL for review stats endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("Fetching review stats for user: \(userID)")
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Network error fetching review stats: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for review stats")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            self.logger.info("Review stats response status code: \(httpResponse.statusCode)")
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error fetching review stats: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                self.logger.error("No data received for review stats")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let reviewStats = try JSONDecoder().decode(ReviewStats.self, from: data)
-                self.logger.info("Successfully fetched review stats")
-                completion(.success(reviewStats))
-            } catch {
-                self.logger.error("Failed to decode review stats response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
     
     func getWordDetails(wordID: Int, completion: @escaping (Result<WordDetails, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/words/\(wordID)/details?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/words/\(wordID)/details?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
             logger.error("Invalid URL for word details endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -712,7 +600,7 @@ class DictionaryService: ObservableObject {
     
     func getUserPreferences(userID: String, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
         guard let encodedUserID = userID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let url = URL(string: "\(baseURL)/users/\(encodedUserID)/preferences") else {
+              let url = URL(string: "\(baseURL)/v3/users/\(encodedUserID)/preferences") else {
             logger.error("Invalid URL for user preferences GET endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -764,7 +652,7 @@ class DictionaryService: ObservableObject {
     
     func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
         guard let encodedUserID = userID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let url = URL(string: "\(baseURL)/users/\(encodedUserID)/preferences") else {
+              let url = URL(string: "\(baseURL)/v3/users/\(encodedUserID)/preferences") else {
             logger.error("Invalid URL for user preferences POST endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -831,7 +719,7 @@ class DictionaryService: ObservableObject {
     
     func getNextReviewWord(completion: @escaping (Result<[ReviewWord], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v2/review_next?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/review_next?user_id=\(userID)") else {
             logger.error("Invalid URL for next review word endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -895,7 +783,7 @@ class DictionaryService: ObservableObject {
     
     func getDueCounts(completion: @escaping (Result<DueCountsResponse, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/due_counts?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/due_counts?user_id=\(userID)") else {
             logger.error("Invalid URL for due counts endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -942,7 +830,7 @@ class DictionaryService: ObservableObject {
     func getReviewStatistics(completion: @escaping (Result<ReviewStatsData, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         
-        guard let url = URL(string: "\(baseURL)/review_statistics?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/review_statistics?user_id=\(userID)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -988,7 +876,7 @@ class DictionaryService: ObservableObject {
     func getWeeklyReviewCounts(completion: @escaping (Result<[DailyReviewCount], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         
-        guard let url = URL(string: "\(baseURL)/weekly_review_counts?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/weekly_review_counts?user_id=\(userID)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -1034,7 +922,7 @@ class DictionaryService: ObservableObject {
     func getProgressFunnelData(completion: @escaping (Result<ProgressFunnelData, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         
-        guard let url = URL(string: "\(baseURL)/progress_funnel?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/progress_funnel?user_id=\(userID)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -1083,7 +971,7 @@ class DictionaryService: ObservableObject {
         let endDateString = formatter.string(from: endDate)
         let userID = UserManager.shared.getUserID()
         
-        guard let url = URL(string: "\(baseURL)/review_activity?user_id=\(userID)&start_date=\(startDateString)&end_date=\(endDateString)") else {
+        guard let url = URL(string: "\(baseURL)/v3/review_activity?user_id=\(userID)&start_date=\(startDateString)&end_date=\(endDateString)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -1127,7 +1015,7 @@ class DictionaryService: ObservableObject {
     }
     
     func getLeaderboard(completion: @escaping (Result<[LeaderboardEntry], Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/leaderboard") else {
+        guard let url = URL(string: "\(baseURL)/v3/leaderboard") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -1174,7 +1062,7 @@ class DictionaryService: ObservableObject {
     
     func getForgettingCurve(wordId: Int, completion: @escaping (Result<ForgettingCurveResponse, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/words/\(wordId)/forgetting-curve?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/words/\(wordId)/forgetting-curve?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
             logger.error("Invalid URL for forgetting curve endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -1191,109 +1079,63 @@ class DictionaryService: ObservableObject {
         )
     }
     
-    func generateIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/generate-illustration") else {
+    func getIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/v3/illustration") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
-        
+
         let requestBody: [String: Any] = [
             "word": word,
             "language": language
         ]
-        
+
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = jsonData
-        request.timeoutInterval = 60.0  // Longer timeout for AI generation
-        
-        logger.info("🎨 Generating AI illustration for word: \(word)")
-        
+        request.timeoutInterval = 60.0  // Longer timeout for potential AI generation
+
+        logger.info("🎨 Getting illustration for word: \(word) (cache-first with generation fallback)")
+
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
-            
-            if let error = error {
-                self.logger.error("❌ Generate illustration request failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("❌ Generate illustration failed with status: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let illustrationResponse = try JSONDecoder().decode(IllustrationResponse.self, from: data)
-                self.logger.info("✅ AI illustration generated successfully for: \(word)")
-                completion(.success(illustrationResponse))
-            } catch {
-                self.logger.error("Failed to decode illustration response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-    
-    func getIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
-        guard let encodedWord = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let encodedLanguage = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)/illustration?word=\(encodedWord)&lang=\(encodedLanguage)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("🖼️ Fetching existing illustration for word: \(word)")
-        
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
-            
+
             if let error = error {
                 self.logger.error("❌ Get illustration request failed: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
-            
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 completion(.failure(DictionaryError.invalidResponse))
                 return
             }
-            
+
             guard httpResponse.statusCode == 200 else {
-                if httpResponse.statusCode == 404 {
-                    completion(.failure(DictionaryError.noData))
-                } else {
-                    self.logger.error("❌ Get illustration failed with status: \(httpResponse.statusCode)")
-                    completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                }
+                self.logger.error("❌ Get illustration failed with status: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
                 return
             }
-            
+
             guard let data = data else {
                 completion(.failure(DictionaryError.noData))
                 return
             }
-            
+
             do {
                 let illustrationResponse = try JSONDecoder().decode(IllustrationResponse.self, from: data)
-                self.logger.info("✅ Illustration fetched successfully for: \(word)")
+                if illustrationResponse.cached == true {
+                    self.logger.info("✅ Cached illustration retrieved for: \(word)")
+                } else {
+                    self.logger.info("✅ New illustration generated for: \(word)")
+                }
                 completion(.success(illustrationResponse))
             } catch {
                 self.logger.error("Failed to decode illustration response: \(error.localizedDescription)")
@@ -1302,9 +1144,14 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    // Backward compatibility: generateIllustration now just calls getIllustration
+    func generateIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {
+        getIllustration(word: word, language: language, completion: completion)
+    }
+
     func submitFeedback(feedback: String, completion: @escaping (Result<Bool, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/feedback") else {
+        guard let url = URL(string: "\(baseURL)/v3/feedback") else {
             logger.error("Invalid URL for feedback endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -1352,7 +1199,7 @@ class DictionaryService: ObservableObject {
 
     func getReviewProgressStats(completion: @escaping (Result<ReviewProgressStats, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/reviews/progress_stats?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/reviews/progress_stats?user_id=\(userID)") else {
             logger.error("Invalid URL for review progress stats endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -1386,7 +1233,7 @@ class DictionaryService: ObservableObject {
 
     func practicePronunciation(originalText: String, audioData: Data, metadata: [String: Any], completion: @escaping (Result<PronunciationResult, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/pronunciation/practice") else {
+        guard let url = URL(string: "\(baseURL)/v3/pronunciation/practice") else {
             logger.error("Invalid URL for pronunciation practice endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -1482,7 +1329,7 @@ class DictionaryService: ObservableObject {
     // MARK: - Test Preparation Methods
 
     func getTestSettings(userID: String, completion: @escaping (Result<TestSettingsResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/api/test-prep/settings?user_id=\(userID)") else {
+        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings?user_id=\(userID)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -1491,7 +1338,7 @@ class DictionaryService: ObservableObject {
     }
 
     func updateTestSettings(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/api/test-prep/settings") else {
+        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -1520,7 +1367,7 @@ class DictionaryService: ObservableObject {
     }
 
     func getTestVocabularyStats(language: String = "en", completion: @escaping (Result<TestVocabularyStatsResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/api/test-prep/stats?language=\(language)") else {
+        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/stats?language=\(language)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
