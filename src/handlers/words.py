@@ -861,6 +861,7 @@ def get_word_details(word_id):
             "metadata": word['metadata'],
             "created_at": word['created_at'].strftime('%Y-%m-%d %H:%M:%S'),
             "review_count": review_count,
+            "ease_factor": 2.5,
             "interval_days": interval_days,
             "next_review_date": next_review_date.strftime('%Y-%m-%d %H:%M:%S') if next_review_date else None,
             "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
