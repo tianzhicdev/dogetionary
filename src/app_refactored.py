@@ -17,7 +17,7 @@ app.before_request(log_request_info)
 app.after_request(log_response_info)
 
 
-from handlers.actions import save_word, delete_saved_word, delete_saved_word_v2, submit_feedback, submit_review
+from handlers.actions import save_word, delete_saved_word, delete_saved_word_v2, submit_feedback, submit_review, get_next_review_word
 from handlers.users import handle_user_preferences, get_supported_languages
 from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
 from handlers.admin import test_review_intervals, fix_next_review_dates, privacy_agreement, support_page, health_check
@@ -32,7 +32,8 @@ app.route('/save', methods=['POST'])(save_word) # ok
 app.route('/unsave', methods=['POST'])(delete_saved_word) # ok
 app.route('/v2/unsave', methods=['POST'])(delete_saved_word_v2) # ok
 
-app.route('/due_counts', methods=['GET'])(get_due_counts) # ok 
+app.route('/review_next', methods=['GET'])(get_next_review_word) # backward compatibility for old iOS versions
+app.route('/due_counts', methods=['GET'])(get_due_counts) # ok
 app.route('/reviews/submit', methods=['POST'])(submit_review) # returning more than needed but ok
 
 app.route('/word', methods=['GET'])(get_word_definition)
