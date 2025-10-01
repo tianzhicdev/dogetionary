@@ -211,11 +211,7 @@ struct SettingsView: View {
 
                             if userManager.toeflEnabled {
                                 HStack {
-                                    Text("Complete in:")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Picker("TOEFL Target Days", selection: $userManager.toeflTargetDays) {
+                                    Picker("complete in: ", selection: $userManager.toeflTargetDays) {
                                         ForEach([7, 14, 21, 30, 45, 60, 90], id: \.self) { days in
                                             Text("\(days) days")
                                                 .tag(days)
@@ -263,18 +259,14 @@ struct SettingsView: View {
 
                             if userManager.ieltsEnabled {
                                 HStack {
-                                    Text("Complete in:")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Picker("IELTS Target Days", selection: $userManager.ieltsTargetDays) {
+                                    Picker("complete in: ", selection: $userManager.ieltsTargetDays) {
                                         ForEach([7, 14, 21, 30, 45, 60, 90], id: \.self) { days in
                                             Text("\(days) days")
                                                 .tag(days)
                                         }
                                     }
                                     .pickerStyle(MenuPickerStyle())
-                                    .tint(.green)
+                                    .tint(.blue)
                                 }
                             }
 

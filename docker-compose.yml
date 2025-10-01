@@ -19,6 +19,11 @@ services:
       retries: 3
     networks:
       - dogetionary-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "3"
 
   app:
     build: ./src
@@ -33,6 +38,13 @@ services:
       - "5000"
     ports:
       - "5000:5000"
+    volumes:
+      - ./logs/app:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "3"
 
   nginx:
     build: ./nginx
@@ -48,6 +60,11 @@ services:
     networks:
       - dogetionary-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "3"
 
 volumes:
   postgres_data:

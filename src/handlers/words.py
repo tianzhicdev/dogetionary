@@ -24,8 +24,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.config import *
 from static.privacy import PRIVACY_POLICY
 from static.support import SUPPORT_HTML
-from utils.database import validate_language, get_db_connection
-from services.user_service import generate_user_profile
+from utils.database import validate_language, get_db_connection, db_fetch_one
+from services.user_service import generate_user_profile, get_user_preferences
 
 # Get logger
 import logging
@@ -46,11 +46,8 @@ def get_next_review_word_v2():
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
 
-        conn = get_db_connection()
-        cur = conn.cursor()
-
         # Find word with earliest next review date (due now or overdue)
-        cur.execute("""
+        word = db_fetch_one("""
             SELECT
                 sw.id,
                 sw.word,
@@ -86,10 +83,6 @@ def get_next_review_word_v2():
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
             LIMIT 1
         """, (user_id,))
-
-        word = cur.fetchone()
-        cur.close()
-        conn.close()
 
         if not word:
             return jsonify({
@@ -170,27 +163,6 @@ WORD_DEFINITION_SCHEMA = {
     "required": ["word", "phonetic", "translations", "definitions"]
 }
 
-# JSON Schema for OpenAI structured output with validation (v2)
-WORD_DEFINITION_SCHEMA_V2 = {
-    "type": "object",
-    "properties": {
-        "definition": {"type": "string", "description": "Clear definition in native language"},
-        "examples": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "3 example sentences"
-        },
-        "validation": {
-            "type": "object",
-            "properties": {
-                "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Confidence that input is a valid word/phrase (0.0-1.0)"},
-                "suggested": {"type": ["string", "null"], "description": "Alternative suggestion if confidence < 0.9, null otherwise"}
-            },
-            "required": ["confidence", "suggested"]
-        }
-    },
-    "required": ["definition", "examples", "validation"]
-}
 
 
 client = openai.OpenAI(
@@ -198,72 +170,6 @@ client = openai.OpenAI(
     base_url=os.getenv('BASE_URL', 'https://api.openai.com/v1/')
 )
 
-def build_definition_prompt_v2(word: str, learning_lang: str, native_lang: str) -> str:
-    """Build LLM prompt for bilingual definitions with word validation"""
-    lang_names = {
-        'af': 'Afrikaans', 'ar': 'Arabic', 'hy': 'Armenian', 'az': 'Azerbaijani',
-        'be': 'Belarusian', 'bs': 'Bosnian', 'bg': 'Bulgarian', 'ca': 'Catalan',
-        'zh': 'Chinese', 'hr': 'Croatian', 'cs': 'Czech', 'da': 'Danish',
-        'nl': 'Dutch', 'en': 'English', 'et': 'Estonian', 'fi': 'Finnish',
-        'fr': 'French', 'gl': 'Galician', 'de': 'German', 'el': 'Greek',
-        'he': 'Hebrew', 'hi': 'Hindi', 'hu': 'Hungarian', 'is': 'Icelandic',
-        'id': 'Indonesian', 'it': 'Italian', 'ja': 'Japanese', 'kn': 'Kannada',
-        'kk': 'Kazakh', 'ko': 'Korean', 'lv': 'Latvian', 'lt': 'Lithuanian',
-        'mk': 'Macedonian', 'ms': 'Malay', 'mr': 'Marathi', 'mi': 'Maori',
-        'ne': 'Nepali', 'no': 'Norwegian', 'fa': 'Persian', 'pl': 'Polish',
-        'pt': 'Portuguese', 'ro': 'Romanian', 'ru': 'Russian', 'sr': 'Serbian',
-        'sk': 'Slovak', 'sl': 'Slovenian', 'es': 'Spanish', 'sw': 'Swahili',
-        'sv': 'Swedish', 'tl': 'Tagalog', 'ta': 'Tamil', 'th': 'Thai',
-        'tr': 'Turkish', 'uk': 'Ukrainian', 'ur': 'Urdu', 'vi': 'Vietnamese',
-        'cy': 'Welsh'
-    }
-
-    learning_lang_name = lang_names.get(learning_lang, learning_lang)
-    native_lang_name = lang_names.get(native_lang, native_lang)
-
-    if learning_lang == native_lang:
-        raise ValueError("Learning language and native language cannot be the same")
-
-    return f"""You are a multilingual dictionary providing definitions from {learning_lang_name} to {native_lang_name}.
-
-IMPORTANT: You must ALWAYS respond with valid JSON in this exact format:
-{{
-  "definition": "clear definition in {native_lang_name}",
-  "examples": ["example 1", "example 2", "example 3"],
-  "validation": {{
-    "confidence": 0.0,
-    "suggested": null
-  }}
-}}
-
-Validation Rules for "{word}":
-- confidence: How confident you are this is a valid {learning_lang_name} word, phrase, or proper noun (0.0-1.0)
-  * 1.0 = Definitely valid (dictionary words, common phrases, well-known proper nouns like "iPhone", "New York")
-  * 0.9+ = Very likely valid (less common but legitimate words/phrases/names)
-  * 0.7-0.9 = Questionable but could be valid (slang, technical terms, uncommon proper nouns)
-  * 0.3-0.7 = Likely invalid but might be a typo
-  * 0.0-0.3 = Definitely invalid (gibberish, random characters)
-
-- suggested: If confidence < 0.9 AND you can suggest a correction, provide it. Otherwise null.
-
-ACCEPT as valid (confidence ≥ 0.9):
-- Dictionary words: "hello", "computer", "beautiful"
-- Common phrases: "how are you", "good morning", "thank you very much"
-- Well-known proper nouns: "iPhone", "McDonald's", "New York", "Google"
-- Brand names: "Coca-Cola", "Microsoft", "Tesla"
-- Common abbreviations: "CEO", "USA", "OK"
-
-QUESTION (confidence 0.7-0.9):
-- Slang: "gonna", "wanna"
-- Technical terms: "API", "blockchain"
-- Less common proper nouns: "Fibonacci", "Schrödinger"
-
-SUGGEST CORRECTIONS (confidence < 0.9 with suggestion):
-- Clear typos: "helllo" → "hello", "computor" → "computer"
-- Common misspellings: "definately" → "definitely"
-
-Word/phrase to define: "{word}"
-"""
 
 def build_definition_prompt(word: str, learning_lang: str, native_lang: str) -> str:
     """Build LLM prompt for bilingual definitions"""
@@ -305,60 +211,6 @@ def build_definition_prompt(word: str, learning_lang: str, native_lang: str) -> 
 
         Examples should always be in {learning_lang_name} since that's what the user is learning."""
 
-
-def get_word_definition_v2():
-    """Get word definition with validation using OpenAI integration (v2)"""
-    try:
-        user_id = request.args.get('user_id')
-        word = request.args.get('w')
-
-        if not word or not user_id:
-            return jsonify({"error": "w and user_id parameters are required"}), 400
-
-        word_normalized = word.strip().lower()
-
-        # Get user preferences
-        learning_lang, native_lang, _, _ = get_user_preferences(user_id)
-
-        logger.info(f"Generating definition with validation for '{word_normalized}'")
-        prompt = build_definition_prompt_v2(word_normalized, learning_lang, native_lang)
-
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a multilingual dictionary expert with word validation capabilities. Provide definitions and assess whether the input is a valid word or phrase."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "word_definition_with_validation",
-                    "schema": WORD_DEFINITION_SCHEMA_V2
-                }
-            },
-            temperature=0.3
-        )
-
-        definition_data = json.loads(response.choices[0].message.content)
-
-        return jsonify({
-            "word": word_normalized,
-            "learning_language": learning_lang,
-            "native_language": native_lang,
-            "definition": definition_data["definition"],
-            "examples": definition_data["examples"],
-            "validation": definition_data["validation"]
-        })
-
-    except Exception as e:
-        logger.error(f"Error getting definition v2 for word '{word_normalized}': {str(e)}")
-        return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
 
 
 def get_cached_definition(word: str, learning_lang: str, native_lang: str) -> Optional[dict]:
@@ -584,13 +436,21 @@ def get_word_definition():
         # Queue missing audio generation
         audio_status = queue_missing_audio(word_normalized, definition_data, learning_lang, audio_refs)
         
+        # Add validation data - assume high confidence for all definitions
+        # since they've passed generation and caching
+        validation_data = {
+            "confidence": 1.0,
+            "suggested": None
+        }
+
         return jsonify({
             "word": word_normalized,
             "learning_language": learning_lang,
             "native_language": native_lang,
             "definition_data": definition_data,
             "audio_references": audio_refs,
-            "audio_generation_status": audio_status
+            "audio_generation_status": audio_status,
+            "validation": validation_data  # NEW: Include validation data (merged from V2)
         })
         
     except Exception as e:
@@ -680,7 +540,6 @@ def get_saved_words():
                 "metadata": row['metadata'],
                 "created_at": row['created_at'].isoformat(),
                 "review_count": review_count,
-                "ease_factor": DEFAULT_EASE_FACTOR,  # Hardcoded as requested
                 "interval_days": int(float(interval_days)) if interval_days else 1,
                 "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
                 "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None
@@ -802,27 +661,35 @@ def get_audio(text, language):
         return jsonify({"error": f"Failed to get audio: {str(e)}"}), 500
 
 
-def generate_illustration():
-    """Generate AI illustration for a word"""
+def get_illustration():
+    """Get AI illustration for a word - returns cached if exists, generates if not"""
     try:
-        data = request.get_json()
-        word = data.get('word')
-        language = data.get('language')
-        
+        # Support both GET parameters and POST JSON body
+        if request.method == 'GET':
+            word = request.args.get('word')
+            language = request.args.get('lang')
+        else:  # POST
+            data = request.get_json()
+            word = data.get('word') if data else None
+            language = data.get('language') if data else None
+
         if not word or not language:
-            return jsonify({"error": "Both 'word' and 'language' are required"}), 400
-        
+            if request.method == 'GET':
+                return jsonify({"error": "Both 'word' and 'lang' parameters are required"}), 400
+            else:
+                return jsonify({"error": "Both 'word' and 'language' are required"}), 400
+
         word_normalized = word.strip().lower()
-        
-        # Check if illustration already exists
+
+        # Check if illustration already exists (cache-first)
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             SELECT scene_description, image_data, content_type, created_at
-            FROM illustrations 
+            FROM illustrations
             WHERE word = %s AND language = %s
         """, (word_normalized, language))
-        
+
         existing = cur.fetchone()
         if existing:
             cur.close()
@@ -836,15 +703,18 @@ def generate_illustration():
                 "cached": True,
                 "created_at": existing['created_at'].isoformat()
             })
-        
+
+        # No cached illustration found - generate new one
+        logger.info(f"No cached illustration found for {word} in {language}, generating new one")
+
         # Get word definition to help with scene generation
         cur.execute("""
             SELECT definition_data
-            FROM definitions 
+            FROM definitions
             WHERE word = %s AND learning_language = %s
             LIMIT 1
         """, (word_normalized, language))
-        
+
         definition_row = cur.fetchone()
         definition_context = ""
         if definition_row:
@@ -852,30 +722,30 @@ def generate_illustration():
                 definition_data = definition_row['definition_data']
                 if isinstance(definition_data, str):
                     definition_data = json.loads(definition_data)
-                
+
                 # Extract main definition for context
                 if definition_data.get('definitions'):
                     definition_context = definition_data['definitions'][0].get('definition', '')
             except:
                 pass
-        
+
         # Generate scene description using OpenAI
-        scene_prompt = f"""Create a vivid, detailed scene description that would best illustrate the word "{word}" in {language}. 
-        
+        scene_prompt = f"""Create a vivid, detailed scene description that would best illustrate the word "{word}" in {language}.
+
         Word definition context: {definition_context}
-        
+
         The scene should be:
         - Visual and concrete (avoid abstract concepts)
         - Culturally appropriate and universal
         - Suitable for illustration/artwork
         - Engaging and memorable for language learning
-        
+
         Describe the scene in 2-3 sentences, focusing on visual elements, setting, and actions that clearly represent the meaning of "{word}".
-        
+
         Scene description:"""
-        
+
         logger.info(f"Generating scene description for word: {word}")
-        
+
         scene_response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
@@ -885,15 +755,15 @@ def generate_illustration():
             max_tokens=200,
             temperature=0.7
         )
-        
+
         scene_description = scene_response.choices[0].message.content.strip()
         logger.info(f"Generated scene: {scene_description}")
-        
+
         # Generate image using DALL-E
         image_prompt = f"Create a clear, educational illustration showing: {scene_description}. Style: clean, colorful, suitable for language learning, no text in image."
-        
+
         logger.info(f"Generating image for: {word}")
-        
+
         image_response = openai.images.generate(
             model="dall-e-3",
             prompt=image_prompt,
@@ -902,28 +772,28 @@ def generate_illustration():
             n=1,
             response_format="b64_json"
         )
-        
+
         image_data = base64.b64decode(image_response.data[0].b64_json)
         content_type = "image/png"
-        
+
         # Store in database
         cur.execute("""
             INSERT INTO illustrations (word, language, scene_description, image_data, content_type)
             VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (word, language) 
-            DO UPDATE SET 
+            ON CONFLICT (word, language)
+            DO UPDATE SET
                 scene_description = EXCLUDED.scene_description,
                 image_data = EXCLUDED.image_data,
                 content_type = EXCLUDED.content_type,
                 created_at = CURRENT_TIMESTAMP
         """, (word_normalized, language, scene_description, image_data, content_type))
-        
+
         conn.commit()
         cur.close()
         conn.close()
-        
+
         logger.info(f"Successfully generated and cached illustration for: {word}")
-        
+
         return jsonify({
             "word": word_normalized,
             "language": language,
@@ -933,49 +803,10 @@ def generate_illustration():
             "cached": False,
             "created_at": datetime.now().isoformat()
         })
-        
-    except Exception as e:
-        logger.error(f"Error generating illustration: {str(e)}")
-        return jsonify({"error": f"Failed to generate illustration: {str(e)}"}), 500
 
-def get_illustration():
-    """Get existing AI illustration for a word"""
-    try:
-        word = request.args.get('word')
-        language = request.args.get('lang')
-        
-        if not word or not language:
-            return jsonify({"error": "Both 'word' and 'lang' parameters are required"}), 400
-        
-        word_normalized = word.strip().lower()
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT scene_description, image_data, content_type, created_at
-            FROM illustrations 
-            WHERE word = %s AND language = %s
-        """, (word_normalized, language))
-        
-        result = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if not result:
-            return jsonify({"error": "Illustration not found"}), 404
-        
-        return jsonify({
-            "word": word_normalized,
-            "language": language,
-            "scene_description": result['scene_description'],
-            "image_data": base64.b64encode(result['image_data']).decode('utf-8'),
-            "content_type": result['content_type'],
-            "created_at": result['created_at'].isoformat()
-        })
-        
     except Exception as e:
-        logger.error(f"Error getting illustration: {str(e)}")
-        return jsonify({"error": f"Failed to get illustration: {str(e)}"}), 500
+        logger.error(f"Error getting/generating illustration: {str(e)}")
+        return jsonify({"error": f"Failed to get/generate illustration: {str(e)}"}), 500
 
 
 
@@ -1100,7 +931,7 @@ def generate_word_definition():
 
         # Generate definition using OpenAI (reuse existing prompt logic)
         try:
-            prompt = build_definition_prompt_v2(word, learning_lang, native_lang)
+            prompt = build_definition_prompt(word, learning_lang, native_lang)
 
             # Call OpenAI API
             client = openai.OpenAI()

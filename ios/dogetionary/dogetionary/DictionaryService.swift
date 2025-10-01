@@ -223,7 +223,7 @@ class DictionaryService: ObservableObject {
 
     func searchWord(_ word: String, learningLanguage: String, nativeLanguage: String, completion: @escaping (Result<[Definition], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        
+
         guard let url = URL(string: "\(baseURL)/v3/word?w=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)&user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&learning_lang=\(learningLanguage)&native_lang=\(nativeLanguage)") else {
             logger.error("Invalid URL for word: \(word)")
             completion(.failure(DictionaryError.invalidURL))
@@ -290,7 +290,7 @@ class DictionaryService: ObservableObject {
     func unsaveWord(wordID: Int, completion: @escaping (Result<Bool, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         guard let url = URL(string: "\(baseURL)/v3/unsave") else {
-            logger.error("Invalid URL for v2/unsave endpoint")
+            logger.error("Invalid URL for v3/unsave endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
         }
@@ -829,7 +829,7 @@ class DictionaryService: ObservableObject {
     
     func getReviewStatistics(completion: @escaping (Result<ReviewStatsData, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        
+
         guard let url = URL(string: "\(baseURL)/v3/review_statistics?user_id=\(userID)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -875,7 +875,7 @@ class DictionaryService: ObservableObject {
     
     func getWeeklyReviewCounts(completion: @escaping (Result<[DailyReviewCount], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        
+
         guard let url = URL(string: "\(baseURL)/v3/weekly_review_counts?user_id=\(userID)") else {
             completion(.failure(DictionaryError.invalidURL))
             return
@@ -921,7 +921,6 @@ class DictionaryService: ObservableObject {
     
     func getProgressFunnelData(completion: @escaping (Result<ProgressFunnelData, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
-        
         guard let url = URL(string: "\(baseURL)/v3/progress_funnel?user_id=\(userID)") else {
             completion(.failure(DictionaryError.invalidURL))
             return

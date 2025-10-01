@@ -12,7 +12,6 @@ struct ReviewView: View {
     @State private var currentWord: ReviewWord?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var reviewStats: ReviewStats?
     @State private var isSessionComplete = false
     @State private var reviewStartTime: Date?
     @State private var dueCounts: DueCountsResponse?

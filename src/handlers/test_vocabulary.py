@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 # Add parent directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.database import get_db_connection
+from utils.database import get_db_connection, db_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +39,7 @@ def update_test_settings():
         if all(param is None for param in [toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days]):
             return jsonify({"error": "At least one setting must be provided"}), 400
 
-        conn = get_db_connection()
-        cur = conn.cursor()
-        try:
-
+        with db_cursor(commit=True) as cur:
             # Build dynamic update query
             update_fields = []
             params = []
@@ -78,7 +75,6 @@ def update_test_settings():
             """, params)
 
             result = cur.fetchone()
-            conn.commit()
 
             if result:
                 return jsonify({
@@ -93,10 +89,6 @@ def update_test_settings():
                 }), 200
             else:
                 return jsonify({"error": "User not found"}), 404
-
-        finally:
-            cur.close()
-            conn.close()
 
     except Exception as e:
         logger.error(f"Error updating test settings: {e}")
@@ -253,7 +245,7 @@ def add_daily_test_words():
                     (%s = TRUE AND tv.is_toefl = TRUE) OR
                     (%s = TRUE AND tv.is_ielts = TRUE)
                 )
-                AND tv.word NOT IN (SELECT word FROM existing_words)
+                AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
                 ORDER BY RANDOM()
                 LIMIT %s
             """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled, DAILY_TEST_WORDS))
@@ -374,3 +366,18 @@ def get_test_vocabulary_stats():
     except Exception as e:
         logger.error(f"Error getting test vocabulary stats: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+
+def manual_daily_job():
+    """
+    Manual trigger for daily test vocabulary job (for testing/admin use)
+    """
+    try:
+        from workers.test_vocabulary_worker import add_daily_test_words_for_all_users
+
+        logger.info("Manual trigger of daily test vocabulary job")
+        add_daily_test_words_for_all_users()
+        return jsonify({"success": True, "message": "Daily job completed successfully"}), 200
+    except Exception as e:
+        logger.error(f"Manual daily job failed: {e}")
+        return jsonify({"error": "Failed to run daily job"}), 500

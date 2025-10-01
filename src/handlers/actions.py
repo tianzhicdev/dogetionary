@@ -23,7 +23,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.config import *
-from utils.database import validate_language, get_db_connection
+from utils.database import validate_language, get_db_connection, db_insert_returning, db_cursor, db_fetch_one, db_fetch_all, db_execute
 from services.user_service import get_user_preferences
 from handlers.admin import get_next_review_date_new
 
@@ -63,20 +63,13 @@ def save_word():
         except ValueError:
             return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
         
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        cur.execute("""
+        result = db_insert_returning("""
             INSERT INTO saved_words (user_id, word, learning_language, native_language, metadata)
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT ON CONSTRAINT saved_words_user_id_word_learning_language_native_language_key
             DO UPDATE SET metadata = EXCLUDED.metadata
             RETURNING id, created_at
         """, (user_id, word, learning_lang, native_lang, json.dumps(metadata)))
-        
-        result = cur.fetchone()
-        conn.commit()
-        conn.close()
         
         return jsonify({
             "success": True,
@@ -106,44 +99,40 @@ def delete_saved_word():
         except ValueError:
             return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        with db_cursor(commit=True) as cur:
+            # Check if this is v1.0.10 format (word_id) or v1.0.9 format (word + learning_language)
+            if 'word_id' in data:
+                # v1.0.10 format: use word_id directly
+                word_id = data['word_id']
+                try:
+                    word_id = int(word_id)
+                except (ValueError, TypeError):
+                    return jsonify({"error": "Invalid word_id format. Must be an integer"}), 400
 
-        # Check if this is v1.0.10 format (word_id) or v1.0.9 format (word + learning_language)
-        if 'word_id' in data:
-            # v1.0.10 format: use word_id directly
-            word_id = data['word_id']
-            try:
-                word_id = int(word_id)
-            except (ValueError, TypeError):
-                return jsonify({"error": "Invalid word_id format. Must be an integer"}), 400
+                cur.execute("""
+                    DELETE FROM saved_words
+                    WHERE id = %s AND user_id = %s
+                    RETURNING id, word
+                """, (word_id, user_id))
 
-            cur.execute("""
-                DELETE FROM saved_words
-                WHERE id = %s AND user_id = %s
-                RETURNING id, word
-            """, (word_id, user_id))
+            elif 'word' in data and 'learning_language' in data:
+                # v1.0.9 format: lookup by word + learning_language
+                word = data['word']
+                learning_language = data['learning_language']
 
-        elif 'word' in data and 'learning_language' in data:
-            # v1.0.9 format: lookup by word + learning_language
-            word = data['word']
-            learning_language = data['learning_language']
+                if not validate_language(learning_language):
+                    return jsonify({"error": f"Unsupported learning language: {learning_language}"}), 400
 
-            if not validate_language(learning_language):
-                return jsonify({"error": f"Unsupported learning language: {learning_language}"}), 400
+                cur.execute("""
+                    DELETE FROM saved_words
+                    WHERE word = %s AND learning_language = %s AND user_id = %s
+                    RETURNING id, word
+                """, (word, learning_language, user_id))
 
-            cur.execute("""
-                DELETE FROM saved_words
-                WHERE word = %s AND learning_language = %s AND user_id = %s
-                RETURNING id, word
-            """, (word, learning_language, user_id))
+            else:
+                return jsonify({"error": "Either 'word_id' or both 'word' and 'learning_language' are required"}), 400
 
-        else:
-            return jsonify({"error": "Either 'word_id' or both 'word' and 'learning_language' are required"}), 400
-
-        deleted = cur.fetchone()
-        conn.commit()
-        conn.close()
+            deleted = cur.fetchone()
 
         if deleted:
             return jsonify({
@@ -188,19 +177,15 @@ def delete_saved_word_v2():
         except (ValueError, TypeError):
             return jsonify({"error": "Invalid word_id format. Must be an integer"}), 400
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        with db_cursor(commit=True) as cur:
+            # Delete the saved word (reviews will cascade delete automatically)
+            cur.execute("""
+                DELETE FROM saved_words
+                WHERE id = %s AND user_id = %s
+                RETURNING id, word
+            """, (word_id, user_id))
 
-        # Delete the saved word (reviews will cascade delete automatically)
-        cur.execute("""
-            DELETE FROM saved_words
-            WHERE id = %s AND user_id = %s
-            RETURNING id, word
-        """, (word_id, user_id))
-
-        deleted = cur.fetchone()
-        conn.commit()
-        conn.close()
+            deleted = cur.fetchone()
 
         if deleted:
             return jsonify({
@@ -224,11 +209,8 @@ def get_next_review_word():
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
         
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
         # Find word with earliest next review date (due now or overdue)
-        cur.execute("""
+        word = db_fetch_one("""
             SELECT
                 sw.id,
                 sw.word,
@@ -239,8 +221,8 @@ def get_next_review_word():
                 COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
                 COALESCE(latest_review.review_count, 0) as review_count,
                 latest_review.last_reviewed_at,
-                CASE 
-                    WHEN latest_review.last_reviewed_at IS NOT NULL AND latest_review.next_review_date IS NOT NULL 
+                CASE
+                    WHEN latest_review.last_reviewed_at IS NOT NULL AND latest_review.next_review_date IS NOT NULL
                     THEN EXTRACT(epoch FROM (latest_review.next_review_date - latest_review.last_reviewed_at)) / 86400
                     WHEN latest_review.next_review_date IS NOT NULL
                     THEN EXTRACT(epoch FROM (latest_review.next_review_date - sw.created_at)) / 86400
@@ -248,7 +230,7 @@ def get_next_review_word():
                 END as interval_days
             FROM saved_words sw
             LEFT JOIN (
-                SELECT 
+                SELECT
                     word_id,
                     next_review_date,
                     reviewed_at as last_reviewed_at,
@@ -257,17 +239,13 @@ def get_next_review_word():
                 FROM reviews
                 GROUP BY word_id, next_review_date, reviewed_at
             ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
-            WHERE sw.user_id = %s 
+            WHERE sw.user_id = %s
             -- Exclude words reviewed in the past 24 hours
             AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
             -- AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
             LIMIT 1
         """, (user_id,))
-        
-        word = cur.fetchone()
-        cur.close()
-        conn.close()
         
         if not word:
             return jsonify({
@@ -294,66 +272,60 @@ def get_next_review_word():
 def submit_review():
     try:
         data = request.get_json()
-        
+
         user_id = data.get('user_id')
         word_id = data.get('word_id')
         response = data.get('response')
-        
+
         if not all([user_id, word_id is not None, response is not None]):
             return jsonify({"error": "user_id, word_id, and response are required"}), 400
-        
+
         try:
             uuid.UUID(user_id)
         except ValueError:
             return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
+
         # Record the current review time
         current_review_time = datetime.now()
-        
+
         # Get existing review data and word creation date
-        cur.execute("""
+        word_data = db_fetch_one("""
             SELECT sw.created_at
             FROM saved_words sw
             WHERE sw.id = %s AND sw.user_id = %s
         """, (word_id, user_id))
-        
-        word_data = cur.fetchone()
+
         if not word_data:
             return jsonify({"error": "Word not found"}), 404
-            
+
         created_at = word_data['created_at']
-        
-        cur.execute("""
-            SELECT response, reviewed_at FROM reviews 
-            WHERE user_id = %s AND word_id = %s 
+
+        reviews_data = db_fetch_all("""
+            SELECT response, reviewed_at FROM reviews
+            WHERE user_id = %s AND word_id = %s
             ORDER BY reviewed_at ASC
         """, (user_id, word_id))
-        
-        existing_reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in cur.fetchall()]
-        
+
+        existing_reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in reviews_data]
+
         # Add current review to history for next review calculation
         all_reviews = existing_reviews + [{"response": response, "reviewed_at": current_review_time}]
-        
+
         # Calculate next review date using new algorithm
         next_review_date = get_next_review_date_new(all_reviews, created_at)
-        
+
         # Insert the new review with calculated next_review_date
-        cur.execute("""
+        # Convert response to boolean (1 = correct/true, 0 = incorrect/false)
+        response_bool = bool(response)
+        db_execute("""
             INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date)
             VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, word_id, response, current_review_time, next_review_date))
-        
-        conn.commit()
-        
+        """, (user_id, word_id, response_bool, current_review_time, next_review_date), commit=True)
+
         # Calculate simple stats for response
         review_count = len(all_reviews)
         interval_days = (next_review_date - current_review_time).days if next_review_date else 1
-        
-        conn.close()
-        
+
         return jsonify({
             "success": True,
             "word_id": word_id,
@@ -363,7 +335,7 @@ def submit_review():
             "interval_days": interval_days,
             "next_review_date": next_review_date.isoformat()
         })
-        
+
     except Exception as e:
         logger.error(f"Error submitting review: {str(e)}")
         return jsonify({"error": f"Failed to submit review: {str(e)}"}), 500
@@ -393,23 +365,15 @@ def submit_feedback():
         except ValueError:
             return jsonify({"error": "Invalid user_id format"}), 400
 
-        conn = get_db_connection()
-        cur = conn.cursor()
-
         # Insert feedback
-        cur.execute("""
+        result = db_insert_returning("""
             INSERT INTO user_feedback (user_id, feedback)
             VALUES (%s, %s)
             RETURNING id, created_at
         """, (user_id, feedback))
 
-        result = cur.fetchone()
         feedback_id = result['id']
         created_at = result['created_at']
-
-        conn.commit()
-        cur.close()
-        conn.close()
 
         return jsonify({
             "success": True,

@@ -101,3 +101,4 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
         # Note: app.logger reference will need to be handled
         print(f"Error getting user preferences: {str(e)}")
         return 'en', 'zh', 'LearningExplorer', 'Every word is a new adventure!'
+        
