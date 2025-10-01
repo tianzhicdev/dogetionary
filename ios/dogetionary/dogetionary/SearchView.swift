@@ -6,11 +6,8 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct SearchView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
     @State private var searchText = ""
     @State private var definitions: [Definition] = []
     @State private var isLoading = false
@@ -171,37 +168,51 @@ struct SearchView: View {
         isLoading = true
         errorMessage = nil
 
-        // FIRST check validation to determine if we should show definition
-        DictionaryService.shared.searchWordV2(searchQuery) { result in
+        // Single merged call to get both definition and validation
+        DictionaryService.shared.searchWord(searchQuery) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let definitionV2):
-                    // Store confidence and suggestion
-                    self.currentWordConfidence = definitionV2.validation.confidence
-                    self.validationSuggestion = definitionV2.validation.suggested
+                self.isLoading = false
 
-                    if definitionV2.isValid {
+                switch result {
+                case .success(let definitions):
+                    guard let definition = definitions.first else {
+                        self.errorMessage = "No definition found"
+                        return
+                    }
+
+                    // Store validation data from merged response
+                    self.currentWordConfidence = definition.validation.confidence
+                    self.validationSuggestion = definition.validation.suggested
+
+                    if definition.isValid {
                         // High confidence (≥0.9) - show definition immediately + auto-save
-                        self.fetchAndDisplayDefinition(searchQuery, autoSave: true)
+                        self.definitions = definitions
+
+                        // Auto-save the word
+                        self.autoSaveWord(definition.word)
+
+                        // Track successful search
+                        AnalyticsManager.shared.track(action: .dictionaryAutoSave, metadata: [
+                            "word": definition.word,
+                            "confidence": definition.validation.confidence,
+                            "language": UserManager.shared.learningLanguage
+                        ])
                     } else {
                         // Low confidence (<0.9) - show alert, NO definition
-                        self.isLoading = false
                         self.showValidationAlert = true
 
                         // Track validation event
                         AnalyticsManager.shared.track(action: .validationInvalid, metadata: [
                             "original_query": searchQuery,
-                            "confidence": definitionV2.validation.confidence,
-                            "suggested": definitionV2.validation.suggested ?? "none",
+                            "confidence": definition.validation.confidence,
+                            "suggested": definition.validation.suggested ?? "none",
                             "language": UserManager.shared.learningLanguage
                         ])
                     }
 
-                case .failure(_):
-                    // Validation service failed - default to showing definition + auto-save
-                    self.currentWordConfidence = 1.0
-                    self.validationSuggestion = nil
-                    self.fetchAndDisplayDefinition(searchQuery, autoSave: true)
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                    self.definitions = []
                 }
             }
         }
@@ -319,356 +330,9 @@ struct SearchView: View {
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
-    }
 }
 
-struct DefinitionCard: View {
-    let definition: Definition
-    @StateObject private var audioPlayer = AudioPlayer()
-    @State private var isSaved = false
-    @State private var isSaving = false
-    @State private var isCheckingStatus = true
-    @State private var savedWordId: Int?
-    @State private var wordAudioData: Data?
-    @State private var exampleAudioData: [String: Data] = [:]
-    @State private var loadingAudio = false
-    @State private var illustration: IllustrationResponse?
-    @State private var isGeneratingIllustration = false
-    @State private var illustrationError: String?
-    @ObservedObject private var userManager = UserManager.shared
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(definition.word)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                if let phonetic = definition.phonetic {
-                    Text(phonetic)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-                
-                HStack(spacing: 12) {
-                    // Save/Unsave toggle button
-                    Button(action: {
-                        if isSaved {
-                            // Unsave the existing saved word (regardless of its language pair)
-                            unsaveWord()
-                        } else {
-                            // Save with current language settings
-                            saveWord()
-                        }
-                    }) {
-                        Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                            .font(.title3)
-                            .foregroundColor(isSaved ? .blue : .secondary)
-                    }
-                    .disabled(isSaving || isCheckingStatus)
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    // Audio play button - always show
-                    Button(action: {
-                        if audioPlayer.isPlaying {
-                            audioPlayer.stopAudio()
-                        } else {
-                            playWordAudio()
-                        }
-                    }) {
-                        if loadingAudio {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .disabled(loadingAudio)
-
-                    // Pronunciation practice button
-                    PronunciationPracticeView(
-                        originalText: definition.word,
-                        source: "word",
-                        wordId: nil
-                    )
-                }
-            }
-
-            // Show language pair from definition (always available)
-            HStack(spacing: 4) {
-                Text(definition.learning_language.uppercased())
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.1))
-                    .foregroundColor(.blue)
-                    .cornerRadius(4)
-
-                Image(systemName: "arrow.right")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                Text(definition.native_language.uppercased())
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.green.opacity(0.1))
-                    .foregroundColor(.green)
-                    .cornerRadius(4)
-            }
-            .padding(.bottom, 8)
-
-            // Show translations if available
-            if !definition.translations.isEmpty {
-                Text(definition.translations.joined(separator: " • "))
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .padding(.bottom, 8)
-            }
-            
-            // AI Illustration Section
-            AIIllustrationView(
-                word: definition.word,
-                language: userManager.learningLanguage,
-                definition: definition,
-                illustration: $illustration,
-                isGenerating: $isGeneratingIllustration,
-                error: $illustrationError
-            )
-            .padding(.bottom, 8)
-            
-            ForEach(definition.meanings, id: \.partOfSpeech) { meaning in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(meaning.partOfSpeech)
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                    
-                    ForEach(Array(meaning.definitions.enumerated()), id: \.offset) { index, def in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(index + 1). \(def.definition)")
-                                .font(.body)
-                            
-                            if let example = def.example {
-                                HStack(alignment: .top, spacing: 8) {
-                                    Text("Example: \(example)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .italic()
-                                    
-                                    Button(action: {
-                                        playExampleAudio(example)
-                                    }) {
-                                        Image(systemName: "speaker.wave.2")
-                                            .font(.title3)
-                                            .foregroundColor(.blue)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-
-                                    // Pronunciation practice for examples
-                                    PronunciationPracticeView(
-                                        originalText: example,
-                                        source: "example",
-                                        wordId: nil
-                                    )
-                                }
-                            }
-                        }
-                        .padding(.leading, 8)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-        .onAppear {
-            checkIfWordIsSaved()
-            loadWordAudioIfNeeded()
-
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { notification in
-            if let autoSavedWord = notification.object as? String,
-               autoSavedWord.lowercased() == definition.word.lowercased() {
-                // Update bookmark state for auto-saved word
-                isSaved = true
-            }
-        }
-    }
-    
-    private func saveWord() {
-        isSaving = true
-
-        // Track dictionary save action
-        AnalyticsManager.shared.track(action: .dictionarySave, metadata: [
-            "word": definition.word,
-            "language": UserManager.shared.learningLanguage
-        ])
-
-        DictionaryService.shared.saveWord(definition.word) { result in
-            DispatchQueue.main.async {
-                isSaving = false
-
-                switch result {
-                case .success(let wordId):
-                    isSaved = true
-                    savedWordId = wordId
-                case .failure(let error):
-                    print("Failed to save word: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-
-    private func unsaveWord() {
-        guard let wordId = savedWordId else {
-            print("Cannot unsave word: no saved word ID available")
-            return
-        }
-
-        isSaving = true
-
-        DictionaryService.shared.unsaveWord(wordID: wordId) { result in
-            DispatchQueue.main.async {
-                isSaving = false
-
-                switch result {
-                case .success:
-                    // Word completely removed from saved words
-                    isSaved = false
-                    savedWordId = nil
-
-                    // Post notification for SavedWordsView to update
-                    NotificationCenter.default.post(name: .wordUnsaved, object: definition.word)
-                case .failure(let error):
-                    print("Failed to unsave word: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-    
-    private func checkIfWordIsSaved() {
-        isCheckingStatus = true
-
-        DictionaryService.shared.getSavedWords { result in
-            DispatchQueue.main.async {
-                isCheckingStatus = false
-
-                switch result {
-                case .success(let savedWords):
-                    // Check if word is saved with current user language settings
-                    if let foundWord = savedWords.first(where: {
-                        $0.word.lowercased() == definition.word.lowercased() &&
-                        $0.learning_language == definition.learning_language &&
-                        $0.native_language == definition.native_language
-                    }) {
-                        // Word is saved with definition's language settings
-                        isSaved = true
-                        savedWordId = foundWord.id
-                    } else {
-                        // Word is not saved with definition's language settings
-                        isSaved = false
-                        savedWordId = nil
-                    }
-                case .failure:
-                    // If we can't check, assume not saved
-                    isSaved = false
-                    savedWordId = nil
-                }
-            }
-        }
-    }
-    
-    private func loadWordAudioIfNeeded() {
-        guard wordAudioData == nil else {
-            return
-        }
-        
-        DictionaryService.shared.fetchAudioForText(definition.word, language: UserManager.shared.learningLanguage) { audioData in
-            DispatchQueue.main.async {
-                self.wordAudioData = audioData
-            }
-        }
-    }
-    
-    private func playWordAudio() {
-        // Track dictionary search audio action
-        AnalyticsManager.shared.track(action: .dictionarySearchAudio, metadata: [
-            "word": definition.word,
-            "language": UserManager.shared.learningLanguage
-        ])
-
-        if let audioData = wordAudioData {
-            audioPlayer.playAudio(from: audioData)
-        } else {
-            // Fetch audio using text+language directly
-            loadingAudio = true
-            DictionaryService.shared.fetchAudioForText(definition.word, language: UserManager.shared.learningLanguage) { audioData in
-                DispatchQueue.main.async {
-                    self.loadingAudio = false
-                    if let audioData = audioData {
-                        self.wordAudioData = audioData
-                        self.audioPlayer.playAudio(from: audioData)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func playExampleAudio(_ text: String) {
-        // Track dictionary example audio action
-        AnalyticsManager.shared.track(action: .dictionaryExampleAudio, metadata: [
-            "word": definition.word,
-            "example_text": text,
-            "language": UserManager.shared.learningLanguage
-        ])
-
-        loadExampleAudio(for: text) { audioData in
-            if let audioData = audioData {
-                self.audioPlayer.playAudio(from: audioData)
-            }
-        }
-    }
-    
-    private func loadExampleAudio(for text: String, completion: @escaping (Data?) -> Void) {
-        if let audioData = exampleAudioData[text] {
-            completion(audioData)
-            return
-        }
-        
-        // Fetch audio using text+language directly
-        DictionaryService.shared.fetchAudioForText(text, language: UserManager.shared.learningLanguage) { audioData in
-            DispatchQueue.main.async {
-                if let audioData = audioData {
-                    self.exampleAudioData[text] = audioData
-                }
-                completion(audioData)
-            }
-        }
-    }
-}
 
 #Preview {
     SearchView()
-        .modelContainer(for: Item.self, inMemory: true)
 }

@@ -1,0 +1,161 @@
+Completed Items ✅
+
+Language selection (57 languages)
+Audio support for example sentences
+Fibonacci/SuperMemo SM-2 algorithm implementation
+Saved words sorting by due date
+Review interval calculations
+Settings page
+Landing page
+Screenshots
+
+Bug Fixes 🐛
+
+Fix audio loading issue in review mode
+Fix review count discrepancy between list and detail views
+Fix current_created_at undefined error in fix_next_review_dates
+Fix retention rate calculation (should use date - last review/creation)
+Fix forgetting curve graph (100% retention off by 1 day)
+Include last review date at 100% on graph
+Add creation date and next review date as markers
+
+New Features 🆕
+
+Create /privacy-agreement page
+Add AI illustration feature with OpenAI integration
+Create illustration database table
+Implement POST /generate-illustration and GET /illustration endpoints
+Add leaderboard tab with user rankings by review count
+Add user name and motto settings
+Create stats with 4-step progress indicators
+Add monthly review graph
+Update progress icons (use brain.filled.head.profile with wiggle effect for final stage)
+
+UI/UX Improvements 🎨
+
+Remove "word information" and "review statistics" sections from saved word detail page
+Show next review date in saved words (to day precision, not seconds)
+Show review count in saved words list
+Use green gradient background for progress graph
+Display datetime to seconds in detail stats
+
+Future Marketing 📈
+
+TikTok ads campaign
+
+----
+1. we should use datetime everywhere in frontend and backend; only when we display it we change it to date;
+
+
+when the backend returns forgetting_curve, it should include the last review at 100% and make a dotted line between last review and the next review date. the next review date marker should always be at 25% of retention;
+
+1. on the retention curve, on x-axis we only show creation date, today and next review date;
+1. rewrite CLAUDE.md to reflect current codebase; keep the principles; 
+2. the line between the last review to next review should be dotted, now it is a full line; if dotted line is not supported we can use a grey color;
+3. remove "historical" "projection" in the legends
+4. remove "learning timeline"
+5. the review history should show creation time 
+6. the decay rate and the threshold to set the next review date should be configurable at compile time, make them constants at the top for easy tuning; 
+
+2. refactor the frontend and backend code -- use multiple files, one for each class, improve the reusability of the code, give every class a meaningful name, remove unused code;
+3. we should refactor integration test so all endpoints are properly tested
+4. we should create unit tests too so business logic heavy functions are tested too
+
+
+1. add a feedback section in the settings tab -- with a submit button; users can write what ever they want < 500 chars then submit it; we should have a table user_id, feedback, created_at to collect feedback;
+
+
+2.
+in review mode there is a "review complete" ReviewCompleteView, we should add a similar ReviewGoalAchievedView;
+we should show ReviewGoalAchievedView when review overdue count reach 0 from 1 or more; 
+it should show "reviews today" (reviews in the past 24 hours), success rate today (n the past 24 hours), 
+changes from acquainted -> familiar, familiar -> remembered, remembered to unforgettable;
+2 buttons: "Continue", "Review Stats"
+ "Review Stats" should take users to saved words -> review stats;
+
+ ReviewCompleteView right now only show up when there is no more words to review (all have been reviewed in the past 24h)
+ keep this behaviour but change the stats to be the same as ReviewGoalAchievedView and there is only one button "Review Stats"
+
+
+we should ask users to rate our app when he has > 100 reviews on the ReviewGoalAchievedView page; we should only trigger rating ask once ever; how can this be implemented? no code, discuss
+
+
+1. create analytics system
+
+for every user action, every button or tab click on the UI, we need to generate a user action
+user_id, action enum, metadata
+
+
+'action enum' should be save, lookup_search, lookup_search_audio, tab_leaderborad ,tab_review, review_yes, review_no, review_audio, username_update, usermotton_update, feedback_submit
+basically category_action we can use   category_action_subaction if needed, plz design all the action enum
+
+the /usage should show a table of counts by day by action in the past 7 days;
+
+the /usage should show a table of all the actions for a user; a dropdown menu to select from all the users should be present
+
+
+show me your plan, DDL sql and action enum
+
+
+1. because users can be on any version of the app, everything we do must be backward compatible;
+
+2. we should add a feature to show the users if the word they look up is not word. -- this will require a breaking ios change;
+-- ios should call new version of the endpoint;
+there must be a way to force an app upgrade
+
+when users search a word, we should automatically save the word. show me how you would want to implement this. no code yet
+
+
+
+1. we should allow people to remove saved words, add a new field in saved words 'removed', then every call must use removed filter;
+2. or we can just really remove it from db and reivews, keep everything simple;
+
+1. when we display word definitions in the contentview, if image loading should not stop new definition being rendered.
+there is a problem when i search for a new word, it does not display definition, it reverted back to the landing view;
+let's keep the logic simple: when a user search, or search a new word where there is already a definiton being displayed, or the user select to display a wrong word on the alert popup window. we IMEEDAITELY display the new word definitoin with no delay. 
+
+
+1. ios app change: let's use ios/dogetionary/dogetionary/resources/logo.png as a logo to make a banner it should just be "<logo> Unforgettable Dictionary";
+the banner should be on top of every page in the ios app
+
+2. develop a feature on the definition on the frontend, we should let the user practice pronuncing the word or example sentences; 
+the ui has a button to start recording, it sends back to backend; audio send to open ai to speech to text; the we ask open ai if the original and new audio recognized text are the similar enough; if yes, we report back to ui as success or no for failure; db should record user voice and results and time stamp; 
+db should be id, original_text (could be just a word or an example sentence), user_audio, speech_to_text, result (boolean), created_at, metadata json
+
+
+1. get rid of app
+
+3. 404 is ok for submit_review
+4. when unsave, we go back to list view
+5. detail view when pronuciation is done
+
+2. test 1.0.9 and 1.0.12(latest tag) frontend again
+
+
+2. use /<learning_language>/<native_language>/<letter>/<word>
+2.  
+test_vocabularies -- the table we keep it simple, just word, langauge, is_toefl, is_ielts for now, we can alway extend
+user_preferences -- we also just use toefl_enabled, ielts_enabled for easy extensibility;
+get_daily_test_words -- if user enabled any test, we add 10 (make it configurable at compile tile, by dev not users), the 10 should be random, and not part of users already saved words;
+
+1. remove unused code from UI and backend
+2. restructure the backend and ui code so they are more manageable, improve reusability and readability, keep the code simple and stupid, no fancy stuff
+3. reduce the amount of boilerplate code involving the database calls, use utility functions
+4. Update README.md with current architecture and setup instructions
+5. Add conprehensive integration tests, ensure all the tests are valid, do not skip tests
+6. ensure each logs can be access from outsite and we keep about 2gb of logs available
+
+--- done ---
+1. code clean up
+the code is getting v difficult to manage at this point, i need to simplify and orgranize the code better;
+
+backend -- review the code
+frontend -- review the code and make sure that api calls are ok with new fields;
+
+2. beckward compatible
+
+1. generate words, no audio no image 
+
+in the usage page: User Actions Analytics (Last 7 Days) should show unique user count and total action count (can from the same user) graph for each action, not just a list;
+
+2. create better metrics for review

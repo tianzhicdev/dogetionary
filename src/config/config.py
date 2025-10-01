@@ -1,5 +1,4 @@
-# SM-2 SuperMemo spaced repetition algorithm
-DEFAULT_EASE_FACTOR = 2.5
+# SM-2 SuperMemo spaced repetition algorithm (deprecated - now using Fibonacci)
 INITIAL_INTERVALS = [1, 6]  # First review: 1 day, Second review: 6 days
 
 DECAY_RATE_WEEK_1 = 0.45      # 45% per day

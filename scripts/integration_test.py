@@ -73,7 +73,7 @@ class TestRunner:
         
         # Test valid word request
         try:
-            response = requests.get(f"{BASE_URL}/word", params={"w": "hello", "user_id": self.test_user_id, "learning_lang": "en", "native_lang": "en"})
+            response = requests.get(f"{BASE_URL}/word", params={"w": "hello", "user_id": self.test_user_id, "learning_lang": "en", "native_lang": "zh"})
             self.assert_status_code(response, 200, "/word endpoint with valid word")
             
             data = response.json()
