@@ -1,3 +1,6 @@
+# this is legacy code, do not edit
+# for any changes, we should do it in app_v3.py
+
 from flask import Flask
 import os
 from dotenv import load_dotenv
@@ -10,11 +13,14 @@ app = Flask(__name__)
 
 # Import and setup logging middleware
 from middleware.logging import setup_logging, log_request_info, log_response_info
+from middleware.api_usage_tracker import track_request_start, track_request_end
 setup_logging(app)
 
 # Register middleware
 app.before_request(log_request_info)
+app.before_request(track_request_start)
 app.after_request(log_response_info)
+app.after_request(track_request_end)
 
 
 from handlers.actions import save_word, delete_saved_word, delete_saved_word_v2, submit_feedback, submit_review, get_next_review_word
@@ -23,6 +29,7 @@ from handlers.reads import get_due_counts, get_review_progress_stats, get_review
 from handlers.admin import test_review_intervals, fix_next_review_dates, privacy_agreement, support_page, health_check
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
+from handlers.api_usage_analytics import get_api_usage_analytics
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
 from handlers.words import get_next_review_word_v2, audio_generation_worker, get_saved_words, get_word_definition, get_word_details, get_audio, get_illustration, generate_word_definition
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
@@ -31,13 +38,10 @@ from handlers.static_site import get_all_words, get_words_summary, get_featured_
 app.route('/save', methods=['POST'])(save_word) # ok
 app.route('/unsave', methods=['POST'])(delete_saved_word) # ok
 app.route('/v2/unsave', methods=['POST'])(delete_saved_word_v2) # ok
-
 app.route('/review_next', methods=['GET'])(get_next_review_word) # backward compatibility for old iOS versions
 app.route('/due_counts', methods=['GET'])(get_due_counts) # ok
 app.route('/reviews/submit', methods=['POST'])(submit_review) # returning more than needed but ok
-
 app.route('/word', methods=['GET'])(get_word_definition)
-
 app.route('/saved_words', methods=['GET'])(get_saved_words) # returning more than needed but ok
 app.route('/users/<user_id>/preferences', methods=['GET', 'POST'])(handle_user_preferences)  # ok
 app.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forgetting_curve)  # might be able to simplify but ok
@@ -54,20 +58,15 @@ app.route('/generate-illustration', methods=['POST'])(get_illustration) # backwa
 app.route('/feedback', methods=['POST'])(submit_feedback) # ok
 app.route('/reviews/stats', methods=['GET'])(get_review_stats) # backward compatibility for old iOS versions
 app.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats) # ok
-
 app.route('/pronunciation/practice', methods=['POST'])(practice_pronunciation) # learning lang should be word-specific but ok for now
-
 app.route('/pronunciation/stats', methods=['GET'])(get_pronunciation_stats)
 app.route('/v2/review_next', methods=['GET'])(get_next_review_word_v2)
-
 # Static site generation endpoints
 app.route('/words', methods=['GET'])(get_all_words)
 app.route('/words/summary', methods=['GET'])(get_words_summary)
 app.route('/words/featured', methods=['GET'])(get_featured_words)
-
 # Bulk data management endpoints
 app.route('/api/words/generate', methods=['POST'])(generate_word_definition)
-
 # Test vocabulary endpoints (TOEFL/IELTS)
 from handlers.test_vocabulary import (
     update_test_settings,
@@ -76,25 +75,20 @@ from handlers.test_vocabulary import (
     get_test_vocabulary_stats,
     manual_daily_job
 )
-
 app.route('/api/test-prep/settings', methods=['PUT'])(update_test_settings)
 app.route('/api/test-prep/settings', methods=['GET'])(get_test_settings)
 app.route('/api/test-prep/add-words', methods=['POST'])(add_daily_test_words)
 app.route('/api/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
 app.route('/test-review-intervals', methods=['GET'])(test_review_intervals) 
-
 app.route('/fix_next_review_dates', methods=['POST'])(fix_next_review_dates)
-
 app.route('/privacy', methods=['GET'])(privacy_agreement)
 app.route('/support', methods=['GET'])(support_page)
 app.route('/health', methods=['GET'])(health_check)
 app.route('/usage', methods=['GET'])(get_usage_dashboard)
-
+app.route('/api/usage', methods=['GET'])(get_api_usage_analytics)
 app.route('/analytics/track', methods=['POST'])(track_user_action)
 app.route('/analytics/data', methods=['GET'])(get_analytics_data) # perhaps we dont need it but it is ok for now
-
 app.route('/pronunciation/history', methods=['GET'])(get_pronunciation_history) # not used by ios
-
 app.route('/api/test-prep/run-daily-job', methods=['POST'])(manual_daily_job)
 
 # Register v3 API blueprint

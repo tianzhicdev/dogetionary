@@ -174,6 +174,19 @@ CREATE TABLE notification_logs (
     dismissed_at TIMESTAMP
 );
 
+-- API Usage Logs table (for tracking endpoint usage and deprecation)
+CREATE TABLE api_usage_logs (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+    endpoint VARCHAR(255) NOT NULL,
+    method VARCHAR(10) NOT NULL,
+    user_id UUID,
+    response_status INTEGER,
+    duration_ms FLOAT,
+    user_agent TEXT,
+    api_version VARCHAR(10)  -- 'v1', 'v2', 'v3', or NULL for unversioned
+);
+
 -- Additional indexes for new tables
 CREATE INDEX idx_test_vocab_toefl ON test_vocabularies(is_toefl) WHERE is_toefl = TRUE;
 CREATE INDEX idx_test_vocab_ielts ON test_vocabularies(is_ielts) WHERE is_ielts = TRUE;
@@ -186,3 +199,6 @@ CREATE INDEX idx_pronunciation_user_id ON pronunciation_practice(user_id);
 CREATE INDEX idx_pronunciation_word ON pronunciation_practice(word);
 CREATE INDEX idx_notification_logs_user_id ON notification_logs(user_id);
 CREATE INDEX idx_notification_logs_type ON notification_logs(notification_type);
+CREATE INDEX idx_api_usage_endpoint_timestamp ON api_usage_logs(endpoint, timestamp DESC);
+CREATE INDEX idx_api_usage_timestamp ON api_usage_logs(timestamp DESC);
+CREATE INDEX idx_api_usage_user_id ON api_usage_logs(user_id);

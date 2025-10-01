@@ -373,6 +373,86 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
         </div>
 
         <div class="section">
+            <h2>📊 API Endpoint Usage (Last 7 Days)</h2>
+            <p style="color: #666; font-size: 0.9em;">Track which endpoints are being called to identify deprecated APIs</p>
+    """
+
+    # Add API usage analytics
+    try:
+        api_conn = get_db_connection()
+        api_cur = api_conn.cursor()
+
+        api_cur.execute("""
+            WITH endpoint_stats AS (
+                SELECT
+                    endpoint,
+                    method,
+                    api_version,
+                    MAX(timestamp) FILTER (WHERE timestamp >= NOW() - INTERVAL '1 day') as last_call_1d,
+                    COUNT(*) FILTER (WHERE timestamp >= NOW() - INTERVAL '1 day') as count_1d,
+                    MAX(timestamp) FILTER (WHERE timestamp >= NOW() - INTERVAL '3 days') as last_call_3d,
+                    COUNT(*) FILTER (WHERE timestamp >= NOW() - INTERVAL '3 days') as count_3d,
+                    MAX(timestamp) FILTER (WHERE timestamp >= NOW() - INTERVAL '7 days') as last_call_7d,
+                    COUNT(*) FILTER (WHERE timestamp >= NOW() - INTERVAL '7 days') as count_7d,
+                    AVG(duration_ms) FILTER (WHERE timestamp >= NOW() - INTERVAL '7 days') as avg_duration_ms
+                FROM api_usage_logs
+                WHERE timestamp >= NOW() - INTERVAL '7 days'
+                GROUP BY endpoint, method, api_version
+            )
+            SELECT * FROM endpoint_stats
+            WHERE count_7d > 0
+            ORDER BY count_7d DESC, endpoint ASC
+        """)
+
+        api_usage = api_cur.fetchall()
+        api_cur.close()
+        api_conn.close()
+
+        if api_usage:
+            html += """
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Method</th>
+                            <th>Version</th>
+                            <th>1 Day</th>
+                            <th>3 Days</th>
+                            <th>7 Days</th>
+                            <th>Last Call</th>
+                            <th>Avg (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            """
+            for row in api_usage:
+                version = row['api_version'] or 'v1'
+                version_style = 'color: #2196F3;' if row['api_version'] else 'color: #999;'
+                html += f"""
+                        <tr>
+                            <td style="font-family: monospace;">{row['endpoint']}</td>
+                            <td>{row['method']}</td>
+                            <td style="{version_style}">{version}</td>
+                            <td>{row['count_1d'] or 0}</td>
+                            <td>{row['count_3d'] or 0}</td>
+                            <td>{row['count_7d'] or 0}</td>
+                            <td class="timestamp">{convert_to_ny_time(row['last_call_7d']).strftime('%m-%d %H:%M') if row['last_call_7d'] else '-'}</td>
+                            <td>{round(row['avg_duration_ms'], 1) if row['avg_duration_ms'] else '-'}</td>
+                        </tr>
+                """
+            html += """
+                    </tbody>
+                </table>
+            """
+        else:
+            html += '<div class="no-data">No API calls tracked yet</div>'
+    except Exception as e:
+        html += f'<div class="no-data">Error loading API usage: {str(e)}</div>'
+
+    html += """
+        </div>
+
+        <div class="section">
             <h2>🔍 Recent Lookups</h2>
             <p style="color: #666; font-size: 0.9em;">Cached word definitions from all users</p>
     """
