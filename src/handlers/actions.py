@@ -331,6 +331,7 @@ def submit_review():
             "word_id": word_id,
             "response": response,
             "review_count": review_count,
+            "ease_factor": 2.5,
             "interval_days": interval_days,
             "next_review_date": next_review_date.isoformat()
         })
