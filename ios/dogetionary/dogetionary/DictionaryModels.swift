@@ -15,10 +15,9 @@ struct WordDefinitionResponse: Identifiable, Codable {
     let definition_data: DefinitionData
     let audio_references: AudioReferences
     let audio_generation_status: String
-    let validation: WordValidation
 
     private enum CodingKeys: String, CodingKey {
-        case word, learning_language, native_language, definition_data, audio_references, audio_generation_status, validation
+        case word, learning_language, native_language, definition_data, audio_references, audio_generation_status
     }
 }
 
@@ -27,9 +26,11 @@ struct DefinitionData: Codable {
     let word: String?
     let translations: [String]?
     let definitions: [DefinitionEntry]
+    let valid_word_score: Double?  // V3: Validation score (0-1), optional for backward compatibility
+    let suggestion: String?  // V3: Suggested correction if score < 0.9, optional for backward compatibility
 
     private enum CodingKeys: String, CodingKey {
-        case phonetic, word, translations, definitions
+        case phonetic, word, translations, definitions, valid_word_score, suggestion
     }
 }
 
@@ -78,7 +79,8 @@ struct Definition: Identifiable {
     let audioData: Data? // Decoded audio data ready for playback
     let hasWordAudio: Bool // whether word audio is available
     let exampleAudioAvailability: [String: Bool] // text -> availability mapping for examples
-    let validation: WordValidation // Merged validation data from V2
+    let validWordScore: Double // V3 validation score (0-1)
+    let suggestion: String? // V3 suggested word if score < 0.9
 
     init(from response: WordDefinitionResponse) {
         self.id = UUID()
@@ -87,9 +89,9 @@ struct Definition: Identifiable {
         self.learning_language = response.learning_language
         self.native_language = response.native_language
         self.translations = response.definition_data.translations ?? []
-        
+
         // Always show native definition if it exists and is different from main definition
-        
+
         // Convert new format to UI-compatible format
         // Group definitions by type (part of speech)
         let groupedDefinitions = Dictionary(grouping: response.definition_data.definitions) { $0.type }
@@ -97,16 +99,16 @@ struct Definition: Identifiable {
             let definitionDetails = definitions.map { def in
                 // Show native definition if it exists and is different from main definition
                 let definitionText: String
-                if let nativeDefinition = def.definition_native, 
+                if let nativeDefinition = def.definition_native,
                    !nativeDefinition.isEmpty && nativeDefinition != def.definition {
                     definitionText = "\(def.definition)\n\n\(nativeDefinition)"
                 } else {
                     definitionText = def.definition
                 }
-                
+
                 // Use first example (always in learning language)
                 let exampleText = def.examples.first
-                
+
                 return DefinitionDetail(
                     definition: definitionText,
                     example: exampleText,
@@ -116,18 +118,19 @@ struct Definition: Identifiable {
             }
             return Meaning(partOfSpeech: partOfSpeech, definitions: definitionDetails)
         }
-        
+
         // Store audio availability information
         self.hasWordAudio = response.audio_references.word_audio ?? false
         self.exampleAudioAvailability = response.audio_references.example_audio
         self.audioData = nil // Will be loaded separately when needed
 
-        // Store validation data (merged from V2)
-        self.validation = response.validation
+        // Store V3 validation data from definition_data
+        self.validWordScore = response.definition_data.valid_word_score ?? 1.0
+        self.suggestion = response.definition_data.suggestion
     }
-    
+
     // Custom initializer for updating with audio data
-    init(id: UUID = UUID(), word: String, phonetic: String?, learning_language: String, native_language: String, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:], validation: WordValidation = WordValidation(confidence: 1.0, suggested: nil)) {
+    init(id: UUID = UUID(), word: String, phonetic: String?, learning_language: String, native_language: String, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:], validWordScore: Double = 1.0, suggestion: String? = nil) {
         self.id = id
         self.word = word
         self.phonetic = phonetic
@@ -138,11 +141,12 @@ struct Definition: Identifiable {
         self.audioData = audioData
         self.hasWordAudio = hasWordAudio
         self.exampleAudioAvailability = exampleAudioAvailability
-        self.validation = validation
+        self.validWordScore = validWordScore
+        self.suggestion = suggestion
     }
 
     var isValid: Bool {
-        return validation.confidence >= 0.9
+        return validWordScore >= 0.9
     }
 }
 

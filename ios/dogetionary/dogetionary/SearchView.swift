@@ -16,6 +16,7 @@ struct SearchView: View {
     @State private var validationSuggestion: String?
     @State private var currentSearchQuery = ""
     @State private var currentWordConfidence: Double = 1.0
+    @State private var pendingDefinitions: [Definition] = [] // Store definition while showing alert
     
     private var isSearchActive: Bool {
         return !definitions.isEmpty || errorMessage != nil || isLoading
@@ -85,28 +86,27 @@ struct SearchView: View {
         }
         .alert("Word Validation", isPresented: $showValidationAlert) {
             if let suggestion = validationSuggestion {
-                // Has suggestion - show suggestion and original options
+                // Has suggestion - show suggestion and "yes" options
                 Button(suggestion) {
                     searchSuggestedWord()
                 }
-                Button(currentSearchQuery) {
-                    searchOriginalWord()
+                Button("Yes") {
+                    showOriginalDefinition()
                 }
-            } else {
-                // No suggestion - show cancel and lookup anyway options
                 Button("Cancel", role: .cancel) {
                     cancelSearch()
                 }
-                Button("Lookup anyway") {
-                    searchOriginalWord()
+            } else {
+                // No suggestion - show "yes" and cancel options
+                Button("Yes") {
+                    showOriginalDefinition()
+                }
+                Button("Cancel", role: .cancel) {
+                    cancelSearch()
                 }
             }
         } message: {
-            if let suggestion = validationSuggestion {
-                Text("Hmm, \"\(currentSearchQuery)\" doesn't look quite right. Did you mean \"\(suggestion)\"?")
-            } else {
-                Text("We couldn't find \"\(currentSearchQuery)\" in our dictionary. You can still look it up, but the definition might not be accurate.")
-            }
+            Text("\"\(currentSearchQuery)\" is likely not a valid word or phrase, are you sure you want to read its definition?")
         }
     }
     
@@ -180,9 +180,9 @@ struct SearchView: View {
                         return
                     }
 
-                    // Store validation data from merged response
-                    self.currentWordConfidence = definition.validation.confidence
-                    self.validationSuggestion = definition.validation.suggested
+                    // Store V3 validation data
+                    self.currentWordConfidence = definition.validWordScore
+                    self.validationSuggestion = definition.suggestion
 
                     if definition.isValid {
                         // High confidence (≥0.9) - show definition immediately + auto-save
@@ -194,18 +194,20 @@ struct SearchView: View {
                         // Track successful search
                         AnalyticsManager.shared.track(action: .dictionaryAutoSave, metadata: [
                             "word": definition.word,
-                            "confidence": definition.validation.confidence,
+                            "confidence": definition.validWordScore,
                             "language": UserManager.shared.learningLanguage
                         ])
                     } else {
-                        // Low confidence (<0.9) - show alert, NO definition
+                        // Low confidence (<0.9) - store definition and show alert
+                        // User can choose to view this definition or search for suggestion
+                        self.pendingDefinitions = definitions
                         self.showValidationAlert = true
 
                         // Track validation event
                         AnalyticsManager.shared.track(action: .validationInvalid, metadata: [
                             "original_query": searchQuery,
-                            "confidence": definition.validation.confidence,
-                            "suggested": definition.validation.suggested ?? "none",
+                            "confidence": definition.validWordScore,
+                            "suggested": definition.suggestion ?? "none",
                             "language": UserManager.shared.learningLanguage
                         ])
                     }
@@ -241,7 +243,7 @@ struct SearchView: View {
     }
 
 
-    private func searchOriginalWord() {
+    private func showOriginalDefinition() {
         // Track user choosing original word
         AnalyticsManager.shared.track(action: .validationUseOriginal, metadata: [
             "original_query": currentSearchQuery,
@@ -250,10 +252,11 @@ struct SearchView: View {
         ])
 
         showValidationAlert = false
-        isLoading = true
 
-        // Fetch and show definition for original word but DON'T auto-save
-        fetchAndDisplayDefinition(currentSearchQuery, autoSave: false)
+        // Display the definition we already fetched (no need to ask backend again!)
+        self.definitions = pendingDefinitions
+
+        // Do NOT auto-save low-confidence words
     }
 
     private func searchSuggestedWord() {
@@ -286,6 +289,7 @@ struct SearchView: View {
         showValidationAlert = false
         searchText = ""
         definitions = []
+        pendingDefinitions = []
         errorMessage = nil
         currentSearchQuery = ""
         validationSuggestion = nil
