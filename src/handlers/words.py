@@ -658,11 +658,13 @@ CRITICAL: examples must be an array of plain text strings, NOT objects. Each exa
         # Queue missing audio
         audio_status = queue_missing_audio(word_normalized, definition_data, learning_lang, audio_refs)
 
-        # Return response (validation fields only in definition_data)
+        # Return response (validation fields at BOTH top-level and in definition_data for backward compatibility)
         return jsonify({
             "word": word_normalized,
             "learning_language": learning_lang,
             "native_language": native_lang,
+            "valid_word_score": valid_word_score,  # For old iOS clients (v2.7.2)
+            "suggestion": suggestion,              # For old iOS clients (v2.7.2)
             "definition_data": definition_data,
             "audio_references": audio_refs,
             "audio_generation_status": audio_status

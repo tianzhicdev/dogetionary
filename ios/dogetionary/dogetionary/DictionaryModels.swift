@@ -15,9 +15,11 @@ struct WordDefinitionResponse: Identifiable, Codable {
     let definition_data: DefinitionData
     let audio_references: AudioReferences
     let audio_generation_status: String
+    let valid_word_score: Double?  // V3: Top-level for backward compatibility with v2.7.2
+    let suggestion: String?  // V3: Top-level for backward compatibility with v2.7.2
 
     private enum CodingKeys: String, CodingKey {
-        case word, learning_language, native_language, definition_data, audio_references, audio_generation_status
+        case word, learning_language, native_language, definition_data, audio_references, audio_generation_status, valid_word_score, suggestion
     }
 }
 
@@ -124,9 +126,9 @@ struct Definition: Identifiable {
         self.exampleAudioAvailability = response.audio_references.example_audio
         self.audioData = nil // Will be loaded separately when needed
 
-        // Store V3 validation data from definition_data
-        self.validWordScore = response.definition_data.valid_word_score ?? 1.0
-        self.suggestion = response.definition_data.suggestion
+        // Store V3 validation data - prefer top-level (v2.7.2 compat), fall back to definition_data
+        self.validWordScore = response.valid_word_score ?? response.definition_data.valid_word_score ?? 1.0
+        self.suggestion = response.suggestion ?? response.definition_data.suggestion
     }
 
     // Custom initializer for updating with audio data
