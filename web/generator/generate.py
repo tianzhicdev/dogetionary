@@ -308,15 +308,27 @@ class DictionaryGenerator:
             word = word_data['word'].lower()
             first_letter = word[0]
 
-            # Find related words (same first 3 letters)
+            # Find related words (same first 3 letters and same language pair)
             related_words = [
                 w['word'] for w in all_words
-                if w['word'].lower().startswith(word[:3]) and w['word'].lower() != word
+                if w['word'].lower().startswith(word[:3])
+                and w['word'].lower() != word
+                and w['learning_language'] == word_data['learning_language']
+                and w['native_language'] == word_data['native_language']
             ][:5]  # Limit to 5 related words
 
-            # Navigation
-            prev_word = all_words[i-1]['word'] if i > 0 else None
-            next_word = all_words[i+1]['word'] if i < len(all_words) - 1 else None
+            # Navigation - filter by same language pair
+            same_lang_words = [
+                (idx, w) for idx, w in enumerate(all_words)
+                if w['learning_language'] == word_data['learning_language']
+                and w['native_language'] == word_data['native_language']
+            ]
+
+            # Find current word's position in same-language list
+            current_pos = next((idx for idx, (orig_idx, w) in enumerate(same_lang_words) if orig_idx == i), None)
+
+            prev_word = same_lang_words[current_pos-1][1]['word'] if current_pos and current_pos > 0 else None
+            next_word = same_lang_words[current_pos+1][1]['word'] if current_pos is not None and current_pos < len(same_lang_words) - 1 else None
 
             context = {
                 'word': word_data,
@@ -382,44 +394,75 @@ class DictionaryGenerator:
 
         logger.info(f"Generated letter pages for {len(grouped_words)} letters")
 
-    def generate_homepage(self, grouped_words: Dict[str, List[Dict]]):
-        """Generate homepage"""
+    def generate_homepage(self):
+        """Generate homepage - app introduction"""
         logger.info("Generating homepage...")
 
-        # Fetch data from API
+        # Fetch summary data
         summary = self.fetch_words_summary()
-        featured_words = self.fetch_featured_words(6)
-
-        # Popular words (could be based on real data later)
-        popular_words = [
-            'apple', 'beautiful', 'computer', 'dictionary', 'example',
-            'fantastic', 'gorgeous', 'hello', 'important', 'journey'
-        ]
-
-        # Letter counts from summary or grouped words
-        letter_counts = summary.get('letter_distribution', {})
-        if not letter_counts:
-            letter_counts = {
-                letter.upper(): len(words) for letter, words in grouped_words.items()
-            }
-        else:
-            # Convert to uppercase keys
-            letter_counts = {k.upper(): v for k, v in letter_counts.items()}
 
         context = {
-            'featured_words': featured_words,
-            'popular_words': popular_words,
-            'letter_counts': letter_counts,
             'total_words': summary.get('total_words', self.stats['total_words']),
             'total_definitions': summary.get('total_definitions', self.stats['total_definitions']),
-            'language_pairs': len(summary.get('language_pairs', [])) or len(self.stats['language_pairs']),
+            'language_pairs': summary.get('language_pairs', []),
             'site_config': self.site_config
         }
 
         output_path = self.dist_dir / 'index.html'
-        self.render_and_save('index.html', context, output_path)
+        self.render_and_save('home.html', context, output_path)
 
         logger.info("Generated homepage")
+
+    def generate_language_pair_pages(self, all_words: List[Dict]):
+        """Generate language pair index pages like /en/zh"""
+        logger.info("Generating language pair pages...")
+
+        # Group words by language pair
+        language_pairs = {}
+        for word_data in all_words:
+            learning = word_data['learning_language']
+            native = word_data['native_language']
+            pair_key = f"{learning}/{native}"
+
+            if pair_key not in language_pairs:
+                language_pairs[pair_key] = []
+
+            language_pairs[pair_key].append(word_data)
+
+        # Generate index page for each language pair
+        for pair_key, words in language_pairs.items():
+            learning_lang, native_lang = pair_key.split('/')
+
+            # Sort words alphabetically
+            words.sort(key=lambda x: x['word'].lower())
+
+            # Group by first letter for the index
+            letter_groups = {}
+            for word in words:
+                first_letter = word['word'][0].lower()
+                if first_letter not in letter_groups:
+                    letter_groups[first_letter] = []
+                letter_groups[first_letter].append(word)
+
+            context = {
+                'learning_language': learning_lang,
+                'native_language': native_lang,
+                'total_words': len(words),
+                'letter_groups': dict(sorted(letter_groups.items())),
+                'words': words[:100],  # Show first 100 words on index
+                'site_config': self.site_config
+            }
+
+            # Create language pair directory
+            lang_pair_dir = self.dist_dir / learning_lang / native_lang
+            lang_pair_dir.mkdir(parents=True, exist_ok=True)
+
+            output_path = lang_pair_dir / 'index.html'
+            self.render_and_save('language_pair.html', context, output_path)
+
+            logger.info(f"Generated language pair page: {pair_key} ({len(words)} words)")
+
+        logger.info(f"Generated {len(language_pairs)} language pair pages")
 
     def _format_date(self, date_str: str) -> str:
         """Format date string for sitemap"""
@@ -450,12 +493,27 @@ class DictionaryGenerator:
             'changefreq': 'daily'
         })
 
+        # Language pair pages (e.g., /en/zh)
+        language_pairs = set()
+        for letter_words in grouped_words.values():
+            for word_data in letter_words:
+                pair = (word_data['learning_language'], word_data['native_language'])
+                language_pairs.add(pair)
+
+        for learning_lang, native_lang in language_pairs:
+            urls.append({
+                'url': f"{base_url}/{learning_lang}/{native_lang}/",
+                'lastmod': datetime.now().strftime('%Y-%m-%d'),
+                'priority': '0.9',
+                'changefreq': 'weekly'
+            })
+
         # Letter pages
         for letter in grouped_words.keys():
             urls.append({
                 'url': f"{base_url}/letters/{letter}.html",
                 'lastmod': datetime.now().strftime('%Y-%m-%d'),
-                'priority': '0.8',
+                'priority': '0.7',
                 'changefreq': 'weekly'
             })
 
@@ -574,15 +632,16 @@ Disallow: /*.log$
         logger.info("Starting static site generation...")
 
         # Fetch data
-        words = self.fetch_all_words()
-        grouped_words = self.process_word_data(words)
+        all_words = self.fetch_all_words()
+        grouped_words = self.process_word_data(all_words)
 
         # Setup
         self.create_directories()
         self.copy_static_files()
 
         # Generate pages
-        self.generate_homepage(grouped_words)
+        self.generate_homepage()
+        self.generate_language_pair_pages(all_words)
         self.generate_letter_pages(grouped_words)
         self.generate_word_pages(grouped_words)
 
