@@ -520,11 +520,16 @@ def get_word_definition_v3():
     - suggestion: alternative word/phrase if score < 0.9
     - definition_data: full definition (always provided)
 
+    Query Parameters:
+    - generateImage: boolean (default=true) - whether to generate illustration if missing
+
     Frontend should prompt user if valid_word_score < 0.9
     """
     try:
         user_id = request.args.get('user_id')
         word = request.args.get('w')
+        # Get generateImage parameter (default to true for user requests)
+        generate_image = request.args.get('generateImage', 'true').lower() == 'true'
 
         if not word or not user_id:
             return jsonify({"error": "w and user_id parameters are required"}), 400
@@ -658,6 +663,41 @@ CRITICAL: examples must be an array of plain text strings, NOT objects. Each exa
         # Queue missing audio
         audio_status = queue_missing_audio(word_normalized, definition_data, learning_lang, audio_refs)
 
+        # Handle image generation based on generateImage parameter
+        image_status = {"has_image": False, "generated_now": False}
+        if generate_image:
+            # Check if image already exists
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT 1 FROM illustrations
+                WHERE word = %s AND language = %s
+            """, (word_normalized, learning_lang))
+            image_exists = cur.fetchone() is not None
+            cur.close()
+            conn.close()
+
+            if image_exists:
+                image_status = {"has_image": True, "generated_now": False}
+                logger.info(f"V3: Image already exists for '{word_normalized}'")
+            else:
+                # Image doesn't exist - generate it now
+                logger.info(f"V3: Generating image for '{word_normalized}' (user request)")
+                try:
+                    # Call get_illustration internally to generate the image
+                    # We need to simulate the request context for get_illustration
+                    from flask import current_app
+                    with current_app.test_request_context(f'/v3/illustration?word={word_normalized}&lang={learning_lang}'):
+                        illustration_response = get_illustration()
+                        if illustration_response[1] == 200 if isinstance(illustration_response, tuple) else True:
+                            image_status = {"has_image": True, "generated_now": True}
+                            logger.info(f"V3: Successfully generated image for '{word_normalized}'")
+                        else:
+                            logger.warning(f"V3: Failed to generate image for '{word_normalized}'")
+                except Exception as img_error:
+                    logger.error(f"V3: Error generating image for '{word_normalized}': {str(img_error)}")
+                    # Don't fail the whole request if image generation fails
+
         # Return response with multiple formats for backward compatibility
         return jsonify({
             "word": word_normalized,
@@ -671,7 +711,8 @@ CRITICAL: examples must be an array of plain text strings, NOT objects. Each exa
             "suggestion": suggestion,              # For v2.7.3+ iOS clients
             "definition_data": definition_data,
             "audio_references": audio_refs,
-            "audio_generation_status": audio_status
+            "audio_generation_status": audio_status,
+            "image_status": image_status
         })
 
     except Exception as e:
@@ -1203,3 +1244,46 @@ def generate_word_definition():
     except Exception as e:
         logger.error(f"Error generating word definition: {str(e)}")
         return jsonify({"error": f"Failed to generate definition: {str(e)}"}), 500
+
+
+def get_all_words_for_language_pair(learning_lang, native_lang):
+    """Get all words for a specific language pair
+
+    Returns a simple list of words that have definitions in the database
+    for the given learning_language and native_language combination.
+
+    Args:
+        learning_lang: Learning language code (e.g., 'en', 'de', 'zh')
+        native_lang: Native language code (e.g., 'zh', 'en')
+
+    Returns:
+        JSON array of word strings
+    """
+    try:
+        # Validate language codes
+        if not validate_language(learning_lang) or not validate_language(native_lang):
+            return jsonify({"error": "Invalid language code"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Get all distinct words for this language pair
+        cur.execute("""
+            SELECT DISTINCT word
+            FROM definitions
+            WHERE learning_language = %s AND native_language = %s
+            ORDER BY word ASC
+        """, (learning_lang, native_lang))
+
+        words = [row['word'] for row in cur.fetchall()]
+
+        cur.close()
+        conn.close()
+
+        logger.info(f"Retrieved {len(words)} words for {learning_lang}->{native_lang}")
+
+        return jsonify(words)
+
+    except Exception as e:
+        logger.error(f"Error getting all words for {learning_lang}->{native_lang}: {str(e)}")
+        return jsonify({"error": f"Failed to get words: {str(e)}"}), 500
