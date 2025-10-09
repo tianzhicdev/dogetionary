@@ -431,6 +431,15 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                Section(header: Text("Reset Onboarding")) {
+                    Button(action: {
+                        OnboardingManager.shared.resetOnboarding()
+                    }) {
+                        Text("Reset Tutorial")
+                            .foregroundColor(.blue)
+                    }
+                }
                 #endif
         }
         .onTapGesture {
