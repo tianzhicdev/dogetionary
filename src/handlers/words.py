@@ -385,27 +385,27 @@ def collect_audio_references(definition_data: dict, learning_lang: str) -> dict:
 def queue_missing_audio(word: str, definition_data: dict, learning_lang: str, existing_audio_refs: dict):
     """Queue missing audio for generation - simplified to just text and language"""
     audio_status_key = f"{word}:{learning_lang}"
-    
+
     # Collect all texts that need audio
     texts_to_generate = []
-    
+
     # Add word if missing
     if not audio_exists(word, learning_lang):
         texts_to_generate.append(word)
-    
+
     # Add examples that are missing
     for def_group in definition_data.get('definitions', []):
         for example in def_group.get('examples', []):
             if example not in existing_audio_refs["example_audio"]:
                 texts_to_generate.append(example)
-    
+
     if texts_to_generate:
         # Queue each text individually for simpler processing
         for text in texts_to_generate:
             audio_generation_queue.put((text, learning_lang))
         audio_generation_status[audio_status_key] = "queued"
         return "queued"
-    
+
     return "complete"
 
 
@@ -520,16 +520,11 @@ def get_word_definition_v3():
     - suggestion: alternative word/phrase if score < 0.9
     - definition_data: full definition (always provided)
 
-    Query Parameters:
-    - generateImage: boolean (default=true) - whether to generate illustration if missing
-
     Frontend should prompt user if valid_word_score < 0.9
     """
     try:
         user_id = request.args.get('user_id')
         word = request.args.get('w')
-        # Get generateImage parameter (default to true for user requests)
-        generate_image = request.args.get('generateImage', 'true').lower() == 'true'
 
         if not word or not user_id:
             return jsonify({"error": "w and user_id parameters are required"}), 400
@@ -663,41 +658,6 @@ CRITICAL: examples must be an array of plain text strings, NOT objects. Each exa
         # Queue missing audio
         audio_status = queue_missing_audio(word_normalized, definition_data, learning_lang, audio_refs)
 
-        # Handle image generation based on generateImage parameter
-        image_status = {"has_image": False, "generated_now": False}
-        if generate_image:
-            # Check if image already exists
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT 1 FROM illustrations
-                WHERE word = %s AND language = %s
-            """, (word_normalized, learning_lang))
-            image_exists = cur.fetchone() is not None
-            cur.close()
-            conn.close()
-
-            if image_exists:
-                image_status = {"has_image": True, "generated_now": False}
-                logger.info(f"V3: Image already exists for '{word_normalized}'")
-            else:
-                # Image doesn't exist - generate it now
-                logger.info(f"V3: Generating image for '{word_normalized}' (user request)")
-                try:
-                    # Call get_illustration internally to generate the image
-                    # We need to simulate the request context for get_illustration
-                    from flask import current_app
-                    with current_app.test_request_context(f'/v3/illustration?word={word_normalized}&lang={learning_lang}'):
-                        illustration_response = get_illustration()
-                        if illustration_response[1] == 200 if isinstance(illustration_response, tuple) else True:
-                            image_status = {"has_image": True, "generated_now": True}
-                            logger.info(f"V3: Successfully generated image for '{word_normalized}'")
-                        else:
-                            logger.warning(f"V3: Failed to generate image for '{word_normalized}'")
-                except Exception as img_error:
-                    logger.error(f"V3: Error generating image for '{word_normalized}': {str(img_error)}")
-                    # Don't fail the whole request if image generation fails
-
         # Return response with multiple formats for backward compatibility
         return jsonify({
             "word": word_normalized,
@@ -711,8 +671,7 @@ CRITICAL: examples must be an array of plain text strings, NOT objects. Each exa
             "suggestion": suggestion,              # For v2.7.3+ iOS clients
             "definition_data": definition_data,
             "audio_references": audio_refs,
-            "audio_generation_status": audio_status,
-            "image_status": image_status
+            "audio_generation_status": audio_status
         })
 
     except Exception as e:

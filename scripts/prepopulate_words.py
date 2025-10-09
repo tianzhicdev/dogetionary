@@ -155,8 +155,7 @@ def populate_word(domain: str, word: str, learning_lang: str, native_lang: str, 
         'w': word,
         'user_id': '00000000-0000-0000-0000-000000000000',
         'learning_lang': learning_lang,
-        'native_lang': native_lang,
-        'generateImage': 'false'  # Don't generate images during prepopulation
+        'native_lang': native_lang
     }
 
     for attempt in range(max_retries):
