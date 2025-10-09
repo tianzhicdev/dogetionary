@@ -10,50 +10,59 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var userManager = UserManager.shared
     @StateObject private var notificationManager = NotificationManager.shared
+    @StateObject private var onboardingManager = OnboardingManager.shared
     @State private var selectedTab = 0
     @State private var reviewBadgeCount = 0
 
     var body: some View {
-        VStack(spacing: 0) {
-            // App banner at the top
-            AppBanner()
+        ZStack {
+            VStack(spacing: 0) {
+                // App banner at the top
+                AppBanner()
 
-            TabView(selection: $selectedTab) {
-            SearchView()
-                .tabItem {
-                    Image(systemName: "magnifyingglass")
-                    Text("Dictionary")
+                TabView(selection: $selectedTab) {
+                SearchView()
+                    .tabItem {
+                        Image(systemName: "magnifyingglass")
+                        Text("Dictionary")
+                    }
+                    .tag(0)
+
+                SavedWordsView()
+                    .tabItem {
+                        Image(systemName: "bookmark.fill")
+                        Text("Saved")
+                    }
+                    .tag(1)
+
+                ReviewView()
+                    .tabItem {
+                        Image(systemName: "brain.head.profile")
+                        Text("Review")
+                    }
+                    .tag(2)
+                    .badge(reviewBadgeCount)
+
+                LeaderboardView()
+                    .tabItem {
+                        Image(systemName: "trophy.fill")
+                        Text("Leaderboard")
+                    }
+                    .tag(3)
+
+                SettingsView()
+                    .tabItem {
+                        Image(systemName: "gear")
+                        Text("Settings")
+                    }
+                    .tag(4)
                 }
-                .tag(0)
-            
-            SavedWordsView()
-                .tabItem {
-                    Image(systemName: "bookmark.fill")
-                    Text("Saved")
-                }
-                .tag(1)
-            
-            ReviewView()
-                .tabItem {
-                    Image(systemName: "brain.head.profile")
-                    Text("Review")
-                }
-                .tag(2)
-                .badge(reviewBadgeCount)
-            
-            LeaderboardView()
-                .tabItem {
-                    Image(systemName: "trophy.fill")
-                    Text("Leaderboard")
-                }
-                .tag(3)
-            
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
-                }
-                .tag(4)
+            }
+
+            // Onboarding overlay
+            if onboardingManager.shouldShowOnboarding {
+                OnboardingOverlayView(manager: onboardingManager)
+                    .transition(.opacity)
             }
         }
         .onAppear {
