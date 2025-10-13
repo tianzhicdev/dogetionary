@@ -86,12 +86,14 @@ def generate_new_words(existing_words: Set[str], count: int, learning_lang: str,
     # Create exclusion list (limit to avoid token limits)
     exclusion_sample = list(existing_words)[:500] if len(existing_words) > 500 else list(existing_words)
 
-    prompt = f"""Generate {count} useful {learning_lang_name} words for {native_lang_name} language learners to study.
+    prompt = f"""Generate {count} RARELY USED {learning_lang_name} words for {native_lang_name} language learners to study.
 
 Requirements:
-- Words should be useful for language learning (common vocabulary, idioms, phrases)
-- Mix of difficulty levels (beginner to advanced)
-- Include single words, compound words, and common phrases
+- Focus on RARE, UNCOMMON, and ADVANCED vocabulary that native speakers rarely use in daily conversation
+- Include obscure words, archaic terms, technical jargon, literary vocabulary, and sophisticated expressions
+- Avoid common or frequently used words
+- Mix of difficulty levels (advanced to expert)
+- Include single words, compound words, and rare phrases
 - Exclude these existing words: {json.dumps(exclusion_sample)}
 
 Return ONLY a JSON array of words, nothing else. Format: ["word1", "word2", ...]"""

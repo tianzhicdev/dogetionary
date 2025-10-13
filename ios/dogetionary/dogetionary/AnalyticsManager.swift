@@ -127,6 +127,7 @@ enum AnalyticsAction: String, CaseIterable {
 
     // Saved words actions
     case savedViewDetails = "saved_view_details"
+    case savedDeleteWord = "saved_delete_word"
 
     // Feedback actions
     case feedbackSubmit = "feedback_submit"

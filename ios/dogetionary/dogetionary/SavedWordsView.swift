@@ -11,7 +11,7 @@ struct SavedWordsView: View {
     @State private var savedWords: [SavedWord] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    
+
     var body: some View {
         NavigationView {
             TabView {
@@ -24,10 +24,11 @@ struct SavedWordsView: View {
 
                     // Words Tab
                     SavedWordsListView(
-                        savedWords: savedWords,
+                        savedWords: $savedWords,
                         isLoading: isLoading,
                         errorMessage: errorMessage,
-                        onRefresh: { await loadSavedWords() }
+                        onRefresh: { await loadSavedWords() },
+                        onDelete: { word in await deleteSavedWord(word) }
                     )
                     .tabItem {
                         Image(systemName: "list.bullet")
@@ -52,12 +53,12 @@ struct SavedWordsView: View {
     private func loadSavedWords() async {
         isLoading = true
         errorMessage = nil
-        
+
         await withCheckedContinuation { continuation in
             DictionaryService.shared.getSavedWords { result in
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    
+
                     switch result {
                     case .success(let words):
                         // Sort by next_review_date ascending (soonest first)
@@ -65,19 +66,40 @@ struct SavedWordsView: View {
                             // Handle nil values - put words without reviews at the end
                             guard let date1 = word1.next_review_date else { return false }
                             guard let date2 = word2.next_review_date else { return true }
-                            
+
                             // Parse dates and compare
                             let formatter = ISO8601DateFormatter()
                             guard let d1 = formatter.date(from: date1),
                                   let d2 = formatter.date(from: date2) else { return false }
-                            
+
                             return d1 < d2
                         }
                     case .failure(let error):
                         self.errorMessage = error.localizedDescription
                     }
-                    
+
                     continuation.resume()
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func deleteSavedWord(_ word: SavedWord) async {
+        DictionaryService.shared.unsaveWord(wordID: word.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    // Remove word from local array
+                    self.savedWords.removeAll { $0.id == word.id }
+
+                    // Track deletion analytics
+                    AnalyticsManager.shared.track(action: .savedDeleteWord, metadata: [
+                        "word": word.word,
+                        "word_id": word.id
+                    ])
+                case .failure(let error):
+                    self.errorMessage = "Failed to delete word: \(error.localizedDescription)"
                 }
             }
         }
@@ -85,10 +107,11 @@ struct SavedWordsView: View {
 }
 
 struct SavedWordsListView: View {
-    let savedWords: [SavedWord]
+    @Binding var savedWords: [SavedWord]
     let isLoading: Bool
     let errorMessage: String?
     let onRefresh: () async -> Void
+    let onDelete: (SavedWord) async -> Void
     
     var body: some View {
         Group {
@@ -134,6 +157,15 @@ struct SavedWordsListView: View {
                         }
                     ) {
                         SavedWordRow(savedWord: savedWord)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task {
+                                await onDelete(savedWord)
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
                 }
             }
