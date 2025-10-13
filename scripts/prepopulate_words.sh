@@ -1,6 +1,7 @@
 #!/bin/bash
 # Prepopulate words script wrapper for Dogetionary
 # This script wraps the Python implementation with argument validation
+# Runs in a loop until interrupted with Ctrl+C
 
 set -e
 
@@ -46,21 +47,48 @@ if [ -z "$LEARNING_LANGUAGE" ] || [ -z "$NATIVE_LANGUAGE" ]; then
     echo "Options:"
     echo "  --domain=URL              API domain (default: https://dogetionary.webhop.net/api)"
     echo "                            Examples: localhost:5000, https://dogetionary.webhop.net/api"
-    echo "  --words=N                 Number of words to generate (default: 10)"
+    echo "  --words=N                 Number of words to generate per batch (default: 10)"
     echo "  --learning_language=LANG  Learning language code (required, e.g., en, de, zh)"
     echo "  --native_language=LANG    Native language code (required, e.g., zh, en)"
     echo ""
     echo "Example:"
     echo "  $0 --domain=localhost:5000 --words=50 --learning_language=en --native_language=zh"
+    echo ""
+    echo "Note: This script runs in a continuous loop. Press Ctrl+C to stop."
     exit 1
 fi
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Run Python script
-python3 "$SCRIPT_DIR/prepopulate_words.py" \
-    --domain="$DOMAIN" \
-    --words="$WORDS" \
-    --learning_language="$LEARNING_LANGUAGE" \
-    --native_language="$NATIVE_LANGUAGE"
+# Trap Ctrl+C to exit gracefully
+trap 'echo ""; echo "🛑 Interrupted by user. Exiting..."; exit 0' INT
+
+echo "🔄 Starting continuous prepopulation (Press Ctrl+C to stop)"
+echo ""
+
+BATCH=1
+
+# Run in loop until interrupted
+while true; do
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "📦 Batch #$BATCH"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Run Python script
+    python3 "$SCRIPT_DIR/prepopulate_words.py" \
+        --domain="$DOMAIN" \
+        --words="$WORDS" \
+        --learning_language="$LEARNING_LANGUAGE" \
+        --native_language="$NATIVE_LANGUAGE"
+
+    echo ""
+    echo "✅ Batch #$BATCH completed"
+    echo ""
+
+    # Increment batch counter
+    BATCH=$((BATCH + 1))
+
+    # Small delay between batches
+    sleep 2
+done

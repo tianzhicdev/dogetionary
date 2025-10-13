@@ -281,12 +281,6 @@ struct ReviewHistorySection: View {
             LazyVStack(spacing: 8) {
                 // Show creation as the first entry
                 HStack(spacing: 12) {
-                    // Creation number (0 for creation)
-                    Text("0")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
-                        .frame(width: 20)
                     
                     // Creation icon
                     Image(systemName: "plus.circle.fill")
@@ -358,11 +352,11 @@ struct ReviewHistoryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Review number
-            Text("\(reviewNumber)")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-                .frame(width: 20)
+//            Text("\(reviewNumber)")
+//                .font(.caption)
+//                .fontWeight(.medium)
+//                .foregroundColor(.secondary)
+//                .frame(width: 20)
             
             // Success/Failure indicator
             Image(systemName: entry.response ? "checkmark.circle.fill" : "xmark.circle.fill")
