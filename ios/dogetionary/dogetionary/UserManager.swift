@@ -21,8 +21,11 @@ class UserManager: ObservableObject {
     private let ieltsEnabledKey = "DogetionaryIeltsEnabled"
     private let toeflTargetDaysKey = "DogetionaryToeflTargetDays"
     private let ieltsTargetDaysKey = "DogetionaryIeltsTargetDays"
-    
+    private let hasCompletedOnboardingKey = "DogetionaryHasCompletedOnboarding"
+
     private var isSyncingFromServer = false
+
+    @Published var hasCompletedOnboarding: Bool
     
     @Published var userID: String
     @Published var learningLanguage: String {
@@ -102,11 +105,20 @@ class UserManager: ObservableObject {
             UserDefaults.standard.set(newUserID, forKey: userIDKey)
             logger.info("Generated new user ID: \(newUserID)")
         }
-        
+
+        // Load onboarding status
+        #if DEBUG
+        // In debug mode, check onboarding status from UserDefaults
+        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: hasCompletedOnboardingKey)
+        #else
+        // In production, check if onboarding is completed
+        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: hasCompletedOnboardingKey)
+        #endif
+
         // Load language preferences or set defaults
         self.learningLanguage = UserDefaults.standard.string(forKey: learningLanguageKey) ?? "en"
         self.nativeLanguage = UserDefaults.standard.string(forKey: nativeLanguageKey) ?? "en"
-        
+
         // Load user profile or set defaults
         self.userName = UserDefaults.standard.string(forKey: userNameKey) ?? ""
         self.userMotto = UserDefaults.standard.string(forKey: userMottoKey) ?? ""
@@ -120,8 +132,8 @@ class UserManager: ObservableObject {
         self.toeflTargetDays = savedToeflTargetDays > 0 ? savedToeflTargetDays : 30
         let savedIeltsTargetDays = UserDefaults.standard.integer(forKey: ieltsTargetDaysKey)
         self.ieltsTargetDays = savedIeltsTargetDays > 0 ? savedIeltsTargetDays : 30
-        
-        logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage)")
+
+        logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage), Onboarding: \(self.hasCompletedOnboarding)")
     }
     
     func getUserID() -> String {
@@ -245,5 +257,19 @@ class UserManager: ObservableObject {
     func markAppRatingRequested() {
         UserDefaults.standard.set(true, forKey: hasRequestedAppRatingKey)
         logger.info("Marked app rating as requested")
+    }
+
+    // MARK: - Onboarding Management
+
+    func completeOnboarding() {
+        hasCompletedOnboarding = true
+        UserDefaults.standard.set(true, forKey: hasCompletedOnboardingKey)
+        logger.info("Marked onboarding as completed")
+    }
+
+    func resetOnboarding() {
+        hasCompletedOnboarding = false
+        UserDefaults.standard.set(false, forKey: hasCompletedOnboardingKey)
+        logger.info("Reset onboarding status")
     }
 }

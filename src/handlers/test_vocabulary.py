@@ -67,12 +67,13 @@ def update_test_settings():
             params.append(user_id)
 
             # Update user preferences
-            cur.execute(f"""
+            query = f"""
                 UPDATE user_preferences
                 SET {', '.join(update_fields)}
                 WHERE user_id = %s
                 RETURNING toefl_enabled, ielts_enabled, last_test_words_added, toefl_target_days, ielts_target_days
-            """, params)
+            """
+            cur.execute(query, params)
 
             result = cur.fetchone()
 
@@ -80,11 +81,11 @@ def update_test_settings():
                 return jsonify({
                     "success": True,
                     "settings": {
-                        "toefl_enabled": result[0],
-                        "ielts_enabled": result[1],
-                        "last_test_words_added": result[2].isoformat() if result[2] else None,
-                        "toefl_target_days": result[3],
-                        "ielts_target_days": result[4]
+                        "toefl_enabled": result['toefl_enabled'],
+                        "ielts_enabled": result['ielts_enabled'],
+                        "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
+                        "toefl_target_days": result['toefl_target_days'],
+                        "ielts_target_days": result['ielts_target_days']
                     }
                 }), 200
             else:
@@ -154,24 +155,24 @@ def get_test_settings():
             if result:
                 return jsonify({
                     "settings": {
-                        "toefl_enabled": result[0],
-                        "ielts_enabled": result[1],
-                        "last_test_words_added": result[2].isoformat() if result[2] else None,
-                        "learning_language": result[3],
-                        "native_language": result[4],
-                        "toefl_target_days": result[5],
-                        "ielts_target_days": result[6]
+                        "toefl_enabled": result['toefl_enabled'],
+                        "ielts_enabled": result['ielts_enabled'],
+                        "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
+                        "learning_language": result['learning_language'],
+                        "native_language": result['native_language'],
+                        "toefl_target_days": result['toefl_target_days'],
+                        "ielts_target_days": result['ielts_target_days']
                     },
                     "progress": {
                         "toefl": {
-                            "saved": result[7],
-                            "total": result[9],
-                            "percentage": round(100 * result[7] / result[9], 1) if result[9] > 0 else 0
+                            "saved": result['toefl_saved'],
+                            "total": result['total_toefl'],
+                            "percentage": round(100 * result['toefl_saved'] / result['total_toefl'], 1) if result['total_toefl'] > 0 else 0
                         },
                         "ielts": {
-                            "saved": result[8],
-                            "total": result[10],
-                            "percentage": round(100 * result[8] / result[10], 1) if result[10] > 0 else 0
+                            "saved": result['ielts_saved'],
+                            "total": result['total_ielts'],
+                            "percentage": round(100 * result['ielts_saved'] / result['total_ielts'], 1) if result['total_ielts'] > 0 else 0
                         }
                     }
                 }), 200

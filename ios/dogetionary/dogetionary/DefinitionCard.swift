@@ -37,51 +37,51 @@ struct DefinitionCard: View {
 
                 Spacer()
 
-                HStack(spacing: 12) {
-                    // Save/Unsave toggle button
-                    Button(action: {
-                        if isSaved {
-                            // Unsave the existing saved word (regardless of its language pair)
-                            unsaveWord()
-                        } else {
-                            // Save with current language settings
-                            saveWord()
-                        }
-                    }) {
-                        Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                            .font(.title3)
-                            .foregroundColor(isSaved ? .blue : .secondary)
+            }
+            HStack(spacing: 12) {
+                // Save/Unsave toggle button
+                Button(action: {
+                    if isSaved {
+                        // Unsave the existing saved word (regardless of its language pair)
+                        unsaveWord()
+                    } else {
+                        // Save with current language settings
+                        saveWord()
                     }
-                    .disabled(isSaving || isCheckingStatus)
-                    .buttonStyle(PlainButtonStyle())
-
-                    // Audio play button - always show
-                    Button(action: {
-                        if audioPlayer.isPlaying {
-                            audioPlayer.stopAudio()
-                        } else {
-                            playWordAudio()
-                        }
-                    }) {
-                        if loadingAudio {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .disabled(loadingAudio)
-
-                    // Pronunciation practice button
-                    PronunciationPracticeView(
-                        originalText: definition.word,
-                        source: "word",
-                        wordId: nil
-                    )
+                }) {
+                    Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                        .font(.title3)
+                        .foregroundColor(isSaved ? .blue : .secondary)
                 }
+                .disabled(isSaving || isCheckingStatus)
+                .buttonStyle(PlainButtonStyle())
+
+                // Audio play button - always show
+                Button(action: {
+                    if audioPlayer.isPlaying {
+                        audioPlayer.stopAudio()
+                    } else {
+                        playWordAudio()
+                    }
+                }) {
+                    if loadingAudio {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(loadingAudio)
+
+                // Pronunciation practice button
+                PronunciationPracticeView(
+                    originalText: definition.word,
+                    source: "word",
+                    wordId: nil
+                )
             }
 
             // Show language pair from definition (always available)
