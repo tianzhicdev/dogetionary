@@ -23,66 +23,6 @@ struct SettingsView: View {
     @State private var vocabularyStats: TestVocabularyStatistics?
     @State private var isLoadingTestStats = false
     
-    private let availableLanguages = [
-        ("af", "Afrikaans"),
-        ("ar", "Arabic"),
-        ("hy", "Armenian"),
-        ("az", "Azerbaijani"),
-        ("be", "Belarusian"),
-        ("bs", "Bosnian"),
-        ("bg", "Bulgarian"),
-        ("ca", "Catalan"),
-        ("zh", "Chinese"),
-        ("hr", "Croatian"),
-        ("cs", "Czech"),
-        ("da", "Danish"),
-        ("nl", "Dutch"),
-        ("en", "English"),
-        ("et", "Estonian"),
-        ("fi", "Finnish"),
-        ("fr", "French"),
-        ("gl", "Galician"),
-        ("de", "German"),
-        ("el", "Greek"),
-        ("he", "Hebrew"),
-        ("hi", "Hindi"),
-        ("hu", "Hungarian"),
-        ("is", "Icelandic"),
-        ("id", "Indonesian"),
-        ("it", "Italian"),
-        ("ja", "Japanese"),
-        ("kn", "Kannada"),
-        ("kk", "Kazakh"),
-        ("ko", "Korean"),
-        ("lv", "Latvian"),
-        ("lt", "Lithuanian"),
-        ("mk", "Macedonian"),
-        ("ms", "Malay"),
-        ("mr", "Marathi"),
-        ("mi", "Maori"),
-        ("ne", "Nepali"),
-        ("no", "Norwegian"),
-        ("fa", "Persian"),
-        ("pl", "Polish"),
-        ("pt", "Portuguese"),
-        ("ro", "Romanian"),
-        ("ru", "Russian"),
-        ("sr", "Serbian"),
-        ("sk", "Slovak"),
-        ("sl", "Slovenian"),
-        ("es", "Spanish"),
-        ("sw", "Swahili"),
-        ("sv", "Swedish"),
-        ("tl", "Tagalog"),
-        ("ta", "Tamil"),
-        ("th", "Thai"),
-        ("tr", "Turkish"),
-        ("uk", "Ukrainian"),
-        ("ur", "Urdu"),
-        ("vi", "Vietnamese"),
-        ("cy", "Welsh")
-    ]
-    
     var body: some View {
         Form {
                 #if DEBUG
@@ -134,7 +74,7 @@ struct SettingsView: View {
                         HStack {
                             Spacer()
                             Picker("Learning Language", selection: learningLanguageBinding) {
-                                ForEach(availableLanguages, id: \.0) { code, name in
+                                ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
                                     HStack {
                                         Text(name)
                                         Text("(\(code.uppercased()))")
@@ -147,11 +87,11 @@ struct SettingsView: View {
                             .pickerStyle(MenuPickerStyle())
                             .tint(.blue)
                         }
-                        
+
                         HStack {
                             Spacer()
                             Picker("Native Language", selection: nativeLanguageBinding) {
-                                ForEach(availableLanguages, id: \.0) { code, name in
+                                ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
                                     HStack {
                                         Text(name)
                                         Text("(\(code.uppercased()))")
@@ -167,8 +107,8 @@ struct SettingsView: View {
                     }
                     
                     // Show current selection summary
-                    if let learningLang = availableLanguages.first(where: { $0.0 == userManager.learningLanguage }),
-                       let nativeLang = availableLanguages.first(where: { $0.0 == userManager.nativeLanguage }) {
+                    if let learningLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.learningLanguage }),
+                       let nativeLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.nativeLanguage }) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Current Configuration")
                                 .font(.caption)
@@ -517,9 +457,6 @@ struct SettingsView: View {
         )
     }
     
-    private func getLanguageName(for code: String) -> String {
-        return availableLanguages.first(where: { $0.0 == code })?.1 ?? code.uppercased()
-    }
     
     private func submitFeedback() {
         print("🔍 submitFeedback() called")

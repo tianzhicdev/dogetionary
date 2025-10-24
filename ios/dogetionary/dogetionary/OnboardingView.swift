@@ -12,8 +12,8 @@ struct OnboardingView: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var currentPage = 0
-    @State private var selectedLearningLanguage = ""
-    @State private var selectedNativeLanguage = ""
+    @State private var selectedLearningLanguage = "en"
+    @State private var selectedNativeLanguage = "fr"
     @State private var userName = ""
     @State private var searchWord = "unforgettable"
     @State private var isSubmitting = false
@@ -22,21 +22,6 @@ struct OnboardingView: View {
     @State private var errorMessage = ""
     @State private var shouldDismiss = false
     @State private var searchedDefinitions: [Definition] = []
-
-    let languages = [
-        ("en", "English"),
-        ("zh", "Chinese"),
-        ("de", "German"),
-        ("es", "Spanish"),
-        ("fr", "French"),
-        ("ja", "Japanese"),
-        ("ko", "Korean"),
-        ("ru", "Russian"),
-        ("ar", "Arabic"),
-        ("pt", "Portuguese"),
-        ("it", "Italian"),
-        ("nl", "Dutch")
-    ]
 
     var body: some View {
         NavigationView {
@@ -148,7 +133,7 @@ struct OnboardingView: View {
         selectedLanguage: Binding<String>,
         excludeLanguage: String
     ) -> some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 40) {
             VStack(spacing: 12) {
                 Text(title)
                     .font(.system(size: 28, weight: .bold))
@@ -160,40 +145,27 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
-            .padding(.top, 20)
+            .padding(.top, 40)
 
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    ForEach(languages.filter { $0.0 != excludeLanguage }, id: \.0) { language in
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3)) {
-                                selectedLanguage.wrappedValue = language.0
-                            }
-                        }) {
-                            VStack(spacing: 8) {
-                                Text(flagEmoji(for: language.0))
-                                    .font(.system(size: 40))
+            Spacer()
 
-                                Text(language.1)
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedLanguage.wrappedValue == language.0 ? Color.blue.opacity(0.1) : Color(.systemGray6))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(selectedLanguage.wrappedValue == language.0 ? Color.blue : Color.clear, lineWidth: 2)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
+            Picker("Select Language", selection: selectedLanguage) {
+                ForEach(LanguageConstants.availableLanguages.filter { $0.0 != excludeLanguage }, id: \.0) { language in
+                    HStack {
+                        Text(language.1)
+                            .font(.title3)
+                        Text("(\(language.0.uppercased()))")
+                            .font(.body)
+                            .foregroundColor(.secondary)
                     }
+                    .tag(language.0)
                 }
-                .padding(.horizontal, 24)
             }
+            .pickerStyle(MenuPickerStyle())
+            .tint(.blue)
+            .padding(.horizontal, 24)
+
+            Spacer()
         }
     }
 
@@ -370,23 +342,6 @@ struct OnboardingView: View {
         shouldDismiss = true
     }
 
-    private func flagEmoji(for languageCode: String) -> String {
-        switch languageCode {
-        case "en": return "🇬🇧"
-        case "zh": return "🇨🇳"
-        case "de": return "🇩🇪"
-        case "es": return "🇪🇸"
-        case "fr": return "🇫🇷"
-        case "ja": return "🇯🇵"
-        case "ko": return "🇰🇷"
-        case "ru": return "🇷🇺"
-        case "ar": return "🇸🇦"
-        case "pt": return "🇵🇹"
-        case "it": return "🇮🇹"
-        case "nl": return "🇳🇱"
-        default: return "🌐"
-        }
-    }
 }
 
 #Preview {
