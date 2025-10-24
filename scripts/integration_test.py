@@ -317,14 +317,98 @@ class TestRunner:
             self.log(f"✗ /review_next endpoint failed with error: {e}")
             self.failed += 1
 
+    def test_test_prep_settings_toggle(self):
+        """Test GET /v3/api/test-prep/settings and PUT /v3/api/test-prep/settings endpoints - especially toggle functionality"""
+        self.log("Testing test prep settings toggle...")
+
+        try:
+            # First, update settings to ensure user exists in user_preferences
+            update_data = {
+                "user_id": self.test_user_id,
+                "toefl_enabled": True,
+                "ielts_enabled": False,
+                "toefl_target_days": 30,
+                "ielts_target_days": 60
+            }
+            response = requests.put(f"{BASE_URL}/v3/api/test-prep/settings", json=update_data)
+            self.assert_status_code(response, 200, "PUT /v3/api/test-prep/settings - initial setup")
+
+            if response.status_code == 200:
+                data = response.json()
+                self.assert_json_contains(data, "success", "Update response contains success")
+                self.assert_json_contains(data, "settings", "Update response contains settings")
+
+            # Test GET endpoint
+            response = requests.get(f"{BASE_URL}/v3/api/test-prep/settings", params={"user_id": self.test_user_id})
+            self.assert_status_code(response, 200, "GET /v3/api/test-prep/settings")
+
+            if response.status_code == 200:
+                data = response.json()
+                self.assert_json_contains(data, "settings", "GET response contains settings")
+                self.assert_json_contains(data, "progress", "GET response contains progress")
+
+                if data['settings']['toefl_enabled'] == True:
+                    self.log("✓ TOEFL correctly enabled after initial setup")
+                    self.passed += 1
+                else:
+                    self.log("✗ TOEFL should be enabled but is not")
+                    self.failed += 1
+
+            # Test disabling TOEFL (the bug scenario)
+            disable_data = {
+                "user_id": self.test_user_id,
+                "toefl_enabled": False
+            }
+            response = requests.put(f"{BASE_URL}/v3/api/test-prep/settings", json=disable_data)
+            self.assert_status_code(response, 200, "PUT /v3/api/test-prep/settings - disable TOEFL")
+
+            if response.status_code == 200:
+                data = response.json()
+                if data['settings']['toefl_enabled'] == False:
+                    self.log("✓ TOEFL correctly disabled")
+                    self.passed += 1
+                else:
+                    self.log("✗ TOEFL should be disabled but is still enabled (BUG!)")
+                    self.failed += 1
+
+            # Verify with GET that TOEFL is disabled
+            response = requests.get(f"{BASE_URL}/v3/api/test-prep/settings", params={"user_id": self.test_user_id})
+            if response.status_code == 200:
+                data = response.json()
+                if data['settings']['toefl_enabled'] == False:
+                    self.log("✓ GET confirms TOEFL is disabled")
+                    self.passed += 1
+                else:
+                    self.log("✗ GET shows TOEFL still enabled (BUG!)")
+                    self.failed += 1
+
+            # Test re-enabling
+            enable_data = {
+                "user_id": self.test_user_id,
+                "toefl_enabled": True
+            }
+            response = requests.put(f"{BASE_URL}/v3/api/test-prep/settings", json=enable_data)
+            if response.status_code == 200:
+                data = response.json()
+                if data['settings']['toefl_enabled'] == True:
+                    self.log("✓ TOEFL correctly re-enabled")
+                    self.passed += 1
+                else:
+                    self.log("✗ TOEFL should be enabled but is not")
+                    self.failed += 1
+
+        except Exception as e:
+            self.log(f"✗ Test prep settings toggle test failed with error: {e}")
+            self.failed += 1
+
     def run_all_tests(self):
         """Run all integration tests"""
         self.log("Starting integration tests...")
-        
+
         if not self.wait_for_service():
             self.log("✗ Cannot run tests - service not available")
             return False
-            
+
         self.test_health_endpoint()
         self.test_word_definition_endpoint()
         self.test_save_word_endpoint()
@@ -332,6 +416,7 @@ class TestRunner:
         self.test_duplicate_save()
         self.test_audio_endpoint()
         self.test_next_due_endpoint()
+        self.test_test_prep_settings_toggle()
         
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
         

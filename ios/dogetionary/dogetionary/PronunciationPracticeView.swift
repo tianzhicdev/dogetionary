@@ -25,9 +25,18 @@ struct PronunciationPracticeView: View {
         Button(action: {
             showingPractice.toggle()
         }) {
-            Image(systemName: "mic.circle.fill")
-                .font(.title3)
-                .foregroundColor(.orange)
+            HStack(spacing: 4) {
+                Image(systemName: "mic.fill")
+                    .font(.caption)
+                Text("Practice")
+                    .font(.caption)
+                    .fontWeight(.medium)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.orange.opacity(0.15))
+            .foregroundColor(.orange)
+            .cornerRadius(8)
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingPractice, onDismiss: {

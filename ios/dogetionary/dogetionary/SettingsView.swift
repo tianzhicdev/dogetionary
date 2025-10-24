@@ -434,9 +434,9 @@ struct SettingsView: View {
 
                 Section(header: Text("Reset Onboarding")) {
                     Button(action: {
-                        OnboardingManager.shared.resetOnboarding()
+                        UserManager.shared.resetOnboarding()
                     }) {
-                        Text("Reset Tutorial")
+                        Text("Reset Onboarding")
                             .foregroundColor(.blue)
                     }
                 }

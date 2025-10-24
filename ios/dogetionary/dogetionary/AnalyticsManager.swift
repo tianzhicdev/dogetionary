@@ -139,4 +139,7 @@ enum AnalyticsAction: String, CaseIterable {
     case appLaunch = "app_launch"
     case appBackground = "app_background"
     case appForeground = "app_foreground"
+
+    // Onboarding actions
+    case onboardingComplete = "onboarding_complete"
 }

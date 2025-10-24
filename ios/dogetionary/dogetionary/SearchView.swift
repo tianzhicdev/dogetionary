@@ -108,6 +108,13 @@ struct SearchView: View {
         } message: {
             Text("\"\(currentSearchQuery)\" is likely not a valid word or phrase, are you sure you want to read its definition?")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .performSearchFromOnboarding)) { notification in
+            if let word = notification.object as? String {
+                // Set the search text and perform search
+                searchText = word
+                searchWord()
+            }
+        }
     }
     
     @ViewBuilder
