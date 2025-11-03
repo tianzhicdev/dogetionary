@@ -401,6 +401,75 @@ class TestRunner:
             self.log(f"✗ Test prep settings toggle test failed with error: {e}")
             self.failed += 1
 
+    def test_combined_metrics_endpoint(self):
+        """Test the combined metrics endpoint"""
+        self.log("Testing /v3/combined_metrics endpoint...")
+
+        try:
+            # Test with default days parameter (30)
+            response = requests.get(f"{BASE_URL}/v3/combined_metrics")
+            self.assert_status_code(response, 200, "GET /v3/combined_metrics (default days)")
+
+            if response.status_code == 200:
+                data = response.json()
+                self.assert_json_contains(data, "daily_metrics", "/v3/combined_metrics contains daily_metrics")
+                self.assert_json_contains(data, "days", "/v3/combined_metrics contains days")
+
+                # Verify daily_metrics is a list
+                if isinstance(data.get("daily_metrics"), list):
+                    self.log("✓ daily_metrics is a list")
+                    self.passed += 1
+
+                    # Verify each metric has the required fields
+                    if len(data["daily_metrics"]) > 0:
+                        first_metric = data["daily_metrics"][0]
+                        self.assert_json_contains(first_metric, "date", "daily_metric contains date")
+                        self.assert_json_contains(first_metric, "lookups", "daily_metric contains lookups")
+                        self.assert_json_contains(first_metric, "reviews", "daily_metric contains reviews")
+                        self.assert_json_contains(first_metric, "unique_users", "daily_metric contains unique_users")
+
+                        # Verify data types
+                        if isinstance(first_metric.get("lookups"), int):
+                            self.log("✓ lookups is an integer")
+                            self.passed += 1
+                        else:
+                            self.log("✗ lookups should be an integer")
+                            self.failed += 1
+
+                        if isinstance(first_metric.get("reviews"), int):
+                            self.log("✓ reviews is an integer")
+                            self.passed += 1
+                        else:
+                            self.log("✗ reviews should be an integer")
+                            self.failed += 1
+
+                        if isinstance(first_metric.get("unique_users"), int):
+                            self.log("✓ unique_users is an integer")
+                            self.passed += 1
+                        else:
+                            self.log("✗ unique_users should be an integer")
+                            self.failed += 1
+                else:
+                    self.log("✗ daily_metrics should be a list")
+                    self.failed += 1
+
+            # Test with custom days parameter
+            response = requests.get(f"{BASE_URL}/v3/combined_metrics", params={"days": 7})
+            self.assert_status_code(response, 200, "GET /v3/combined_metrics (days=7)")
+
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("days") == 7:
+                    self.log("✓ days parameter correctly set to 7")
+                    self.passed += 1
+                else:
+                    self.log(f"✗ Expected days=7, got days={data.get('days')}")
+                    self.failed += 1
+
+        except Exception as e:
+            self.log(f"✗ /v3/combined_metrics endpoint failed with error: {e}")
+            self.failed += 1
+
     def run_all_tests(self):
         """Run all integration tests"""
         self.log("Starting integration tests...")
@@ -417,7 +486,8 @@ class TestRunner:
         self.test_audio_endpoint()
         self.test_next_due_endpoint()
         self.test_test_prep_settings_toggle()
-        
+        self.test_combined_metrics_endpoint()
+
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
         
         if self.failed == 0:

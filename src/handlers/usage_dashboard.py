@@ -103,6 +103,53 @@ def get_usage_dashboard():
 
         daily_stats = cur.fetchall()
 
+        # Get combined metrics for the past 30 days
+        cur.execute("""
+            WITH date_series AS (
+                SELECT generate_series(
+                    CURRENT_DATE - INTERVAL '30 days',
+                    CURRENT_DATE,
+                    '1 day'::interval
+                )::date as date
+            ),
+            daily_lookups AS (
+                SELECT
+                    DATE(created_at) as date,
+                    COUNT(*) as count
+                FROM definitions
+                WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+                GROUP BY DATE(created_at)
+            ),
+            daily_reviews AS (
+                SELECT
+                    DATE(reviewed_at) as date,
+                    COUNT(*) as count
+                FROM reviews
+                WHERE reviewed_at >= CURRENT_DATE - INTERVAL '30 days'
+                GROUP BY DATE(reviewed_at)
+            ),
+            daily_unique_users AS (
+                SELECT
+                    DATE(created_at) as date,
+                    COUNT(DISTINCT user_id) as count
+                FROM saved_words
+                WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+                GROUP BY DATE(created_at)
+            )
+            SELECT
+                ds.date,
+                COALESCE(dl.count, 0) as lookups,
+                COALESCE(dr.count, 0) as reviews,
+                COALESCE(du.count, 0) as unique_users
+            FROM date_series ds
+            LEFT JOIN daily_lookups dl ON ds.date = dl.date
+            LEFT JOIN daily_reviews dr ON ds.date = dr.date
+            LEFT JOIN daily_unique_users du ON ds.date = du.date
+            ORDER BY ds.date ASC
+        """)
+
+        combined_metrics = cur.fetchall()
+
         cur.close()
         conn.close()
 
@@ -120,7 +167,7 @@ def get_usage_dashboard():
             user_actions = analytics_service.get_user_actions(selected_user_id)
 
         # Generate HTML
-        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, monthly_metrics, available_users, selected_user_id, user_actions)
+        html = generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, monthly_metrics, available_users, selected_user_id, user_actions, combined_metrics)
 
         return Response(html, mimetype='text/html')
 
@@ -145,7 +192,7 @@ def convert_to_ny_time(timestamp):
         return ny_time
     return None
 
-def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, monthly_metrics, available_users, selected_user_id, user_actions):
+def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action_summary, daily_action_counts, time_analytics, monthly_metrics, available_users, selected_user_id, user_actions, combined_metrics):
     """Generate HTML dashboard with tables"""
 
     # Get current time in NY
@@ -278,18 +325,11 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
         <h1>🐕 Dogetionary Usage Dashboard</h1>
         <p style="color: #666;">Last 7 days activity • Updated: """ + now_ny.strftime('%Y-%m-%d %H:%M:%S ET') + """</p>
 
-        <!-- Monthly Analytics Charts Section -->
+        <!-- Combined Metrics Chart Section -->
         <div class="section">
-            <h2>📊 Monthly Analytics (Last 30 Days)</h2>
-            <div class="chart-grid">
-                <div class="chart-container">
-                    <h3>Daily Unique Users</h3>
-                    <canvas id="monthlyUniqueUsersChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h3>Daily Total Counts</h3>
-                    <canvas id="monthlyTotalCountsChart"></canvas>
-                </div>
+            <h2>📊 Combined Metrics (Last 30 Days)</h2>
+            <div class="chart-container" style="max-width: 100%;">
+                <canvas id="combinedMetricsChart"></canvas>
             </div>
         </div>
 
@@ -528,104 +568,62 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
 
     """
 
-    # Generate daily data for the last 30 days
+    # Prepare combined metrics data for chart
     import json
 
-    # Create 30-day date range
-    end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=29)  # 30 days total including today
+    # Extract data from combined_metrics
+    combined_dates = []
+    lookups_data = []
+    reviews_data = []
+    unique_users_data = []
 
-    monthly_dates = []
-    date_to_metrics = {}
-    date_to_actions = {}
-
-    # Create lookup dictionaries from analytics data
-    for row in monthly_metrics:
-        date_to_metrics[row['metric_date']] = row
-
-    # Process daily action counts (multiple rows per date, one per action type)
-    for row in daily_action_counts:
-        date = row['action_date']
-        if date not in date_to_actions:
-            date_to_actions[date] = {'active': 0, 'search': 0, 'review': 0}
-
-        # Categorize actions
-        action = row['action']
-        if action.startswith('dictionary'):
-            date_to_actions[date]['search'] += row['count']
-        elif action.startswith('review'):
-            date_to_actions[date]['review'] += row['count']
-        else:
-            date_to_actions[date]['active'] += row['count']
-
-    # Generate arrays for all 30 days
-    active_users_data = []
-    search_users_data = []
-    review_users_data = []
-    active_total_data = []
-    search_total_data = []
-    review_total_data = []
-
-    current_date = start_date
-    while current_date <= end_date:
-        # Format date for display
-        monthly_dates.append(current_date.strftime('%m/%d'))
-
-        # Get metrics for this date (default to 0 if no data)
-        metrics = date_to_metrics.get(current_date, {})
-        actions = date_to_actions.get(current_date, {'active': 0, 'search': 0, 'review': 0})
-
-        active_users_data.append(metrics.get('unique_active_users', 0))
-        search_users_data.append(metrics.get('unique_search_users', 0))
-        review_users_data.append(metrics.get('unique_review_users', 0))
-
-        active_total_data.append(actions['active'])
-        search_total_data.append(actions['search'])
-        review_total_data.append(actions['review'])
-
-        current_date += timedelta(days=1)
+    for row in combined_metrics:
+        combined_dates.append(row['date'].strftime('%m/%d'))
+        lookups_data.append(row['lookups'])
+        reviews_data.append(row['reviews'])
+        unique_users_data.append(row['unique_users'])
 
     # Convert to JSON for JavaScript
-    monthly_dates_json = json.dumps(monthly_dates)
-    active_users_json = json.dumps(active_users_data)
-    search_users_json = json.dumps(search_users_data)
-    review_users_json = json.dumps(review_users_data)
-    active_total_json = json.dumps(active_total_data)
-    search_total_json = json.dumps(search_total_data)
-    review_total_json = json.dumps(review_total_data)
+    combined_dates_json = json.dumps(combined_dates)
+    lookups_json = json.dumps(lookups_data)
+    reviews_json = json.dumps(reviews_data)
+    unique_users_json = json.dumps(unique_users_data)
 
-    # Generate JavaScript for monthly charts
+    # Generate JavaScript for combined metrics chart
     html += f"""
         <script>
-        console.log('Creating monthly analytics charts...');
+        console.log('Creating combined metrics chart...');
 
-        // Monthly Unique Users Chart
-        const uniqueCtx = document.getElementById('monthlyUniqueUsersChart').getContext('2d');
-        const uniqueChart = new Chart(uniqueCtx, {{
+        // Combined Metrics Chart
+        const ctx = document.getElementById('combinedMetricsChart').getContext('2d');
+        const combinedChart = new Chart(ctx, {{
             type: 'line',
             data: {{
-                labels: {monthly_dates_json},
+                labels: {combined_dates_json},
                 datasets: [{{
-                    label: 'Active Users',
-                    data: {active_users_json},
+                    label: 'Lookups',
+                    data: {lookups_json},
                     borderColor: '#2196F3',
                     backgroundColor: '#2196F320',
                     fill: false,
-                    tension: 0.1
+                    tension: 0.3,
+                    borderWidth: 2
                 }}, {{
-                    label: 'Search Users',
-                    data: {search_users_json},
+                    label: 'Reviews',
+                    data: {reviews_json},
                     borderColor: '#4CAF50',
                     backgroundColor: '#4CAF5020',
                     fill: false,
-                    tension: 0.1
+                    tension: 0.3,
+                    borderWidth: 2
                 }}, {{
-                    label: 'Review Users',
-                    data: {review_users_json},
+                    label: 'Unique Users',
+                    data: {unique_users_json},
                     borderColor: '#FF9800',
                     backgroundColor: '#FF980020',
                     fill: false,
-                    tension: 0.1
+                    tension: 0.3,
+                    borderWidth: 2
                 }}]
             }},
             options: {{
@@ -634,7 +632,14 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                 plugins: {{
                     title: {{
                         display: true,
-                        text: 'Daily Unique Users by Activity (Last 30 Days)'
+                        text: 'Combined Metrics: Lookups, Reviews, and Unique Users (Last 30 Days)',
+                        font: {{
+                            size: 16
+                        }}
+                    }},
+                    legend: {{
+                        display: true,
+                        position: 'top'
                     }}
                 }},
                 scales: {{
@@ -642,7 +647,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
                         beginAtZero: true,
                         title: {{
                             display: true,
-                            text: 'Unique Users'
+                            text: 'Count'
                         }}
                     }},
                     x: {{
@@ -655,63 +660,7 @@ def generate_html_dashboard(new_users, lookups, saved_words, daily_stats, action
             }}
         }});
 
-        // Monthly Total Counts Chart
-        const totalCtx = document.getElementById('monthlyTotalCountsChart').getContext('2d');
-        const totalChart = new Chart(totalCtx, {{
-            type: 'line',
-            data: {{
-                labels: {monthly_dates_json},
-                datasets: [{{
-                    label: 'Total Active Actions',
-                    data: {active_total_json},
-                    borderColor: '#2196F3',
-                    backgroundColor: '#2196F320',
-                    fill: false,
-                    tension: 0.1
-                }}, {{
-                    label: 'Total Search Actions',
-                    data: {search_total_json},
-                    borderColor: '#4CAF50',
-                    backgroundColor: '#4CAF5020',
-                    fill: false,
-                    tension: 0.1
-                }}, {{
-                    label: 'Total Review Actions',
-                    data: {review_total_json},
-                    borderColor: '#FF9800',
-                    backgroundColor: '#FF980020',
-                    fill: false,
-                    tension: 0.1
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    title: {{
-                        display: true,
-                        text: 'Daily Total Action Counts (Last 30 Days)'
-                    }}
-                }},
-                scales: {{
-                    y: {{
-                        beginAtZero: true,
-                        title: {{
-                            display: true,
-                            text: 'Total Actions'
-                        }}
-                    }},
-                    x: {{
-                        title: {{
-                            display: true,
-                            text: 'Date'
-                        }}
-                    }}
-                }}
-            }}
-        }});
-
-        console.log('Monthly charts created successfully');
+        console.log('Combined metrics chart created successfully');
         </script>
     """
 
