@@ -67,6 +67,10 @@ class DictionaryGenerator:
             lstrip_blocks=True
         )
 
+        # Add Python built-ins to Jinja2 globals
+        self.jinja_env.globals['max'] = max
+        self.jinja_env.globals['min'] = min
+
         self.stats = {
             'total_words': 0,
             'total_pages': 0,
@@ -215,6 +219,103 @@ class DictionaryGenerator:
 
         return definition
 
+    def generate_meta_description(self, word: str, definition_data: Dict) -> str:
+        """
+        Generate optimized meta description for SEO.
+        Format: Word: Core definition (50-80 chars). Key feature (20-40 chars). Pronunciation (20 chars).
+        Total: 150-160 characters
+        """
+        if not definition_data.get('definitions'):
+            return f"{word}: No definition available."
+
+        first_def = definition_data['definitions'][0]
+        full_definition = first_def.get('definition', '')
+        part_of_speech = first_def.get('type', '')
+        phonetic = definition_data.get('phonetic', '')
+        examples = first_def.get('examples', [])
+
+        # Calculate available space
+        word_prefix = f"{word}: "
+        available_space = 160 - len(word_prefix)
+
+        # Prepare pronunciation (if available, ~15-25 chars including "Pron: ")
+        pronunciation = ""
+        if phonetic:
+            pronunciation = f" Pron: {phonetic}"
+            if len(pronunciation) > 25:
+                pronunciation = pronunciation[:23]
+
+        # Prepare feature (part of speech, ~7-15 chars)
+        feature = ""
+        if part_of_speech:
+            feature = f" ({part_of_speech})"
+
+        # Calculate space for core definition
+        fixed_parts_length = len(feature) + len(pronunciation)
+        definition_space = available_space - fixed_parts_length
+
+        # Extract and trim core definition to fit remaining space
+        core_def = full_definition
+        if len(core_def) > definition_space:
+            # Try to cut at sentence boundary
+            cutoff = core_def[:definition_space-3].rfind('.')
+            if cutoff > definition_space * 0.6:  # Use sentence break if it's not too short
+                core_def = core_def[:cutoff+1]
+            else:
+                # Try to cut at clause boundary (comma)
+                cutoff = core_def[:definition_space-3].rfind(',')
+                if cutoff > definition_space * 0.6:
+                    core_def = core_def[:cutoff]
+                else:
+                    # Cut at word boundary
+                    cutoff = core_def[:definition_space-3].rfind(' ')
+                    if cutoff > 0:
+                        core_def = core_def[:cutoff]
+                    else:
+                        core_def = core_def[:definition_space-3]
+
+        # Build initial description
+        description = word_prefix + core_def + feature + pronunciation
+
+        # If description is too short (< 140 chars), try to add context
+        if len(description) < 140 and examples:
+            # Try to add a short example fragment
+            remaining_space = 158 - len(description)  # Leave 2 chars for safety
+            if remaining_space > 20:  # Only add if we have meaningful space
+                example_intro = " Ex: "
+                example_space = remaining_space - len(example_intro)
+                if example_space > 15:  # Minimum useful example length
+                    example_text = examples[0]
+                    if len(example_text) > example_space:
+                        # Trim example to fit
+                        cutoff = example_text[:example_space-3].rfind(' ')
+                        if cutoff > 0:
+                            example_text = example_text[:cutoff] + "..."
+                        else:
+                            example_text = example_text[:example_space-3] + "..."
+                    description += example_intro + example_text
+
+        # Ensure we're within limits (150-160 chars is ideal)
+        if len(description) > 160:
+            # Need to trim more aggressively
+            excess = len(description) - 160
+            if len(pronunciation) > 0:
+                # Try removing pronunciation first
+                description = word_prefix + core_def + feature
+                if len(description) <= 160:
+                    return description
+
+            # Still too long, trim definition more
+            new_def_space = definition_space - excess - 3
+            cutoff = core_def[:new_def_space].rfind(' ')
+            if cutoff > 0:
+                core_def = core_def[:cutoff] + "..."
+            else:
+                core_def = core_def[:new_def_space] + "..."
+            description = word_prefix + core_def + feature
+
+        return description
+
     def create_directories(self):
         """Create necessary directories"""
         directories = [
@@ -330,9 +431,16 @@ class DictionaryGenerator:
             prev_word = same_lang_words[current_pos-1][1]['word'] if current_pos and current_pos > 0 else None
             next_word = same_lang_words[current_pos+1][1]['word'] if current_pos is not None and current_pos < len(same_lang_words) - 1 else None
 
+            # Generate optimized meta description
+            meta_description = self.generate_meta_description(
+                word_data['word'],
+                word_data['definition_data']
+            )
+
             context = {
                 'word': word_data,
                 'definition_data': word_data['definition_data'],
+                'meta_description': meta_description,
                 'related_words': related_words,
                 'prev_word': prev_word,
                 'next_word': next_word,

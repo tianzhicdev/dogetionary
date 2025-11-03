@@ -197,10 +197,10 @@ struct ForgettingCurveView: View {
             
             // Legend
             HStack(spacing: 12) {
-                LegendItem(color: .blue, shape: .diamond, text: "Created")
-                LegendItem(color: .green, text: "Correct")
-                LegendItem(color: .red, text: "Incorrect")
-                LegendItem(color: .orange, shape: .diamond, text: "Next Review")
+                ForgettingCurveLegendItem(color: .blue, shape: .diamond, text: "Created")
+                ForgettingCurveLegendItem(color: .green, text: "Correct")
+                ForgettingCurveLegendItem(color: .red, text: "Incorrect")
+                ForgettingCurveLegendItem(color: .orange, shape: .diamond, text: "Next Review")
             }
             .font(.caption)
             
@@ -379,11 +379,11 @@ struct CurveDataPoint: Identifiable {
     let isProjection: Bool
 }
 
-struct LegendItem: View {
+struct ForgettingCurveLegendItem: View {
     let color: Color
     var shape: SymbolShape = .circle
     let text: String
-    
+
     enum SymbolShape {
         case circle
         case diamond

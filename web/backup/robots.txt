@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://unforgettable-dictionary.com/sitemap.xml
+
+# Crawl delay (be nice to servers)
+Crawl-delay: 1
+
+# Block non-essential paths
+Disallow: /static/
+Disallow: /*.json$
+Disallow: /*.log$

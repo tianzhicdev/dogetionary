@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Charts
 
 struct SavedWordsView: View {
     @State private var savedWords: [SavedWord] = []
@@ -187,20 +186,34 @@ struct SavedWordsListView: View {
 
 struct StatsView: View {
     @State private var reviewDates: Set<String> = []
-    @State private var combinedMetrics: [DailyMetric] = []
+    @State private var progressData: ProgressFunnelData?
+    @State private var reviewStats: ReviewStatsData?
+    @State private var weeklyReviews: [DailyReviewCount] = []
     @State private var isLoading = false
     @State private var currentDate = Date()
-
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Combined Metrics Chart at top
-                if !combinedMetrics.isEmpty {
-                    CombinedMetricsChart(metrics: combinedMetrics)
+                // Progress Funnel at top
+                if let progressData = progressData {
+                    HorizontalProgressBarChart(data: progressData)
                         .padding(.horizontal)
                         .padding(.top)
                 }
-
+                
+                // Stats Cards
+                if let stats = reviewStats {
+                    StatsCardsView(stats: stats)
+                        .padding(.horizontal)
+                }
+                
+                // Weekly Review Chart
+                if !weeklyReviews.isEmpty {
+                    WeeklyReviewChart(dailyCounts: weeklyReviews)
+                        .padding(.horizontal)
+                }
+                
                 // Calendar with integrated navigation
                 VStack(spacing: 0) {
                     HStack {
@@ -245,7 +258,9 @@ struct StatsView: View {
         }
         .onAppear {
             loadReviewDates()
-            loadCombinedMetrics()
+            loadProgressData()
+            loadReviewStats()
+            loadWeeklyReviews()
         }
         .onChange(of: currentDate) { _, _ in
             loadReviewDates()
@@ -279,16 +294,42 @@ struct StatsView: View {
         formatter.dateFormat = "MMMM yyyy"
         return formatter.string(from: date)
     }
-
-    private func loadCombinedMetrics() {
-        DictionaryService.shared.getCombinedMetrics(days: 30) { result in
+    
+    private func loadProgressData() {
+        DictionaryService.shared.getProgressFunnelData { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let response):
-                    self.combinedMetrics = response.daily_metrics
+                case .success(let data):
+                    self.progressData = data
                 case .failure(let error):
-                    print("Failed to load combined metrics: \(error)")
-                    self.combinedMetrics = []
+                    print("Failed to load progress data: \(error)")
+                    self.progressData = nil
+                }
+            }
+        }
+    }
+    
+    private func loadReviewStats() {
+        DictionaryService.shared.getReviewStatistics { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let stats):
+                    self.reviewStats = stats
+                case .failure(let error):
+                    print("Failed to load review stats: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func loadWeeklyReviews() {
+        DictionaryService.shared.getWeeklyReviewCounts { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let counts):
+                    self.weeklyReviews = counts
+                case .failure(let error):
+                    print("Failed to load weekly reviews: \(error)")
                 }
             }
         }
@@ -305,119 +346,8 @@ struct ReviewStatsData: Codable {
 struct DailyReviewCount: Codable, Identifiable {
     let date: String
     let count: Int
-
+    
     var id: String { date }
-}
-
-struct CombinedMetricsResponse: Codable {
-    let daily_metrics: [DailyMetric]
-    let days: Int
-}
-
-struct DailyMetric: Codable, Identifiable {
-    let date: String
-    let lookups: Int
-    let reviews: Int
-    let unique_users: Int
-
-    var id: String { date }
-}
-
-struct CombinedMetricsChart: View {
-    let metrics: [DailyMetric]
-
-    private var maxValue: Int {
-        let lookupMax = metrics.map { $0.lookups }.max() ?? 1
-        let reviewMax = metrics.map { $0.reviews }.max() ?? 1
-        let userMax = metrics.map { $0.unique_users }.max() ?? 1
-        return max(lookupMax, max(reviewMax, userMax))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Activity Metrics")
-                .font(.headline)
-                .fontWeight(.semibold)
-
-            if #available(iOS 16.0, *) {
-                Chart {
-                    ForEach(metrics) { metric in
-                        LineMark(
-                            x: .value("Date", parseDate(metric.date) ?? Date()),
-                            y: .value("Lookups", metric.lookups)
-                        )
-                        .foregroundStyle(.blue)
-                        .symbol(.circle)
-                        .interpolationMethod(.catmullRom)
-
-                        LineMark(
-                            x: .value("Date", parseDate(metric.date) ?? Date()),
-                            y: .value("Reviews", metric.reviews)
-                        )
-                        .foregroundStyle(.green)
-                        .symbol(.square)
-                        .interpolationMethod(.catmullRom)
-
-                        LineMark(
-                            x: .value("Date", parseDate(metric.date) ?? Date()),
-                            y: .value("Users", metric.unique_users)
-                        )
-                        .foregroundStyle(.orange)
-                        .symbol(.triangle)
-                        .interpolationMethod(.catmullRom)
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks(position: .leading)
-                }
-                .chartXAxis {
-                    AxisMarks(values: .stride(by: .day, count: max(1, metrics.count / 6))) { _ in
-                        AxisValueLabel(format: .dateTime.month().day())
-                    }
-                }
-                .frame(height: 200)
-
-                // Legend
-                HStack(spacing: 16) {
-                    LegendItem(color: .blue, label: "Lookups", symbol: "circle.fill")
-                    LegendItem(color: .green, label: "Reviews", symbol: "square.fill")
-                    LegendItem(color: .orange, label: "Users", symbol: "triangle.fill")
-                }
-                .padding(.top, 8)
-            } else {
-                Text("Chart requires iOS 16+")
-                    .foregroundColor(.secondary)
-                    .frame(height: 200)
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-    }
-
-    private func parseDate(_ dateString: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: dateString)
-    }
-}
-
-struct LegendItem: View {
-    let color: Color
-    let label: String
-    let symbol: String
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: symbol)
-                .font(.caption2)
-                .foregroundColor(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-    }
 }
 
 struct StatsCardsView: View {

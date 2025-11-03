@@ -15,7 +15,7 @@
     <meta property="og:url" content="https://unforgettable-dictionary.com{% block og_url %}{% endblock %}">
     <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
-    <meta property="og:image" content="https://unforgettable-dictionary.com/static/images/og-image.jpg">
+    <meta property="og:image" content="https://unforgettable-dictionary.com/static/images/logo.png">
     <meta property="og:site_name" content="Unforgettable Dictionary">
 
     <!-- Twitter -->
@@ -23,7 +23,7 @@
     <meta property="twitter:url" content="https://unforgettable-dictionary.com{% block twitter_url %}{% endblock %}">
     <meta property="twitter:title" content="{% block twitter_title %}{{ self.title() }}{% endblock %}">
     <meta property="twitter:description" content="{% block twitter_description %}{{ self.description() }}{% endblock %}">
-    <meta property="twitter:image" content="https://unforgettable-dictionary.com/static/images/og-image.jpg">
+    <meta property="twitter:image" content="https://unforgettable-dictionary.com/static/images/logo.png">
 
     <!-- Schema.org markup -->
     <script type="application/ld+json">
@@ -50,8 +50,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
-    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="icon" type="image/png" href="/static/images/logo-64.png">
+    <link rel="apple-touch-icon" href="/static/images/logo-128.png">
 
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
@@ -65,9 +65,6 @@
 <body>
     <header class="header">
         <nav class="nav">
-            <a href="/" class="logo">
-                📚 Unforgettable Dictionary
-            </a>
             <ul class="nav-links">
                 {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}
                 <li><a href="/letters/{{ letter.lower() }}.html">{{ letter }}</a></li>

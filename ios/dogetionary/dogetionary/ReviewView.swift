@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import StoreKit
 
 struct ReviewView: View {
     @State private var currentWord: ReviewWord?
@@ -906,26 +905,6 @@ struct ReviewGoalAchievedView: View {
             Spacer()
         }
         .padding()
-        .onAppear {
-            // Check if we should show app rating request
-            if let stats = progressStats,
-               stats.total_reviews >= 40,
-               !UserManager.shared.hasRequestedAppRating {
-                // Small delay to let the view fully appear before showing rating
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    requestAppRating()
-                }
-            }
-        }
-    }
-
-    private func requestAppRating() {
-        // Request app store rating using native iOS API
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            SKStoreReviewController.requestReview(in: windowScene)
-            // Mark that we've requested rating so we don't ask again
-            UserManager.shared.markAppRatingRequested()
-        }
     }
 }
 
