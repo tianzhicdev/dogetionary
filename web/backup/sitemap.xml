@@ -7,31 +7,7 @@
         <changefreq>daily</changefreq>
     </url>
     <url>
-        <loc>https://unforgettable-dictionary.com/es/fr/</loc>
-        <lastmod>2025-11-03</lastmod>
-        <priority>0.9</priority>
-        <changefreq>weekly</changefreq>
-    </url>
-    <url>
-        <loc>https://unforgettable-dictionary.com/en/es/</loc>
-        <lastmod>2025-11-03</lastmod>
-        <priority>0.9</priority>
-        <changefreq>weekly</changefreq>
-    </url>
-    <url>
-        <loc>https://unforgettable-dictionary.com/de/zh/</loc>
-        <lastmod>2025-11-03</lastmod>
-        <priority>0.9</priority>
-        <changefreq>weekly</changefreq>
-    </url>
-    <url>
         <loc>https://unforgettable-dictionary.com/da/hu/</loc>
-        <lastmod>2025-11-03</lastmod>
-        <priority>0.9</priority>
-        <changefreq>weekly</changefreq>
-    </url>
-    <url>
-        <loc>https://unforgettable-dictionary.com/zh/en/</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.9</priority>
         <changefreq>weekly</changefreq>
@@ -43,25 +19,7 @@
         <changefreq>weekly</changefreq>
     </url>
     <url>
-        <loc>https://unforgettable-dictionary.com/en/ar/</loc>
-        <lastmod>2025-11-03</lastmod>
-        <priority>0.9</priority>
-        <changefreq>weekly</changefreq>
-    </url>
-    <url>
-        <loc>https://unforgettable-dictionary.com/en/ne/</loc>
-        <lastmod>2025-11-03</lastmod>
-        <priority>0.9</priority>
-        <changefreq>weekly</changefreq>
-    </url>
-    <url>
-        <loc>https://unforgettable-dictionary.com/ko/zh/</loc>
-        <lastmod>2025-11-03</lastmod>
-        <priority>0.9</priority>
-        <changefreq>weekly</changefreq>
-    </url>
-    <url>
-        <loc>https://unforgettable-dictionary.com/de/ar/</loc>
+        <loc>https://unforgettable-dictionary.com/fr/bg/</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.9</priority>
         <changefreq>weekly</changefreq>
@@ -79,13 +37,13 @@
         <changefreq>weekly</changefreq>
     </url>
     <url>
-        <loc>https://unforgettable-dictionary.com/en/zh/</loc>
+        <loc>https://unforgettable-dictionary.com/zh/zh/</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.9</priority>
         <changefreq>weekly</changefreq>
     </url>
     <url>
-        <loc>https://unforgettable-dictionary.com/zh/zh/</loc>
+        <loc>https://unforgettable-dictionary.com/en/es/</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.9</priority>
         <changefreq>weekly</changefreq>
@@ -97,7 +55,49 @@
         <changefreq>weekly</changefreq>
     </url>
     <url>
-        <loc>https://unforgettable-dictionary.com/fr/bg/</loc>
+        <loc>https://unforgettable-dictionary.com/ko/zh/</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.9</priority>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/ne/</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.9</priority>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/es/fr/</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.9</priority>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/de/zh/</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.9</priority>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/de/ar/</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.9</priority>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.9</priority>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/ar/</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.9</priority>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/zh/en/</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.9</priority>
         <changefreq>weekly</changefreq>
@@ -343,6 +343,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/abnegation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/abolish.html</loc>
         <lastmod>2025-10-01</lastmod>
         <priority>0.6</priority>
@@ -445,6 +451,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/abstrusely.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/abstruseness.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -475,6 +487,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/acarpous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/acatalepsy.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -483,6 +501,24 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/access.html</loc>
         <lastmod>2025-10-10</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/accolade.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/accoutrement.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/acedia.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -512,6 +548,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/acolyte.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/aconite.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -548,6 +590,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/acquittal.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/acrimonious.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -590,6 +638,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/adroit.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/adroitly.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/adscititious.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -673,6 +733,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/aesthesia.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/aesthete.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -686,6 +752,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/aestheticism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/aestheticization.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -735,6 +807,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/agog.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/agogness.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -793,6 +871,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/alchemic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/aleatory.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -805,7 +889,25 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/alembicated.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/alimony.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/alisphragm.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/allegiance.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -859,6 +961,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/alpenglow.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/altercation.html</loc>
         <lastmod>2025-10-13</lastmod>
         <priority>0.6</priority>
@@ -879,6 +987,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/altruism.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/altruistic.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -907,7 +1021,25 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/ambagious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/ambiguity.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/ambivalence.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/ambivalent.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -1081,6 +1213,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/antagonistic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/antebellum.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -1171,6 +1309,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/antiquarian.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/antithesis.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -1197,6 +1341,24 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/aphorism.html</loc>
         <lastmod>2025-10-08</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/apis.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/aplomb.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/apocalyptic.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -1285,6 +1447,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/apostasy.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/apothecary.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -1335,6 +1503,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/apple.html</loc>
         <lastmod>2025-09-24</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/apposite.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -1567,6 +1741,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/ascertaining.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/ascetic.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -1579,6 +1759,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/ascititious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/ascribe.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -1586,6 +1772,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/ascription.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/ascriptive.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -1663,6 +1855,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/astringency.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/astringent.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -1670,6 +1868,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/astrolabe.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/astrophysics.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -1759,7 +1963,25 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/atemporal.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/atheism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/athwart.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/atrophy.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -1809,6 +2031,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/audacious.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/audacity.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -1868,6 +2096,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/auspicate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/auspice.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -1939,6 +2173,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/a/autoschediasm.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/a/avant-garde.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -1988,6 +2228,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/babeldom.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/baccate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -2107,6 +2353,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/bandersnatch.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/bane.html</loc>
         <lastmod>2025-10-06</lastmod>
         <priority>0.6</priority>
@@ -2162,6 +2414,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/bastion.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/bateau.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -2234,6 +2492,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/beatific.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/becloud.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -2389,7 +2653,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/benighted.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/benign.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/benignly.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -2438,6 +2714,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/beseech.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/beseeching.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -2503,6 +2785,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/bifrost.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/bifurcate.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -2551,6 +2839,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/blarney.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/blas%C3%A9.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/blatherskite.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -2564,6 +2864,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/blithe.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/blithering.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -2647,6 +2953,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/bonhomie.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/bonjour.html</loc>
         <lastmod>2025-10-19</lastmod>
         <priority>0.6</priority>
@@ -2655,6 +2967,18 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/bonnet.html</loc>
         <lastmod>2025-10-08</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/boondoggle.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/boorish.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -2695,6 +3019,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/brabble.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/brachiation.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -2713,6 +3043,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/braggart.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/branches%20of%20microbiology.html</loc>
         <lastmod>2025-09-22</lastmod>
         <priority>0.6</priority>
@@ -2721,6 +3057,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/bravado.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/bravissimo.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -2815,6 +3157,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/brooding.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/brouhaha.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -2851,13 +3199,37 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/bucolically.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/buffer%20zone.html</loc>
         <lastmod>2025-09-20</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/bumbershoot.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/b/buoyant.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/burgeon.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/b/burgeoning.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -2941,6 +3313,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/cadaverous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/cadence.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/cadenza.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -3007,6 +3391,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/callow.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/calumnious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/calumny.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -3037,7 +3433,25 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/campestral.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/canard.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/candelabrum.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/candlelit.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3109,6 +3523,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/captivatingly.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/carapace.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -3128,6 +3548,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/carnivalesque.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/carnivorous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/carrion.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3199,6 +3631,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/catalysis.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/catalyst.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -3241,7 +3679,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/causation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/caustic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/cavalcade.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3272,6 +3722,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/cavorting.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/celeripede.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3343,6 +3799,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/chaos.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/chaplain.html</loc>
         <lastmod>2025-10-05</lastmod>
         <priority>0.6</priority>
@@ -3391,6 +3853,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/chilblain.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/chimerical.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -3427,6 +3895,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/circuitous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/circumambient.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/circumambulate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -3453,6 +3933,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/circumstance.html</loc>
         <lastmod>2025-09-27</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/cistern.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -3505,7 +3991,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/clandestineness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/claptrap.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/clastic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3518,6 +4016,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/clemency.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/clement.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3596,6 +4100,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/cognitive.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/cognitive%20dissonance.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3847,6 +4357,24 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/compleat.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/complementary.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/comport.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/composure.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -3889,6 +4417,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/concomitant.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/concordant.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -3908,6 +4442,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/confabulate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/confabulation.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3955,6 +4495,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/conflated.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/conflation.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -3985,7 +4531,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/congeniality.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/conglomerate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/conglomeration.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -3993,6 +4551,18 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/congregation.html</loc>
         <lastmod>2025-09-20</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/congruent.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/congruous.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -4195,6 +4765,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/contumelious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/contumely.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -4202,6 +4778,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/conundrum.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/convalesce.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -4215,6 +4797,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/convasant.html</loc>
         <lastmod>2025-09-17</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/convergence.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -4273,6 +4861,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/coprolalia.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/cordial.html</loc>
         <lastmod>2025-10-04</lastmod>
         <priority>0.6</priority>
@@ -4285,6 +4879,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/cormorant.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/cornucopia.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -4292,6 +4892,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/corollary.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/corporeal.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -4315,6 +4921,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/coruscant.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/coruscate.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -4328,6 +4940,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/coruscation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/corybantic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -4357,6 +4975,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/countermand.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/counternarrative.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -4381,6 +5005,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/covetous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/craftsman.html</loc>
         <lastmod>2025-09-16</lastmod>
         <priority>0.6</priority>
@@ -4400,6 +5030,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/credulous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/crepuscle.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -4466,6 +5102,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/culminate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/c/culmination.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -4557,6 +5199,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/c/cynosure.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/dactylic.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -4713,6 +5361,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/decision.html</loc>
         <lastmod>2025-09-26</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/declamatory.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -4927,6 +5581,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/dendritic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/dendrology.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -4981,6 +5641,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/depravity.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/deprecate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -5012,6 +5678,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/dereliction.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/derivative.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/descant.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -5079,6 +5757,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/determine.html</loc>
         <lastmod>2025-09-16</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/detritus.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -5197,8 +5881,20 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/digress.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/dilapidated.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/dilapidation.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -5329,7 +6025,25 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/disdain.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/disenchant.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/disenfranchise.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/disenfranchised.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -5343,6 +6057,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/disguise.html</loc>
         <lastmod>2025-09-20</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/disheveled.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -5389,7 +6109,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/dissect.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/disseminate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/dissemination.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -5521,6 +6253,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/doxology.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/d/doyen.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -5629,6 +6367,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/d/d%C3%A9tente.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/ebullience.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -5689,6 +6433,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/eclecticism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/eclipsed.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/ecliptic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -5719,6 +6475,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/efface.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/effacement.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -5733,6 +6495,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/effervescent.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/effete.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -5821,6 +6589,24 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/egrigious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/eidolon.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/eidos.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/de/ar/e/einen%20schreck%20bekommen.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -5869,6 +6655,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/elation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/eldritch.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -5906,6 +6698,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/ellipsis.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/elliptical.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -6007,6 +6805,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/empathetic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/empathy.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -6038,6 +6842,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/emulate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/emulation.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -6111,6 +6921,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/engagement.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/engender.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -6235,6 +7051,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/epicureanism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/epigraph.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -6325,6 +7147,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/eponym.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/eponymous.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -6337,7 +7165,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/equanimous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/equinox.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/equivocal.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -6368,6 +7208,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/ergonomy.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/ergotism.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -6511,6 +7357,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/ethnography.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/ethos.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -6523,8 +7375,20 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/euclidean.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/eudaimonia.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/eulogy.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -6579,6 +7443,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/eviscerate.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/evocative.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -6673,6 +7543,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/exemplary.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/exempt.html</loc>
         <lastmod>2025-09-17</lastmod>
         <priority>0.6</priority>
@@ -6687,6 +7563,18 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/exhortation.html</loc>
         <lastmod>2025-09-26</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/exhume.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/exigency.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -6710,6 +7598,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/existentialism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/exonerate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -6746,6 +7640,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/expeditious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/expiation.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -6841,6 +7741,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/e/extrapolation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/e/extricate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -6879,6 +7785,18 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/facilitate.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/facsimile.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/factitious.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -6931,6 +7849,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/fanfaronade.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fantasize.html</loc>
         <lastmod>2025-09-17</lastmod>
         <priority>0.6</priority>
@@ -6973,6 +7897,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/fasciculate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fastidious.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -7010,6 +7940,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fatuousness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/faultless.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -7063,7 +7999,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/felicitate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/felicitous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/felicitude.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -7071,6 +8019,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/felicity.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/fenestration.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -7093,6 +8047,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/ferroequinology.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fervent.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -7100,6 +8060,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fervid.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/fervor.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -7173,6 +8139,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/es/fr/f/filigree.html</loc>
         <lastmod>2025-10-24</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/finespun.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -7285,8 +8257,32 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/flocculent.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/floodgates.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/floppy.html</loc>
         <lastmod>2025-10-04</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/florid.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/floriferous.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -7339,6 +8335,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/flutist.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/de/ar/f/fl%C3%BCstern.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -7358,6 +8360,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/foibles.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/foison.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -7465,6 +8473,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/forswear.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/forthcoming.html</loc>
         <lastmod>2025-10-14</lastmod>
         <priority>0.6</priority>
@@ -7483,6 +8497,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/fortuitousness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fossilize.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -7496,6 +8516,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fostering.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/frabjous.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -7597,6 +8623,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/fructify.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fruition.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -7616,6 +8648,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/fugue.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/fulgent.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -7675,6 +8713,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/furor.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/f/furore.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/f/furtive.html</loc>
         <lastmod>2025-10-04</lastmod>
         <priority>0.6</priority>
@@ -7729,6 +8779,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/gallimaufry.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/gallivant.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -7772,6 +8828,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/garnet.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/garnish.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/garrison.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -7843,6 +8911,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/genteel.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/gentility.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -7891,6 +8965,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/gerrymander.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/gerrymandering.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -7928,6 +9008,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/gesticulate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/gesticulating.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -8005,6 +9091,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/glibness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/glisten.html</loc>
         <lastmod>2025-10-04</lastmod>
         <priority>0.6</priority>
@@ -8047,6 +9139,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/gloze.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/glut.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/glutton.html</loc>
         <lastmod>2025-10-06</lastmod>
         <priority>0.6</priority>
@@ -8066,6 +9170,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/gnomic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/gnoshing.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -8203,6 +9313,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/gregariously.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/grievance.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/grievous.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -8217,6 +9339,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/g/grunt.html</loc>
         <lastmod>2025-10-08</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/g/gr%C3%BCndlichkeit.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -8563,6 +9691,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/hesperian.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/h/heteroclite.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -8587,6 +9721,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/heteromorphic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/h/heteronomy.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -8605,6 +9745,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/hibernacula.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/h/hibernaculum.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -8618,6 +9764,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/h/hibernation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/hibiscus.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -8642,6 +9794,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/h/hiraeth.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/hispid.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -8815,6 +9973,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/hyphenate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/h/hypnagogic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -8822,6 +9986,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/h/hypnotherapy.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/hypochondria.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/h/hypotaxis.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -8869,6 +10045,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/iatrogenic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/iconoclasm.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -8894,6 +10076,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/iconolatry.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/iconosphere.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/iconostasis.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -9031,13 +10225,43 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imbalance.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imbecile.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imbricate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/imbrication.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imbrogate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/imbroglio.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imbroglios.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -9115,6 +10339,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imperceptible.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/impermanence.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -9169,6 +10399,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imponderable.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/importunate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -9182,6 +10418,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/imprecation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imprecatory.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/impresario.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -9225,6 +10473,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/impulses.html</loc>
         <lastmod>2025-10-19</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/imputation.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -9325,6 +10579,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/incomprehensible.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/incongruous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/incontrovertible.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -9338,6 +10604,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/incorrigible.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/inctation.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -9385,6 +10657,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/indomitable.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/ineffability.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -9393,6 +10671,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/ineffable.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/inefficacy.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -9507,6 +10791,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/ingenuous.html</loc>
         <lastmod>2025-10-06</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/inhumane.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -9805,6 +11095,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/inusitate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/invective.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -9878,6 +11174,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/i/irrefutable.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/i/irresolute.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -9973,6 +11275,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/j/jauntily.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/j/jaunty.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -9986,6 +11294,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/j/jeopardize.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/j/jeopardy.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -10063,6 +11377,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/j/jubilance.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/j/jubilant.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -10088,6 +11408,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/j/juvenescence.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/j/juvenescent.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -10213,6 +11539,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/k/knavery.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/k/knell.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -10297,6 +11629,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/laminate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/lammergeier.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -10339,7 +11677,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/lantana.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/lapidary.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/lapsarian.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -10376,6 +11726,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/lassitude.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/latent.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -10483,6 +11839,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/libidinous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/libretto.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -10573,6 +11935,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/lissome.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/lisztomania.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -10586,6 +11954,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/lithe.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/lithesome.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -10639,6 +12013,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/lolling.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/de/ar/l/lopen.html</loc>
         <lastmod>2025-09-17</lastmod>
         <priority>0.6</priority>
@@ -10652,6 +12032,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/loquacious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/loquaciously.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -10729,6 +12115,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/luminal.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/luminance.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -10760,6 +12152,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/l/lurid.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/luridness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/l/lycanthropy.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -10875,6 +12279,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/malice.html</loc>
         <lastmod>2025-10-21</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/malignant.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -11023,7 +12433,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/meliorate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/meliorism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/melismatic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -11048,6 +12470,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/melodrama.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/melodramatic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -11119,6 +12547,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/mesmeric.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/mess.html</loc>
         <lastmod>2025-09-24</lastmod>
         <priority>0.6</priority>
@@ -11167,6 +12601,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/metanoetic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/metanoia.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -11181,6 +12621,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/metaphorically.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/metaphorize.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -11228,6 +12674,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/meticulousness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/metonymic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -11443,6 +12895,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/moratorium.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/morbidity.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -11528,6 +12986,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/m/mundanity.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/m/munificence.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -11635,6 +13099,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/n/nebulization.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/n/nebulous.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -11649,6 +13119,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/n/negligence.html</loc>
         <lastmod>2025-09-20</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/n/nenia.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -11755,6 +13231,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/n/nimbostratus.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/n/nimrod.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/n/no.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -11821,6 +13309,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/n/nonplused.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/n/nonplussed.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -11859,6 +13353,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/n/nourishment.html</loc>
         <lastmod>2025-09-16</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/n/novelty.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -12133,6 +13633,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/o/oleaginous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/o/oligarchy.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -12140,6 +13646,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/o/ombudsman.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/o/omnifarious.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -12182,6 +13694,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/o/omphaloskepsis.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/o/ondoyant.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -12313,6 +13831,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/o/orotund.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/o/orphean.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -12397,6 +13921,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pabulum.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/pace.html</loc>
         <lastmod>2025-09-23</lastmod>
         <priority>0.6</priority>
@@ -12433,6 +13963,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/palatial.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/palaver.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -12464,6 +14000,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/palindrome.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/palinode.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/palladium.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -12543,6 +14091,18 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/pansophist.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pantheism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pantheon.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -12649,6 +14209,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/parody.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/paroxysm.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -12693,6 +14259,18 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/pathological.html</loc>
         <lastmod>2025-10-08</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pathos.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/patina.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -12883,6 +14461,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/perdurable.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/peregrinate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -12913,8 +14497,20 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/perfidy.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/perfunctory.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/perigee.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -12998,6 +14594,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/perplexity.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/perquisites.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -13201,7 +14803,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/philoprogeny.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/philosophical.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/philosophique.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -13315,7 +14929,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/plasticity.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/platitude.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/platitudes.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -13363,6 +14989,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/plicate.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/plight.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -13395,6 +15027,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/pneumatic.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pneumatics.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -13543,6 +15181,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/predilection.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/preponderance.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -13604,6 +15248,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/pristine.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/probity.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -13687,6 +15337,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/profoundness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/progenitor.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -13765,6 +15421,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/propitious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/prosaic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -13784,6 +15446,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/protean.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/provenance.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -13873,6 +15541,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pugnacious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/puissant.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -13885,6 +15559,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pulchritudinous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/pull.html</loc>
         <lastmod>2025-09-13</lastmod>
         <priority>0.6</priority>
@@ -13892,6 +15572,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/p/pulsar.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/p/pulverize.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -13989,6 +15675,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/q/queried.html</loc>
         <lastmod>2025-10-13</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/q/quibble.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -14109,6 +15801,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/q/quote.html</loc>
         <lastmod>2025-10-01</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/q/quotidian.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -14455,6 +16153,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/regression.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/regurgitate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -14473,6 +16177,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/reiteration.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/rejoinder.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -14486,6 +16196,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/rejuvenation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/relegate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -14599,6 +16315,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/reprehensible.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/reproach.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -14683,6 +16405,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/resonant.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/resourceful.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -14715,6 +16443,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/restrain.html</loc>
         <lastmod>2025-10-10</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/resurgence.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -14755,7 +16489,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/retrogressive.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/retronym.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/retrospect.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -14869,6 +16615,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/romanticism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/roulades.html</loc>
         <lastmod>2025-10-06</lastmod>
         <priority>0.6</priority>
@@ -14882,6 +16634,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/r/rubicund.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/r/ruinous.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -15007,6 +16765,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/saltation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/salubrious.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -15127,6 +16891,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/sartorially.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/satiate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -15141,6 +16911,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/saturate.html</loc>
         <lastmod>2025-09-20</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/saturnalia.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -15385,6 +17161,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/semaphore.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/semblance.html</loc>
         <lastmod>2025-10-08</lastmod>
         <priority>0.6</priority>
@@ -15440,6 +17222,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/sequestered.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/sequestration.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -15585,6 +17373,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/similar.html</loc>
         <lastmod>2025-10-19</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/simpatico.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -15841,6 +17635,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/sonderhemd.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/sondering.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -15854,6 +17654,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/sonderkommando.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/sonderland.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/sonderling.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -15890,6 +17702,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/soothsayer.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/sophistic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/sophisticate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -15956,6 +17780,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/spectacle.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/spectacular.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -16065,6 +17895,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/startle.html</loc>
         <lastmod>2025-11-02</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/stasis.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -16189,6 +18025,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/stultify.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/stupefy.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -16297,6 +18139,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/suffering.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/sui%20generis.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -16382,6 +18230,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/surrealist.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/surrealistic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -16543,6 +18397,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/s/synergistic.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/s/synergy.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -16657,6 +18517,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/tantivy.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/tape.html</loc>
         <lastmod>2025-09-30</lastmod>
         <priority>0.6</priority>
@@ -16669,7 +18535,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/tascabilious.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/tatterdemalion.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/tautology.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -16682,6 +18560,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/taxidermy.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/tedious.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -16723,6 +18607,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/temporary.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/temporary%20cessation.html</loc>
         <lastmod>2025-09-21</lastmod>
         <priority>0.6</priority>
@@ -16741,6 +18631,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/tender-hearted.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/tenebrous.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -16754,6 +18650,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/tenuous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/teratoid.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -16796,6 +18698,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/terrestrial.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/terrifically.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -16910,6 +18818,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/thesaurus.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/thespian.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -17101,6 +19015,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/transcendence.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/transcendent.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -17108,6 +19028,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/transcendental.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/transcendentalism.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -17192,6 +19118,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/transubstantiation.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/trapeze.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -17295,6 +19227,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/t/troglodytism.html</loc>
         <lastmod>2025-10-06</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/t/trompe-l%27%C5%93il.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -17485,6 +19423,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/u/unabated.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/u/unambiguity.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -17551,8 +19495,20 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/u/understatement.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/u/undeviating.html</loc>
         <lastmod>2025-10-08</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/u/undulate.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -17629,6 +19585,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/u/unquenchable.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/u/unscrupulous.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -17671,8 +19633,20 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/u/urtext.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/u/usurp.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/u/usurpation.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -17761,6 +19735,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/vagabond.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/vagabondage.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -17798,6 +19778,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/valiant.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/vanitas.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -17863,6 +19849,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/vehement.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/vellicate.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -17893,6 +19885,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/veneer.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/venerable.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -17918,6 +19916,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/venial.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/venturous.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -18067,6 +20071,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/vexillology.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/vexing.html</loc>
         <lastmod>2025-10-07</lastmod>
         <priority>0.6</priority>
@@ -18116,6 +20126,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/vicissitudinous.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/victuals.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -18295,6 +20311,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/voil%C3%A0.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/v/volition.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -18379,6 +20401,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/v/vulpine.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wabi-sabi.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -18387,6 +20415,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/waft.html</loc>
         <lastmod>2025-10-04</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wafting.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -18433,6 +20467,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wampum.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wandering.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -18464,6 +20504,18 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wantonly.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wantonness.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wassail.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -18523,6 +20575,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wheddle.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wheedle.html</loc>
         <lastmod>2025-10-09</lastmod>
         <priority>0.6</priority>
@@ -18536,6 +20594,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wheedles.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wheedling.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -18673,6 +20737,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wonky.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wont.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -18745,6 +20815,18 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wretched.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wry.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wshed.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -18763,7 +20845,19 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/w/wuthering.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/w/wynne.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/x/xanadu.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
@@ -18907,6 +21001,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/y/yearnful.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/y/yearning.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -18927,6 +21027,12 @@
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/y/yeoman.html</loc>
         <lastmod>2025-10-09</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/y/yeomanry.html</loc>
+        <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
     </url>
@@ -19051,6 +21157,12 @@
         <changefreq>monthly</changefreq>
     </url>
     <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/z/zenoism.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
         <loc>https://unforgettable-dictionary.com/en/zh/z/zenophobic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
@@ -19094,6 +21206,12 @@
     </url>
     <url>
         <loc>https://unforgettable-dictionary.com/en/zh/z/zeugma.html</loc>
+        <lastmod>2025-11-03</lastmod>
+        <priority>0.6</priority>
+        <changefreq>monthly</changefreq>
+    </url>
+    <url>
+        <loc>https://unforgettable-dictionary.com/en/zh/z/zeugmatic.html</loc>
         <lastmod>2025-11-03</lastmod>
         <priority>0.6</priority>
         <changefreq>monthly</changefreq>
