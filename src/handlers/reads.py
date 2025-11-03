@@ -744,19 +744,95 @@ def get_review_progress_stats():
 def get_due_counts():
     try:
         user_id = request.args.get('user_id')
-        
+
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
-        
+
         # Use shared function for consistent calculation
         result = get_due_words_count(user_id)
-        
+
         return jsonify({
             "user_id": user_id,
             "overdue_count": result['due_count'],
             "total_count": result['total_count']
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting due counts: {str(e)}")
         return jsonify({"error": f"Failed to get due counts: {str(e)}"}), 500
+
+
+def get_combined_metrics():
+    """Get combined metrics: lookups, reviews, and unique users over time"""
+    try:
+        # Get time range from query params (default to last 30 days)
+        days = int(request.args.get('days', 30))
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Get daily metrics for the past N days
+        cur.execute("""
+            WITH date_series AS (
+                SELECT generate_series(
+                    CURRENT_DATE - INTERVAL '%s days',
+                    CURRENT_DATE,
+                    '1 day'::interval
+                )::date as date
+            ),
+            daily_lookups AS (
+                SELECT
+                    DATE(created_at) as date,
+                    COUNT(*) as count
+                FROM definitions
+                WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
+                GROUP BY DATE(created_at)
+            ),
+            daily_reviews AS (
+                SELECT
+                    DATE(reviewed_at) as date,
+                    COUNT(*) as count
+                FROM reviews
+                WHERE reviewed_at >= CURRENT_DATE - INTERVAL '%s days'
+                GROUP BY DATE(reviewed_at)
+            ),
+            daily_unique_users AS (
+                SELECT
+                    DATE(created_at) as date,
+                    COUNT(DISTINCT user_id) as count
+                FROM saved_words
+                WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
+                GROUP BY DATE(created_at)
+            )
+            SELECT
+                ds.date,
+                COALESCE(dl.count, 0) as lookups,
+                COALESCE(dr.count, 0) as reviews,
+                COALESCE(du.count, 0) as unique_users
+            FROM date_series ds
+            LEFT JOIN daily_lookups dl ON ds.date = dl.date
+            LEFT JOIN daily_reviews dr ON ds.date = dr.date
+            LEFT JOIN daily_unique_users du ON ds.date = du.date
+            ORDER BY ds.date ASC
+        """, (days, days, days, days))
+
+        daily_metrics = []
+        for row in cur.fetchall():
+            daily_metrics.append({
+                "date": row['date'].strftime('%Y-%m-%d'),
+                "lookups": row['lookups'],
+                "reviews": row['reviews'],
+                "unique_users": row['unique_users']
+            })
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "daily_metrics": daily_metrics,
+            "days": days
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting combined metrics: {str(e)}")
+        return jsonify({"error": f"Failed to get combined metrics: {str(e)}"}), 500

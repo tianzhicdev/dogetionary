@@ -1,0 +1,7 @@
+in the /usage page
+repalce the top graph with:
+number of lookups (use the timestamps of definitions)
+number of reviews (use the timestamps of reviews)
+number of unique users (get unique id from definitions/saved_words)
+
+2. a dropdown menu 

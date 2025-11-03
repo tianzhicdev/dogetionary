@@ -40,6 +40,7 @@ CREATE TABLE definitions (
     learning_language VARCHAR(10) NOT NULL,
     native_language VARCHAR(10) NOT NULL,
     definition_data JSONB NOT NULL,
+    schema_version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (word, learning_language, native_language)
@@ -95,6 +96,7 @@ CREATE INDEX idx_user_feedback_created_at ON user_feedback(created_at);
 
 -- Indexes for performance
 CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);
+CREATE INDEX idx_definitions_schema_version ON definitions(schema_version);
 CREATE INDEX idx_saved_words_user_id ON saved_words(user_id);
 CREATE INDEX idx_reviews_user_id ON reviews(user_id);
 CREATE INDEX idx_reviews_word_id ON reviews(word_id);
@@ -117,35 +119,14 @@ CREATE TABLE test_vocabularies (
 CREATE TABLE user_actions (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
-    action VARCHAR(50) NOT NULL CHECK (action IN (
-        'review_completed',
-        'word_saved',
-        'word_unsaved',
-        'audio_played',
-        'definition_viewed',
-        'app_opened',
-        'session_started',
-        'session_ended',
-        'streak_achieved',
-        'level_up',
-        'illustration_viewed',
-        'pronunciation_practiced',
-        'pronunciation_success',
-        'pronunciation_failure',
-        'notification_sent',
-        'notification_opened',
-        'notification_dismissed',
-        'settings_changed',
-        'feedback_submitted',
-        'leaderboard_viewed',
-        'progress_viewed',
-        'review_skipped',
-        'word_mastered',
-        'word_forgotten',
-        'daily_goal_completed'
-    )),
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    action VARCHAR(50) NOT NULL,
+    category VARCHAR(30) NOT NULL,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    session_id VARCHAR(100),
+    platform VARCHAR(20) DEFAULT 'ios'::character varying,
+    app_version VARCHAR(20),
+    CONSTRAINT fk_user_actions_user_id FOREIGN KEY (user_id) REFERENCES user_preferences(user_id) ON DELETE CASCADE
 );
 
 -- Pronunciation practice table
@@ -194,7 +175,10 @@ CREATE INDEX idx_user_pref_test_enabled ON user_preferences(user_id)
     WHERE toefl_enabled = TRUE OR ielts_enabled = TRUE;
 CREATE INDEX idx_user_actions_user_id ON user_actions(user_id);
 CREATE INDEX idx_user_actions_action ON user_actions(action);
-CREATE INDEX idx_user_actions_created_at ON user_actions(created_at);
+CREATE INDEX idx_user_actions_category ON user_actions(category);
+CREATE INDEX idx_user_actions_created_at ON user_actions(created_at DESC);
+CREATE INDEX idx_user_actions_daily ON user_actions(DATE(created_at), action);
+CREATE INDEX idx_user_actions_user_date ON user_actions(user_id, created_at DESC);
 CREATE INDEX idx_pronunciation_user_id ON pronunciation_practice(user_id);
 CREATE INDEX idx_pronunciation_word ON pronunciation_practice(word);
 CREATE INDEX idx_notification_logs_user_id ON notification_logs(user_id);
