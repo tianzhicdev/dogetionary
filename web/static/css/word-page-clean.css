@@ -1,0 +1,394 @@
+/* Modern Clean Design for Word Pages - Chrome Optimized */
+
+/* Clean page background */
+.word-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    background: #fafbfc;
+}
+
+/* Minimal breadcrumb */
+.breadcrumb ol {
+    display: flex;
+    list-style: none;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.875rem;
+}
+
+.breadcrumb a {
+    color: #6366f1;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+    color: #4f46e5;
+}
+
+/* Modern header - white card instead of gradient */
+.word-header {
+    background: white;
+    padding: 3rem 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 16px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e5e7eb;
+}
+
+.word-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #111827;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.language-pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.language-pair .lang {
+    color: #6366f1;
+}
+
+.language-pair .arrow {
+    color: #9ca3af;
+    font-size: 1rem;
+}
+
+/* Clean translation section */
+.translations {
+    background: white;
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.translations h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    color: #111827;
+}
+
+.translation-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    list-style: none;
+}
+
+.translation-list li {
+    background: #f9fafb;
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 500;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.translation-list li:hover {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(99, 102, 241, 0.2);
+}
+
+/* Minimal pronunciation section */
+.pronunciation-section {
+    background: white;
+    padding: 1.75rem 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.pronunciation-section h2 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pronunciation-section .pronunciation {
+    display: inline-block;
+}
+
+.pronunciation-section .phonetic {
+    font-family: 'Lucida Sans Unicode', 'Arial Unicode MS', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #111827;
+}
+
+/* Clean definitions */
+.definitions h2, .related-words h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    color: #111827;
+}
+
+.definition-block {
+    margin-bottom: 1.5rem;
+    padding: 2rem 2.5rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #6366f1;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.definition-block:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.part-of-speech {
+    background: #eff6ff;
+    color: #1e40af;
+    padding: 0.375rem 1rem;
+    border-radius: 6px;
+    font-size: 0.813rem;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 1.25rem;
+    text-transform: lowercase;
+}
+
+.definition-content h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.definition-text {
+    font-size: 1.125rem;
+    line-height: 1.75;
+    margin-bottom: 1.25rem;
+    color: #111827;
+    font-weight: 400;
+}
+
+.native-definition {
+    background: #f9fafb;
+    padding: 1.25rem 1.5rem;
+    border-radius: 12px;
+    margin: 1.25rem 0;
+    border-left: 3px solid #10b981;
+}
+
+.native-definition h4 {
+    font-size: 0.813rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #10b981;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.native-definition p {
+    font-size: 1rem;
+    color: #374151;
+    line-height: 1.6;
+}
+
+/* Modern examples */
+.examples h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.example-list {
+    list-style: none;
+    margin-top: 1.5rem;
+}
+
+.example-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #f3f4f6;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.example-list li:hover {
+    background: white;
+    border-color: #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transform: translateX(4px);
+}
+
+.example-list li::before {
+    content: '•';
+    color: #6366f1;
+    font-weight: 700;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.example-text {
+    flex: 1;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #374151;
+}
+
+/* Clean related words */
+.related-words {
+    margin: 2rem 0;
+}
+
+.related-word-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    list-style: none;
+}
+
+.related-word-list a {
+    display: block;
+    padding: 0.625rem 1.25rem;
+    background: white;
+    color: #6366f1;
+    text-decoration: none;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.related-word-list a:hover {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(99, 102, 241, 0.2);
+}
+
+/* Minimalist navigation */
+.word-navigation {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 3rem 0 2rem;
+}
+
+.nav-link {
+    padding: 0.875rem 1.75rem;
+    background: white;
+    color: #6366f1;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nav-link:hover {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* Clean CTA */
+.cta {
+    background: white;
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin: 2rem 0;
+}
+
+.cta h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #111827;
+}
+
+.cta p {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: #111827;
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cta-button:hover {
+    background: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.cta-button::before {
+    content: '📱';
+    font-size: 1.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .word-title {
+        font-size: 2.5rem;
+    }
+
+    .word-header {
+        padding: 2rem 1.5rem;
+    }
+
+    .translations, .pronunciation-section, .definition-block, .cta {
+        padding: 1.5rem 1.25rem;
+    }
+}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ word.word|title }} - Definition, Pronunciation & Examples | Unforgettable Dictionary{% endblock %}
+{% block title %}What Does {{ word.word|title }} Mean? Definition, Usage & Examples in Sentences{% endblock %}
 
 {% block description %}{{ meta_description }}{% endblock %}
 
@@ -58,12 +58,6 @@
     <!-- Word Header -->
     <header class="word-header">
         <h1 class="word-title">{{ word.word|title }}</h1>
-        {% if definition_data.phonetic %}
-        <div class="pronunciation">
-            <span class="pronunciation-label">Pronunciation:</span>
-            <span class="phonetic">{{ definition_data.phonetic }}</span>
-        </div>
-        {% endif %}
 
         <!-- Language Pair Badge -->
         <div class="language-pair">
@@ -76,7 +70,7 @@
     <!-- Quick Translations -->
     {% if definition_data.translations %}
     <section class="translations">
-        <h2>Quick Translations</h2>
+        <h2>What Does {{ word.word|title }} Mean?</h2>
         <ul class="translation-list">
             {% for translation in definition_data.translations %}
             <li>{{ translation }}</li>
@@ -85,9 +79,19 @@
     </section>
     {% endif %}
 
+    <!-- Pronunciation Section -->
+    {% if definition_data.phonetic %}
+    <section class="pronunciation-section">
+        <h2>{{ word.word|title }} Pronunciation</h2>
+        <div class="pronunciation">
+            <span class="phonetic">{{ definition_data.phonetic }}</span>
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Detailed Definitions -->
     <section class="definitions">
-        <h2>Definitions</h2>
+        <h2>{{ word.word|title }} Definition</h2>
         {% for definition in definition_data.definitions %}
         <div class="definition-block">
             <div class="part-of-speech">{{ definition.type }}</div>
@@ -106,7 +110,7 @@
 
             {% if definition.examples %}
             <div class="examples">
-                <h4>Examples</h4>
+                <h3>How to Use {{ word.word|title }} in a Sentence</h3>
                 <ul class="example-list">
                     {% for example in definition.examples %}
                     <li>
@@ -130,7 +134,7 @@
     <!-- Related Words -->
     {% if related_words %}
     <section class="related-words">
-        <h2>Related Words</h2>
+        <h2>Synonyms for {{ word.word|title }}</h2>
         <ul class="related-word-list">
             {% for related in related_words %}
             <li><a href="/{{ word.learning_language }}/{{ word.native_language }}/{{ related[0].lower() }}/{{ related.lower() }}.html">{{ related|title }}</a></li>
