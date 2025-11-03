@@ -250,40 +250,69 @@ body {
 }
 
 /* Word Page Styles */
+.word-page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
 .breadcrumb ol {
     display: flex;
     list-style: none;
     gap: 0.5rem;
     margin-bottom: 2rem;
+    font-size: 0.875rem;
 }
 
 .breadcrumb a {
     color: var(--primary-color);
     text-decoration: none;
+    transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+    color: var(--secondary-color);
 }
 
 .word-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem 2rem;
+    border-radius: 1rem;
     margin-bottom: 2rem;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
 }
 
 .word-title {
-    font-size: 3rem;
-    font-weight: bold;
-    color: var(--primary-color);
+    font-size: 3.5rem;
+    font-weight: 800;
     margin-bottom: 1rem;
+    color: white;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .pronunciation {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+.pronunciation-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    opacity: 0.9;
 }
 
 .phonetic {
     font-family: 'Lucida Sans Unicode', 'Arial Unicode MS', sans-serif;
-    font-size: 1.25rem;
-    color: var(--text-secondary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: white;
 }
 
 .audio-btn {
@@ -307,68 +336,130 @@ body {
 }
 
 .lang {
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
     font-weight: bold;
-}
-
-.lang.learning {
-    background: var(--primary-color);
+    background: rgba(255, 255, 255, 0.25);
     color: white;
-}
-
-.lang.native {
-    background: var(--secondary-color);
-    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .arrow {
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.25rem;
+}
+
+/* Translations Section */
+.translations {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 2rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.translations h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.translations h2::before {
+    content: "🌐";
+    font-size: 1.75rem;
+}
+
+.translation-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.translation-list li {
+    background: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.translation-list li:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Definition Blocks */
 .definition-block {
     margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: var(--bg-secondary);
-    border-radius: 0.5rem;
-    border-left: 4px solid var(--primary-color);
+    padding: 2rem;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.definition-block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 .part-of-speech {
-    background: var(--primary-color);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 2rem;
     font-size: 0.875rem;
-    font-weight: bold;
+    font-weight: 700;
     display: inline-block;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .definition-text {
-    font-size: 1.125rem;
-    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    color: #1a1a1a;
+    font-weight: 500;
 }
 
 .native-definition {
-    background: var(--bg-primary);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin: 1rem 0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.75rem;
+    margin: 1.5rem 0;
+    border-left: 3px solid var(--secondary-color);
+    font-size: 1.125rem;
+    color: #2d3748;
 }
 
 .example-list {
     list-style: none;
+    margin-top: 1.5rem;
 }
 
 .example-list li {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.example-list li:hover {
+    background: rgba(102, 126, 234, 0.1);
+    transform: translateX(4px);
 }
 
 .example-text {
@@ -380,20 +471,31 @@ body {
 .word-navigation {
     display: flex;
     justify-content: space-between;
+    gap: 1rem;
     margin: 3rem 0;
 }
 
 .nav-link {
     padding: 1rem 2rem;
-    background: var(--primary-color);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     text-decoration: none;
-    border-radius: 0.5rem;
-    transition: all 0.2s;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .nav-link:hover {
-    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.nav-link:active {
+    transform: translateY(0);
 }
 
 /* Pagination */
@@ -430,32 +532,47 @@ body {
 /* CTA Sections */
 .cta {
     text-align: center;
-    padding: 2rem;
-    background: var(--bg-secondary);
-    border-radius: 0.5rem;
-    margin: 2rem 0;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 1rem;
+    margin: 3rem 0;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.cta h2, .cta h3 {
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.cta p {
+    opacity: 0.95;
+    margin-bottom: 1.5rem;
 }
 
 .cta-button {
-    display: inline-block;
-    padding: 1rem 2rem;
-    background: var(--accent-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.25rem 2.5rem;
+    background: #000;
     color: white;
     text-decoration: none;
-    border-radius: 0.5rem;
-    font-weight: bold;
+    border-radius: 0.75rem;
+    font-weight: 700;
     margin-top: 1rem;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .cta-button:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
 }
 
 .cta-button.big {
     padding: 1.5rem 3rem;
-    font-size: 1.125rem;
+    font-size: 1.25rem;
 }
 
 /* Footer */
@@ -492,7 +609,40 @@ body {
     }
 
     .word-title {
-        font-size: 2rem;
+        font-size: 2.5rem !important;
+    }
+
+    .word-header {
+        padding: 2rem 1.5rem !important;
+    }
+
+    .pronunciation {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+    }
+
+    .phonetic {
+        font-size: 1.25rem;
+    }
+
+    .definition-block {
+        padding: 1.5rem;
+    }
+
+    .definition-text {
+        font-size: 1.125rem;
+    }
+
+    .native-definition {
+        font-size: 1rem;
+        padding: 1rem;
+    }
+
+    .example-list li {
+        padding: 0.75rem;
+        flex-direction: column;
+        gap: 0.5rem;
     }
 
     .search-container {
@@ -509,8 +659,33 @@ body {
         gap: 1rem;
     }
 
+    .nav-link {
+        width: 100%;
+        justify-content: center;
+    }
+
     .pagination-list {
         flex-wrap: wrap;
+    }
+
+    .translation-list {
+        gap: 0.5rem;
+    }
+
+    .translation-list li {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .cta {
+        padding: 2rem 1rem;
+    }
+
+    .cta-button {
+        padding: 1rem 1.5rem;
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
     }
 }
 
