@@ -919,50 +919,6 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
-    func getCombinedMetrics(days: Int = 30, completion: @escaping (Result<CombinedMetricsResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/v3/combined_metrics?days=\(days)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("🔍 Fetching combined metrics for \(days) days")
-
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                self.logger.error("❌ Combined metrics request failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("❌ Combined metrics request failed with status: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            do {
-                let response = try JSONDecoder().decode(CombinedMetricsResponse.self, from: data)
-                self.logger.info("✅ Successfully fetched combined metrics")
-                completion(.success(response))
-            } catch {
-                self.logger.error("Failed to decode combined metrics: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
     func getProgressFunnelData(completion: @escaping (Result<ProgressFunnelData, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         guard let url = URL(string: "\(baseURL)/v3/progress_funnel?user_id=\(userID)") else {

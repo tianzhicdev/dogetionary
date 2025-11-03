@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import StoreKit
 
 struct SearchView: View {
     @State private var searchText = ""
@@ -204,6 +205,14 @@ struct SearchView: View {
                             "confidence": definition.validWordScore,
                             "language": UserManager.shared.learningLanguage
                         ])
+
+                        // Request app rating on first successful word lookup
+                        if !UserManager.shared.hasRequestedAppRating {
+                            // Small delay to let the view fully appear before showing rating
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                self.requestAppRating()
+                            }
+                        }
                     } else {
                         // Low confidence (<0.9) - store definition and show alert
                         // User can choose to view this definition or search for suggestion
@@ -338,6 +347,15 @@ struct SearchView: View {
             case .failure(let error):
                 print("Failed to check saved words for auto-save: \(error.localizedDescription)")
             }
+        }
+    }
+
+    private func requestAppRating() {
+        // Request app store rating using native iOS API
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: windowScene)
+            // Mark that we've requested rating so we don't ask again
+            UserManager.shared.markAppRatingRequested()
         }
     }
 
