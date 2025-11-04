@@ -621,7 +621,7 @@ class DictionaryGenerator:
             urls.append({
                 'url': f"{base_url}/letters/{letter}.html",
                 'lastmod': datetime.now().strftime('%Y-%m-%d'),
-                'priority': '0.7',
+                'priority': '0.8',
                 'changefreq': 'weekly'
             })
 
@@ -635,8 +635,8 @@ class DictionaryGenerator:
                 urls.append({
                     'url': f"{base_url}/{learning_lang}/{native_lang}/{first_letter}/{quote(word)}.html",
                     'lastmod': self._format_date(word_data.get('updated_at')) or datetime.now().strftime('%Y-%m-%d'),
-                    'priority': '0.6',
-                    'changefreq': 'monthly'
+                    'priority': '0.8',
+                    'changefreq': 'weekly'
                 })
 
         # Generate sitemap XML
