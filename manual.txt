@@ -145,17 +145,7 @@ get_daily_test_words -- if user enabled any test, we add 10 (make it configurabl
 5. Add conprehensive integration tests, ensure all the tests are valid, do not skip tests
 6. ensure each logs can be access from outsite and we keep about 2gb of logs available
 
+1. disable toefl and iets
+
 --- done ---
-1. code clean up
-the code is getting v difficult to manage at this point, i need to simplify and orgranize the code better;
 
-backend -- review the code
-frontend -- review the code and make sure that api calls are ok with new fields;
-
-2. beckward compatible
-
-1. generate words, no audio no image 
-
-in the usage page: User Actions Analytics (Last 7 Days) should show unique user count and total action count (can from the same user) graph for each action, not just a list;
-
-2. create better metrics for review

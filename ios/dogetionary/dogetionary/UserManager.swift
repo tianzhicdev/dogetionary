@@ -23,7 +23,7 @@ class UserManager: ObservableObject {
     private let ieltsTargetDaysKey = "DogetionaryIeltsTargetDays"
     private let hasCompletedOnboardingKey = "DogetionaryHasCompletedOnboarding"
 
-    private var isSyncingFromServer = false
+    internal var isSyncingFromServer = false
 
     @Published var hasCompletedOnboarding: Bool
     
@@ -142,13 +142,30 @@ class UserManager: ObservableObject {
     
     private func syncPreferencesToServer() {
         logger.info("Syncing preferences to server - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage)")
-        
+
+        // Convert UserManager's test prep properties to API format
+        let testPrep: String? = {
+            if self.toeflEnabled {
+                return "TOEFL"
+            } else if self.ieltsEnabled {
+                return "IELTS"
+            } else {
+                return nil
+            }
+        }()
+
+        // Always send study duration days to keep settings in sync, even when test prep is disabled
+        // Use toeflTargetDays as the source since both should be kept in sync
+        let studyDurationDays: Int? = self.toeflTargetDays
+
         DictionaryService.shared.updateUserPreferences(
             userID: self.userID,
             learningLanguage: self.learningLanguage,
             nativeLanguage: self.nativeLanguage,
             userName: self.userName,
-            userMotto: self.userMotto
+            userMotto: self.userMotto,
+            testPrep: testPrep,
+            studyDurationDays: studyDurationDays
         ) { result in
             switch result {
             case .success(_):

@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 # Add parent directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.database import get_db_connection, db_cursor
+from utils.database import get_db_connection, db_cursor, db_fetch_scalar
 
 logger = logging.getLogger(__name__)
 
@@ -366,6 +366,54 @@ def get_test_vocabulary_stats():
 
     except Exception as e:
         logger.error(f"Error getting test vocabulary stats: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+def get_test_vocabulary_count():
+    """
+    Get test vocabulary count and calculate study plans
+    V3 API endpoint for onboarding
+    """
+    try:
+        test_type = request.args.get('test_type')
+
+        if not test_type:
+            return jsonify({"error": "test_type parameter is required"}), 400
+
+        if test_type not in ['TOEFL', 'IELTS']:
+            return jsonify({"error": "test_type must be 'TOEFL' or 'IELTS'"}), 400
+
+        # Get total count of words for the specified test
+        if test_type == 'TOEFL':
+            total_words = db_fetch_scalar("""
+                SELECT COUNT(DISTINCT word)
+                FROM test_vocabularies
+                WHERE language = 'en' AND is_toefl = TRUE
+            """) or 0
+        else:  # IELTS
+            total_words = db_fetch_scalar("""
+                SELECT COUNT(DISTINCT word)
+                FROM test_vocabularies
+                WHERE language = 'en' AND is_ielts = TRUE
+            """) or 0
+
+        # Calculate study plans for 5 durations
+        study_plans = []
+        for days in [70, 60, 50, 40, 30]:
+            words_per_day = (total_words + days - 1) // days  # Ceiling division
+            study_plans.append({
+                "days": days,
+                "words_per_day": words_per_day
+            })
+
+        return jsonify({
+            "test_type": test_type,
+            "total_words": total_words,
+            "study_plans": study_plans
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting test vocabulary count: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
 

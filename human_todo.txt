@@ -1,7 +1,23 @@
-in the /usage page
-repalce the top graph with:
-number of lookups (use the timestamps of definitions)
-number of reviews (use the timestamps of reviews)
-number of unique users (get unique id from definitions/saved_words)
+in the onboarding journey, if user is studying english, we add one more question
+"are you studying for " menu with TOEFL/IELTS/NONE
+we recommend the user to register but users can skip
+if user select an active test, we should generate a schedule and display progress
+"prepare for my test" on landing -> "practice"
+display definition for new word in practice; perhaps with some special effects
+"review" -> "practice"
 
-2. a dropdown menu 
+
+
+
+let's design a teacher's portal
+1. students can add an id in settings to join a group
+2. teachers can access a web app /teacher-admin to view students stats
+in /teacher-admin
+we should all the groups
+when click into a group, we show all the students and their stats
+such as total saved words, total review count, 
+when click into a student, we can see more details such as 
+1. number of words saved in the last 7 days (show count for each day)
+2. number of words reviewed in the last 7 days (show count for each day)
+3. most recent saved 10 words 
+4. more recent reviedwed 10 words
