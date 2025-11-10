@@ -14,6 +14,11 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var selectedLearningLanguage = "en"
     @State private var selectedNativeLanguage = "fr"
+    @State private var selectedTestPrep: String? = nil // TOEFL, IELTS, or nil
+    @State private var selectedStudyDuration: Int? = nil // 30, 40, 50, 60, or 70
+    @State private var vocabularyCount: Int = 0
+    @State private var studyPlans: [(days: Int, wordsPerDay: Int)] = []
+    @State private var isLoadingVocabulary = false
     @State private var userName = ""
     @State private var searchWord = "unforgettable"
     @State private var isSubmitting = false
@@ -28,9 +33,9 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 // Progress indicator
                 HStack(spacing: 8) {
-                    ForEach(0..<4) { index in
+                    ForEach(0..<totalPages) { index in
                         Capsule()
-                            .fill(index <= currentPage ? Color.blue : Color.gray.opacity(0.3))
+                            .fill(index <= displayPageIndex ? Color.blue : Color.gray.opacity(0.3))
                             .frame(height: 4)
                     }
                 }
@@ -40,7 +45,7 @@ struct OnboardingView: View {
 
                 // Page content
                 TabView(selection: $currentPage) {
-                    // Page 1: Learning Language
+                    // Page 0: Learning Language
                     languageSelectionPage(
                         title: "What language are you learning?",
                         description: "Choose the language you want to learn and improve",
@@ -49,7 +54,7 @@ struct OnboardingView: View {
                     )
                     .tag(0)
 
-                    // Page 2: Native Language
+                    // Page 1: Native Language
                     languageSelectionPage(
                         title: "What is your native language?",
                         description: "Choose your native language for translations",
@@ -58,13 +63,25 @@ struct OnboardingView: View {
                     )
                     .tag(1)
 
-                    // Page 3: Username
-                    usernamePage
-                        .tag(2)
+                    // Page 2: Test Prep (only shown if learning English)
+                    if selectedLearningLanguage == "en" {
+                        testPrepPage
+                            .tag(2)
+                    }
 
-                    // Page 4: Search Word
+                    // Page 3: Study Duration (only shown if TOEFL or IELTS selected)
+                    if showDurationPage {
+                        studyDurationPage
+                            .tag(3)
+                    }
+
+                    // Username Page
+                    usernamePage
+                        .tag(usernamePageIndex)
+
+                    // Search Word Page
                     searchWordPage
-                        .tag(3)
+                        .tag(searchPageIndex)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut, value: currentPage)
@@ -205,6 +222,133 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - Test Prep Page
+
+    private var testPrepPage: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 12) {
+                Text("Are you studying for a test?")
+                    .font(.system(size: 28, weight: .bold))
+                    .multilineTextAlignment(.center)
+
+                Text("We can help you prepare for standardized tests")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 40)
+
+            Spacer()
+
+            VStack(spacing: 16) {
+                testPrepButton(title: "TOEFL", icon: "", testType: "TOEFL")
+                testPrepButton(title: "IELTS", icon: "", testType: "IELTS")
+                testPrepButton(title: "Neither", icon: "", testType: nil)
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+        }
+    }
+
+    private func testPrepButton(title: String, icon: String, testType: String?) -> some View {
+        Button(action: {
+            selectedTestPrep = testType
+        }) {
+            HStack {
+                Text(icon)
+                    .font(.title2)
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                if selectedTestPrep == testType {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                }
+            }
+            .padding()
+            .background(selectedTestPrep == testType ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(selectedTestPrep == testType ? Color.blue : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Study Duration Page
+
+    private var studyDurationPage: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 12) {
+                Text("How long do you want to study?")
+                    .font(.system(size: 28, weight: .bold))
+                    .multilineTextAlignment(.center)
+
+                Text("Choose your study plan for \(selectedTestPrep ?? "")")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 40)
+
+            Spacer()
+
+            if isLoadingVocabulary {
+                ProgressView()
+                    .scaleEffect(1.5)
+            } else {
+                VStack(spacing: 16) {
+                    ForEach(studyPlans, id: \.days) { plan in
+                        studyDurationButton(days: plan.days, wordsPerDay: plan.wordsPerDay)
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+
+            Spacer()
+        }
+        .onAppear {
+            if studyPlans.isEmpty {
+                fetchVocabularyCount()
+            }
+        }
+    }
+
+    private func studyDurationButton(days: Int, wordsPerDay: Int) -> some View {
+        Button(action: {
+            selectedStudyDuration = days
+        }) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(days) days")
+                        .font(.headline)
+                    Text("~\(wordsPerDay) new words per day")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if selectedStudyDuration == days {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                }
+            }
+            .padding()
+            .background(selectedStudyDuration == days ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(selectedStudyDuration == days ? Color.blue : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
     // MARK: - Search Word Page
 
     private var searchWordPage: some View {
@@ -239,6 +383,36 @@ struct OnboardingView: View {
 
     // MARK: - Helper Methods
 
+    private var totalPages: Int {
+        if selectedLearningLanguage == "en" {
+            return showDurationPage ? 6 : 5
+        }
+        return 4
+    }
+
+    private var showDurationPage: Bool {
+        return selectedLearningLanguage == "en" &&
+               (selectedTestPrep == "TOEFL" || selectedTestPrep == "IELTS")
+    }
+
+    private var usernamePageIndex: Int {
+        if selectedLearningLanguage == "en" {
+            return showDurationPage ? 4 : 3
+        }
+        return 2
+    }
+
+    private var searchPageIndex: Int {
+        if selectedLearningLanguage == "en" {
+            return showDurationPage ? 5 : 4
+        }
+        return 3
+    }
+
+    private var displayPageIndex: Int {
+        return currentPage
+    }
+
     private var canProceed: Bool {
         switch currentPage {
         case 0:
@@ -246,8 +420,32 @@ struct OnboardingView: View {
         case 1:
             return !selectedNativeLanguage.isEmpty && selectedNativeLanguage != selectedLearningLanguage
         case 2:
-            return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            // Test prep page (English) or Username page (non-English)
+            if selectedLearningLanguage == "en" {
+                return true // Test prep always allows proceeding
+            } else {
+                return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
         case 3:
+            // Study duration (if test) or Username (if no test) or Search (non-English)
+            if selectedLearningLanguage == "en" {
+                if showDurationPage {
+                    return selectedStudyDuration != nil // Study duration page
+                } else {
+                    return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
+                }
+            } else {
+                return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
+            }
+        case 4:
+            // Username (if test) or Search (if no test) - English only
+            if showDurationPage {
+                return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
+            } else {
+                return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
+            }
+        case 5:
+            // Search page (English with test)
             return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         default:
             return false
@@ -255,23 +453,24 @@ struct OnboardingView: View {
     }
 
     private var buttonTitle: String {
-        switch currentPage {
-        case 0, 1: return "Next"
-        case 2: return "Get Started"
-        case 3: return "Search"
-        default: return "Next"
+        if currentPage == usernamePageIndex {
+            return "Get Started"
+        } else if currentPage == searchPageIndex {
+            return "Search"
+        } else {
+            return "Next"
         }
     }
 
     private func handleNextButton() {
-        if currentPage < 2 {
+        if currentPage < usernamePageIndex {
             withAnimation {
                 currentPage += 1
             }
-        } else if currentPage == 2 {
+        } else if currentPage == usernamePageIndex {
             // Submit onboarding data first
             submitOnboarding()
-        } else if currentPage == 3 {
+        } else if currentPage == searchPageIndex {
             // Perform search and dismiss onboarding
             performSearch()
         }
@@ -288,7 +487,9 @@ struct OnboardingView: View {
             learningLanguage: selectedLearningLanguage,
             nativeLanguage: selectedNativeLanguage,
             userName: trimmedName,
-            userMotto: ""
+            userMotto: "",
+            testPrep: selectedTestPrep,
+            studyDurationDays: selectedStudyDuration
         ) { result in
             DispatchQueue.main.async {
                 isSubmitting = false
@@ -296,19 +497,51 @@ struct OnboardingView: View {
                 switch result {
                 case .success:
                     // Update local user manager
+                    // Set isSyncingFromServer to prevent didSet observers from triggering additional API calls
+                    userManager.isSyncingFromServer = true
                     userManager.learningLanguage = selectedLearningLanguage
                     userManager.nativeLanguage = selectedNativeLanguage
                     userManager.userName = trimmedName
 
+                    // Update test prep settings
+                    // Always update target days if duration was selected, even if test prep is disabled
+                    if let duration = selectedStudyDuration {
+                        // Update both target days to keep them in sync
+                        userManager.toeflTargetDays = duration
+                        userManager.ieltsTargetDays = duration
+                    }
+
+                    if let testPrep = selectedTestPrep {
+                        if testPrep == "TOEFL" {
+                            userManager.toeflEnabled = true
+                            userManager.ieltsEnabled = false
+                        } else if testPrep == "IELTS" {
+                            userManager.toeflEnabled = false
+                            userManager.ieltsEnabled = true
+                        }
+                    } else {
+                        userManager.toeflEnabled = false
+                        userManager.ieltsEnabled = false
+                    }
+
+                    userManager.isSyncingFromServer = false
+
                     // Track analytics
-                    AnalyticsManager.shared.track(action: .onboardingComplete, metadata: [
+                    var metadata: [String: Any] = [
                         "learning_language": selectedLearningLanguage,
                         "native_language": selectedNativeLanguage
-                    ])
+                    ]
+                    if let testPrep = selectedTestPrep {
+                        metadata["test_prep"] = testPrep
+                    }
+                    if let duration = selectedStudyDuration {
+                        metadata["study_duration_days"] = duration
+                    }
+                    AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
 
-                    // Move to page 4 (search)
+                    // Move to search page
                     withAnimation {
-                        currentPage = 3
+                        currentPage = searchPageIndex
                     }
 
                 case .failure(let error):
@@ -340,6 +573,55 @@ struct OnboardingView: View {
 
         // Dismiss onboarding - SearchView will handle the actual search
         shouldDismiss = true
+    }
+
+    private func fetchVocabularyCount() {
+        guard let testType = selectedTestPrep, testType == "TOEFL" || testType == "IELTS" else {
+            return
+        }
+
+        isLoadingVocabulary = true
+
+        let baseURL = Configuration.effectiveBaseURL
+        guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=\(testType)") else {
+            isLoadingVocabulary = false
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                isLoadingVocabulary = false
+
+                if let error = error {
+                    print("Error fetching vocabulary count: \(error)")
+                    return
+                }
+
+                guard let data = data else { return }
+
+                do {
+                    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                    if let totalWords = json?["total_words"] as? Int,
+                       let plans = json?["study_plans"] as? [[String: Int]] {
+
+                        vocabularyCount = totalWords
+                        studyPlans = plans.compactMap { plan in
+                            if let days = plan["days"], let wordsPerDay = plan["words_per_day"] {
+                                return (days: days, wordsPerDay: wordsPerDay)
+                            }
+                            return nil
+                        }
+
+                        // Auto-select 60 days if available
+                        if let defaultPlan = studyPlans.first(where: { $0.days == 60 }) {
+                            selectedStudyDuration = defaultPlan.days
+                        }
+                    }
+                } catch {
+                    print("Error parsing vocabulary count response: \(error)")
+                }
+            }
+        }.resume()
     }
 
 }

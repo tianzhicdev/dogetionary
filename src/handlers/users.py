@@ -90,42 +90,71 @@ def handle_user_preferences(user_id):
             native_lang = data.get('native_language')
             user_name = data.get('user_name', '')
             user_motto = data.get('user_motto', '')
-            
+            test_prep = data.get('test_prep')  # "TOEFL", "IELTS", or null
+            study_duration_days = data.get('study_duration_days')  # 30, 40, 50, 60, 70
+
             if not learning_lang or not native_lang:
                 return jsonify({"error": "Both learning_language and native_language are required"}), 400
-            
+
             # Validate language codes are supported
             if not validate_language(learning_lang):
                 return jsonify({"error": f"Unsupported learning language: {learning_lang}"}), 400
             if not validate_language(native_lang):
                 return jsonify({"error": f"Unsupported native language: {native_lang}"}), 400
-            
+
             # Validate languages are not the same
             if learning_lang == native_lang:
                 return jsonify({"error": "Learning language and native language cannot be the same"}), 400
-            
+
+            # Validate test prep values if provided
+            if test_prep and test_prep not in ['TOEFL', 'IELTS']:
+                return jsonify({"error": "test_prep must be 'TOEFL' or 'IELTS'"}), 400
+
+            # Validate study duration if provided
+            if study_duration_days and study_duration_days not in [30, 40, 50, 60, 70]:
+                return jsonify({"error": "study_duration_days must be 30, 40, 50, 60, or 70"}), 400
+
             conn = get_db_connection()
             cur = conn.cursor()
+
+            # Determine test settings based on test_prep selection
+            toefl_enabled = (test_prep == 'TOEFL')
+            ielts_enabled = (test_prep == 'IELTS')
+            # Always preserve the study_duration_days if provided, even when test prep is disabled
+            # This ensures the "complete in" setting is always synced with what was selected in onboarding
+            toefl_target_days = study_duration_days if study_duration_days else 30
+            ielts_target_days = study_duration_days if study_duration_days else 30
+
             cur.execute("""
-                INSERT INTO user_preferences (user_id, learning_language, native_language, user_name, user_motto)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (user_id) 
-                DO UPDATE SET 
+                INSERT INTO user_preferences (
+                    user_id, learning_language, native_language, user_name, user_motto,
+                    toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id)
+                DO UPDATE SET
                     learning_language = EXCLUDED.learning_language,
                     native_language = EXCLUDED.native_language,
                     user_name = EXCLUDED.user_name,
                     user_motto = EXCLUDED.user_motto,
+                    toefl_enabled = EXCLUDED.toefl_enabled,
+                    ielts_enabled = EXCLUDED.ielts_enabled,
+                    toefl_target_days = EXCLUDED.toefl_target_days,
+                    ielts_target_days = EXCLUDED.ielts_target_days,
                     updated_at = CURRENT_TIMESTAMP
-            """, (user_id, learning_lang, native_lang, user_name, user_motto))
+            """, (user_id, learning_lang, native_lang, user_name, user_motto,
+                  toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days))
             conn.commit()
             conn.close()
-            
+
             return jsonify({
                 "user_id": user_id,
                 "learning_language": learning_lang,
                 "native_language": native_lang,
                 "user_name": user_name,
                 "user_motto": user_motto,
+                "test_prep": test_prep,
+                "study_duration_days": study_duration_days,
                 "updated": True
             })
     

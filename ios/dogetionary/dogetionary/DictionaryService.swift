@@ -650,22 +650,30 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
+    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
         guard let encodedUserID = userID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let url = URL(string: "\(baseURL)/v3/users/\(encodedUserID)/preferences") else {
             logger.error("Invalid URL for user preferences POST endpoint")
             completion(.failure(DictionaryError.invalidURL))
             return
         }
-        
-        logger.info("Updating user preferences for: \(userID) - learning: \(learningLanguage), native: \(nativeLanguage), name: \(userName), motto: \(userMotto)")
-        
-        let requestBody: [String: Any] = [
+
+        logger.info("Updating user preferences for: \(userID) - learning: \(learningLanguage), native: \(nativeLanguage), name: \(userName), motto: \(userMotto), testPrep: \(testPrep ?? "nil"), duration: \(studyDurationDays ?? 0)")
+
+        var requestBody: [String: Any] = [
             "learning_language": learningLanguage,
             "native_language": nativeLanguage,
             "user_name": userName,
             "user_motto": userMotto
         ]
+
+        if let testPrep = testPrep {
+            requestBody["test_prep"] = testPrep
+        }
+
+        if let studyDurationDays = studyDurationDays {
+            requestBody["study_duration_days"] = studyDurationDays
+        }
         
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             logger.error("Failed to serialize user preferences request")
