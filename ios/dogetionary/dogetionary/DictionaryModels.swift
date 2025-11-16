@@ -565,3 +565,108 @@ struct WordValidation: Codable {
         case confidence, suggested
     }
 }
+
+// MARK: - Schedule Models
+
+/// Study schedule metadata returned when creating/refreshing a schedule
+struct StudySchedule: Codable {
+    let schedule_id: Int
+    let days_remaining: Int
+    let total_new_words: Int
+    let daily_new_words: Int
+    let test_practice_words_count: Int
+    let non_test_practice_words_count: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case schedule_id, days_remaining, total_new_words, daily_new_words,
+             test_practice_words_count, non_test_practice_words_count
+    }
+}
+
+/// Response when creating a schedule
+struct CreateScheduleResponse: Codable {
+    let success: Bool
+    let schedule: StudySchedule
+
+    private enum CodingKeys: String, CodingKey {
+        case success, schedule
+    }
+}
+
+/// Word in a practice session with expected retention
+struct SchedulePracticeWord: Codable, Identifiable {
+    let word: String
+    let word_id: Int?  // Can be null for new words not yet saved
+    let expected_retention: Double
+    let review_number: Int
+
+    var id: String {
+        if let wordId = word_id {
+            return "\(wordId)"
+        } else {
+            return word  // Use word itself as ID for unsaved words
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case word, word_id, expected_retention, review_number
+    }
+}
+
+/// Today's schedule entry with new words and practice words
+struct DailyScheduleEntry: Codable {
+    let date: String
+    let has_schedule: Bool
+    let new_words: [String]
+    let test_practice_words: [SchedulePracticeWord]
+    let non_test_practice_words: [SchedulePracticeWord]
+    let summary: ScheduleSummary?
+    let message: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case date, has_schedule, new_words, test_practice_words,
+             non_test_practice_words, summary, message
+    }
+}
+
+/// Summary of today's schedule
+struct ScheduleSummary: Codable {
+    let total_new: Int
+    let total_test_practice: Int
+    let total_non_test_practice: Int
+    let total_words: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case total_new, total_test_practice, total_non_test_practice, total_words
+    }
+}
+
+/// Response when reviewing a new word from schedule
+struct ReviewNewWordResponse: Codable {
+    let success: Bool
+    let word_id: Int
+    let next_review_date: String
+
+    private enum CodingKeys: String, CodingKey {
+        case success, word_id, next_review_date
+    }
+}
+
+/// Response when updating timezone
+struct UpdateTimezoneResponse: Codable {
+    let success: Bool
+    let timezone: String
+
+    private enum CodingKeys: String, CodingKey {
+        case success, timezone
+    }
+}
+
+/// Response when getting schedule range
+struct GetScheduleRangeResponse: Codable {
+    let schedules: [DailyScheduleEntry]
+
+    private enum CodingKeys: String, CodingKey {
+        case schedules
+    }
+}

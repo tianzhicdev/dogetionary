@@ -13,6 +13,7 @@ from handlers.pronunciation import practice_pronunciation, get_pronunciation_his
 from handlers.words import get_next_review_word_v2, get_saved_words, get_word_definition, get_word_definition_v3, get_word_details, get_audio, get_illustration, generate_word_definition, get_all_words_for_language_pair
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
 from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count
+from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone
 
 # Create v3 blueprint
 v3_api = Blueprint('v3_api', __name__, url_prefix='/v3')
@@ -73,6 +74,13 @@ v3_api.route('/api/test-prep/add-words', methods=['POST'])(add_daily_test_words)
 v3_api.route('/api/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
 v3_api.route('/api/test-prep/run-daily-job', methods=['POST'])(manual_daily_job)
 v3_api.route('/api/test-vocabulary-count', methods=['GET'])(get_test_vocabulary_count)  # New onboarding endpoint
+
+# Schedule Management (V3) - Study plan scheduling
+v3_api.route('/schedule/create', methods=['POST'])(create_schedule)
+v3_api.route('/schedule/today', methods=['GET'])(get_today_schedule)
+v3_api.route('/schedule/range', methods=['GET'])(get_schedule_range)
+v3_api.route('/review_new_word', methods=['POST'])(review_new_word)
+v3_api.route('/user/timezone', methods=['PUT'])(update_timezone)
 
 # Administrative (V3)
 v3_api.route('/test-review-intervals', methods=['GET'])(test_review_intervals)

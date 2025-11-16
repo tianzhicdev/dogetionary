@@ -1382,6 +1382,327 @@ class DictionaryService: ObservableObject {
         performNetworkRequest(url: url, responseType: TestVocabularyStatsResponse.self, completion: completion)
     }
 
+    // MARK: - Schedule Methods
+
+    func createSchedule(testType: String, targetEndDate: String, completion: @escaping (Result<CreateScheduleResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/schedule/create") else {
+            logger.error("Invalid URL for create schedule endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Creating schedule - User: \(userID), Test: \(testType), End Date: \(targetEndDate)")
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "test_type": testType,
+            "target_end_date": targetEndDate
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            logger.error("Failed to encode create schedule request")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = jsonData
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                self.logger.error("Network error creating schedule: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for create schedule")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("Create schedule response status: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("Server error creating schedule: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data else {
+                self.logger.error("No data received for create schedule")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            do {
+                let scheduleResponse = try JSONDecoder().decode(CreateScheduleResponse.self, from: data)
+                self.logger.info("Successfully created schedule with ID: \(scheduleResponse.schedule.schedule_id)")
+                completion(.success(scheduleResponse))
+            } catch {
+                self.logger.error("Failed to decode create schedule response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
+    func getTodaySchedule(completion: @escaping (Result<DailyScheduleEntry, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/schedule/today?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
+            logger.error("Invalid URL for today schedule endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Fetching today's schedule for user: \(userID)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                self.logger.error("Network error fetching today schedule: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for today schedule")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("Today schedule response status: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("Server error fetching today schedule: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data else {
+                self.logger.error("No data received for today schedule")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            do {
+                let scheduleEntry = try JSONDecoder().decode(DailyScheduleEntry.self, from: data)
+                self.logger.info("Successfully fetched today's schedule - has_schedule: \(scheduleEntry.has_schedule)")
+                completion(.success(scheduleEntry))
+            } catch {
+                self.logger.error("Failed to decode today schedule response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
+    func getScheduleRange(days: Int = 7, onlyNewWords: Bool = true, completion: @escaping (Result<GetScheduleRangeResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        let onlyNewWordsParam = onlyNewWords ? "true" : "false"
+        guard let url = URL(string: "\(baseURL)/v3/schedule/range?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&days=\(days)&only_new_words=\(onlyNewWordsParam)") else {
+            logger.error("Invalid URL for schedule range endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Fetching schedule range for \(days) days (only new words: \(onlyNewWords))")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                self.logger.error("Network error fetching schedule range: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for schedule range")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            guard let data = data else {
+                self.logger.error("No data received for schedule range")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            if httpResponse.statusCode != 200 {
+                self.logger.error("Schedule range request failed with status \(httpResponse.statusCode)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    self.logger.error("Response: \(responseString)")
+                }
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let scheduleRangeResponse = try decoder.decode(GetScheduleRangeResponse.self, from: data)
+                self.logger.info("Successfully fetched schedule range with \(scheduleRangeResponse.schedules.count) days")
+                completion(.success(scheduleRangeResponse))
+            } catch {
+                self.logger.error("Failed to decode schedule range response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
+    func reviewNewWord(word: String, response: Bool, completion: @escaping (Result<ReviewNewWordResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        let learningLang = UserManager.shared.learningLanguage
+        let nativeLang = UserManager.shared.nativeLanguage
+
+        guard let url = URL(string: "\(baseURL)/v3/review_new_word") else {
+            logger.error("Invalid URL for review new word endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Reviewing new word: \(word), response: \(response)")
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "word": word,
+            "response": response,
+            "learning_language": learningLang,
+            "native_language": nativeLang
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            logger.error("Failed to encode review new word request")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = jsonData
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                self.logger.error("Network error reviewing new word: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for review new word")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("Review new word response status: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("Server error reviewing new word: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data else {
+                self.logger.error("No data received for review new word")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            do {
+                let reviewResponse = try JSONDecoder().decode(ReviewNewWordResponse.self, from: data)
+                self.logger.info("Successfully reviewed new word: \(word)")
+                completion(.success(reviewResponse))
+            } catch {
+                self.logger.error("Failed to decode review new word response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
+    func updateTimezone(timezone: String, completion: @escaping (Result<UpdateTimezoneResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/user/timezone") else {
+            logger.error("Invalid URL for update timezone endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Updating timezone to: \(timezone)")
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "timezone": timezone
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            logger.error("Failed to encode update timezone request")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = jsonData
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                self.logger.error("Network error updating timezone: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for update timezone")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("Update timezone response status: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                self.logger.error("Server error updating timezone: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data else {
+                self.logger.error("No data received for update timezone")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            do {
+                let timezoneResponse = try JSONDecoder().decode(UpdateTimezoneResponse.self, from: data)
+                self.logger.info("Successfully updated timezone to: \(timezoneResponse.timezone)")
+                completion(.success(timezoneResponse))
+            } catch {
+                self.logger.error("Failed to decode update timezone response: \(error.localizedDescription)")
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {
