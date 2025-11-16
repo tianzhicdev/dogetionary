@@ -62,17 +62,27 @@ class UserManager: ObservableObject {
     }
     @Published var toeflEnabled: Bool {
         didSet {
+            let wasEnabled = oldValue
             UserDefaults.standard.set(toeflEnabled, forKey: toeflEnabledKey)
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
+                // Create schedule when toggled from off to on
+                if !wasEnabled && toeflEnabled {
+                    createScheduleForTestType("TOEFL", targetDays: toeflTargetDays)
+                }
             }
         }
     }
     @Published var ieltsEnabled: Bool {
         didSet {
+            let wasEnabled = oldValue
             UserDefaults.standard.set(ieltsEnabled, forKey: ieltsEnabledKey)
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
+                // Create schedule when toggled from off to on
+                if !wasEnabled && ieltsEnabled {
+                    createScheduleForTestType("IELTS", targetDays: ieltsTargetDays)
+                }
             }
         }
     }
@@ -81,6 +91,10 @@ class UserManager: ObservableObject {
             UserDefaults.standard.set(toeflTargetDays, forKey: toeflTargetDaysKey)
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
+                // Recreate schedule if TOEFL is enabled and days changed
+                if toeflEnabled && oldValue != toeflTargetDays {
+                    createScheduleForTestType("TOEFL", targetDays: toeflTargetDays)
+                }
             }
         }
     }
@@ -89,6 +103,10 @@ class UserManager: ObservableObject {
             UserDefaults.standard.set(ieltsTargetDays, forKey: ieltsTargetDaysKey)
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
+                // Recreate schedule if IELTS is enabled and days changed
+                if ieltsEnabled && oldValue != ieltsTargetDays {
+                    createScheduleForTestType("IELTS", targetDays: ieltsTargetDays)
+                }
             }
         }
     }
@@ -232,34 +250,65 @@ class UserManager: ObservableObject {
 
     func syncPreferencesFromServer() {
         logger.info("Syncing preferences from server for user: \(self.userID)")
-        
+
         DictionaryService.shared.getUserPreferences(userID: self.userID) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let preferences):
                     self.logger.info("Successfully fetched preferences from server: learning=\(preferences.learning_language), native=\(preferences.native_language)")
-                    
+
                     // Update local preferences if they're different from server
-                    if self.learningLanguage != preferences.learning_language || 
+                    if self.learningLanguage != preferences.learning_language ||
                        self.nativeLanguage != preferences.native_language ||
                        self.userName != (preferences.user_name ?? "") ||
                        self.userMotto != (preferences.user_motto ?? "") {
                         self.logger.info("Updating local preferences to match server")
-                        
+
                         // Set flag to prevent sync loop
                         self.isSyncingFromServer = true
-                        
+
                         // Update published properties - the didSet will update UserDefaults but skip server sync
                         self.learningLanguage = preferences.learning_language
                         self.nativeLanguage = preferences.native_language
                         self.userName = preferences.user_name ?? ""
                         self.userMotto = preferences.user_motto ?? ""
-                        
+
                         // Reset flag
                         self.isSyncingFromServer = false
                     }
                 case .failure(let error):
                     self.logger.error("Failed to fetch preferences from server: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    // MARK: - Schedule Management
+
+    private func createScheduleForTestType(_ testType: String, targetDays: Int) {
+        logger.info("Creating schedule for \(testType) with \(targetDays) target days")
+
+        // Calculate target end date
+        let calendar = Calendar.current
+        guard let targetEndDate = calendar.date(byAdding: .day, value: targetDays, to: Date()) else {
+            logger.error("Failed to calculate target end date")
+            return
+        }
+
+        // Format as YYYY-MM-DD string (backend expects this format)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let targetEndDateString = formatter.string(from: targetEndDate)
+
+        logger.info("Calling createSchedule API - testType: \(testType), targetEndDate: \(targetEndDateString)")
+
+        DictionaryService.shared.createSchedule(testType: testType, targetEndDate: targetEndDateString) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self.logger.info("Successfully created schedule: \(response.schedule.schedule_id)")
+                case .failure(let error):
+                    self.logger.error("Failed to create schedule: \(error.localizedDescription)")
                 }
             }
         }

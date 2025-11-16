@@ -11,16 +11,19 @@ struct SavedWordsView: View {
     @State private var savedWords: [SavedWord] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var hasSchedule = false
+    @State private var selectedTab = 0
 
     var body: some View {
         NavigationView {
-            TabView {
+            TabView(selection: $selectedTab) {
                     // Stats Tab (now first)
                     StatsView()
                         .tabItem {
                             Image(systemName: "chart.bar.fill")
                             Text("Stats")
                         }
+                        .tag(0)
 
                     // Words Tab
                     SavedWordsListView(
@@ -34,17 +37,30 @@ struct SavedWordsView: View {
                         Image(systemName: "list.bullet")
                         Text("Words")
                     }
+                    .tag(1)
+
+                    // Schedule Tab (conditional)
+                    if hasSchedule {
+                        ScheduleView()
+                            .tabItem {
+                                Image(systemName: "calendar")
+                                Text("Schedule")
+                            }
+                            .tag(2)
+                    }
             }
             .navigationBarTitleDisplayMode(.large)
         }
         .onAppear {
             Task {
                 await loadSavedWords()
+                checkSchedule()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSavedWords)) { _ in
             Task {
                 await loadSavedWords()
+                checkSchedule()
             }
         }
     }
@@ -100,6 +116,19 @@ struct SavedWordsView: View {
                     ])
                 case .failure(let error):
                     self.errorMessage = "Failed to delete word: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    private func checkSchedule() {
+        DictionaryService.shared.getTodaySchedule { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let entry):
+                    self.hasSchedule = entry.has_schedule
+                case .failure:
+                    self.hasSchedule = false
                 }
             }
         }

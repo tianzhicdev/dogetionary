@@ -30,7 +30,7 @@ struct ContentView: View {
             SavedWordsView()
                 .tabItem {
                     Image(systemName: "bookmark.fill")
-                    Text("Saved")
+                    Text("Schedule")
                 }
                 .tag(1)
 
