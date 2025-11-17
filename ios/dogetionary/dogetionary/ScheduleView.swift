@@ -14,6 +14,7 @@ struct ScheduleView: View {
     @State private var selectedDays = 7
     @State private var onlyNewWords = true  // Default to only showing days with new words
     @State private var hasLoadedInitially = false
+    @State private var userHasSchedule = false  // Track if user has created any schedule
 
     var body: some View {
         NavigationStack {
@@ -45,7 +46,24 @@ struct ScheduleView: View {
                         ScheduleRangeListView(schedules: schedules)
                     }
                 } else {
-                    NoScheduleView(message: "No schedule available. Enable test preparation to create a schedule.")
+                    // Empty state - different message based on whether user has a schedule
+                    if userHasSchedule {
+                        VStack(spacing: 16) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.green)
+                            Text("All caught up!")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            Text(onlyNewWords ? "No new words in the next \(selectedDays) days.\nTry viewing the full schedule." : "No tasks scheduled for the next \(selectedDays) days.")
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        NoScheduleView(message: "No schedule available. Enable test preparation to create a schedule.")
+                    }
                 }
             }
             .navigationTitle("Study Schedule")
@@ -84,6 +102,23 @@ struct ScheduleView: View {
         isLoading = true
         errorMessage = nil
 
+        // First check if user has any schedule by calling today endpoint
+        await withCheckedContinuation { continuation in
+            DictionaryService.shared.getTodaySchedule { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let entry):
+                        // Use user_has_schedule field for tab visibility
+                        self.userHasSchedule = entry.user_has_schedule ?? entry.has_schedule
+                    case .failure:
+                        self.userHasSchedule = false
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+
+        // Then load the schedule range
         await withCheckedContinuation { continuation in
             DictionaryService.shared.getScheduleRange(days: selectedDays, onlyNewWords: onlyNewWords) { result in
                 DispatchQueue.main.async {
@@ -175,32 +210,32 @@ struct DailyScheduleCard: View {
 
                 VStack(alignment: .leading, spacing: 16) {
                     // New Words
-                    if !entry.new_words.isEmpty {
+                    if let newWords = entry.new_words, !newWords.isEmpty {
                         WordListSection(
                             title: "New Words",
                             icon: "plus.circle.fill",
                             color: .blue,
-                            words: entry.new_words
+                            words: newWords
                         )
                     }
 
                     // Test Practice Words
-                    if !entry.test_practice_words.isEmpty {
+                    if let testPractice = entry.test_practice_words, !testPractice.isEmpty {
                         PracticeWordListSection(
                             title: "Test Practice",
                             icon: "target",
                             color: .orange,
-                            words: entry.test_practice_words
+                            words: testPractice
                         )
                     }
 
                     // Non-Test Practice Words
-                    if !entry.non_test_practice_words.isEmpty {
+                    if let nonTestPractice = entry.non_test_practice_words, !nonTestPractice.isEmpty {
                         PracticeWordListSection(
                             title: "Other Practice",
                             icon: "repeat.circle.fill",
                             color: .green,
-                            words: entry.non_test_practice_words
+                            words: nonTestPractice
                         )
                     }
                 }
@@ -397,14 +432,14 @@ struct ScheduleContentView: View {
                 }
 
                 // New Words Section
-                if !entry.new_words.isEmpty {
+                if let newWords = entry.new_words, !newWords.isEmpty {
                     ScheduleSection(
                         title: "New Words",
                         icon: "plus.circle.fill",
                         color: .blue,
-                        count: entry.new_words.count
+                        count: newWords.count
                     ) {
-                        ForEach(entry.new_words, id: \.self) { word in
+                        ForEach(newWords, id: \.self) { word in
                             NewWordRow(word: word)
                         }
                     }
@@ -412,14 +447,14 @@ struct ScheduleContentView: View {
                 }
 
                 // Test Practice Words Section
-                if !entry.test_practice_words.isEmpty {
+                if let testPractice = entry.test_practice_words, !testPractice.isEmpty {
                     ScheduleSection(
                         title: "Test Practice",
                         icon: "target",
                         color: .orange,
-                        count: entry.test_practice_words.count
+                        count: testPractice.count
                     ) {
-                        ForEach(entry.test_practice_words) { practiceWord in
+                        ForEach(testPractice) { practiceWord in
                             PracticeWordRow(word: practiceWord, isTestWord: true)
                         }
                     }
@@ -427,14 +462,14 @@ struct ScheduleContentView: View {
                 }
 
                 // Non-Test Practice Words Section
-                if !entry.non_test_practice_words.isEmpty {
+                if let nonTestPractice = entry.non_test_practice_words, !nonTestPractice.isEmpty {
                     ScheduleSection(
                         title: "Other Practice",
                         icon: "repeat.circle.fill",
                         color: .green,
-                        count: entry.non_test_practice_words.count
+                        count: nonTestPractice.count
                     ) {
-                        ForEach(entry.non_test_practice_words) { practiceWord in
+                        ForEach(nonTestPractice) { practiceWord in
                             PracticeWordRow(word: practiceWord, isTestWord: false)
                         }
                     }

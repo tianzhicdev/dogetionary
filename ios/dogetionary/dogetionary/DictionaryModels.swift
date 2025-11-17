@@ -277,9 +277,10 @@ struct ReviewWordsResponse: Codable {
     let user_id: String
     let saved_words: [ReviewWord]
     let count: Int
+    let new_words_remaining_today: Int?  // NEW: count of scheduled new words remaining today
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, saved_words, count
+        case user_id, saved_words, count, new_words_remaining_today
     }
 }
 
@@ -288,9 +289,10 @@ struct ReviewWord: Identifiable, Codable {
     let word: String
     let learning_language: String
     let native_language: String
+    let is_new_word: Bool?  // NEW: indicates if this is a scheduled new word
 
     private enum CodingKeys: String, CodingKey {
-        case id, word, learning_language, native_language
+        case id, word, learning_language, native_language, is_new_word
     }
 }
 
@@ -616,15 +618,16 @@ struct SchedulePracticeWord: Codable, Identifiable {
 /// Today's schedule entry with new words and practice words
 struct DailyScheduleEntry: Codable {
     let date: String
-    let has_schedule: Bool
-    let new_words: [String]
-    let test_practice_words: [SchedulePracticeWord]
-    let non_test_practice_words: [SchedulePracticeWord]
+    let user_has_schedule: Bool?  // NEW: Whether user has created any schedule (determines tab visibility)
+    let has_schedule: Bool  // Whether today has tasks scheduled
+    let new_words: [String]?  // Optional when has_schedule is false
+    let test_practice_words: [SchedulePracticeWord]?  // Optional when has_schedule is false
+    let non_test_practice_words: [SchedulePracticeWord]?  // Optional when has_schedule is false
     let summary: ScheduleSummary?
     let message: String?
 
     private enum CodingKeys: String, CodingKey {
-        case date, has_schedule, new_words, test_practice_words,
+        case date, user_has_schedule, has_schedule, new_words, test_practice_words,
              non_test_practice_words, summary, message
     }
 }

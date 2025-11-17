@@ -13,7 +13,7 @@ from handlers.pronunciation import practice_pronunciation, get_pronunciation_his
 from handlers.words import get_next_review_word_v2, get_saved_words, get_word_definition, get_word_definition_v3, get_word_details, get_audio, get_illustration, generate_word_definition, get_all_words_for_language_pair
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
 from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count
-from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone
+from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words
 
 # Create v3 blueprint
 v3_api = Blueprint('v3_api', __name__, url_prefix='/v3')
@@ -30,6 +30,7 @@ v3_api.route('/saved_words', methods=['GET'])(get_saved_words)
 
 # Review System (V3 - current version)
 v3_api.route('/review_next', methods=['GET'])(get_next_review_word_v2)  # V2 as default in V3
+v3_api.route('/next-review-word-with-scheduled-new-words', methods=['GET'])(get_next_review_word_with_scheduled_new_words)  # V3 with schedule integration
 v3_api.route('/reviews/submit', methods=['POST'])(submit_review)
 v3_api.route('/due_counts', methods=['GET'])(get_due_counts)
 v3_api.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats)

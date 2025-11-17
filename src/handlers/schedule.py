@@ -91,7 +91,8 @@ def get_today_schedule():
     Response:
         {
             "date": "2025-11-10",
-            "has_schedule": true,
+            "user_has_schedule": true,  // Whether user has created any schedule (determines tab visibility)
+            "has_schedule": true,  // Whether today has tasks scheduled
             "new_words": ["abandon", "abbreviate", ...],
             "test_practice_words": [
                 {
@@ -109,6 +110,10 @@ def get_today_schedule():
                 "total_words": 17
             }
         }
+
+    NOTE: Two separate flags for clarity:
+    - user_has_schedule: True if user has ever created a schedule (used for UI tab visibility)
+    - has_schedule: True if today specifically has tasks (used for displaying today's content)
     """
     try:
         user_id = request.args.get('user_id')
@@ -124,7 +129,24 @@ def get_today_schedule():
         cur = conn.cursor()
 
         try:
-            # Get today's schedule
+            # First check if user has any schedule created at all
+            cur.execute("""
+                SELECT id FROM study_schedules
+                WHERE user_id = %s
+                LIMIT 1
+            """, (user_id,))
+
+            user_has_schedule = cur.fetchone() is not None
+
+            if not user_has_schedule:
+                return jsonify({
+                    "date": today.isoformat(),
+                    "user_has_schedule": False,  # No schedule exists at all
+                    "has_schedule": False,  # No schedule for today
+                    "message": "No schedule found. Create a schedule first."
+                }), 200
+
+            # Get today's schedule entry
             cur.execute("""
                 SELECT dse.new_words, dse.test_practice_words, dse.non_test_practice_words
                 FROM daily_schedule_entries dse
@@ -134,20 +156,35 @@ def get_today_schedule():
 
             result = cur.fetchone()
 
+            # User has a schedule, but no entry for today
             if not result:
                 return jsonify({
                     "date": today.isoformat(),
-                    "has_schedule": False,
-                    "message": "No schedule found for today. Create a schedule first."
+                    "user_has_schedule": True,  # User has created a schedule
+                    "has_schedule": False,  # But nothing scheduled for today
+                    "new_words": [],
+                    "test_practice_words": [],
+                    "non_test_practice_words": [],
+                    "summary": {
+                        "total_new": 0,
+                        "total_test_practice": 0,
+                        "total_non_test_practice": 0,
+                        "total_words": 0
+                    },
+                    "message": "No tasks scheduled for today."
                 }), 200
 
-            new_words = result['new_words']
-            test_practice = result['test_practice_words']
-            non_test_practice = result['non_test_practice_words']
+            new_words = result['new_words'] or []
+            test_practice = result['test_practice_words'] or []
+            non_test_practice = result['non_test_practice_words'] or []
+
+            total_words = len(new_words) + len(test_practice) + len(non_test_practice)
+            has_tasks_today = total_words > 0
 
             return jsonify({
                 "date": today.isoformat(),
-                "has_schedule": True,
+                "user_has_schedule": True,  # User has created a schedule
+                "has_schedule": has_tasks_today,  # Whether today has tasks
                 "new_words": new_words,
                 "test_practice_words": test_practice,
                 "non_test_practice_words": non_test_practice,
@@ -155,8 +192,9 @@ def get_today_schedule():
                     "total_new": len(new_words),
                     "total_test_practice": len(test_practice),
                     "total_non_test_practice": len(non_test_practice),
-                    "total_words": len(new_words) + len(test_practice) + len(non_test_practice)
-                }
+                    "total_words": total_words
+                },
+                "message": "All tasks completed for today!" if not has_tasks_today else None
             }), 200
 
         finally:
@@ -422,3 +460,155 @@ def update_timezone():
     except Exception as e:
         logger.error(f"Error updating timezone: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+
+def get_next_review_word_with_scheduled_new_words():
+    """
+    GET /v3/next-review-word-with-scheduled-new-words?user_id=XXX
+
+    Get next word for review, prioritizing scheduled new words from today's schedule.
+
+    Logic:
+    1. Check if there are scheduled new words for today
+    2. If yes, return one new word and add it to saved_words
+    3. If no, fall back to regular review logic (due words)
+
+    Response:
+        {
+            "user_id": "uuid",
+            "saved_words": [{
+                "id": 123,
+                "word": "abandon",
+                "learning_language": "en",
+                "native_language": "zh",
+                "is_new_word": true  // NEW: indicates this is from schedule
+            }],
+            "count": 1,
+            "new_words_remaining_today": 5  // NEW: count of remaining new words today
+        }
+    """
+    try:
+        user_id = request.args.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
+
+        # Get user preferences for language settings
+        from services.user_service import get_user_preferences
+        learning_lang, native_lang, _, _ = get_user_preferences(user_id)
+
+        # Get today's date in user's timezone
+        user_tz = get_user_timezone(user_id)
+        today = get_today_in_timezone(user_tz)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            # Check for scheduled new words today
+            cur.execute("""
+                SELECT dse.id, dse.new_words, dse.schedule_id
+                FROM daily_schedule_entries dse
+                JOIN study_schedules ss ON dse.schedule_id = ss.id
+                WHERE ss.user_id = %s AND dse.scheduled_date = %s
+            """, (user_id, today))
+
+            schedule_entry = cur.fetchone()
+
+            # If there are scheduled new words, return one
+            if schedule_entry and schedule_entry['new_words'] and len(schedule_entry['new_words']) > 0:
+                new_words = schedule_entry['new_words']
+                word_to_learn = new_words[0]  # Get first new word
+
+                # Add word to saved_words (or get existing)
+                cur.execute("""
+                    INSERT INTO saved_words (user_id, word, learning_language, native_language)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (user_id, word, learning_language, native_language)
+                    DO UPDATE SET created_at = saved_words.created_at
+                    RETURNING id
+                """, (user_id, word_to_learn, learning_lang, native_lang))
+
+                word_info = cur.fetchone()
+                word_id = word_info['id']
+
+                # Remove word from schedule's new_words list
+                updated_new_words = new_words[1:]  # Remove first element
+                cur.execute("""
+                    UPDATE daily_schedule_entries
+                    SET new_words = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (updated_new_words, schedule_entry['id']))
+
+                conn.commit()
+
+                logger.info(f"Returning scheduled new word '{word_to_learn}' for user {user_id}")
+
+                return jsonify({
+                    "user_id": user_id,
+                    "saved_words": [{
+                        "id": word_id,
+                        "word": word_to_learn,
+                        "learning_language": learning_lang,
+                        "native_language": native_lang,
+                        "is_new_word": True
+                    }],
+                    "count": 1,
+                    "new_words_remaining_today": len(updated_new_words)
+                })
+
+            # No scheduled new words, fall back to regular review logic
+            # Use the same query as get_next_review_word_v2
+            cur.execute("""
+                SELECT
+                    sw.id,
+                    sw.word,
+                    sw.learning_language,
+                    sw.native_language,
+                    COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date
+                FROM saved_words sw
+                LEFT JOIN (
+                    SELECT
+                        word_id,
+                        next_review_date,
+                        reviewed_at as last_reviewed_at,
+                        ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                    FROM reviews
+                ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+                WHERE sw.user_id = %s
+                -- Exclude words reviewed in the past 24 hours
+                AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
+                ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
+                LIMIT 1
+            """, (user_id,))
+
+            word = cur.fetchone()
+
+            if not word:
+                return jsonify({
+                    "user_id": user_id,
+                    "saved_words": [],
+                    "count": 0,
+                    "new_words_remaining_today": 0
+                })
+
+            return jsonify({
+                "user_id": user_id,
+                "saved_words": [{
+                    "id": word['id'],
+                    "word": word['word'],
+                    "learning_language": word['learning_language'],
+                    "native_language": word['native_language'],
+                    "is_new_word": False
+                }],
+                "count": 1,
+                "new_words_remaining_today": 0
+            })
+
+        finally:
+            cur.close()
+            conn.close()
+
+    except Exception as e:
+        logger.error(f"Error getting next review word with scheduled new words: {str(e)}")
+        return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500

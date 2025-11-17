@@ -126,7 +126,9 @@ struct SavedWordsView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let entry):
-                    self.hasSchedule = entry.has_schedule
+                    // Use user_has_schedule (whether user created any schedule)
+                    // NOT has_schedule (whether today has tasks)
+                    self.hasSchedule = entry.user_has_schedule ?? entry.has_schedule
                 case .failure:
                     self.hasSchedule = false
                 }
