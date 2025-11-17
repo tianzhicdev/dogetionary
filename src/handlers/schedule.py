@@ -322,8 +322,8 @@ def get_schedule_range():
         if not user_id:
             return jsonify({"error": "user_id is required"}), 400
 
-        if days < 1 or days > 30:
-            return jsonify({"error": "days must be between 1 and 30"}), 400
+        if days < 1 or days > 60:
+            return jsonify({"error": "days must be between 1 and 60"}), 400
 
         # Get today in user's timezone
         user_tz = get_user_timezone(user_id)
