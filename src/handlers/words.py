@@ -39,7 +39,12 @@ audio_generation_status = {}
 
 
 def get_next_review_word_v2():
-    """Get next review word with language information for v1.0.10+ clients"""
+    """
+    Get next review word with language information for v1.0.10+ clients.
+
+    Returns ONLY overdue words (next_review_date <= NOW, not reviewed in past 24h).
+    When all overdue words are reviewed, returns empty response = "today's tasks complete".
+    """
     try:
         user_id = request.args.get('user_id')
 
@@ -79,7 +84,8 @@ def get_next_review_word_v2():
             WHERE sw.user_id = %s
             -- Exclude words reviewed in the past 24 hours
             AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
-            -- AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
+            -- ONLY include words that are actually DUE (overdue or due now)
+            AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
             LIMIT 1
         """, (user_id,))
