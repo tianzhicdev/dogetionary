@@ -466,12 +466,16 @@ def get_next_review_word_with_scheduled_new_words():
     """
     GET /v3/next-review-word-with-scheduled-new-words?user_id=XXX
 
-    Get next word for review, prioritizing scheduled new words from today's schedule.
+    Get next word for review, prioritizing scheduled new words and overdue words.
 
-    Logic:
-    1. Check if there are scheduled new words for today
-    2. If yes, return one new word and add it to saved_words
-    3. If no, fall back to regular review logic (due words)
+    Priority Order:
+    1. Scheduled new words for today (is_new_word=true)
+    2. Overdue words (next_review_date <= NOW, not reviewed in past 24h)
+    3. Nothing (empty response = "today's tasks complete")
+
+    Note: Does NOT return words that are not due yet, even if they haven't been
+    reviewed in 24 hours. This ensures users see "today's tasks complete" when
+    they finish all overdue and new words.
 
     Response:
         {
@@ -481,10 +485,10 @@ def get_next_review_word_with_scheduled_new_words():
                 "word": "abandon",
                 "learning_language": "en",
                 "native_language": "zh",
-                "is_new_word": true  // NEW: indicates this is from schedule
+                "is_new_word": true  // true if from schedule, false if overdue
             }],
             "count": 1,
-            "new_words_remaining_today": 5  // NEW: count of remaining new words today
+            "new_words_remaining_today": 5  // count of remaining new words from schedule
         }
     """
     try:
@@ -557,8 +561,9 @@ def get_next_review_word_with_scheduled_new_words():
                     "new_words_remaining_today": len(updated_new_words)
                 })
 
-            # No scheduled new words, fall back to regular review logic
-            # Use the same query as get_next_review_word_v2
+            # No scheduled new words, fall back to OVERDUE words only
+            # Only return words that are actually DUE (next_review_date <= NOW)
+            # This ensures we complete "today's tasks" when all due words are done
             cur.execute("""
                 SELECT
                     sw.id,
@@ -578,6 +583,8 @@ def get_next_review_word_with_scheduled_new_words():
                 WHERE sw.user_id = %s
                 -- Exclude words reviewed in the past 24 hours
                 AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
+                -- ONLY include words that are actually DUE (overdue or due now)
+                AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
                 ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
                 LIMIT 1
             """, (user_id,))
