@@ -54,7 +54,7 @@ struct ScheduleView: View {
                     }
                 }
             }
-            .navigationTitle("Study Schedule")
+            .navigationTitle("SuperMemo Schedule")
             .navigationBarTitleDisplayMode(.large)
             .task {
                 guard !isLoading && !hasLoadedInitially else { return }
