@@ -17,14 +17,6 @@ struct SavedWordsView: View {
     var body: some View {
         NavigationView {
             TabView(selection: $selectedTab) {
-                    // Stats Tab (now first)
-                    StatsView()
-                        .tabItem {
-                            Image(systemName: "chart.bar.fill")
-                            Text("Stats")
-                        }
-                        .tag(0)
-
                     // Words Tab
                     SavedWordsListView(
                         savedWords: $savedWords,
@@ -37,7 +29,7 @@ struct SavedWordsView: View {
                         Image(systemName: "list.bullet")
                         Text("Words")
                     }
-                    .tag(1)
+                    .tag(0)
 
                     // Schedule Tab (conditional)
                     if hasSchedule {
@@ -46,7 +38,7 @@ struct SavedWordsView: View {
                                 Image(systemName: "calendar")
                                 Text("Schedule")
                             }
-                            .tag(2)
+                            .tag(1)
                     }
             }
             .navigationBarTitleDisplayMode(.large)

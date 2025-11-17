@@ -11,10 +11,8 @@ struct ScheduleView: View {
     @State private var schedules: [DailyScheduleEntry] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var selectedDays = 7
-    @State private var onlyNewWords = true  // Default to only showing days with new words
     @State private var hasLoadedInitially = false
-    @State private var userHasSchedule = false  // Track if user has created any schedule
+    @State private var userHasSchedule = false
 
     var body: some View {
         NavigationStack {
@@ -34,19 +32,9 @@ struct ScheduleView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if !schedules.isEmpty {
-                    VStack(spacing: 0) {
-                        // Toggle control
-                        Picker("View Mode", selection: $onlyNewWords) {
-                            Text("Only New Words").tag(true)
-                            Text("Full Schedule").tag(false)
-                        }
-                        .pickerStyle(.segmented)
-                        .padding()
-
-                        ScheduleRangeListView(schedules: schedules)
-                    }
+                    SimpleScheduleListView(schedules: schedules)
                 } else {
-                    // Empty state - different message based on whether user has a schedule
+                    // Empty state
                     if userHasSchedule {
                         VStack(spacing: 16) {
                             Image(systemName: "checkmark.circle.fill")
@@ -55,7 +43,7 @@ struct ScheduleView: View {
                             Text("All caught up!")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                            Text(onlyNewWords ? "No new words in the next \(selectedDays) days.\nTry viewing the full schedule." : "No tasks scheduled for the next \(selectedDays) days.")
+                            Text("No tasks scheduled for the next 60 days.")
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
@@ -68,26 +56,10 @@ struct ScheduleView: View {
             }
             .navigationTitle("Study Schedule")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Picker("Days", selection: $selectedDays) {
-                            Text("7 days").tag(7)
-                            Text("14 days").tag(14)
-                            Text("30 days").tag(30)
-                        }
-                    } label: {
-                        Image(systemName: "calendar")
-                    }
-                }
-            }
-            .task(id: "\(selectedDays)-\(onlyNewWords)") {
-                // Only load if not already loading and either first load or parameters changed
-                guard !isLoading else { return }
-                if !hasLoadedInitially || hasLoadedInitially {
-                    await loadScheduleRangeAsync()
-                    hasLoadedInitially = true
-                }
+            .task {
+                guard !isLoading && !hasLoadedInitially else { return }
+                await loadScheduleRangeAsync()
+                hasLoadedInitially = true
             }
             .refreshable {
                 await loadScheduleRangeAsync()
@@ -96,19 +68,17 @@ struct ScheduleView: View {
     }
 
     private func loadScheduleRangeAsync() async {
-        // Prevent concurrent loads
         guard !isLoading else { return }
 
         isLoading = true
         errorMessage = nil
 
-        // First check if user has any schedule by calling today endpoint
+        // Check if user has any schedule
         await withCheckedContinuation { continuation in
             DictionaryService.shared.getTodaySchedule { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let entry):
-                        // Use user_has_schedule field for tab visibility
                         self.userHasSchedule = entry.user_has_schedule ?? entry.has_schedule
                     case .failure:
                         self.userHasSchedule = false
@@ -118,9 +88,9 @@ struct ScheduleView: View {
             }
         }
 
-        // Then load the schedule range
+        // Load schedule range for 60 days, only days with tasks
         await withCheckedContinuation { continuation in
-            DictionaryService.shared.getScheduleRange(days: selectedDays, onlyNewWords: onlyNewWords) { result in
+            DictionaryService.shared.getScheduleRange(days: 60, onlyNewWords: false) { result in
                 DispatchQueue.main.async {
                     self.isLoading = false
 
@@ -138,14 +108,14 @@ struct ScheduleView: View {
     }
 }
 
-struct ScheduleRangeListView: View {
+struct SimpleScheduleListView: View {
     let schedules: [DailyScheduleEntry]
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
                 ForEach(schedules, id: \.date) { entry in
-                    DailyScheduleCard(entry: entry)
+                    SimpleDayRow(entry: entry)
                 }
             }
             .padding()
@@ -153,514 +123,69 @@ struct ScheduleRangeListView: View {
     }
 }
 
-struct DailyScheduleCard: View {
-    let entry: DailyScheduleEntry
-    @State private var isExpanded = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header with date and summary
-            Button(action: {
-                withAnimation {
-                    isExpanded.toggle()
-                }
-            }) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(formatDate(entry.date))
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-
-                        if let summary = entry.summary {
-                            Text("\(summary.total_words) words total")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    Spacer()
-
-                    // Summary badges
-                    if let summary = entry.summary {
-                        HStack(spacing: 8) {
-                            if summary.total_new > 0 {
-                                Badge(count: summary.total_new, color: .blue, icon: "plus.circle.fill")
-                            }
-                            if summary.total_test_practice > 0 {
-                                Badge(count: summary.total_test_practice, color: .orange, icon: "target")
-                            }
-                            if summary.total_non_test_practice > 0 {
-                                Badge(count: summary.total_non_test_practice, color: .green, icon: "repeat.circle.fill")
-                            }
-                        }
-                    }
-
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                }
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            // Expanded content showing actual words
-            if isExpanded {
-                Divider()
-                    .padding(.vertical, 4)
-
-                VStack(alignment: .leading, spacing: 16) {
-                    // New Words
-                    if let newWords = entry.new_words, !newWords.isEmpty {
-                        WordListSection(
-                            title: "New Words",
-                            icon: "plus.circle.fill",
-                            color: .blue,
-                            words: newWords
-                        )
-                    }
-
-                    // Test Practice Words
-                    if let testPractice = entry.test_practice_words, !testPractice.isEmpty {
-                        PracticeWordListSection(
-                            title: "Test Practice",
-                            icon: "target",
-                            color: .orange,
-                            words: testPractice
-                        )
-                    }
-
-                    // Non-Test Practice Words
-                    if let nonTestPractice = entry.non_test_practice_words, !nonTestPractice.isEmpty {
-                        PracticeWordListSection(
-                            title: "Other Practice",
-                            icon: "repeat.circle.fill",
-                            color: .green,
-                            words: nonTestPractice
-                        )
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-
-    private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        if let date = formatter.date(from: dateString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateFormat = "EEEE, MMM d"
-            return displayFormatter.string(from: date)
-        }
-        return dateString
-    }
-}
-
-struct Badge: View {
-    let count: Int
-    let color: Color
-    let icon: String
-
-    var body: some View {
-        HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.caption2)
-            Text("\(count)")
-                .font(.caption)
-                .fontWeight(.medium)
-        }
-        .foregroundColor(color)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(color.opacity(0.15))
-        .cornerRadius(6)
-    }
-}
-
-struct WordListSection: View {
-    let title: String
-    let icon: String
-    let color: Color
-    let words: [String]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                    .font(.caption)
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Text("(\(words.count))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            FlowLayout(spacing: 8) {
-                ForEach(words, id: \.self) { word in
-                    Text(word)
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(6)
-                }
-            }
-        }
-    }
-}
-
-struct PracticeWordListSection: View {
-    let title: String
-    let icon: String
-    let color: Color
-    let words: [SchedulePracticeWord]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                    .font(.caption)
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Text("(\(words.count))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            FlowLayout(spacing: 8) {
-                ForEach(words) { word in
-                    HStack(spacing: 4) {
-                        Text(word.word)
-                            .font(.caption)
-                        Text("•")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text("\(Int(word.expected_retention * 100))%")
-                            .font(.caption2)
-                            .foregroundColor(retentionColor(word.expected_retention))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(6)
-                }
-            }
-        }
-    }
-
-    private func retentionColor(_ retention: Double) -> Color {
-        if retention < 0.4 {
-            return .red
-        } else if retention < 0.6 {
-            return .orange
-        } else {
-            return .green
-        }
-    }
-}
-
-// Flow layout for wrapping words
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(
-            in: proposal.replacingUnspecifiedDimensions().width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(
-            in: bounds.width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: CGPoint(x: bounds.minX + result.frames[index].minX,
-                                     y: bounds.minY + result.frames[index].minY),
-                         proposal: .unspecified)
-        }
-    }
-
-    struct FlowResult {
-        var frames: [CGRect] = []
-        var size: CGSize = .zero
-
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var currentX: CGFloat = 0
-            var currentY: CGFloat = 0
-            var lineHeight: CGFloat = 0
-
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-
-                if currentX + size.width > maxWidth && currentX > 0 {
-                    currentX = 0
-                    currentY += lineHeight + spacing
-                    lineHeight = 0
-                }
-
-                frames.append(CGRect(x: currentX, y: currentY, width: size.width, height: size.height))
-                lineHeight = max(lineHeight, size.height)
-                currentX += size.width + spacing
-            }
-
-            self.size = CGSize(width: maxWidth, height: currentY + lineHeight)
-        }
-    }
-}
-
-struct ScheduleContentView: View {
+struct SimpleDayRow: View {
     let entry: DailyScheduleEntry
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Summary Card
-                if let summary = entry.summary {
-                    ScheduleSummaryCard(summary: summary, date: entry.date)
-                        .padding(.horizontal)
-                        .padding(.top)
-                }
-
-                // New Words Section
-                if let newWords = entry.new_words, !newWords.isEmpty {
-                    ScheduleSection(
-                        title: "New Words",
-                        icon: "plus.circle.fill",
-                        color: .blue,
-                        count: newWords.count
-                    ) {
-                        ForEach(newWords, id: \.self) { word in
-                            NewWordRow(word: word)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                // Test Practice Words Section
-                if let testPractice = entry.test_practice_words, !testPractice.isEmpty {
-                    ScheduleSection(
-                        title: "Test Practice",
-                        icon: "target",
-                        color: .orange,
-                        count: testPractice.count
-                    ) {
-                        ForEach(testPractice) { practiceWord in
-                            PracticeWordRow(word: practiceWord, isTestWord: true)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                // Non-Test Practice Words Section
-                if let nonTestPractice = entry.non_test_practice_words, !nonTestPractice.isEmpty {
-                    ScheduleSection(
-                        title: "Other Practice",
-                        icon: "repeat.circle.fill",
-                        color: .green,
-                        count: nonTestPractice.count
-                    ) {
-                        ForEach(nonTestPractice) { practiceWord in
-                            PracticeWordRow(word: practiceWord, isTestWord: false)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                Spacer(minLength: 40)
-            }
-        }
-    }
-}
-
-struct ScheduleSummaryCard: View {
-    let summary: ScheduleSummary
-    let date: String
-
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Today's Schedule")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    Text(formatDate(date))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                Image(systemName: "calendar")
-                    .font(.title2)
-                    .foregroundColor(.blue)
-            }
-
-            Divider()
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                SummaryStatItem(
-                    title: "New Words",
-                    value: "\(summary.total_new)",
-                    icon: "plus.circle.fill",
-                    color: .blue
-                )
-                SummaryStatItem(
-                    title: "Practice",
-                    value: "\(summary.total_test_practice + summary.total_non_test_practice)",
-                    icon: "repeat.circle.fill",
-                    color: .orange
-                )
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-
-    private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        if let date = formatter.date(from: dateString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .long
-            return displayFormatter.string(from: date)
-        }
-        return dateString
-    }
-}
-
-struct SummaryStatItem: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundColor(color)
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color(.systemBackground))
-        .cornerRadius(8)
-    }
-}
-
-struct ScheduleSection<Content: View>: View {
-    let title: String
-    let icon: String
-    let color: Color
-    let count: Int
-    let content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                Text(title)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Text("\(count)")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(.systemGray5))
-                    .cornerRadius(8)
-            }
-
-            VStack(spacing: 8) {
-                content()
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-        }
-    }
-}
-
-struct NewWordRow: View {
-    let word: String
-
-    var body: some View {
-        HStack {
-            Text(word)
+        HStack(alignment: .top, spacing: 8) {
+            // Date
+            Text(formatDate(entry.date))
                 .font(.body)
                 .fontWeight(.medium)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding(.vertical, 4)
-    }
-}
+                .foregroundColor(.primary)
+                .frame(width: 120, alignment: .leading)
 
-struct PracticeWordRow: View {
-    let word: SchedulePracticeWord
-    let isTestWord: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(word.word)
-                    .font(.body)
-                    .fontWeight(.medium)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            HStack(spacing: 8) {
-                HStack(spacing: 4) {
-                    Image(systemName: "brain")
-                        .font(.caption2)
-                    Text(String(format: "%.0f%%", word.expected_retention * 100))
-                        .font(.caption)
-                }
-                .foregroundColor(retentionColor(word.expected_retention))
-
-                Text("•")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text("Review #\(word.review_number)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            // Words in colored text
+            Text(wordsString)
+                .font(.body)
+                .lineLimit(nil)
         }
         .padding(.vertical, 4)
     }
 
-    private func retentionColor(_ retention: Double) -> Color {
-        if retention < 0.4 {
-            return .red
-        } else if retention < 0.6 {
-            return .orange
-        } else {
-            return .green
+    private var wordsString: AttributedString {
+        var result = AttributedString()
+
+        // New words in red
+        if let newWords = entry.new_words, !newWords.isEmpty {
+            var newWordsText = AttributedString(newWords.joined(separator: ", "))
+            newWordsText.foregroundColor = .red
+            result.append(newWordsText)
         }
+
+        // Test practice words in green
+        if let testPractice = entry.test_practice_words, !testPractice.isEmpty {
+            if !result.characters.isEmpty {
+                result.append(AttributedString(", "))
+            }
+            let testWords = testPractice.map { $0.word }.joined(separator: ", ")
+            var testWordsText = AttributedString(testWords)
+            testWordsText.foregroundColor = .green
+            result.append(testWordsText)
+        }
+
+        // Non-test practice words in blue
+        if let nonTestPractice = entry.non_test_practice_words, !nonTestPractice.isEmpty {
+            if !result.characters.isEmpty {
+                result.append(AttributedString(", "))
+            }
+            let nonTestWords = nonTestPractice.map { $0.word }.joined(separator: ", ")
+            var nonTestWordsText = AttributedString(nonTestWords)
+            nonTestWordsText.foregroundColor = .blue
+            result.append(nonTestWordsText)
+        }
+
+        return result
+    }
+
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MMM d"
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
 }
 

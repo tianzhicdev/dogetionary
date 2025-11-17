@@ -18,7 +18,14 @@ struct SearchView: View {
     @State private var currentSearchQuery = ""
     @State private var currentWordConfidence: Double = 1.0
     @State private var pendingDefinitions: [Definition] = [] // Store definition while showing alert
-    
+
+    // Stats state
+    @State private var reviewDates: Set<String> = []
+    @State private var progressData: ProgressFunnelData?
+    @State private var reviewStats: ReviewStatsData?
+    @State private var weeklyReviews: [DailyReviewCount] = []
+    @State private var currentDate = Date()
+
     private var isSearchActive: Bool {
         return !definitions.isEmpty || errorMessage != nil || isLoading
     }
@@ -59,24 +66,76 @@ struct SearchView: View {
                         Spacer()
                     }
                 } else {
-                    // Landing page layout - centered search bar with logo
-                    VStack(spacing: 40) {
-                        Spacer()
-                        
-                        VStack(spacing: 24) {
-                            // Centered search bar
-                            searchBarView()
-                                .padding(.horizontal, 24)
-                            
-                            // Tagline
-                            Text("Every lookup becomes unforgettable")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
+                    // Landing page layout - stats components with search bar
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            // Stats Cards at top
+                            if let stats = reviewStats {
+                                StatsCardsView(stats: stats)
+                                    .padding(.horizontal)
+                                    .padding(.top)
+                            }
+
+                            // Search bar between stats and calendar
+                            VStack(spacing: 8) {
+                                searchBarView()
+                                    .padding(.horizontal, 24)
+
+                                Text("Every lookup becomes unforgettable")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(.vertical, 8)
+
+                            // Weekly Review Chart
+                            if !weeklyReviews.isEmpty {
+                                WeeklyReviewChart(dailyCounts: weeklyReviews)
+                                    .padding(.horizontal)
+                            }
+
+                            // Calendar with integrated navigation
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Button(action: {
+                                        currentDate = Calendar.current.date(byAdding: .month, value: -1, to: currentDate) ?? currentDate
+                                        loadReviewDates()
+                                    }) {
+                                        Image(systemName: "chevron.left")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding(.leading)
+
+                                    Spacer()
+
+                                    Text(monthYearString(from: currentDate))
+                                        .font(.headline)
+                                        .fontWeight(.medium)
+
+                                    Spacer()
+
+                                    Button(action: {
+                                        currentDate = Calendar.current.date(byAdding: .month, value: 1, to: currentDate) ?? currentDate
+                                        loadReviewDates()
+                                    }) {
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding(.trailing)
+                                }
+                                .padding(.vertical, 8)
+
+                                MonthlyCalendarView(
+                                    currentDate: $currentDate,
+                                    reviewDates: reviewDates
+                                )
                                 .padding(.horizontal)
+                            }
+
+                            Spacer(minLength: 40)
                         }
-                        
-                        Spacer()
                     }
                 }
             }
@@ -115,6 +174,15 @@ struct SearchView: View {
                 searchText = word
                 searchWord()
             }
+        }
+        .onAppear {
+            loadReviewDates()
+            loadProgressData()
+            loadReviewStats()
+            loadWeeklyReviews()
+        }
+        .onChange(of: currentDate) { _, _ in
+            loadReviewDates()
         }
     }
     
@@ -356,6 +424,70 @@ struct SearchView: View {
             SKStoreReviewController.requestReview(in: windowScene)
             // Mark that we've requested rating so we don't ask again
             UserManager.shared.markAppRatingRequested()
+        }
+    }
+
+    private func loadReviewDates() {
+        let calendar = Calendar.current
+        let startOfMonth = calendar.dateInterval(of: .month, for: currentDate)?.start ?? currentDate
+        let endOfMonth = calendar.dateInterval(of: .month, for: currentDate)?.end ?? currentDate
+
+        DictionaryService.shared.getReviewActivity(from: startOfMonth, to: endOfMonth) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let dates):
+                    self.reviewDates = Set(dates)
+                case .failure(let error):
+                    print("Failed to load review dates: \(error)")
+                    self.reviewDates = []
+                }
+            }
+        }
+    }
+
+    private func monthYearString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: date)
+    }
+
+    private func loadProgressData() {
+        DictionaryService.shared.getProgressFunnelData { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let data):
+                    self.progressData = data
+                case .failure(let error):
+                    print("Failed to load progress data: \(error)")
+                    self.progressData = nil
+                }
+            }
+        }
+    }
+
+    private func loadReviewStats() {
+        DictionaryService.shared.getReviewStatistics { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let stats):
+                    self.reviewStats = stats
+                case .failure(let error):
+                    print("Failed to load review stats: \(error)")
+                }
+            }
+        }
+    }
+
+    private func loadWeeklyReviews() {
+        DictionaryService.shared.getWeeklyReviewCounts { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let counts):
+                    self.weeklyReviews = counts
+                case .failure(let error):
+                    print("Failed to load weekly reviews: \(error)")
+                }
+            }
         }
     }
 

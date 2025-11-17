@@ -590,6 +590,7 @@ struct OnboardingView: View {
         let baseURL = Configuration.effectiveBaseURL
         guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=\(testType)") else {
             isLoadingVocabulary = false
+            setDefaultStudyPlans()
             return
         }
 
@@ -599,10 +600,14 @@ struct OnboardingView: View {
 
                 if let error = error {
                     print("Error fetching vocabulary count: \(error)")
+                    setDefaultStudyPlans()
                     return
                 }
 
-                guard let data = data else { return }
+                guard let data = data else {
+                    setDefaultStudyPlans()
+                    return
+                }
 
                 do {
                     let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -621,12 +626,32 @@ struct OnboardingView: View {
                         if let defaultPlan = studyPlans.first(where: { $0.days == 60 }) {
                             selectedStudyDuration = defaultPlan.days
                         }
+                    } else {
+                        setDefaultStudyPlans()
                     }
                 } catch {
                     print("Error parsing vocabulary count response: \(error)")
+                    setDefaultStudyPlans()
                 }
             }
         }.resume()
+    }
+
+    private func setDefaultStudyPlans() {
+        // Fallback to default study plans if API fails
+        // Assuming ~3500 words for typical test vocabulary
+        let defaultTotalWords = 3500
+        studyPlans = [
+            (days: 70, wordsPerDay: 50),
+            (days: 60, wordsPerDay: 59),
+            (days: 50, wordsPerDay: 70),
+            (days: 40, wordsPerDay: 88),
+            (days: 30, wordsPerDay: 117)
+        ]
+        vocabularyCount = defaultTotalWords
+
+        // Auto-select 60 days
+        selectedStudyDuration = 60
     }
 
     private func createSchedule(testType: String, targetDays: Int) {
