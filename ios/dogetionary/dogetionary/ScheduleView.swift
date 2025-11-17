@@ -111,14 +111,29 @@ struct ScheduleView: View {
 struct SimpleScheduleListView: View {
     let schedules: [DailyScheduleEntry]
 
+    // Filter out days with no tasks
+    private var filteredSchedules: [DailyScheduleEntry] {
+        schedules.filter { entry in
+            let hasNewWords = (entry.new_words?.isEmpty == false)
+            let hasTestPractice = (entry.test_practice_words?.isEmpty == false)
+            let hasNonTestPractice = (entry.non_test_practice_words?.isEmpty == false)
+            return hasNewWords || hasTestPractice || hasNonTestPractice
+        }
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(schedules, id: \.date) { entry in
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(filteredSchedules, id: \.date) { entry in
                     SimpleDayRow(entry: entry)
+
+                    if entry.date != filteredSchedules.last?.date {
+                        Divider()
+                            .padding(.leading, 8)
+                    }
                 }
             }
-            .padding()
+            .padding(.vertical, 8)
         }
     }
 }
@@ -127,65 +142,89 @@ struct SimpleDayRow: View {
     let entry: DailyScheduleEntry
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            // Date
-            Text(formatDate(entry.date))
-                .font(.body)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-                .frame(width: 120, alignment: .leading)
+        VStack(alignment: .leading, spacing: 8) {
+            // Date header
+            HStack {
+                Text(formatDate(entry.date))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
 
-            // Words in colored text
-            Text(wordsString)
-                .font(.body)
-                .lineLimit(nil)
+                Spacer()
+
+                // Count badge
+                Text("\(totalWordCount) words")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color(.systemGray5))
+                    .cornerRadius(8)
+            }
+
+            // Words grouped by type
+            VStack(alignment: .leading, spacing: 6) {
+                if let newWords = entry.new_words, !newWords.isEmpty {
+                    WordGroup(label: "New", color: .red, words: newWords)
+                }
+
+                if let testPractice = entry.test_practice_words, !testPractice.isEmpty {
+                    WordGroup(label: "Test", color: .green, words: testPractice.map { $0.word })
+                }
+
+                if let nonTestPractice = entry.non_test_practice_words, !nonTestPractice.isEmpty {
+                    WordGroup(label: "Practice", color: .blue, words: nonTestPractice.map { $0.word })
+                }
+            }
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
-    private var wordsString: AttributedString {
-        var result = AttributedString()
-
-        // New words in red
-        if let newWords = entry.new_words, !newWords.isEmpty {
-            var newWordsText = AttributedString(newWords.joined(separator: ", "))
-            newWordsText.foregroundColor = .red
-            result.append(newWordsText)
-        }
-
-        // Test practice words in green
-        if let testPractice = entry.test_practice_words, !testPractice.isEmpty {
-            if !result.characters.isEmpty {
-                result.append(AttributedString(", "))
-            }
-            let testWords = testPractice.map { $0.word }.joined(separator: ", ")
-            var testWordsText = AttributedString(testWords)
-            testWordsText.foregroundColor = .green
-            result.append(testWordsText)
-        }
-
-        // Non-test practice words in blue
-        if let nonTestPractice = entry.non_test_practice_words, !nonTestPractice.isEmpty {
-            if !result.characters.isEmpty {
-                result.append(AttributedString(", "))
-            }
-            let nonTestWords = nonTestPractice.map { $0.word }.joined(separator: ", ")
-            var nonTestWordsText = AttributedString(nonTestWords)
-            nonTestWordsText.foregroundColor = .blue
-            result.append(nonTestWordsText)
-        }
-
-        return result
+    private var totalWordCount: Int {
+        let newCount = entry.new_words?.count ?? 0
+        let testCount = entry.test_practice_words?.count ?? 0
+        let nonTestCount = entry.non_test_practice_words?.count ?? 0
+        return newCount + testCount + nonTestCount
     }
 
     private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         if let date = formatter.date(from: dateString) {
             let displayFormatter = DateFormatter()
-            displayFormatter.dateFormat = "MMM d"
+            displayFormatter.dateFormat = "EEEE, MMM d"
             return displayFormatter.string(from: date)
         }
         return dateString
+    }
+}
+
+struct WordGroup: View {
+    let label: String
+    let color: Color
+    let words: [String]
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            // Label with color indicator
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6, height: 6)
+                Text(label)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+            }
+            .frame(width: 65, alignment: .leading)
+
+            // Words
+            Text(words.joined(separator: ", "))
+                .font(.body)
+                .foregroundColor(color)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
