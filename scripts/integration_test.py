@@ -470,6 +470,74 @@ class TestRunner:
             self.log(f"✗ /v3/combined_metrics endpoint failed with error: {e}")
             self.failed += 1
 
+    def test_next_review_word_with_scheduled_new_words(self):
+        """Test the new endpoint that integrates scheduled new words"""
+        self.log("Testing /v3/next-review-word-with-scheduled-new-words endpoint...")
+
+        try:
+            # First create a schedule for the test user
+            from datetime import date, timedelta
+            target_date = (date.today() + timedelta(days=60)).isoformat()
+
+            schedule_response = requests.post(
+                f"{BASE_URL}/v3/schedule/create",
+                json={
+                    "user_id": self.test_user_id,
+                    "test_type": "TOEFL",
+                    "target_end_date": target_date
+                }
+            )
+
+            if schedule_response.status_code != 200:
+                self.log(f"⚠️  Could not create schedule (status {schedule_response.status_code}), but continuing with test")
+
+            # Test the new endpoint
+            response = requests.get(
+                f"{BASE_URL}/v3/next-review-word-with-scheduled-new-words",
+                params={"user_id": self.test_user_id}
+            )
+
+            self.assert_status_code(
+                response,
+                200,
+                "GET /v3/next-review-word-with-scheduled-new-words"
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+
+                # Verify response structure
+                self.assert_json_contains(data, "user_id", "Response contains user_id")
+                self.assert_json_contains(data, "saved_words", "Response contains saved_words")
+                self.assert_json_contains(data, "count", "Response contains count")
+                self.assert_json_contains(data, "new_words_remaining_today", "Response contains new_words_remaining_today")
+
+                # Verify count matches saved_words length
+                if data.get("count") == len(data.get("saved_words", [])):
+                    self.log("✓ count matches saved_words length")
+                    self.passed += 1
+                else:
+                    self.log(f"✗ count mismatch: count={data.get('count')}, saved_words length={len(data.get('saved_words', []))}")
+                    self.failed += 1
+
+                # If there are words, verify structure
+                if data.get("saved_words"):
+                    word = data["saved_words"][0]
+                    required_fields = ["id", "word", "learning_language", "native_language"]
+                    for field in required_fields:
+                        self.assert_json_contains(word, field, f"Word object contains {field}")
+
+                    # Check if is_new_word field exists (optional)
+                    if "is_new_word" in word:
+                        self.log("✓ Word object contains is_new_word field")
+                        self.passed += 1
+                    else:
+                        self.log("⚠️  Word object missing optional is_new_word field")
+
+        except Exception as e:
+            self.log(f"✗ /v3/next-review-word-with-scheduled-new-words endpoint failed with error: {e}")
+            self.failed += 1
+
     def run_all_tests(self):
         """Run all integration tests"""
         self.log("Starting integration tests...")
@@ -487,9 +555,10 @@ class TestRunner:
         self.test_next_due_endpoint()
         self.test_test_prep_settings_toggle()
         self.test_combined_metrics_endpoint()
+        self.test_next_review_word_with_scheduled_new_words()
 
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
-        
+
         if self.failed == 0:
             self.log("🎉 All tests passed!")
             return True

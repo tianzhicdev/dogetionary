@@ -18,6 +18,7 @@ struct ReviewView: View {
     @State private var previousOverdueCount: Int? = nil
     @State private var isGoalAchieved = false
     @State private var reviewProgressStats: ReviewProgressStats?
+    @State private var newWordsRemainingToday: Int = 0  // NEW: Track scheduled new words remaining
     
     var body: some View {
         VStack(spacing: 20) {
@@ -32,7 +33,7 @@ struct ReviewView: View {
                     }
                     .padding(.horizontal)
                 } else if let dueCounts = dueCounts {
-                    OverdueCountView(dueCounts: dueCounts)
+                    OverdueCountView(dueCounts: dueCounts, newWordsRemainingToday: newWordsRemainingToday)
                         .padding(.horizontal)
                 }
                 
@@ -63,6 +64,7 @@ struct ReviewView: View {
                     StartReviewState(
                         dueCounts: dueCounts,
                         isLoadingCounts: isLoadingCounts,
+                        newWordsRemainingToday: newWordsRemainingToday,
                         onStart: startReview
                     )
                 }
@@ -75,9 +77,11 @@ struct ReviewView: View {
         }
         .onAppear {
             loadDueCounts()
+            loadScheduledNewWordsCount()
         }
         .refreshable {
             await loadDueCountsAsync()
+            await loadScheduledNewWordsCountAsync()
         }
     }
     
@@ -132,16 +136,17 @@ struct ReviewView: View {
         isLoading = true
         errorMessage = nil
 
-        DictionaryService.shared.getNextReviewWord { result in
+        DictionaryService.shared.getNextReviewWordWithScheduledNewWords { result in
             DispatchQueue.main.async {
                 self.isLoading = false
 
                 switch result {
-                case .success(let words):
-                    if !words.isEmpty {
-                        self.currentWord = words[0]
+                case .success(let response):
+                    if !response.saved_words.isEmpty {
+                        self.currentWord = response.saved_words[0]
                         self.isSessionComplete = false
                         self.reviewStartTime = Date()
+                        self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
                     } else {
                         self.errorMessage = "No words available for review"
                     }
@@ -159,7 +164,30 @@ struct ReviewView: View {
             continuation.resume()
         }
     }
-    
+
+    private func loadScheduledNewWordsCount() {
+        DictionaryService.shared.getTodaySchedule { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let schedule):
+                    // Count remaining new words from today's schedule
+                    self.newWordsRemainingToday = schedule.new_words?.count ?? 0
+                case .failure:
+                    // If schedule fetch fails, assume no scheduled words
+                    self.newWordsRemainingToday = 0
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func loadScheduledNewWordsCountAsync() async {
+        await withCheckedContinuation { continuation in
+            loadScheduledNewWordsCount()
+            continuation.resume()
+        }
+    }
+
     private func submitReview(response: Bool) {
         guard let currentWord = currentWord else { return }
 
@@ -204,16 +232,17 @@ struct ReviewView: View {
 
         // Get the next word to review
         isLoading = true
-        DictionaryService.shared.getNextReviewWord { result in
+        DictionaryService.shared.getNextReviewWordWithScheduledNewWords { result in
             DispatchQueue.main.async {
                 self.isLoading = false
 
                 switch result {
-                case .success(let words):
-                    if !words.isEmpty {
+                case .success(let response):
+                    if !response.saved_words.isEmpty {
                         // Always use the next word returned by backend
-                        self.currentWord = words[0]
+                        self.currentWord = response.saved_words[0]
                         self.reviewStartTime = Date()
+                        self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
                     } else {
                         // No more words - session complete
                         print("🔚 Setting isSessionComplete = true")
@@ -264,40 +293,34 @@ struct ReviewView: View {
 struct StartReviewState: View {
     let dueCounts: DueCountsResponse?
     let isLoadingCounts: Bool
+    let newWordsRemainingToday: Int
     let onStart: () -> Void
-    
+
+    var totalWordsAvailable: Int {
+        (dueCounts?.total_count ?? 0) + newWordsRemainingToday
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "brain.head.profile")
                 .font(.system(size: 64))
                 .foregroundColor(.secondary)
-            
+
             VStack(spacing: 8) {
                 Text("Ready to Review")
                     .font(.title2)
                     .fontWeight(.semibold)
-                
-                if let dueCounts = dueCounts {
-                    if dueCounts.total_count > 0 {
-                        Text("Ready to practice!")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("No saved words yet. Save some words to start reviewing.")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                }
+
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal)
-            
+
             Button("Start Review") {
                 onStart()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled((dueCounts?.total_count ?? 0) == 0)
+            .disabled(totalWordsAvailable == 0)
         }
         .padding()
     }
@@ -945,28 +968,46 @@ struct StatRow: View {
 
 struct OverdueCountView: View {
     let dueCounts: DueCountsResponse
-    
+    var newWordsRemainingToday: Int = 0
+
     var body: some View {
-        HStack {
-            Image(systemName: "clock.fill")
-                .foregroundColor(dueCounts.overdue_count > 0 ? .orange : .green)
-                .font(.caption)
-            
-            if dueCounts.overdue_count > 0 {
-                Text("\(dueCounts.overdue_count) words overdue")
-                    .font(.subheadline)
-                    .foregroundColor(.orange)
-            } else {
-                Text("No overdue words")
-                    .font(.subheadline)
-                    .foregroundColor(.green)
+        VStack(spacing: 8) {
+            HStack {
+                Image(systemName: "clock.fill")
+                    .foregroundColor(dueCounts.overdue_count > 0 ? .orange : .green)
+                    .font(.caption)
+
+                if dueCounts.overdue_count > 0 {
+                    Text("\(dueCounts.overdue_count) words overdue")
+                        .font(.subheadline)
+                        .foregroundColor(.orange)
+                } else {
+                    Text("No overdue words")
+                        .font(.subheadline)
+                        .foregroundColor(.green)
+                }
+
+                Spacer()
+
+                Text("\(dueCounts.total_count) total")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            
-            Spacer()
-            
-            Text("\(dueCounts.total_count) total")
-                .font(.caption)
-                .foregroundColor(.secondary)
+
+            // Display new words count if any
+            if newWordsRemainingToday > 0 {
+                HStack {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.blue)
+                        .font(.caption)
+
+                    Text("\(newWordsRemainingToday) new words to learn today")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+
+                    Spacer()
+                }
+            }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
