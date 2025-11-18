@@ -708,6 +708,21 @@ struct GetScheduleRangeResponse: Codable {
     }
 }
 
+// MARK: - Test Progress Models
+
+/// Response from /v3/schedule/test-progress
+struct TestProgressResponse: Codable {
+    let has_schedule: Bool
+    let test_type: String?  // "TOEFL", "IELTS", or "BOTH"
+    let total_words: Int
+    let saved_words: Int
+    let progress: Double  // 0.0 to 1.0
+
+    private enum CodingKeys: String, CodingKey {
+        case has_schedule, test_type, total_words, saved_words, progress
+    }
+}
+
 // MARK: - Enhanced Review Question Models
 
 /// Question option for multiple choice or fill-in-blank

@@ -19,6 +19,10 @@ struct SearchView: View {
     @State private var currentWordConfidence: Double = 1.0
     @State private var pendingDefinitions: [Definition] = [] // Store definition while showing alert
 
+    // Test progress state
+    @State private var testProgress: TestProgressResponse?
+    @State private var isLoadingProgress = false
+
     private var isSearchActive: Bool {
         return !definitions.isEmpty || errorMessage != nil || isLoading
     }
@@ -30,18 +34,29 @@ struct SearchView: View {
                     VStack(spacing: 20) {
                         searchBarView()
                             .padding(.horizontal)
-                        
+
+                        // Show progress bar if user has schedule
+                        if let progress = testProgress, progress.has_schedule {
+                            TestProgressBar(
+                                progress: progress.progress,
+                                totalWords: progress.total_words,
+                                savedWords: progress.saved_words,
+                                testType: progress.test_type ?? "Test"
+                            )
+                            .padding(.horizontal)
+                        }
+
                         if isLoading {
                             ProgressView("Searching...")
                                 .padding()
                         }
-                        
+
                         if let errorMessage = errorMessage {
                             Text(errorMessage)
                                 .foregroundColor(.red)
                                 .padding()
                         }
-                        
+
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 16) {
                                 ForEach(definitions) { definition in
@@ -55,13 +70,29 @@ struct SearchView: View {
                                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                             }
                         }
-                        
+
                         Spacer()
                     }
                 } else {
                     // Landing page layout - centered search bar
                     VStack {
-                        Spacer()
+                        // Show progress bar at top if user has schedule
+                        if let progress = testProgress, progress.has_schedule {
+                            VStack {
+                                TestProgressBar(
+                                    progress: progress.progress,
+                                    totalWords: progress.total_words,
+                                    savedWords: progress.saved_words,
+                                    testType: progress.test_type ?? "Test"
+                                )
+                                .padding(.horizontal)
+                                .padding(.top, 16)
+
+                                Spacer()
+                            }
+                        } else {
+                            Spacer()
+                        }
 
                         VStack(spacing: 8) {
                             searchBarView()
@@ -112,6 +143,13 @@ struct SearchView: View {
                 searchText = word
                 searchWord()
             }
+        }
+        .onAppear {
+            loadTestProgress()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { _ in
+            // Refresh progress when a word is saved
+            loadTestProgress()
         }
     }
     
@@ -343,6 +381,25 @@ struct SearchView: View {
                 }
             case .failure(let error):
                 print("Failed to check saved words for auto-save: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func loadTestProgress() {
+        guard !isLoadingProgress else { return }
+
+        isLoadingProgress = true
+        DictionaryService.shared.getTestProgress { result in
+            DispatchQueue.main.async {
+                self.isLoadingProgress = false
+
+                switch result {
+                case .success(let progress):
+                    self.testProgress = progress
+                case .failure(let error):
+                    print("Failed to load test progress: \(error.localizedDescription)")
+                    // Silently fail - progress bar simply won't show
+                }
             }
         }
     }

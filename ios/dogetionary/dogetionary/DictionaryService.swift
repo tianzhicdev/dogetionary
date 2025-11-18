@@ -1883,6 +1883,20 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    // MARK: - Test Progress
+
+    func getTestProgress(completion: @escaping (Result<TestProgressResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/schedule/test-progress?user_id=\(userID)") else {
+            logger.error("Invalid URL for test progress endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Fetching test progress for user: \(userID)")
+        performNetworkRequest(url: url, responseType: TestProgressResponse.self, completion: completion)
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {
