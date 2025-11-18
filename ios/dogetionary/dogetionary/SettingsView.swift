@@ -141,6 +141,11 @@ struct SettingsView: View {
                                 Toggle("", isOn: $userManager.toeflEnabled)
                                     .labelsHidden()
                                     .onChange(of: userManager.toeflEnabled) { _, newValue in
+                                        // Mutually exclusive: disable IELTS when TOEFL is enabled
+                                        if newValue && userManager.ieltsEnabled {
+                                            userManager.ieltsEnabled = false
+                                        }
+
                                         // Track test preparation changes
                                         AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
                                             "test_type": "toefl",
@@ -189,6 +194,11 @@ struct SettingsView: View {
                                 Toggle("", isOn: $userManager.ieltsEnabled)
                                     .labelsHidden()
                                     .onChange(of: userManager.ieltsEnabled) { _, newValue in
+                                        // Mutually exclusive: disable TOEFL when IELTS is enabled
+                                        if newValue && userManager.toeflEnabled {
+                                            userManager.toeflEnabled = false
+                                        }
+
                                         // Track test preparation changes
                                         AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
                                             "test_type": "ielts",

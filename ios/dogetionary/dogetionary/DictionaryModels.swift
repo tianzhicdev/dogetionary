@@ -44,7 +44,41 @@ struct DefinitionEntry: Codable {
     let cultural_notes: String?
 
     private enum CodingKeys: String, CodingKey {
-        case definition, type, examples, definition_native, cultural_notes
+        case definition
+        case type
+        case part_of_speech
+        case examples
+        case definition_native
+        case cultural_notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        definition = try container.decode(String.self, forKey: .definition)
+        examples = try container.decode([String].self, forKey: .examples)
+        definition_native = try container.decodeIfPresent(String.self, forKey: .definition_native)
+        cultural_notes = try container.decodeIfPresent(String.self, forKey: .cultural_notes)
+
+        // Try "type" first, fallback to "part_of_speech" for compatibility
+        if let typeValue = try? container.decode(String.self, forKey: .type) {
+            type = typeValue
+        } else if let partOfSpeech = try? container.decode(String.self, forKey: .part_of_speech) {
+            type = partOfSpeech
+        } else {
+            throw DecodingError.keyNotFound(CodingKeys.type, DecodingError.Context(
+                codingPath: decoder.codingPath,
+                debugDescription: "Neither 'type' nor 'part_of_speech' field found"
+            ))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(definition, forKey: .definition)
+        try container.encode(type, forKey: .type)
+        try container.encode(examples, forKey: .examples)
+        try container.encodeIfPresent(definition_native, forKey: .definition_native)
+        try container.encodeIfPresent(cultural_notes, forKey: .cultural_notes)
     }
 }
 
@@ -671,5 +705,62 @@ struct GetScheduleRangeResponse: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case schedules
+    }
+}
+
+// MARK: - Enhanced Review Question Models
+
+/// Question option for multiple choice or fill-in-blank
+struct QuestionOption: Codable, Identifiable {
+    let id: String
+    let text: String
+
+    private enum CodingKeys: String, CodingKey {
+        case id, text
+    }
+}
+
+/// Enhanced review question data
+struct ReviewQuestion: Codable {
+    let question_type: String  // "recognition", "mc_definition", "mc_word", "fill_blank"
+    let word: String
+    let question_text: String
+    let options: [QuestionOption]?
+    let correct_answer: String?
+    let sentence: String?  // For fill_blank type
+    let sentence_translation: String?  // For fill_blank type
+    let show_definition: Bool?  // For recognition type
+
+    private enum CodingKeys: String, CodingKey {
+        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition
+    }
+}
+
+/// Response from /v3/review_next_enhanced
+struct EnhancedReviewResponse: Codable {
+    let user_id: String
+    let word_id: Int
+    let word: String
+    let learning_language: String
+    let native_language: String
+    let is_new_word: Bool?
+    let new_words_remaining_today: Int?
+    let question: ReviewQuestion
+    let definition: DefinitionData?
+
+    private enum CodingKeys: String, CodingKey {
+        case user_id, word_id, word, learning_language, native_language, is_new_word, new_words_remaining_today, question, definition
+    }
+}
+
+/// Enhanced review submission (backward compatible)
+struct EnhancedReviewSubmissionRequest: Codable {
+    let user_id: String
+    let word_id: Int
+    let response: Bool
+    let question_type: String?  // Optional for backward compatibility
+
+    private enum CodingKeys: String, CodingKey {
+        case user_id, word_id, response, question_type
     }
 }

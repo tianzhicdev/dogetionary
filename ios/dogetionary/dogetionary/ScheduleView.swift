@@ -73,6 +73,22 @@ struct ScheduleView: View {
         isLoading = true
         errorMessage = nil
 
+        // First, refresh the schedule to regenerate based on current progress
+        await withCheckedContinuation { continuation in
+            DictionaryService.shared.refreshSchedule { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        print("✅ Schedule refreshed successfully")
+                    case .failure(let error):
+                        print("⚠️ Failed to refresh schedule: \(error.localizedDescription)")
+                        // Continue anyway - might be no schedule to refresh yet
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+
         // Check if user has any schedule
         await withCheckedContinuation { continuation in
             DictionaryService.shared.getTodaySchedule { result in

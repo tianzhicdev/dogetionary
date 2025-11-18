@@ -276,6 +276,7 @@ def submit_review():
         user_id = data.get('user_id')
         word_id = data.get('word_id')
         response = data.get('response')
+        question_type = data.get('question_type', 'recognition')  # Optional, defaults to recognition
 
         if not all([user_id, word_id is not None, response is not None]):
             return jsonify({"error": "user_id, word_id, and response are required"}), 400
@@ -318,9 +319,9 @@ def submit_review():
         # Convert response to boolean (1 = correct/true, 0 = incorrect/false)
         response_bool = bool(response)
         db_execute("""
-            INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, word_id, response_bool, current_review_time, next_review_date), commit=True)
+            INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date, question_type)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (user_id, word_id, response_bool, current_review_time, next_review_date, question_type), commit=True)
 
         # Calculate simple stats for response
         review_count = len(all_reviews)

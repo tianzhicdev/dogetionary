@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ReviewView: View {
-    @State private var currentWord: ReviewWord?
+    @State private var currentReview: EnhancedReviewResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var isSessionComplete = false
@@ -52,12 +52,11 @@ struct ReviewView: View {
                     ReviewCompleteView(
                         progressStats: reviewProgressStats
                     )
-                } else if let currentWord = currentWord, !isSessionComplete {
-                    ReviewSessionView(
-                        currentWord: currentWord,
-                        progress: "Review Mode",
-                        onResponse: { response in
-                            submitReview(response: response)
+                } else if let currentReview = currentReview, !isSessionComplete {
+                    EnhancedQuestionView(
+                        question: currentReview.question,
+                        onAnswer: { isCorrect in
+                            submitReview(response: isCorrect, questionType: currentReview.question.question_type)
                         }
                     )
                 } else {
@@ -136,22 +135,23 @@ struct ReviewView: View {
         isLoading = true
         errorMessage = nil
 
-        DictionaryService.shared.getNextReviewWordWithScheduledNewWords { result in
+        DictionaryService.shared.getNextReviewWordEnhanced { result in
             DispatchQueue.main.async {
                 self.isLoading = false
 
                 switch result {
                 case .success(let response):
-                    if !response.saved_words.isEmpty {
-                        self.currentWord = response.saved_words[0]
-                        self.isSessionComplete = false
-                        self.reviewStartTime = Date()
-                        self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
-                    } else {
-                        self.errorMessage = "No words available for review"
-                    }
+                    self.currentReview = response
+                    self.isSessionComplete = false
+                    self.reviewStartTime = Date()
+                    self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
+                    // Check if this is the "no words" case
+                    if error.localizedDescription.contains("No words") {
+                        self.isSessionComplete = true
+                    } else {
+                        self.errorMessage = error.localizedDescription
+                    }
                 }
             }
         }
@@ -188,27 +188,30 @@ struct ReviewView: View {
         }
     }
 
-    private func submitReview(response: Bool) {
-        guard let currentWord = currentWord else { return }
+    private func submitReview(response: Bool, questionType: String) {
+        guard let currentReview = currentReview else { return }
 
         let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
 
         // Track review answer
         if response {
             AnalyticsManager.shared.track(action: .reviewAnswerCorrect, metadata: [
-                "word": currentWord.word,
+                "word": currentReview.word,
+                "question_type": questionType,
                 "response_time_ms": responseTime ?? 0
             ])
         } else {
             AnalyticsManager.shared.track(action: .reviewAnswerIncorrect, metadata: [
-                "word": currentWord.word,
+                "word": currentReview.word,
+                "question_type": questionType,
                 "response_time_ms": responseTime ?? 0
             ])
         }
 
         DictionaryService.shared.submitReview(
-            wordID: currentWord.id,
-            response: response
+            wordID: currentReview.word_id,
+            response: response,
+            questionType: questionType
         ) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -232,34 +235,29 @@ struct ReviewView: View {
 
         // Get the next word to review
         isLoading = true
-        DictionaryService.shared.getNextReviewWordWithScheduledNewWords { result in
+        DictionaryService.shared.getNextReviewWordEnhanced { result in
             DispatchQueue.main.async {
                 self.isLoading = false
 
                 switch result {
                 case .success(let response):
-                    if !response.saved_words.isEmpty {
-                        // Always use the next word returned by backend
-                        self.currentWord = response.saved_words[0]
-                        self.reviewStartTime = Date()
-                        self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
-                    } else {
-                        // No more words - session complete
-                        print("🔚 Setting isSessionComplete = true")
-                        print("🔚 Before setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
-                        self.isSessionComplete = true
-                        print("🔚 After setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
+                    // Always use the next word returned by backend
+                    self.currentReview = response
+                    self.reviewStartTime = Date()
+                    self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
+                case .failure(_):
+                    // No more words - session complete
+                    print("🔚 Setting isSessionComplete = true")
+                    print("🔚 Before setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
+                    self.isSessionComplete = true
+                    print("🔚 After setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
 
-                        // Track review complete
-                        AnalyticsManager.shared.track(action: .reviewComplete)
+                    // Track review complete
+                    AnalyticsManager.shared.track(action: .reviewComplete)
 
-                        self.loadProgressStats {
-                            // Stats loaded for complete view
-                        }
+                    self.loadProgressStats {
+                        // Stats loaded for complete view
                     }
-                case .failure(let error):
-                    // Show error but don't end session
-                    self.errorMessage = error.localizedDescription
                 }
             }
         }

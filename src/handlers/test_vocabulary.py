@@ -39,7 +39,32 @@ def update_test_settings():
         if all(param is None for param in [toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days]):
             return jsonify({"error": "At least one setting must be provided"}), 400
 
-        with db_cursor(commit=True) as cur:
+        # Validate: Only one test can be enabled at a time
+        # First, get current settings to determine final state
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            cur.execute("""
+                SELECT toefl_enabled, ielts_enabled FROM user_preferences
+                WHERE user_id = %s
+            """, (user_id,))
+
+            current = cur.fetchone()
+            if not current:
+                return jsonify({"error": "User not found"}), 404
+
+            # Calculate final state
+            final_toefl = toefl_enabled if toefl_enabled is not None else current['toefl_enabled']
+            final_ielts = ielts_enabled if ielts_enabled is not None else current['ielts_enabled']
+
+            # Enforce mutual exclusivity
+            if final_toefl and final_ielts:
+                return jsonify({"error": "Cannot enable both TOEFL and IELTS. Only one test can be active at a time."}), 400
+
+            # If both are being disabled, we'll delete the schedule later
+            both_disabled = (not final_toefl) and (not final_ielts)
+
             # Build dynamic update query
             update_fields = []
             params = []
@@ -61,7 +86,7 @@ def update_test_settings():
                 params.append(ielts_target_days)
 
             # If disabling all tests, clear the last_test_words_added date
-            if toefl_enabled == False and ielts_enabled == False:
+            if both_disabled:
                 update_fields.append("last_test_words_added = NULL")
 
             params.append(user_id)
@@ -77,19 +102,33 @@ def update_test_settings():
 
             result = cur.fetchone()
 
-            if result:
-                return jsonify({
-                    "success": True,
-                    "settings": {
-                        "toefl_enabled": result['toefl_enabled'],
-                        "ielts_enabled": result['ielts_enabled'],
-                        "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
-                        "toefl_target_days": result['toefl_target_days'],
-                        "ielts_target_days": result['ielts_target_days']
-                    }
-                }), 200
-            else:
+            if not result:
                 return jsonify({"error": "User not found"}), 404
+
+            # If both tests are disabled, delete the schedule
+            if both_disabled:
+                logger.info(f"Both tests disabled for user {user_id}, deleting schedule")
+                cur.execute("""
+                    DELETE FROM study_schedules WHERE user_id = %s
+                """, (user_id,))
+                logger.info(f"Deleted schedule for user {user_id}")
+
+            conn.commit()
+
+            return jsonify({
+                "success": True,
+                "settings": {
+                    "toefl_enabled": result['toefl_enabled'],
+                    "ielts_enabled": result['ielts_enabled'],
+                    "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
+                    "toefl_target_days": result['toefl_target_days'],
+                    "ielts_target_days": result['ielts_target_days']
+                }
+            }), 200
+
+        finally:
+            cur.close()
+            conn.close()
 
     except Exception as e:
         logger.error(f"Error updating test settings: {e}")
