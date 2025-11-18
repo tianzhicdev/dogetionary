@@ -754,17 +754,27 @@ struct ReviewQuestion: Codable {
 /// Response from /v3/review_next_enhanced
 struct EnhancedReviewResponse: Codable {
     let user_id: String
-    let word_id: Int
-    let word: String
-    let learning_language: String
-    let native_language: String
+    let word_id: Int?
+    let word: String?
+    let learning_language: String?
+    let native_language: String?
     let is_new_word: Bool?
     let new_words_remaining_today: Int?
-    let question: ReviewQuestion
+    let question: ReviewQuestion?
     let definition: DefinitionData?
 
+    // Fields for "no words" response
+    let count: Int?
+    let message: String?
+    let saved_words: [String]?
+
+    // Helper to check if there's a word to review
+    var hasWordToReview: Bool {
+        return word_id != nil && word != nil && question != nil
+    }
+
     private enum CodingKeys: String, CodingKey {
-        case user_id, word_id, word, learning_language, native_language, is_new_word, new_words_remaining_today, question, definition
+        case user_id, word_id, word, learning_language, native_language, is_new_word, new_words_remaining_today, question, definition, count, message, saved_words
     }
 }
 

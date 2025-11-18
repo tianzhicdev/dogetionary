@@ -904,7 +904,11 @@ class DictionaryService: ObservableObject {
 
             do {
                 let reviewResponse = try JSONDecoder().decode(EnhancedReviewResponse.self, from: data)
-                self.logger.info("Successfully decoded enhanced review response - question type: \(reviewResponse.question.question_type)")
+                if let questionType = reviewResponse.question?.question_type {
+                    self.logger.info("Successfully decoded enhanced review response - question type: \(questionType)")
+                } else {
+                    self.logger.info("Successfully decoded enhanced review response - no words available")
+                }
                 completion(.success(reviewResponse))
             } catch {
                 self.logger.error("Failed to decode enhanced review response: \(error.localizedDescription)")
