@@ -712,3 +712,134 @@ def refresh_schedule_handler():
     except Exception as e:
         logger.error(f"Error refreshing schedule for user {user_id}: {str(e)}")
         return jsonify({"error": "Failed to refresh schedule"}), 500
+
+
+def get_test_progress():
+    """
+    GET /v3/schedule/test-progress?user_id=XXX
+    Get user's test preparation progress.
+
+    Response:
+        {
+            "has_schedule": true,
+            "test_type": "TOEFL" | "IELTS" | "BOTH",
+            "total_words": 3500,
+            "saved_words": 150,
+            "progress": 0.043  // saved_words / total_words
+        }
+    """
+    try:
+        user_id = request.args.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            # Check if user has test prep enabled
+            cur.execute("""
+                SELECT toefl_enabled, ielts_enabled
+                FROM user_preferences
+                WHERE user_id = %s
+            """, (user_id,))
+
+            prefs = cur.fetchone()
+
+            if not prefs:
+                return jsonify({"error": "User not found"}), 404
+
+            toefl_enabled = prefs['toefl_enabled']
+            ielts_enabled = prefs['ielts_enabled']
+
+            if not toefl_enabled and not ielts_enabled:
+                return jsonify({
+                    "has_schedule": False,
+                    "test_type": None,
+                    "total_words": 0,
+                    "saved_words": 0,
+                    "progress": 0.0
+                }), 200
+
+            # Determine test type
+            if toefl_enabled and ielts_enabled:
+                test_type = "BOTH"
+            elif toefl_enabled:
+                test_type = "TOEFL"
+            else:
+                test_type = "IELTS"
+
+            # Get total words in enabled test(s)
+            if test_type == "BOTH":
+                cur.execute("""
+                    SELECT COUNT(DISTINCT word) as total
+                    FROM test_vocabularies
+                    WHERE language = 'en' AND (is_toefl = TRUE OR is_ielts = TRUE)
+                """)
+            elif test_type == "TOEFL":
+                cur.execute("""
+                    SELECT COUNT(DISTINCT word) as total
+                    FROM test_vocabularies
+                    WHERE language = 'en' AND is_toefl = TRUE
+                """)
+            else:  # IELTS
+                cur.execute("""
+                    SELECT COUNT(DISTINCT word) as total
+                    FROM test_vocabularies
+                    WHERE language = 'en' AND is_ielts = TRUE
+                """)
+
+            total_result = cur.fetchone()
+            total_words = total_result['total'] if total_result else 0
+
+            # Get count of saved words that are in the enabled test(s)
+            if test_type == "BOTH":
+                cur.execute("""
+                    SELECT COUNT(DISTINCT sw.word) as saved
+                    FROM saved_words sw
+                    INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
+                    WHERE sw.user_id = %s
+                        AND sw.learning_language = 'en'
+                        AND (tv.is_toefl = TRUE OR tv.is_ielts = TRUE)
+                """, (user_id,))
+            elif test_type == "TOEFL":
+                cur.execute("""
+                    SELECT COUNT(DISTINCT sw.word) as saved
+                    FROM saved_words sw
+                    INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
+                    WHERE sw.user_id = %s
+                        AND sw.learning_language = 'en'
+                        AND tv.is_toefl = TRUE
+                """, (user_id,))
+            else:  # IELTS
+                cur.execute("""
+                    SELECT COUNT(DISTINCT sw.word) as saved
+                    FROM saved_words sw
+                    INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
+                    WHERE sw.user_id = %s
+                        AND sw.learning_language = 'en'
+                        AND tv.is_ielts = TRUE
+                """, (user_id,))
+
+            saved_result = cur.fetchone()
+            saved_words = saved_result['saved'] if saved_result else 0
+
+            # Calculate progress
+            progress = saved_words / total_words if total_words > 0 else 0.0
+
+            return jsonify({
+                "has_schedule": True,
+                "test_type": test_type,
+                "total_words": total_words,
+                "saved_words": saved_words,
+                "progress": round(progress, 4)
+            }), 200
+
+        finally:
+            cur.close()
+            conn.close()
+
+    except Exception as e:
+        logger.error(f"Error getting test progress: {e}")
+        return jsonify({"error": "Internal server error"}), 500

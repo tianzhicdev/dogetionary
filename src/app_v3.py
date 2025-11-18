@@ -13,7 +13,7 @@ from handlers.pronunciation import practice_pronunciation, get_pronunciation_his
 from handlers.words import get_next_review_word_v2, get_saved_words, get_word_definition_v3, get_word_details, get_audio, get_illustration, generate_word_definition, get_all_words_for_language_pair
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
 from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count
-from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words, refresh_schedule_handler
+from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words, refresh_schedule_handler, get_test_progress
 from handlers.enhanced_review import get_next_review_enhanced
 
 # Create v3 blueprint
@@ -83,6 +83,7 @@ v3_api.route('/schedule/create', methods=['POST'])(create_schedule)
 v3_api.route('/schedule/refresh', methods=['POST'])(refresh_schedule_handler)
 v3_api.route('/schedule/today', methods=['GET'])(get_today_schedule)
 v3_api.route('/schedule/range', methods=['GET'])(get_schedule_range)
+v3_api.route('/schedule/test-progress', methods=['GET'])(get_test_progress)
 v3_api.route('/review_new_word', methods=['POST'])(review_new_word)
 v3_api.route('/user/timezone', methods=['PUT'])(update_timezone)
 
