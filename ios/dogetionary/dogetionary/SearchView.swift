@@ -35,17 +35,6 @@ struct SearchView: View {
                         searchBarView()
                             .padding(.horizontal)
 
-                        // Show progress bar if user has schedule
-                        if let progress = testProgress, progress.has_schedule {
-                            TestProgressBar(
-                                progress: progress.progress,
-                                totalWords: progress.total_words,
-                                savedWords: progress.saved_words,
-                                testType: progress.test_type ?? "Test"
-                            )
-                            .padding(.horizontal)
-                        }
-
                         if isLoading {
                             ProgressView("Searching...")
                                 .padding()

@@ -52,11 +52,13 @@ struct ReviewView: View {
                     ReviewCompleteView(
                         progressStats: reviewProgressStats
                     )
-                } else if let currentReview = currentReview, !isSessionComplete {
+                } else if let currentReview = currentReview,
+                          let question = currentReview.question,
+                          !isSessionComplete {
                     EnhancedQuestionView(
-                        question: currentReview.question,
+                        question: question,
                         onAnswer: { isCorrect in
-                            submitReview(response: isCorrect, questionType: currentReview.question.question_type)
+                            submitReview(response: isCorrect, questionType: question.question_type)
                         }
                     )
                 } else {
@@ -141,10 +143,17 @@ struct ReviewView: View {
 
                 switch result {
                 case .success(let response):
-                    self.currentReview = response
-                    self.isSessionComplete = false
-                    self.reviewStartTime = Date()
-                    self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
+                    // Check if there's actually a word to review
+                    if response.hasWordToReview {
+                        self.currentReview = response
+                        self.isSessionComplete = false
+                        self.reviewStartTime = Date()
+                        self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
+                    } else {
+                        // No words available, show completion state
+                        self.isSessionComplete = true
+                        self.currentReview = nil
+                    }
                 case .failure(let error):
                     // Check if this is the "no words" case
                     if error.localizedDescription.contains("No words") {
@@ -189,27 +198,29 @@ struct ReviewView: View {
     }
 
     private func submitReview(response: Bool, questionType: String) {
-        guard let currentReview = currentReview else { return }
+        guard let currentReview = currentReview,
+              let word = currentReview.word,
+              let wordID = currentReview.word_id else { return }
 
         let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
 
         // Track review answer
         if response {
             AnalyticsManager.shared.track(action: .reviewAnswerCorrect, metadata: [
-                "word": currentReview.word,
+                "word": word,
                 "question_type": questionType,
                 "response_time_ms": responseTime ?? 0
             ])
         } else {
             AnalyticsManager.shared.track(action: .reviewAnswerIncorrect, metadata: [
-                "word": currentReview.word,
+                "word": word,
                 "question_type": questionType,
                 "response_time_ms": responseTime ?? 0
             ])
         }
 
         DictionaryService.shared.submitReview(
-            wordID: currentReview.word_id,
+            wordID: wordID,
             response: response,
             questionType: questionType
         ) { result in
