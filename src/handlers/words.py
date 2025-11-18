@@ -1,9 +1,10 @@
 from flask import Flask, request, jsonify, Response, g
 import os
 from dotenv import load_dotenv
-import openai
 from typing import Optional, Dict, Any
 import json
+from utils.llm import llm_completion
+import openai
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import uuid
@@ -193,7 +194,7 @@ WORD_DEFINITION_V3_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "type": {"type": "string", "description": "Part of speech: noun, verb, adjective, etc"},
+                    "part_of_speech": {"type": "string", "description": "Part of speech: noun, verb, adjective, etc"},
                     "definition": {"type": "string", "description": "Definition in learning language"},
                     "definition_native": {"type": "string", "description": "Definition in user's native language"},
                     "examples": {
@@ -203,7 +204,7 @@ WORD_DEFINITION_V3_SCHEMA = {
                     },
                     "cultural_notes": {"type": ["string", "null"], "description": "Optional cultural context"}
                 },
-                "required": ["type", "definition", "definition_native", "examples"],
+                "required": ["part_of_speech", "definition", "definition_native", "examples", "cultural_notes"],
                 "additionalProperties": False
             }
         }
@@ -213,13 +214,6 @@ WORD_DEFINITION_V3_SCHEMA = {
 }
 
 CURRENT_SCHEMA_VERSION = 3
-
-
-
-client = openai.OpenAI(
-    api_key=os.getenv('OPENAI_API_KEY'),
-    base_url=os.getenv('BASE_URL', 'https://api.openai.com/v1/')
-)
 
 
 def build_definition_prompt(word: str, learning_lang: str, native_lang: str) -> str:
@@ -446,8 +440,7 @@ def get_word_definition():
             logger.info(f"Generating new definition for '{word_normalized}'")
             prompt = build_definition_prompt(word_normalized, learning_lang, native_lang)
             
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
+            definition_content = llm_completion(
                 messages=[
                     {
                         "role": "system",
@@ -458,17 +451,21 @@ def get_word_definition():
                         "content": prompt
                     }
                 ],
+                model_name=COMPLETION_MODEL_NAME,
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
                         "name": "word_definition",
+                        "strict": True,
                         "schema": WORD_DEFINITION_SCHEMA
                     }
-                },
-                temperature=0.9
+                }
             )
-            
-            definition_data = json.loads(response.choices[0].message.content)
+
+            if not definition_content:
+                return jsonify({"error": "Failed to generate definition"}), 500
+
+            definition_data = json.loads(definition_content)
             
             # Store in cache
             conn = get_db_connection()
@@ -607,8 +604,7 @@ Consider INVALID (score < 0.9):
 
 CRITICAL: examples must be an array of plain text strings, NOT objects. Each example should be a complete sentence in {learning_lang_name}."""
 
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
+            response_content = llm_completion(
                 messages=[
                     {
                         "role": "system",
@@ -619,17 +615,21 @@ CRITICAL: examples must be an array of plain text strings, NOT objects. Each exa
                         "content": prompt
                     }
                 ],
+                model_name=COMPLETION_MODEL_NAME,
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
                         "name": "word_definition_with_validation",
+                        "strict": True,
                         "schema": WORD_DEFINITION_V3_SCHEMA
                     }
-                },
-                temperature=0.9
+                }
             )
 
-            result = json.loads(response.choices[0].message.content)
+            if not response_content:
+                return jsonify({"error": "Failed to generate definition"}), 500
+
+            result = json.loads(response_content)
 
             # Store everything in definition_data (including validation fields)
             definition_data = result
@@ -791,8 +791,8 @@ def generate_audio_for_text(text: str) -> bytes:
     """Generate TTS audio for text using OpenAI"""
     try:
         response = client.audio.speech.create(
-            model="tts-1",
-            voice="alloy", 
+            model=TTS_MODEL_NAME,
+            voice=TTS_VOICE, 
             input=text,
             response_format="mp3"
         )
@@ -972,17 +972,17 @@ def get_illustration():
 
         logger.info(f"Generating scene description for word: {word}")
 
-        scene_response = openai.chat.completions.create(
-            model="gpt-4",
+        scene_description = llm_completion(
             messages=[
                 {"role": "system", "content": "You are a creative director helping create visual scenes for language learning illustrations."},
                 {"role": "user", "content": scene_prompt}
             ],
-            max_tokens=200,
-            temperature=0.7
+            model_name=COMPLETION_MODEL_NAME_ADVANCED,
+            max_completion_tokens=200
         )
 
-        scene_description = scene_response.choices[0].message.content.strip()
+        if not scene_description:
+            return jsonify({"error": "Failed to generate scene description"}), 500
         logger.info(f"Generated scene: {scene_description}")
 
         # Generate image using DALL-E
@@ -990,11 +990,13 @@ def get_illustration():
 
         logger.info(f"Generating image for: {word}")
 
-        image_response = openai.images.generate(
-            model="dall-e-3",
+        # Create OpenAI client for image generation
+        client = openai.OpenAI()
+        image_response = client.images.generate(
+            model=IMAGE_MODEL_NAME,
             prompt=image_prompt,
-            size="1024x1024",
-            quality="standard",
+            size=IMAGE_MODEL_SIZE,
+            quality=IMAGE_MODEL_QUALITY,
             n=1,
             response_format="b64_json"
         )
@@ -1159,19 +1161,18 @@ def generate_word_definition():
         try:
             prompt = build_definition_prompt(word, learning_lang, native_lang)
 
-            # Call OpenAI API
-            client = openai.OpenAI()
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
+            # Call OpenAI API using utility function
+            definition_content = llm_completion(
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that creates dictionary definitions."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1000,
-                temperature=0.3
+                model_name=COMPLETION_MODEL_NAME,
+                max_tokens=1000
             )
 
-            definition_content = response.choices[0].message.content.strip()
+            if not definition_content:
+                return jsonify({"error": "Failed to generate definition"}), 500
 
             # Parse the JSON response from OpenAI
             definition_data = json.loads(definition_content)

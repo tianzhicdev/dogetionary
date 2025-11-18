@@ -1,3 +1,18 @@
+# OpenAI Model Configuration
+# Text completion models
+COMPLETION_MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"  # Fast, cost-effective model for definitions, questions, user profiles
+COMPLETION_MODEL_NAME_ADVANCED = "meta-llama/llama-4-scout-17b-16e-instruct"  # More capable model for complex tasks (currently unused)
+
+# Image generation models
+IMAGE_MODEL_NAME = "dall-e-3"  # High-quality image generation
+IMAGE_MODEL_SIZE = "1024x1024"  # Default image size
+IMAGE_MODEL_QUALITY = "standard"  # Image quality: "standard" or "hd"
+
+# Audio/TTS models
+TTS_MODEL_NAME = "tts-1"  # Fast text-to-speech model
+TTS_VOICE = "alloy"  # Default voice: alloy, echo, fable, onyx, nova, shimmer
+WHISPER_MODEL_NAME = "whisper-1"  # Speech-to-text transcription model
+
 # SM-2 SuperMemo spaced repetition algorithm (deprecated - now using Fibonacci)
 INITIAL_INTERVALS = [1, 6]  # First review: 1 day, Second review: 6 days
 

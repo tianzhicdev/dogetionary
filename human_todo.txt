@@ -82,9 +82,10 @@ multi selections
 1. the LLM calls need to be faster
 2. some questions pronunciations are erroneous
 
+
 1. progress bar 
 2. when it is done, show badges for when 5, 10, 50, 100, 200.... ALL words learnt;
-
+https://www.figma.com/design/NzE6vNDdbpeafseWzGR71c/Badges-and-Awards--Community-?node-id=0-1&p=f&t=Go42SXoQ8mz88bwB-0
 
 
 
