@@ -8,7 +8,9 @@ import logging
 import tempfile
 import os
 from utils.database import get_db_connection
+from utils.llm import llm_completion
 from typing import Dict, Any
+from config.config import COMPLETION_MODEL_NAME, WHISPER_MODEL_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +90,7 @@ class PronunciationService:
             # Use Whisper API for transcription
             with open(tmp_file_path, 'rb') as audio_file:
                 transcript = self.client.audio.transcriptions.create(
-                    model="whisper-1",
+                    model=WHISPER_MODEL_NAME,
                     file=audio_file,
                     language=language  # Use user's learning language
                 )
@@ -132,8 +134,7 @@ Examples:
 
 Respond with valid JSON only."""
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+            content = llm_completion(
                 messages=[
                     {
                         "role": "system",
@@ -144,11 +145,18 @@ Respond with valid JSON only."""
                         "content": prompt
                     }
                 ],
-                response_format={"type": "json_object"},
-                temperature=0.3
+                model_name=COMPLETION_MODEL_NAME,
+                response_format={"type": "json_object"}
             )
 
-            result = json.loads(response.choices[0].message.content)
+            if not content:
+                return {
+                    'similar': False,
+                    'score': 0.0,
+                    'feedback': 'Unable to evaluate pronunciation. Please try again.'
+                }
+
+            result = json.loads(content)
 
             # Ensure all required fields are present
             return {

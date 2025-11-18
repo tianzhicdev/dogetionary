@@ -1,12 +1,12 @@
-import openai
 import json
 from utils.database import get_db_connection
+from utils.llm import llm_completion
+from config.config import COMPLETION_MODEL_NAME
 
 def generate_user_profile() -> tuple[str, str]:
     """Generate a proper, civil user name and motto using OpenAI with structured output"""
     try:
-        response = openai.chat.completions.create(
-            model="gpt-4o-mini",
+        content = llm_completion(
             messages=[
                 {
                     "role": "system",
@@ -17,6 +17,7 @@ def generate_user_profile() -> tuple[str, str]:
                     "content": "Generate a friendly, appropriate username and motivational motto for a language learning app user. The username should be suitable for all ages, contain no real names, and avoid numbers/special characters. The motto should be positive, motivational, related to learning or personal growth, and under 50 characters. Both should be completely appropriate, civil, and encouraging."
                 }
             ],
+            model_name=COMPLETION_MODEL_NAME,
             response_format={
                 "type": "json_schema",
                 "json_schema": {
@@ -39,12 +40,13 @@ def generate_user_profile() -> tuple[str, str]:
                     }
                 }
             },
-            max_tokens=150,
-            temperature=0.7
+            max_tokens=150
         )
 
+        if not content:
+            return "LearningExplorer", "Every word is a new adventure!"
+
         # Parse the structured JSON response
-        content = response.choices[0].message.content.strip()
         profile_data = json.loads(content)
 
         username = profile_data.get("username", "LearningExplorer")

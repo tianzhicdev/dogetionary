@@ -8,15 +8,12 @@ Implements caching to avoid regenerating the same questions.
 import json
 import random
 import logging
-import os
 from typing import Dict, Any, Optional, List
-import openai
 from utils.database import db_fetch_one, db_execute
+from utils.llm import llm_completion
+from config.config import COMPLETION_MODEL_NAME
 
 logger = logging.getLogger(__name__)
-
-# Get OpenAI API key from environment
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # Language code to name mapping for prompts
 LANG_NAMES = {
@@ -199,10 +196,7 @@ def call_openai_for_question(prompt: str) -> Dict:
         Dict containing the generated question data
     """
     try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Fast and cost-effective
+        content = llm_completion(
             messages=[
                 {
                     "role": "system",
@@ -213,18 +207,20 @@ def call_openai_for_question(prompt: str) -> Dict:
                     "content": prompt
                 }
             ],
-            temperature=0.7,
+            model_name=COMPLETION_MODEL_NAME,
             response_format={"type": "json_object"}  # Ensure JSON response
         )
 
-        content = response.choices[0].message.content
+        if not content:
+            raise Exception("LLM completion returned empty content")
+
         question_data = json.loads(content)
 
-        logger.info("Successfully generated question with OpenAI")
+        logger.info("Successfully generated question with LLM")
         return question_data
 
     except Exception as e:
-        logger.error(f"Error calling OpenAI API: {e}")
+        logger.error(f"Error calling LLM API: {e}")
         raise
 
 
