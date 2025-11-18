@@ -207,6 +207,10 @@ class UserManager: ObservableObject {
             switch result {
             case .success(_):
                 self.logger.info("Successfully synced test settings to server")
+                // Notify SavedWordsView to refresh schedule status
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .refreshSavedWords, object: nil)
+                }
             case .failure(let error):
                 self.logger.error("Failed to sync test settings to server: \(error.localizedDescription)")
             }

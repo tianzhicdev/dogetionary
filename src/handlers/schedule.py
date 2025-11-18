@@ -129,14 +129,26 @@ def get_today_schedule():
         cur = conn.cursor()
 
         try:
-            # First check if user has any schedule created at all
+            # Check if user has test prep enabled (TOEFL or IELTS)
+            cur.execute("""
+                SELECT toefl_enabled, ielts_enabled FROM user_preferences
+                WHERE user_id = %s
+            """, (user_id,))
+
+            prefs = cur.fetchone()
+            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
+
+            # Check if user has any schedule created at all
             cur.execute("""
                 SELECT id FROM study_schedules
                 WHERE user_id = %s
                 LIMIT 1
             """, (user_id,))
 
-            user_has_schedule = cur.fetchone() is not None
+            has_schedule_entry = cur.fetchone() is not None
+
+            # Only show schedule if test prep is enabled AND schedule exists
+            user_has_schedule = test_prep_enabled and has_schedule_entry
 
             if not user_has_schedule:
                 return jsonify({
@@ -333,6 +345,19 @@ def get_schedule_range():
         cur = conn.cursor()
 
         try:
+            # Check if user has test prep enabled (TOEFL or IELTS)
+            cur.execute("""
+                SELECT toefl_enabled, ielts_enabled FROM user_preferences
+                WHERE user_id = %s
+            """, (user_id,))
+
+            prefs = cur.fetchone()
+            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
+
+            # If test prep is disabled, return empty schedules
+            if not test_prep_enabled:
+                return jsonify({"schedules": []}), 200
+
             # Get schedule for the next N days
             cur.execute("""
                 SELECT dse.scheduled_date, dse.new_words, dse.test_practice_words, dse.non_test_practice_words
@@ -619,3 +644,71 @@ def get_next_review_word_with_scheduled_new_words():
     except Exception as e:
         logger.error(f"Error getting next review word with scheduled new words: {str(e)}")
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
+
+
+def refresh_schedule_handler():
+    """
+    POST /v3/schedule/refresh
+    Refresh/regenerate the schedule based on current user progress.
+
+    This endpoint regenerates the study schedule from today forward,
+    taking into account the user's current progress and retention rates.
+
+    Query params:
+        - user_id: UUID of the user
+
+    Response:
+        {
+            "success": true,
+            "message": "Schedule refreshed successfully",
+            "schedule": {
+                "schedule_id": 123,
+                "days_remaining": 45,
+                "total_new_words": 2500,
+                "daily_new_words": 56,
+                "test_practice_words_count": 120,
+                "non_test_practice_words_count": 80
+            }
+        }
+    """
+    try:
+        user_id = request.args.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+
+        # Check if user has test prep enabled
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            cur.execute("""
+                SELECT toefl_enabled, ielts_enabled FROM user_preferences
+                WHERE user_id = %s
+            """, (user_id,))
+
+            prefs = cur.fetchone()
+            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
+
+            if not test_prep_enabled:
+                return jsonify({"error": "Test preparation is not enabled"}), 400
+        finally:
+            cur.close()
+            conn.close()
+
+        # Call the refresh_schedule service function
+        result = refresh_schedule(user_id)
+
+        return jsonify({
+            "success": True,
+            "message": "Schedule refreshed successfully",
+            "schedule": result
+        }), 200
+
+    except ValueError as e:
+        # User-facing errors (no schedule found, invalid date, etc.)
+        logger.warning(f"Schedule refresh validation error for user {user_id}: {str(e)}")
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error refreshing schedule for user {user_id}: {str(e)}")
+        return jsonify({"error": "Failed to refresh schedule"}), 500
