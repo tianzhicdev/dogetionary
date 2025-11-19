@@ -703,7 +703,33 @@ def get_saved_words():
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
         # Get saved words with review statistics (correct/incorrect counts and progress level)
+        # Progress level logic:
+        # - Level 7: >= 7 correct reviews in past 84 days with no errors
+        # - Level 6: >= 6 correct reviews in past 41 days with no errors
+        # - Level 5: >= 5 correct reviews in past 22 days with no errors
+        # - Level 4: >= 4 correct reviews in past 12 days with no errors
+        # - Level 3: >= 3 correct reviews in past 6 days with no errors
+        # - Level 2: >= 2 correct reviews in past 3 days with no errors
+        # - Level 1: >= 1 correct review
         cur.execute("""
+            WITH recent_reviews AS (
+                SELECT
+                    word_id,
+                    COUNT(*) FILTER (WHERE response = TRUE AND reviewed_at >= NOW() - INTERVAL '84 days') as correct_84d,
+                    COUNT(*) FILTER (WHERE response = TRUE AND reviewed_at >= NOW() - INTERVAL '41 days') as correct_41d,
+                    COUNT(*) FILTER (WHERE response = TRUE AND reviewed_at >= NOW() - INTERVAL '22 days') as correct_22d,
+                    COUNT(*) FILTER (WHERE response = TRUE AND reviewed_at >= NOW() - INTERVAL '12 days') as correct_12d,
+                    COUNT(*) FILTER (WHERE response = TRUE AND reviewed_at >= NOW() - INTERVAL '6 days') as correct_6d,
+                    COUNT(*) FILTER (WHERE response = TRUE AND reviewed_at >= NOW() - INTERVAL '3 days') as correct_3d,
+                    COUNT(*) FILTER (WHERE response = FALSE AND reviewed_at >= NOW() - INTERVAL '84 days') as errors_84d,
+                    COUNT(*) FILTER (WHERE response = FALSE AND reviewed_at >= NOW() - INTERVAL '41 days') as errors_41d,
+                    COUNT(*) FILTER (WHERE response = FALSE AND reviewed_at >= NOW() - INTERVAL '22 days') as errors_22d,
+                    COUNT(*) FILTER (WHERE response = FALSE AND reviewed_at >= NOW() - INTERVAL '12 days') as errors_12d,
+                    COUNT(*) FILTER (WHERE response = FALSE AND reviewed_at >= NOW() - INTERVAL '6 days') as errors_6d,
+                    COUNT(*) FILTER (WHERE response = FALSE AND reviewed_at >= NOW() - INTERVAL '3 days') as errors_3d
+                FROM reviews
+                GROUP BY word_id
+            )
             SELECT
                 sw.id,
                 sw.word,
@@ -718,8 +744,17 @@ def get_saved_words():
                 latest_review.last_reviewed_at,
                 tv.is_toefl,
                 tv.is_ielts,
-                -- Random progress level 1-7 for now (will be replaced with real logic later)
-                (1 + (sw.id %% 7)) as word_progress_level
+                -- Calculate progress level based on recent correct reviews and no errors
+                CASE
+                    WHEN rr.correct_84d >= 7 AND rr.errors_84d = 0 THEN 7
+                    WHEN rr.correct_41d >= 6 AND rr.errors_41d = 0 THEN 6
+                    WHEN rr.correct_22d >= 5 AND rr.errors_22d = 0 THEN 5
+                    WHEN rr.correct_12d >= 4 AND rr.errors_12d = 0 THEN 4
+                    WHEN rr.correct_6d >= 3 AND rr.errors_6d = 0 THEN 3
+                    WHEN rr.correct_3d >= 2 AND rr.errors_3d = 0 THEN 2
+                    WHEN review_counts.correct_reviews >= 1 THEN 1
+                    ELSE 0
+                END as word_progress_level
             FROM saved_words sw
             LEFT JOIN (
                 SELECT
@@ -738,6 +773,7 @@ def get_saved_words():
                 FROM reviews
                 GROUP BY word_id
             ) review_counts ON sw.id = review_counts.word_id
+            LEFT JOIN recent_reviews rr ON sw.id = rr.word_id
             LEFT JOIN test_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
             WHERE sw.user_id = %s
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
