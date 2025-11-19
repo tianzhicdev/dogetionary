@@ -24,7 +24,16 @@ struct SettingsView: View {
     @State private var isLoadingTestStats = false
     
     var body: some View {
-        Form {
+        ZStack {
+            // Soft blue gradient background
+            LinearGradient(
+                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            Form {
                 #if DEBUG
                 Section(header: Text("User Information")) {
                     HStack {
@@ -391,10 +400,12 @@ struct SettingsView: View {
                     }
                 }
                 #endif
-        }
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside text fields
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside text fields
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+            .scrollContentBackground(.hidden)
         }
         .alert("Invalid Language Selection", isPresented: $showLanguageAlert) {
             Button("OK") { }

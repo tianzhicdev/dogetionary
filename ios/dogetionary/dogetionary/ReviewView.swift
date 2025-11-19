@@ -21,59 +21,69 @@ struct ReviewView: View {
     @State private var newWordsRemainingToday: Int = 0  // NEW: Track scheduled new words remaining
     
     var body: some View {
-        VStack(spacing: 20) {
-                // Always show overdue count at top
-                if isLoadingCounts {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Loading counts...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal)
-                } else if let dueCounts = dueCounts {
-                    OverdueCountView(dueCounts: dueCounts, newWordsRemainingToday: newWordsRemainingToday)
+        ZStack {
+            // Soft blue gradient background
+            LinearGradient(
+                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                    // Always show overdue count at top
+                    if isLoadingCounts {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Loading counts...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                         .padding(.horizontal)
+                    } else if let dueCounts = dueCounts {
+                        OverdueCountView(dueCounts: dueCounts, newWordsRemainingToday: newWordsRemainingToday)
+                            .padding(.horizontal)
+                    }
+
+                    if isLoading {
+                        ProgressView("Loading practice...")
+                            .padding()
+                    } else if isGoalAchieved {
+                        ReviewGoalAchievedView(
+                            progressStats: reviewProgressStats,
+                            onContinue: {
+                                isGoalAchieved = false
+                                startReview()
+                            }
+                        )
+                    } else if isSessionComplete {
+                        ReviewCompleteView(
+                            progressStats: reviewProgressStats
+                        )
+                    } else if let currentReview = currentReview,
+                              let question = currentReview.question,
+                              !isSessionComplete {
+                        EnhancedQuestionView(
+                            question: question,
+                            onAnswer: { isCorrect in
+                                submitReview(response: isCorrect, questionType: question.question_type)
+                            }
+                        )
+                    } else {
+                        StartReviewState(
+                            dueCounts: dueCounts,
+                            isLoadingCounts: isLoadingCounts,
+                            newWordsRemainingToday: newWordsRemainingToday,
+                            onStart: startReview
+                        )
+                    }
+
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .padding()
                 }
-                
-                if isLoading {
-                    ProgressView("Loading review...")
-                        .padding()
-                } else if isGoalAchieved {
-                    ReviewGoalAchievedView(
-                        progressStats: reviewProgressStats,
-                        onContinue: {
-                            isGoalAchieved = false
-                            startReview()
-                        }
-                    )
-                } else if isSessionComplete {
-                    ReviewCompleteView(
-                        progressStats: reviewProgressStats
-                    )
-                } else if let currentReview = currentReview,
-                          let question = currentReview.question,
-                          !isSessionComplete {
-                    EnhancedQuestionView(
-                        question: question,
-                        onAnswer: { isCorrect in
-                            submitReview(response: isCorrect, questionType: question.question_type)
-                        }
-                    )
-                } else {
-                    StartReviewState(
-                        dueCounts: dueCounts,
-                        isLoadingCounts: isLoadingCounts,
-                        newWordsRemainingToday: newWordsRemainingToday,
-                        onStart: startReview
-                    )
-                }
-                
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
             }
         }
         .onAppear {
@@ -316,7 +326,7 @@ struct StartReviewState: View {
                 .foregroundColor(.secondary)
 
             VStack(spacing: 8) {
-                Text("Ready to Review")
+                Text("Ready to Practice")
                     .font(.title2)
                     .fontWeight(.semibold)
 
@@ -324,7 +334,7 @@ struct StartReviewState: View {
             .multilineTextAlignment(.center)
             .padding(.horizontal)
 
-            Button("Start Review") {
+            Button("Start Practice") {
                 onStart()
             }
             .buttonStyle(.borderedProminent)
@@ -798,7 +808,7 @@ struct ReviewCompleteView: View {
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text("No more words to review right now")
+            Text("No more words to practice right now")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -806,7 +816,7 @@ struct ReviewCompleteView: View {
                 VStack(spacing: 16) {
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Reviews Today")
+                            Text("Practice Today")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Text("\(stats.reviews_today)")
@@ -872,7 +882,7 @@ struct ReviewGoalAchievedView: View {
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text("You've cleared all overdue reviews!")
+            Text("You've cleared all overdue practice!")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -880,7 +890,7 @@ struct ReviewGoalAchievedView: View {
                 VStack(spacing: 16) {
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Reviews Today")
+                            Text("Practice Today")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Text("\(stats.reviews_today)")

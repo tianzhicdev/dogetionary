@@ -22,7 +22,7 @@ struct WordDetailView: View {
             // Custom tab picker
             Picker("Tab", selection: $selectedTab) {
                 Text("Definition").tag(0)
-                Text("Review Stats").tag(1)
+                Text("Practice Stats").tag(1)
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding()
@@ -240,15 +240,15 @@ struct WordInfoSection: View {
                 
                 if let nextReviewDate = details.next_review_date {
                     InfoRow(
-                        label: "Next Review",
+                        label: "Next Practice",
                         value: formatDate(nextReviewDate, style: .relative),
                         style: isOverdue(nextReviewDate) ? .warning : .normal
                     )
                 }
-                
+
                 if let lastReviewed = details.last_reviewed_at {
                     InfoRow(
-                        label: "Last Reviewed",
+                        label: "Last Practice",
                         value: formatDate(lastReviewed, style: .relative)
                     )
                 }
@@ -269,8 +269,8 @@ struct ReviewHistorySection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Review History")
-            // Show review history
+            SectionHeader(title: "Practice History")
+            // Show practice history
             ForEach(Array(reviewHistory.enumerated()), id: \.offset) { index, entry in
                 ReviewHistoryRow(
                     entry: entry,
@@ -408,16 +408,16 @@ struct ReviewStatsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Review Statistics")
-            
+            SectionHeader(title: "Practice Statistics")
+
             VStack(spacing: 12) {
                 InfoRow(
-                    label: "Successful Reviews",
+                    label: "Successful Practice",
                     value: "\(details.review_count)"
                 )
-                
+
                 InfoRow(
-                    label: "Total Reviews",
+                    label: "Total Practice",
                     value: "\(details.review_history.count)"
                 )
                 
@@ -447,11 +447,11 @@ struct EmptyHistorySection: View {
                 .font(.system(size: 32))
                 .foregroundColor(.secondary)
             
-            Text("No Reviews Yet")
+            Text("No Practice Yet")
                 .font(.headline)
                 .foregroundColor(.secondary)
-            
-            Text("This word hasn't been reviewed yet. It will appear in your review queue when due.")
+
+            Text("This word hasn't been practiced yet. It will appear in your practice queue when due.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

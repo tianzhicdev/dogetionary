@@ -14,54 +14,58 @@ struct LeaderboardView: View {
     @ObservedObject private var userManager = UserManager.shared
     
     var body: some View {
-        Group {
-                if isLoading {
-                    ProgressView("Loading leaderboard...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 48))
-                            .foregroundColor(.orange)
-                        
-                        Text("Error")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text(errorMessage)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                        
-                        Button("Try Again") {
-                            Task {
-                                await loadLeaderboard()
+        ZStack {
+            // Background gradient
+            AppTheme.backgroundGradient
+                .ignoresSafeArea()
+
+            Group {
+                    if isLoading {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                            Text("Loading leaderboard...")
+                                .foregroundColor(.secondary)
+                        }
+                    } else if let errorMessage = errorMessage {
+                        VStack(spacing: 16) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: AppTheme.emptyStateIconSize))
+                                .foregroundColor(.orange)
+
+                            Text("Error")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+
+                            Text(errorMessage)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+
+                            Button("Try Again") {
+                                Task {
+                                    await loadLeaderboard()
+                                }
                             }
+                            .buttonStyle(.borderedProminent)
                         }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .padding()
-                } else if leaderboard.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "chart.bar")
-                            .font(.system(size: 48))
-                            .foregroundColor(.gray)
-                        
-                        Text("No users found")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text("Be the first to start learning!")
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                } else {
-                    List {
-                        ForEach(leaderboard) { entry in
-                            LeaderboardRowView(entry: entry, isCurrentUser: entry.user_id == userManager.userID)
+                        .padding()
+                    } else if leaderboard.isEmpty {
+                        AppTheme.emptyState(
+                            icon: "chart.bar",
+                            title: "No users found",
+                            message: "Be the first to start learning!"
+                        )
+                    } else {
+                        ScrollView {
+                            VStack(spacing: AppTheme.cardSpacing) {
+                                ForEach(leaderboard) { entry in
+                                    LeaderboardRowView(entry: entry, isCurrentUser: entry.user_id == userManager.userID)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, AppTheme.cardSpacing)
                         }
                     }
-                    .listStyle(.plain)
-                }
+            }
         }
         .refreshable {
             await loadLeaderboard()
@@ -97,55 +101,56 @@ struct LeaderboardView: View {
 struct LeaderboardRowView: View {
     let entry: LeaderboardEntry
     let isCurrentUser: Bool
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Rank
             RankBadgeView(rank: entry.rank)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(entry.user_name)
-                        .font(.headline)
+                        .font(AppTheme.titleFont)
                         .fontWeight(isCurrentUser ? .bold : .medium)
-                        .foregroundColor(isCurrentUser ? .blue : .primary)
-                    
+                        .foregroundColor(isCurrentUser ? AppTheme.primaryBlue : .primary)
+
                     if isCurrentUser {
                         Text("(You)")
-                            .font(.caption)
-                            .foregroundColor(.blue)
+                            .font(AppTheme.captionFont)
+                            .foregroundColor(AppTheme.primaryBlue)
                             .fontWeight(.medium)
                     }
                 }
-                
+
                 if !entry.user_motto.isEmpty {
                     Text(entry.user_motto)
-                        .font(.caption)
+                        .font(AppTheme.captionFont)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                 }
             }
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(entry.total_reviews)")
                     .font(.title3)
                     .fontWeight(.semibold)
-                    .foregroundColor(isCurrentUser ? .blue : .primary)
-                
-                Text("reviews")
-                    .font(.caption2)
+                    .foregroundColor(isCurrentUser ? AppTheme.primaryBlue : .primary)
+
+                Text("practice")
+                    .font(AppTheme.smallCaptionFont)
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 8)
+        .padding(AppTheme.cardPadding)
         .background(
-            isCurrentUser ? 
-            Color.blue.opacity(0.1) : 
-            Color.clear
+            isCurrentUser ?
+            AppTheme.primaryBlue.opacity(0.1) :
+            AppTheme.cardBackground
         )
-        .cornerRadius(8)
+        .cornerRadius(AppTheme.cardCornerRadius)
+        .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, x: 0, y: 2)
     }
 }
 
