@@ -663,6 +663,8 @@ struct DailyScheduleEntry: Codable {
     let date: String
     let user_has_schedule: Bool?  // NEW: Whether user has created any schedule (determines tab visibility)
     let has_schedule: Bool  // Whether today has tasks scheduled
+    let test_type: String?  // TOEFL, IELTS, or BOTH
+    let user_name: String?  // User's name for personalization
     let new_words: [String]?  // Optional when has_schedule is false
     let test_practice_words: [SchedulePracticeWord]?  // Optional when has_schedule is false
     let non_test_practice_words: [SchedulePracticeWord]?  // Optional when has_schedule is false
@@ -670,7 +672,7 @@ struct DailyScheduleEntry: Codable {
     let message: String?
 
     private enum CodingKeys: String, CodingKey {
-        case date, user_has_schedule, has_schedule, new_words, test_practice_words,
+        case date, user_has_schedule, has_schedule, test_type, user_name, new_words, test_practice_words,
              non_test_practice_words, summary, message
     }
 }
@@ -711,9 +713,11 @@ struct UpdateTimezoneResponse: Codable {
 /// Response when getting schedule range
 struct GetScheduleRangeResponse: Codable {
     let schedules: [DailyScheduleEntry]
+    let test_type: String?
+    let user_name: String?
 
     private enum CodingKeys: String, CodingKey {
-        case schedules
+        case schedules, test_type, user_name
     }
 }
 

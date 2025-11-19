@@ -13,6 +13,8 @@ struct ScheduleView: View {
     @State private var errorMessage: String?
     @State private var hasLoadedInitially = false
     @State private var userHasSchedule = false
+    @State private var testType: String?
+    @State private var userName: String?
 
     var body: some View {
         NavigationStack {
@@ -64,7 +66,7 @@ struct ScheduleView: View {
                     }
                 }
             }
-            .navigationTitle("Study Schedule")
+            .navigationTitle(userName != nil ? "\(userName!)'s Study Plan" : "Study Plan")
             .navigationBarTitleDisplayMode(.large)
             .task {
                 guard !isLoading && !hasLoadedInitially else { return }
@@ -122,6 +124,8 @@ struct ScheduleView: View {
                     switch result {
                     case .success(let response):
                         self.schedules = response.schedules
+                        self.testType = response.test_type
+                        self.userName = response.user_name
                     case .failure(let error):
                         self.errorMessage = error.localizedDescription
                     }
@@ -170,6 +174,14 @@ struct DayCard: View {
         formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: entry.date) else { return false }
         return Calendar.current.isDateInToday(date)
+    }
+
+    private var testLabel: String {
+        guard let testType = entry.test_type else { return "Test" }
+        if testType == "BOTH" {
+            return "Test"
+        }
+        return testType
     }
 
     var body: some View {
@@ -224,10 +236,10 @@ struct DayCard: View {
                             TaskBadge(count: newCount, label: "New", color: Color(red: 1.0, green: 0.6, blue: 0.4))
                         }
                         if let testCount = entry.test_practice_words?.count, testCount > 0 {
-                            TaskBadge(count: testCount, label: "Test", color: Color(red: 0.4, green: 0.8, blue: 0.6))
+                            TaskBadge(count: testCount, label: testLabel, color: Color(red: 0.4, green: 0.8, blue: 0.6))
                         }
                         if let practiceCount = entry.non_test_practice_words?.count, practiceCount > 0 {
-                            TaskBadge(count: practiceCount, label: "Practice", color: Color(red: 0.5, green: 0.7, blue: 1.0))
+                            TaskBadge(count: practiceCount, label: "Custom", color: Color(red: 0.5, green: 0.7, blue: 1.0))
                         }
                     }
                 }
@@ -252,7 +264,7 @@ struct DayCard: View {
 
                 if let testWords = entry.test_practice_words, !testWords.isEmpty {
                     WordSection(
-                        label: "Test Practice",
+                        label: "\(testLabel) Practice",
                         words: testWords.map { $0.word },
                         backgroundColor: Color(red: 0.9, green: 0.98, blue: 0.95),
                         textColor: Color(red: 0.2, green: 0.6, blue: 0.4)
@@ -261,7 +273,7 @@ struct DayCard: View {
 
                 if let practiceWords = entry.non_test_practice_words, !practiceWords.isEmpty {
                     WordSection(
-                        label: "Review Practice",
+                        label: "Custom Practice",
                         words: practiceWords.map { $0.word },
                         backgroundColor: Color(red: 0.95, green: 0.97, blue: 1.0),
                         textColor: Color(red: 0.3, green: 0.5, blue: 0.9)

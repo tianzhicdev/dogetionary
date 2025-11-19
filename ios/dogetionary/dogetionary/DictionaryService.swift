@@ -1680,7 +1680,13 @@ class DictionaryService: ObservableObject {
 
             do {
                 let scheduleEntry = try JSONDecoder().decode(DailyScheduleEntry.self, from: data)
+                
                 self.logger.info("Successfully fetched today's schedule - has_schedule: \(scheduleEntry.has_schedule)")
+                if let tt = scheduleEntry.test_type {
+                       print("The test type string is: \(tt)") // Prints "The string is: Hello"
+                   } else {
+                       print("The test type string  is nil.")
+                   }
                 completion(.success(scheduleEntry))
             } catch {
                 self.logger.error("Failed to decode today schedule response: \(error.localizedDescription)")

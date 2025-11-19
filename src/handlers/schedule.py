@@ -129,23 +129,26 @@ def get_today_schedule():
         cur = conn.cursor()
 
         try:
-            # Check if user has test prep enabled (TOEFL or IELTS)
+            # Check if user has test prep enabled (TOEFL or IELTS) and get user_name
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled FROM user_preferences
+                SELECT toefl_enabled, ielts_enabled, user_name FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
 
             prefs = cur.fetchone()
             test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
+            user_name = prefs['user_name'] if prefs and prefs.get('user_name') else None
 
-            # Check if user has any schedule created at all
+            # Check if user has any schedule created at all and get test_type
             cur.execute("""
-                SELECT id FROM study_schedules
+                SELECT id, test_type FROM study_schedules
                 WHERE user_id = %s
                 LIMIT 1
             """, (user_id,))
 
-            has_schedule_entry = cur.fetchone() is not None
+            schedule_info = cur.fetchone()
+            has_schedule_entry = schedule_info is not None
+            test_type = schedule_info['test_type'] if schedule_info else None
 
             # Only show schedule if test prep is enabled AND schedule exists
             user_has_schedule = test_prep_enabled and has_schedule_entry
@@ -155,6 +158,8 @@ def get_today_schedule():
                     "date": today.isoformat(),
                     "user_has_schedule": False,  # No schedule exists at all
                     "has_schedule": False,  # No schedule for today
+                    "test_type": test_type,
+                    "user_name": user_name,
                     "message": "No schedule found. Create a schedule first."
                 }), 200
 
@@ -174,6 +179,8 @@ def get_today_schedule():
                     "date": today.isoformat(),
                     "user_has_schedule": True,  # User has created a schedule
                     "has_schedule": False,  # But nothing scheduled for today
+                    "test_type": test_type,
+                    "user_name": user_name,
                     "new_words": [],
                     "test_practice_words": [],
                     "non_test_practice_words": [],
@@ -197,6 +204,8 @@ def get_today_schedule():
                 "date": today.isoformat(),
                 "user_has_schedule": True,  # User has created a schedule
                 "has_schedule": has_tasks_today,  # Whether today has tasks
+                "test_type": test_type,
+                "user_name": user_name,
                 "new_words": new_words,
                 "test_practice_words": test_practice,
                 "non_test_practice_words": non_test_practice,
@@ -345,18 +354,33 @@ def get_schedule_range():
         cur = conn.cursor()
 
         try:
-            # Check if user has test prep enabled (TOEFL or IELTS)
+            # Check if user has test prep enabled (TOEFL or IELTS) and get user_name
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled FROM user_preferences
+                SELECT toefl_enabled, ielts_enabled, user_name FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
 
             prefs = cur.fetchone()
             test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
+            user_name = prefs['user_name'] if prefs and prefs.get('user_name') else None
+
+            # Get test_type from schedule
+            cur.execute("""
+                SELECT test_type FROM study_schedules
+                WHERE user_id = %s
+                LIMIT 1
+            """, (user_id,))
+
+            schedule_info = cur.fetchone()
+            test_type = schedule_info['test_type'] if schedule_info else None
 
             # If test prep is disabled, return empty schedules
             if not test_prep_enabled:
-                return jsonify({"schedules": []}), 200
+                return jsonify({
+                    "schedules": [],
+                    "test_type": test_type,
+                    "user_name": user_name
+                }), 200
 
             # Get schedule for the next N days
             cur.execute("""
@@ -384,6 +408,7 @@ def get_schedule_range():
                         schedules.append({
                             "date": row['scheduled_date'].isoformat(),
                             "has_schedule": True,
+                            "test_type": test_type,
                             "new_words": new_words,
                             "test_practice_words": test_practice,
                             "non_test_practice_words": non_test_practice,
@@ -399,6 +424,7 @@ def get_schedule_range():
                     schedules.append({
                         "date": row['scheduled_date'].isoformat(),
                         "has_schedule": True,
+                        "test_type": test_type,
                         "new_words": new_words,
                         "test_practice_words": test_practice,
                         "non_test_practice_words": non_test_practice,
@@ -411,7 +437,9 @@ def get_schedule_range():
                     })
 
             return jsonify({
-                "schedules": schedules
+                "schedules": schedules,
+                "test_type": test_type,
+                "user_name": user_name
             }), 200
 
         finally:
