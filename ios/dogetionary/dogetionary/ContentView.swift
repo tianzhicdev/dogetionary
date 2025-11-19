@@ -37,7 +37,7 @@ struct ContentView: View {
             ReviewView()
                 .tabItem {
                     Image(systemName: "brain.head.profile")
-                    Text("Review")
+                    Text("Practice")
                 }
                 .tag(2)
                 .badge(reviewBadgeCount)

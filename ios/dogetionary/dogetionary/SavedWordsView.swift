@@ -50,6 +50,8 @@ struct SavedWordsView: View {
                     }
             }
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.visible, for: .tabBar)
+            .toolbarBackground(Color(UIColor.systemBackground), for: .tabBar)
         }
         .onAppear {
             Task {
@@ -221,7 +223,7 @@ struct SavedWordsListView: View {
 
                         // Word list
                         ScrollView {
-                            LazyVStack(spacing: 8) {
+                            LazyVStack(spacing: AppTheme.cardSpacing) {
                                 ForEach(filteredWords) { savedWord in
                                     NavigationLink(destination: WordDetailView(savedWord: savedWord)
                                         .onAppear {
@@ -244,6 +246,7 @@ struct SavedWordsListView: View {
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
+                                        .tint(.red)
                                     }
                                 }
                             }
@@ -292,7 +295,7 @@ struct StatsView: View {
                         .padding(.horizontal)
                 }
                 
-                // Weekly Review Chart
+                // Weekly Practice Chart
                 if !weeklyReviews.isEmpty {
                     WeeklyReviewChart(dailyCounts: weeklyReviews)
                         .padding(.horizontal)
@@ -439,7 +442,7 @@ struct StatsCardsView: View {
     
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            StatCard(title: "Total Reviews", value: "\(stats.total_reviews)", icon: "checkmark.circle.fill", color: .blue)
+            StatCard(title: "Total Practice", value: "\(stats.total_reviews)", icon: "checkmark.circle.fill", color: .blue)
             StatCard(title: "Week Change", value: String(format: "%+.0f%%", stats.week_over_week_change), icon: stats.week_over_week_change >= 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill", color: stats.week_over_week_change >= 0 ? .green : .red)
             StatCard(title: "Avg/Week", value: String(format: "%.1f", stats.avg_reviews_per_week), icon: "calendar", color: .green)
             StatCard(title: "Avg/Day", value: String(format: "%.1f", stats.avg_reviews_per_active_day), icon: "chart.bar.fill", color: .purple)
@@ -754,54 +757,51 @@ struct SavedWordRow: View {
     @ObservedObject private var userManager = UserManager.shared
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                // Word name with test badges
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 4) {
-                        Text(savedWord.word)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.primary)
+        HStack(spacing: 12) {
+            // Word name with test badges
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Text(savedWord.word)
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
 
-                        // Show test labels only if user has enabled tests
-                        testLabels
-                    }
-
-                    // Review counts
-                    HStack(spacing: 8) {
-                        // Incorrect reviews
-                        HStack(spacing: 2) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
-                            Text("\(savedWord.incorrect_reviews)")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-
-                        // Correct reviews
-                        HStack(spacing: 2) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(Color(red: 0.4, green: 0.8, blue: 0.6))
-                            Text("\(savedWord.correct_reviews)")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                    }
+                    // Show test labels only if user has enabled tests
+                    testLabels
                 }
 
-                Spacer()
+                // Review counts
+                HStack(spacing: 8) {
+                    // Incorrect reviews
+                    HStack(spacing: 2) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+                        Text("\(savedWord.incorrect_reviews)")
+                            .font(AppTheme.badgeLabelFont)
+                            .foregroundColor(.secondary)
+                    }
 
-                // 7-box progress bar (from backend: 1-7 scale)
-                WordProgressBar(progressLevel: savedWord.word_progress_level)
+                    // Correct reviews
+                    HStack(spacing: 2) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.testPracticeColor)
+                        Text("\(savedWord.correct_reviews)")
+                            .font(AppTheme.badgeLabelFont)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 14)
+
+            Spacer()
+
+            // 7-box progress bar (from backend: 1-7 scale)
+            WordProgressBar(progressLevel: savedWord.word_progress_level)
         }
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 2)
+        .padding(AppTheme.cardPadding)
+        .background(AppTheme.cardBackground)
+        .cornerRadius(AppTheme.cardCornerRadius)
+        .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, x: 0, y: 2)
     }
 
     @ViewBuilder
