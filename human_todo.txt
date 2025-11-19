@@ -77,13 +77,21 @@ we need a database strucuture to store the schedule;
 we should be able to call initiate_schedule every day (or any time really) to refresh the schedule so we always take into account new events from the user, such as study_duration change, reviewed words that are supposed to be reviewed in the future (so the next review time should be delayed);
 multi selections 
 
+1. the LLM calls need to be faster
+
 -- done --
 
-1. the LLM calls need to be faster
-2. some questions pronunciations are erroneous
+1. progress bar, when it opens, show show more meaningful stats. 
 
+1.1 onboarding should show the schedule.
+2. some questions pronunciations are erroneous, we need a reporting.fixing mechanism;
+3. words search in saved words.
+  3.1 let's define the word progress bar number logic: if a word most recent reivew count >= 7 times with no error in the past 84 dqys, it is 7. >= 6 times in the past 41 days, return 6;  >= 5 times in the past 22 days, return 5;   >= 4 times in the past 12 days, return 4;   >= 3 times in the past 6 days, return 3;   >= 5 times in the past 41 days, return 6;   >= 2 times in the past 3 days, return 2;  >= 1 times, return 1
+4. practice refresh.
+4.1 practice naming
+4.2 review word count should include new words.  
+5. in practice mode, if user select wrong, we should show what is correct. regardless if user select right or wrong, we should show a pop-up window with the showing the definition view of the word, with a "next" button at the buttom to practice the next word 
 
-1. progress bar 
 2. when it is done, show badges for when 5, 10, 50, 100, 200.... ALL words learnt;
 https://www.figma.com/design/NzE6vNDdbpeafseWzGR71c/Badges-and-Awards--Community-?node-id=0-1&p=f&t=Go42SXoQ8mz88bwB-0
 

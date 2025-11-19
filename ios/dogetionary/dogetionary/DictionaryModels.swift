@@ -227,6 +227,9 @@ struct SavedWord: Identifiable, Codable {
     let created_at: String
     // Calculated fields from review history (backend provides these)
     let review_count: Int
+    let correct_reviews: Int
+    let incorrect_reviews: Int
+    let word_progress_level: Int  // 1-7 scale (will be replaced with real logic later)
     let interval_days: Int
     let next_review_date: String?
     let last_reviewed_at: String?
@@ -234,9 +237,9 @@ struct SavedWord: Identifiable, Codable {
     let is_ielts: Bool?
 
     private enum CodingKeys: String, CodingKey {
-        case id, word, learning_language, native_language, created_at, review_count, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts
+        case id, word, learning_language, native_language, created_at, review_count, correct_reviews, incorrect_reviews, word_progress_level, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
@@ -245,6 +248,9 @@ struct SavedWord: Identifiable, Codable {
         native_language = try container.decode(String.self, forKey: .native_language)
         created_at = try container.decode(String.self, forKey: .created_at)
         review_count = try container.decodeIfPresent(Int.self, forKey: .review_count) ?? 0
+        correct_reviews = try container.decodeIfPresent(Int.self, forKey: .correct_reviews) ?? 0
+        incorrect_reviews = try container.decodeIfPresent(Int.self, forKey: .incorrect_reviews) ?? 0
+        word_progress_level = try container.decodeIfPresent(Int.self, forKey: .word_progress_level) ?? 1
         interval_days = try container.decodeIfPresent(Int.self, forKey: .interval_days) ?? 1
         next_review_date = try container.decodeIfPresent(String.self, forKey: .next_review_date)
         last_reviewed_at = try container.decodeIfPresent(String.self, forKey: .last_reviewed_at)
@@ -252,9 +258,9 @@ struct SavedWord: Identifiable, Codable {
         is_ielts = try container.decodeIfPresent(Bool.self, forKey: .is_ielts)
         metadata = nil // We'll skip decoding metadata for now
     }
-    
+
     // Convenience initializer for testing
-    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil) {
+    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, correct_reviews: Int, incorrect_reviews: Int, word_progress_level: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil) {
         self.id = id
         self.word = word
         self.learning_language = learning_language
@@ -262,6 +268,9 @@ struct SavedWord: Identifiable, Codable {
         self.metadata = metadata
         self.created_at = created_at
         self.review_count = review_count
+        self.correct_reviews = correct_reviews
+        self.incorrect_reviews = incorrect_reviews
+        self.word_progress_level = word_progress_level
         self.interval_days = interval_days
         self.next_review_date = next_review_date
         self.last_reviewed_at = last_reviewed_at
