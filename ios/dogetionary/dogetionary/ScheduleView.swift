@@ -166,7 +166,8 @@ struct DayCard: View {
     let entry: DailyScheduleEntry
 
     private var isToday: Bool {
-        let formatter = ISO8601DateFormatter()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: entry.date) else { return false }
         return Calendar.current.isDateInToday(date)
     }
@@ -276,7 +277,8 @@ struct DayCard: View {
     }
 
     private var dayOfWeek: String {
-        let formatter = ISO8601DateFormatter()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: entry.date) else { return "" }
         let dayFormatter = DateFormatter()
         dayFormatter.dateFormat = "EEEE"
@@ -284,7 +286,8 @@ struct DayCard: View {
     }
 
     private var dayOfMonth: String {
-        let formatter = ISO8601DateFormatter()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: entry.date) else { return "" }
         let dayFormatter = DateFormatter()
         dayFormatter.dateFormat = "d"
@@ -292,7 +295,8 @@ struct DayCard: View {
     }
 
     private var monthAbbreviation: String {
-        let formatter = ISO8601DateFormatter()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: entry.date) else { return "" }
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMM"
