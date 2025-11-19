@@ -221,7 +221,7 @@ struct SavedWordsListView: View {
 
                         // Word list
                         ScrollView {
-                            LazyVStack(spacing: 12) {
+                            LazyVStack(spacing: 8) {
                                 ForEach(filteredWords) { savedWord in
                                     NavigationLink(destination: WordDetailView(savedWord: savedWord)
                                         .onAppear {
@@ -757,10 +757,10 @@ struct SavedWordRow: View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 // Word name with test badges
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 4) {
                         Text(savedWord.word)
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.primary)
 
                         // Show test labels only if user has enabled tests
@@ -768,24 +768,24 @@ struct SavedWordRow: View {
                     }
 
                     // Review counts
-                    HStack(spacing: 12) {
+                    HStack(spacing: 8) {
                         // Incorrect reviews
-                        HStack(spacing: 4) {
+                        HStack(spacing: 2) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 12))
+                                .font(.system(size: 10))
                                 .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
                             Text("\(savedWord.incorrect_reviews)")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
 
                         // Correct reviews
-                        HStack(spacing: 4) {
+                        HStack(spacing: 2) {
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 12))
+                                .font(.system(size: 10))
                                 .foregroundColor(Color(red: 0.4, green: 0.8, blue: 0.6))
                             Text("\(savedWord.correct_reviews)")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -796,7 +796,8 @@ struct SavedWordRow: View {
                 // 7-box progress bar (from backend: 1-7 scale)
                 WordProgressBar(progressLevel: savedWord.word_progress_level)
             }
-            .padding(16)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
         }
         .background(Color.white)
         .cornerRadius(12)
