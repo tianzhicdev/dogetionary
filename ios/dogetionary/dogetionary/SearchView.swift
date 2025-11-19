@@ -64,7 +64,7 @@ struct SearchView: View {
                     }
                 } else {
                     // Landing page layout - centered search bar
-                    VStack {
+                    ZStack {
                         // Show progress bar at top if user has schedule
                         if let progress = testProgress, progress.has_schedule {
                             VStack {
@@ -79,10 +79,9 @@ struct SearchView: View {
 
                                 Spacer()
                             }
-                        } else {
-                            Spacer()
                         }
 
+                        // Centered search bar (independent of progress bar)
                         VStack(spacing: 8) {
                             searchBarView()
                                 .padding(.horizontal, 24)
@@ -92,8 +91,6 @@ struct SearchView: View {
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                         }
-
-                        Spacer()
                     }
                 }
             }

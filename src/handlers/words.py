@@ -837,15 +837,16 @@ def get_saved_words():
 def generate_audio_for_text(text: str) -> bytes:
     """Generate TTS audio for text using OpenAI"""
     try:
+        client = openai.OpenAI()
         response = client.audio.speech.create(
             model=TTS_MODEL_NAME,
-            voice=TTS_VOICE, 
+            voice=TTS_VOICE,
             input=text,
             response_format="mp3"
         )
-        
+
         return response.content
-        
+
     except Exception as e:
         logger.error(f"Failed to generate audio: {str(e)}")
         raise

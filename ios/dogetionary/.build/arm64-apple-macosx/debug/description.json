@@ -1,0 +1,752 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.DogetionaryApp-arm64-apple-macosx15.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/sources",
+      "importPath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AIIllustrationView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AnalyticsManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AppBanner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioPlayer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioRecorder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/BackgroundTaskManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/Configuration.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DefinitionCard.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/EnhancedQuestionViews.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ForgettingCurveView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LanguageConstants.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LeaderboardView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/NotificationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/OnboardingView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/PronunciationPracticeView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ReviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SavedWordsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ScheduleView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SearchView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TabBarPreferenceKey.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TestProgressBar.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/UserManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/WordDetailView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/dogetionaryApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "DogetionaryApp",
+      "moduleOutputPath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/Modules/DogetionaryApp.swiftmodule",
+      "objects" : [
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AIIllustrationView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AnalyticsManager.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AppBanner.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AudioPlayer.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AudioRecorder.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/BackgroundTaskManager.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/Configuration.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ContentView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DefinitionCard.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DictionaryModels.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DictionaryService.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/EnhancedQuestionViews.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ForgettingCurveView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/LanguageConstants.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/LeaderboardView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/NotificationManager.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/OnboardingView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/PronunciationPracticeView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ReviewView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SavedWordsView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ScheduleView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SearchView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SettingsView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/TabBarPreferenceKey.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/TestProgressBar.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/UserManager.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/WordDetailView.swift.o",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/dogetionaryApp.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx10.13",
+        "-enable-batch-mode",
+        "-index-store-path",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-module-cache-path",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "DogetionaryApp_main",
+        "-color-diagnostics",
+        "-swift-version",
+        "5",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "dogetionary"
+      ],
+      "outputFileMapPath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AIIllustrationView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AnalyticsManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AppBanner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AudioPlayer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AudioRecorder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/BackgroundTaskManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/Configuration.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DefinitionCard.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DictionaryModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DictionaryService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/EnhancedQuestionViews.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ForgettingCurveView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/LanguageConstants.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/LeaderboardView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/NotificationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/OnboardingView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/PronunciationPracticeView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ReviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SavedWordsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ScheduleView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SearchView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/TabBarPreferenceKey.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/TestProgressBar.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/UserManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/WordDetailView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/dogetionaryApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/Modules/DogetionaryApp.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AIIllustrationView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AnalyticsManager.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AppBanner.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioPlayer.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioRecorder.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/BackgroundTaskManager.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/Configuration.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ContentView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DefinitionCard.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryModels.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryService.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/EnhancedQuestionViews.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ForgettingCurveView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LanguageConstants.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LeaderboardView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/NotificationManager.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/OnboardingView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/PronunciationPracticeView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ReviewView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SavedWordsView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ScheduleView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SearchView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SettingsView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TabBarPreferenceKey.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TestProgressBar.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/UserManager.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/WordDetailView.swift",
+        "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/dogetionaryApp.swift"
+      ],
+      "tempsPath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "DogetionaryApp" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "DogetionaryApp",
+      "-package-name",
+      "dogetionary",
+      "-incremental",
+      "-c",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AIIllustrationView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AnalyticsManager.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AppBanner.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioPlayer.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioRecorder.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/BackgroundTaskManager.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/Configuration.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ContentView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DefinitionCard.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryModels.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryService.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/EnhancedQuestionViews.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ForgettingCurveView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LanguageConstants.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LeaderboardView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/NotificationManager.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/OnboardingView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/PronunciationPracticeView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ReviewView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SavedWordsView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ScheduleView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SearchView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SettingsView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TabBarPreferenceKey.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TestProgressBar.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/UserManager.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/WordDetailView.swift",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/dogetionaryApp.swift",
+      "-I",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx10.13",
+      "-enable-batch-mode",
+      "-index-store-path",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-module-cache-path",
+      "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "DogetionaryApp_main",
+      "-color-diagnostics",
+      "-swift-version",
+      "5",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "dogetionary",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "DogetionaryApp" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "writeCommands" : {
+    "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp-entitlement.plist"
+    },
+    "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AIIllustrationView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AnalyticsManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AppBanner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioPlayer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/AudioRecorder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/BackgroundTaskManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/Configuration.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DefinitionCard.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/DictionaryService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/EnhancedQuestionViews.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ForgettingCurveView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LanguageConstants.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/LeaderboardView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/NotificationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/OnboardingView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/PronunciationPracticeView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ReviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SavedWordsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/ScheduleView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SearchView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TabBarPreferenceKey.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/TestProgressBar.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/UserManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/WordDetailView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/dogetionary/dogetionaryApp.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/sources"
+    },
+    "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AIIllustrationView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AnalyticsManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AppBanner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AudioPlayer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/AudioRecorder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/BackgroundTaskManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/Configuration.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DefinitionCard.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DictionaryModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/DictionaryService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/EnhancedQuestionViews.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ForgettingCurveView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/LanguageConstants.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/LeaderboardView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/NotificationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/OnboardingView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/PronunciationPracticeView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ReviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SavedWordsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/ScheduleView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SearchView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/TabBarPreferenceKey.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/TestProgressBar.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/UserManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/WordDetailView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.build/dogetionaryApp.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/DogetionaryApp.product/Objects.LinkFileList"
+    },
+    "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/biubiu/projects/dogetionary/ios/dogetionary/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}
