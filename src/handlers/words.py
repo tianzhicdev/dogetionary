@@ -698,11 +698,11 @@ def get_saved_words():
             uuid.UUID(user_id)
         except ValueError:
             return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
-        
+
         conn = get_db_connection()
-        cur = conn.cursor()
-        
-        # Get saved words with their latest review next_review_date and correct review count
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Get saved words with review statistics (correct/incorrect counts and progress level)
         cur.execute("""
             SELECT
                 sw.id,
@@ -713,9 +713,13 @@ def get_saved_words():
                 sw.created_at,
                 COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
                 COALESCE(review_counts.total_reviews, 0) as review_count,
+                COALESCE(review_counts.correct_reviews, 0) as correct_reviews,
+                COALESCE(review_counts.incorrect_reviews, 0) as incorrect_reviews,
                 latest_review.last_reviewed_at,
                 tv.is_toefl,
-                tv.is_ielts
+                tv.is_ielts,
+                -- Random progress level 1-7 for now (will be replaced with real logic later)
+                (1 + (sw.id %% 7)) as word_progress_level
             FROM saved_words sw
             LEFT JOIN (
                 SELECT
@@ -728,7 +732,9 @@ def get_saved_words():
             LEFT JOIN (
                 SELECT
                     word_id,
-                    COUNT(*) as total_reviews
+                    COUNT(*) as total_reviews,
+                    COUNT(*) FILTER (WHERE response = TRUE) as correct_reviews,
+                    COUNT(*) FILTER (WHERE response = FALSE) as incorrect_reviews
                 FROM reviews
                 GROUP BY word_id
             ) review_counts ON sw.id = review_counts.word_id
@@ -739,7 +745,7 @@ def get_saved_words():
         
         rows = cur.fetchall()
         saved_words = []
-        
+
         for row in rows:
             # Use values directly from the query
             review_count = row['review_count']
@@ -766,9 +772,14 @@ def get_saved_words():
                 "metadata": row['metadata'],
                 "created_at": row['created_at'].isoformat(),
                 "review_count": review_count,
+                "correct_reviews": row['correct_reviews'],
+                "incorrect_reviews": row['incorrect_reviews'],
+                "word_progress_level": row['word_progress_level'],
                 "interval_days": int(float(interval_days)) if interval_days else 1,
                 "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
-                "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None
+                "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
+                "is_toefl": row['is_toefl'],
+                "is_ielts": row['is_ielts']
             })
         
         cur.close()

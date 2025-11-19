@@ -143,59 +143,112 @@ struct SavedWordsListView: View {
     let errorMessage: String?
     let onRefresh: () async -> Void
     let onDelete: (SavedWord) async -> Void
-    
+
+    @State private var filterText = ""
+
+    private var filteredWords: [SavedWord] {
+        if filterText.isEmpty {
+            return savedWords
+        } else {
+            return savedWords.filter { $0.word.lowercased().contains(filterText.lowercased()) }
+        }
+    }
+
     var body: some View {
-        Group {
-            if isLoading {
-                ProgressView("Loading saved words...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if savedWords.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "book.closed")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    
-                    Text("No Saved Words")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    
-                    Text("Words you save will appear here")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-            } else if let errorMessage = errorMessage {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 48))
-                        .foregroundColor(.orange)
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List(savedWords) { savedWord in
-                    NavigationLink(destination: WordDetailView(savedWord: savedWord)
-                        .onAppear {
-                            // Track saved word view details when navigation happens
-                            AnalyticsManager.shared.track(action: .savedViewDetails, metadata: [
-                                "word": savedWord.word,
-                                "review_count": savedWord.review_count,
-                                "is_overdue": isOverdue(savedWord.next_review_date ?? "")
-                            ])
-                        }
-                    ) {
-                        SavedWordRow(savedWord: savedWord)
+        ZStack {
+            // Soft blue gradient background
+            LinearGradient(
+                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            Group {
+                if isLoading {
+                    ProgressView("Loading saved words...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if savedWords.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "book.closed")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+
+                        Text("No Saved Words")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+
+                        Text("Words you save will appear here")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            Task {
-                                await onDelete(savedWord)
+                    .padding()
+                } else if let errorMessage = errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 48))
+                            .foregroundColor(.orange)
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    VStack(spacing: 0) {
+                        // Filter text bar
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.secondary)
+                            TextField("Filter words...", text: $filterText)
+                                .font(.body)
+                            if !filterText.isEmpty {
+                                Button(action: {
+                                    filterText = ""
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                }
                             }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                        }
+                        .padding(12)
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+
+                        // Word list
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                ForEach(filteredWords) { savedWord in
+                                    NavigationLink(destination: WordDetailView(savedWord: savedWord)
+                                        .onAppear {
+                                            // Track saved word view details when navigation happens
+                                            AnalyticsManager.shared.track(action: .savedViewDetails, metadata: [
+                                                "word": savedWord.word,
+                                                "review_count": savedWord.review_count,
+                                                "is_overdue": isOverdue(savedWord.next_review_date ?? "")
+                                            ])
+                                        }
+                                    ) {
+                                        SavedWordRow(savedWord: savedWord)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            Task {
+                                                await onDelete(savedWord)
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
                         }
                     }
                 }
@@ -701,42 +754,53 @@ struct SavedWordRow: View {
     @ObservedObject private var userManager = UserManager.shared
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(savedWord.word)
-                        .font(.title3)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // Word name with test badges
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Text(savedWord.word)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
 
-                    // Show test labels only if user has enabled tests
-                    testLabels
-                }
-
-                HStack {
-                    if let nextReviewDate = savedWord.next_review_date {
-                        Text("Next review \(formatDateOnly(nextReviewDate))")
-                            .font(.caption)
-                            .foregroundColor(isOverdue(nextReviewDate) ? .red : .secondary)
-                    } else {
-                        Text("No reviews yet")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        // Show test labels only if user has enabled tests
+                        testLabels
                     }
 
-                    Text("•")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    // Review counts
+                    HStack(spacing: 12) {
+                        // Incorrect reviews
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+                            Text("\(savedWord.incorrect_reviews)")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
 
-                    Text("\(savedWord.review_count) review\(savedWord.review_count == 1 ? "" : "s")")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        // Correct reviews
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(red: 0.4, green: 0.8, blue: 0.6))
+                            Text("\(savedWord.correct_reviews)")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
-            }
 
-            Spacer()
+                Spacer()
+
+                // 7-box progress bar (from backend: 1-7 scale)
+                WordProgressBar(progressLevel: savedWord.word_progress_level)
+            }
+            .padding(16)
         }
-        .padding(.vertical, 6)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 2)
     }
 
     @ViewBuilder
@@ -745,44 +809,93 @@ struct SavedWordRow: View {
             if userManager.toeflEnabled && (savedWord.is_toefl == true) {
                 Text("TOEFL")
                     .font(.caption2)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.blue)
+                    .padding(.vertical, 3)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.blue, Color.cyan],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     .cornerRadius(4)
             }
 
             if userManager.ieltsEnabled && (savedWord.is_ielts == true) {
                 Text("IELTS")
                     .font(.caption2)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.green)
+                    .padding(.vertical, 3)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(red: 0.4, green: 0.8, blue: 0.6), Color.green],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     .cornerRadius(4)
             }
         }
     }
-    
-    private func formatDateOnly(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        if let date = formatter.date(from: dateString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .medium
-            displayFormatter.timeStyle = .none
-            return displayFormatter.string(from: date)
+}
+
+// MARK: - 7-Box Progress Bar
+
+struct WordProgressBar: View {
+    let progressLevel: Int  // 1-7 scale from backend
+
+    // Color for each box based on index and progress level
+    private func colorForBox(at index: Int) -> LinearGradient {
+        // Boxes are filled from left to right up to progressLevel
+        let isFilled = (index + 1) <= progressLevel
+
+        if !isFilled {
+            // Empty box - light gray
+            return LinearGradient(
+                colors: [Color(red: 0.92, green: 0.94, blue: 0.97), Color(red: 0.88, green: 0.90, blue: 0.95)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
-        return dateString
+
+        // Filled boxes: red (1-2), yellow (3-5), green (6-7)
+        let boxNumber = index + 1
+        if boxNumber <= 2 {
+            // Red boxes (low progress)
+            return LinearGradient(
+                colors: [Color(red: 1.0, green: 0.4, blue: 0.4), Color(red: 0.9, green: 0.3, blue: 0.3)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        } else if boxNumber <= 5 {
+            // Yellow boxes (medium progress)
+            return LinearGradient(
+                colors: [Color(red: 1.0, green: 0.8, blue: 0.2), Color(red: 0.95, green: 0.7, blue: 0.1)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        } else {
+            // Green boxes (high progress)
+            return LinearGradient(
+                colors: [Color(red: 0.4, green: 0.8, blue: 0.5), Color(red: 0.3, green: 0.7, blue: 0.4)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
     }
-    
-    private func isOverdue(_ dateString: String) -> Bool {
-        let formatter = ISO8601DateFormatter()
-        if let date = formatter.date(from: dateString) {
-            return date < Date()
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<7, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(colorForBox(at: index))
+                    .frame(width: 8, height: 24)
+            }
         }
-        return false
     }
 }
 
