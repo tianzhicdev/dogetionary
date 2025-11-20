@@ -19,6 +19,9 @@ struct ReviewView: View {
     @State private var isGoalAchieved = false
     @State private var reviewProgressStats: ReviewProgressStats?
     @State private var newWordsRemainingToday: Int = 0  // NEW: Track scheduled new words remaining
+    @State private var showDefinitionSheet = false  // Show definition after answering
+    @State private var currentAnswer: Bool? = nil  // Track if answer was correct
+    @State private var currentQuestionType: String? = nil  // Track question type for submission
     
     var body: some View {
         ZStack {
@@ -67,7 +70,16 @@ struct ReviewView: View {
                         EnhancedQuestionView(
                             question: question,
                             onAnswer: { isCorrect in
-                                submitReview(response: isCorrect, questionType: question.question_type)
+                                currentAnswer = isCorrect
+                                currentQuestionType = question.question_type
+
+                                if isCorrect {
+                                    // If correct, submit immediately and move to next word
+                                    submitReview(response: isCorrect, questionType: question.question_type)
+                                } else {
+                                    // If wrong, show definition sheet
+                                    showDefinitionSheet = true
+                                }
                             }
                         )
                     } else {
@@ -93,6 +105,28 @@ struct ReviewView: View {
         .refreshable {
             await loadDueCountsAsync()
             await loadScheduledNewWordsCountAsync()
+        }
+        .sheet(isPresented: $showDefinitionSheet) {
+            if let review = currentReview,
+               let definition = review.definition,
+               let word = review.word,
+               let learningLang = review.learning_language,
+               let nativeLang = review.native_language {
+                DefinitionSheetView(
+                    word: word,
+                    definition: definition,
+                    learningLanguage: learningLang,
+                    nativeLanguage: nativeLang,
+                    isCorrect: currentAnswer ?? false,
+                    onNext: {
+                        showDefinitionSheet = false
+                        // Submit the answer and move to next word
+                        if let answer = currentAnswer, let questionType = currentQuestionType {
+                            submitReview(response: answer, questionType: questionType)
+                        }
+                    }
+                )
+            }
         }
     }
     
@@ -1032,6 +1066,110 @@ struct OverdueCountView: View {
         .padding(.horizontal, 12)
         .background(Color(.systemGray6))
         .cornerRadius(8)
+    }
+}
+
+// MARK: - Definition Sheet View for Practice
+
+struct DefinitionSheetView: View {
+    let word: String
+    let definition: DefinitionData
+    let learningLanguage: String
+    let nativeLanguage: String
+    let isCorrect: Bool
+    let onNext: () -> Void
+
+    // Convert DefinitionData to Definition model for DefinitionCard
+    private var convertedDefinition: Definition {
+        // Group definitions by type (part of speech)
+        let groupedDefinitions = Dictionary(grouping: definition.definitions) { $0.type }
+        let meanings = groupedDefinitions.map { (partOfSpeech, definitions) in
+            let definitionDetails = definitions.map { def in
+                // Show native definition if it exists and is different from main definition
+                let definitionText: String
+                if let nativeDefinition = def.definition_native,
+                   !nativeDefinition.isEmpty && nativeDefinition != def.definition {
+                    definitionText = "\(def.definition)\n\n\(nativeDefinition)"
+                } else {
+                    definitionText = def.definition
+                }
+
+                // Use first example (always in learning language)
+                let exampleText = def.examples.first
+
+                return DefinitionDetail(
+                    definition: definitionText,
+                    example: exampleText,
+                    synonyms: nil,
+                    antonyms: def.cultural_notes != nil ? [def.cultural_notes!] : nil
+                )
+            }
+            return Meaning(partOfSpeech: partOfSpeech, definitions: definitionDetails)
+        }
+
+        return Definition(
+            id: UUID(),
+            word: word,
+            phonetic: definition.phonetic,
+            learning_language: learningLanguage,
+            native_language: nativeLanguage,
+            translations: definition.translations ?? [],
+            meanings: meanings,
+            audioData: nil,
+            hasWordAudio: false,
+            exampleAudioAvailability: [:],
+            validWordScore: definition.valid_word_score ?? 1.0,
+            suggestion: definition.suggestion
+        )
+    }
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Feedback banner for incorrect answers
+                    HStack {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.red)
+
+                        Text("Incorrect - Study the definition")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.red)
+
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+
+                    // Reuse DefinitionCard component
+                    DefinitionCard(definition: convertedDefinition)
+                        .padding(.horizontal)
+
+                    // Next button
+                    Button(action: onNext) {
+                        HStack {
+                            Text("Next")
+                                .font(.headline)
+                            Image(systemName: "arrow.right")
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppTheme.primaryBlue)
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
+                }
+                .padding(.top)
+            }
+            .navigationTitle("Word Definition")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 
