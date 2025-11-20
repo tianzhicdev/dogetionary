@@ -32,13 +32,14 @@ struct MultipleChoiceQuestionView: View {
                         option: option,
                         isSelected: selectedAnswer == option.id,
                         isCorrect: option.id == question.correct_answer,
+                        correctAnswer: question.correct_answer,
                         showFeedback: showFeedback,
                         onTap: {
                             selectedAnswer = option.id
                             showFeedback = true
 
-                            // Delay before calling onAnswer to show feedback
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            // Delay before calling onAnswer to show feedback and correct answer
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                 let isCorrect = option.id == question.correct_answer
                                 onAnswer(option.id)
                             }
@@ -57,12 +58,20 @@ struct MultipleChoiceOptionButton: View {
     let option: QuestionOption
     let isSelected: Bool
     let isCorrect: Bool
+    let correctAnswer: String?
     let showFeedback: Bool
     let onTap: () -> Void
+
+    // Show this option as correct if user was wrong and this is the correct answer
+    var shouldShowAsCorrect: Bool {
+        showFeedback && !isSelected && isCorrect
+    }
 
     var backgroundColor: Color {
         if showFeedback && isSelected {
             return isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)
+        } else if shouldShowAsCorrect {
+            return Color.green.opacity(0.15)
         } else if isSelected {
             return Color.blue.opacity(0.1)
         } else {
@@ -73,6 +82,8 @@ struct MultipleChoiceOptionButton: View {
     var borderColor: Color {
         if showFeedback && isSelected {
             return isCorrect ? Color.green : Color.red
+        } else if shouldShowAsCorrect {
+            return Color.green
         } else if isSelected {
             return Color.blue
         } else {
@@ -86,11 +97,17 @@ struct MultipleChoiceOptionButton: View {
                 // Option ID (A, B, C, D)
                 Text(option.id)
                     .font(.headline)
-                    .foregroundColor(showFeedback && isSelected ? (isCorrect ? .green : .red) : .blue)
+                    .foregroundColor(
+                        showFeedback && isSelected ? (isCorrect ? .green : .red) :
+                        shouldShowAsCorrect ? .green : .blue
+                    )
                     .frame(width: 30, height: 30)
                     .background(
                         Circle()
-                            .fill(showFeedback && isSelected ? (isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)) : Color.blue.opacity(0.1))
+                            .fill(
+                                showFeedback && isSelected ? (isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)) :
+                                shouldShowAsCorrect ? Color.green.opacity(0.2) : Color.blue.opacity(0.1)
+                            )
                     )
 
                 // Option Text
@@ -100,8 +117,8 @@ struct MultipleChoiceOptionButton: View {
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Check mark for selected
-                if showFeedback && isSelected {
+                // Check mark for selected or correct answer
+                if showFeedback && (isSelected || shouldShowAsCorrect) {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(isCorrect ? .green : .red)
                         .font(.title3)
@@ -165,13 +182,14 @@ struct FillInBlankQuestionView: View {
                         option: option,
                         isSelected: selectedAnswer == option.id,
                         isCorrect: option.id == question.correct_answer,
+                        correctAnswer: question.correct_answer,
                         showFeedback: showFeedback,
                         onTap: {
                             selectedAnswer = option.id
                             showFeedback = true
 
-                            // Delay before calling onAnswer to show feedback
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            // Delay before calling onAnswer to show feedback and correct answer
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                 let isCorrect = option.id == question.correct_answer
                                 onAnswer(option.id)
                             }
@@ -190,12 +208,20 @@ struct FillInBlankOptionButton: View {
     let option: QuestionOption
     let isSelected: Bool
     let isCorrect: Bool
+    let correctAnswer: String?
     let showFeedback: Bool
     let onTap: () -> Void
+
+    // Show this option as correct if user was wrong and this is the correct answer
+    var shouldShowAsCorrect: Bool {
+        showFeedback && !isSelected && isCorrect
+    }
 
     var backgroundColor: Color {
         if showFeedback && isSelected {
             return isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)
+        } else if shouldShowAsCorrect {
+            return Color.green.opacity(0.15)
         } else if isSelected {
             return Color.blue.opacity(0.1)
         } else {
@@ -206,6 +232,8 @@ struct FillInBlankOptionButton: View {
     var borderColor: Color {
         if showFeedback && isSelected {
             return isCorrect ? Color.green : Color.red
+        } else if shouldShowAsCorrect {
+            return Color.green
         } else if isSelected {
             return Color.blue
         } else {
@@ -219,11 +247,14 @@ struct FillInBlankOptionButton: View {
                 // Option Text (word)
                 Text(option.text)
                     .font(.headline)
-                    .foregroundColor(showFeedback && isSelected ? (isCorrect ? .green : .red) : .primary)
+                    .foregroundColor(
+                        showFeedback && isSelected ? (isCorrect ? .green : .red) :
+                        shouldShowAsCorrect ? .green : .primary
+                    )
                     .frame(maxWidth: .infinity)
 
-                // Check mark for selected
-                if showFeedback && isSelected {
+                // Check mark for selected or correct answer
+                if showFeedback && (isSelected || shouldShowAsCorrect) {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(isCorrect ? .green : .red)
                         .font(.title3)
@@ -263,46 +294,10 @@ struct EnhancedQuestionView: View {
                 }
 
             default:
-                // Recognition type - show word and ask yes/no
-                VStack(spacing: 24) {
-                    Text("Do you remember this word?")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Text(question.word)
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.blue)
-
-                    HStack(spacing: 20) {
-                        Button(action: {
-                            onAnswer(false)
-                        }) {
-                            Text("No")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.red)
-                                .cornerRadius(12)
-                        }
-
-                        Button(action: {
-                            onAnswer(true)
-                        }) {
-                            Text("Yes")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.green)
-                                .cornerRadius(12)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 32)
+                // Recognition type removed - will be handled by definition view
+                Text("Loading...")
+                    .font(.title2)
+                    .foregroundColor(.secondary)
             }
         }
     }
