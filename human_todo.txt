@@ -120,16 +120,27 @@ please design first
 -- done --
 
 
-1. badge system -- times of reviews -- animation
-2. animation for badge
+1. badge system
 
-2. some questions pronunciations are erroneous, we need a reporting/fixing mechanism;
-3. blacklist words, be able to remove 
+let's change how the badge system work; we move from saved_words based to number of reviews based; do not change the icons and everything. make the number to get the badge to be 10x the current number; (because reviews are easier)
+let's call it score (score = number of reviews where failed review = 1, success review = 2) 
+it it should be displayed on the top of practice mode always, every time user completes a review, we should add to the score, making a little animition when the score changes;
+the score does not have to sync back to the db, becuase it can always get calculated from reviews; we only need to sync from backend when user lands on a page where the score needs to be displayed;
+let's design first, mention updates in backend/ui and db (if any);
+
+
+
+2. practice mode interface 
+
+3. animation for badge
+
+4. some questions pronunciations are erroneous, we need a reporting/fixing mechanism;
+
  
-4.2 review word count should include new words.  
+5. review word count should include new words.  
 
 
-bug: changing schedule affect streak
+6. changing schedule affect streak
 
 
 

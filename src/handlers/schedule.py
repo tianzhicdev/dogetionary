@@ -24,6 +24,39 @@ from handlers.admin import get_next_review_date_new
 logger = logging.getLogger(__name__)
 
 
+def filter_known_words_from_practice(practice_words, user_id, conn):
+    """
+    Filter out known words from a practice words list.
+
+    Args:
+        practice_words: List of practice word dicts with word_id
+        user_id: User UUID
+        conn: Database connection
+
+    Returns:
+        Filtered list of practice words (excluding known words)
+    """
+    if not practice_words:
+        return []
+
+    # Get word IDs from practice words
+    word_ids = [pw.get('word_id') for pw in practice_words if pw.get('word_id')]
+    if not word_ids:
+        return practice_words
+
+    # Query to find which words are known
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id FROM saved_words
+        WHERE user_id = %s AND id = ANY(%s) AND is_known = TRUE
+    """, (user_id, word_ids))
+    known_ids = {row[0] for row in cur.fetchall()}
+    cur.close()
+
+    # Filter out known words
+    return [pw for pw in practice_words if pw.get('word_id') not in known_ids]
+
+
 def create_schedule():
     """
     POST /v3/schedule/create
@@ -196,6 +229,10 @@ def get_today_schedule():
             new_words = result['new_words'] or []
             test_practice = result['test_practice_words'] or []
             non_test_practice = result['non_test_practice_words'] or []
+
+            # Filter out known words from practice lists
+            test_practice = filter_known_words_from_practice(test_practice, user_id, conn)
+            non_test_practice = filter_known_words_from_practice(non_test_practice, user_id, conn)
 
             total_words = len(new_words) + len(test_practice) + len(non_test_practice)
             has_tasks_today = total_words > 0
@@ -400,6 +437,10 @@ def get_schedule_range():
                 new_words = row['new_words'] or []
                 test_practice = row['test_practice_words'] or []
                 non_test_practice = row['non_test_practice_words'] or []
+
+                # Filter out known words from practice lists
+                test_practice = filter_known_words_from_practice(test_practice, user_id, conn)
+                non_test_practice = filter_known_words_from_practice(non_test_practice, user_id, conn)
 
                 # Filter based on only_new_words parameter
                 if only_new_words:

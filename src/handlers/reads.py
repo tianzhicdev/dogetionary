@@ -68,6 +68,8 @@ def get_due_words_count(user_id, conn=None):
                 FROM reviews
             ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
             WHERE sw.user_id = %s
+            -- Exclude known words from due counts
+            AND (sw.is_known IS NULL OR sw.is_known = FALSE)
         """, (user_id,))
         
         result = cur.fetchone()

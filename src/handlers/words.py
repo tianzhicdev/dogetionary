@@ -83,6 +83,8 @@ def get_next_review_word_v2():
                 GROUP BY word_id, next_review_date, reviewed_at
             ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
             WHERE sw.user_id = %s
+            -- Exclude known words from practice
+            AND (sw.is_known IS NULL OR sw.is_known = FALSE)
             -- Exclude words reviewed in the past 24 hours
             AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
             -- ONLY include words that are actually DUE (overdue or due now)
@@ -737,6 +739,7 @@ def get_saved_words():
                 sw.native_language,
                 sw.metadata,
                 sw.created_at,
+                sw.is_known,
                 COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
                 COALESCE(review_counts.total_reviews, 0) as review_count,
                 COALESCE(review_counts.correct_reviews, 0) as correct_reviews,
@@ -815,7 +818,8 @@ def get_saved_words():
                 "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
                 "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
                 "is_toefl": row['is_toefl'],
-                "is_ielts": row['is_ielts']
+                "is_ielts": row['is_ielts'],
+                "is_known": row['is_known'] or False
             })
         
         cur.close()

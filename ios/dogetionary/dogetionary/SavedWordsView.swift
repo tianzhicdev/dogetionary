@@ -36,7 +36,8 @@ struct SavedWordsView: View {
                         isLoading: isLoading,
                         errorMessage: errorMessage,
                         onRefresh: { await loadSavedWords() },
-                        onDelete: { word in await deleteSavedWord(word) }
+                        onDelete: { word in await deleteSavedWord(word) },
+                        onToggleKnown: { word in await toggleKnownStatus(word) }
                     )
                 } else if hasSchedule {
                     ScheduleView()
@@ -70,9 +71,14 @@ struct SavedWordsView: View {
 
                     switch result {
                     case .success(let words):
-                        // Sort by next_review_date ascending (soonest first)
+                        // Sort: known words at bottom, then by next_review_date ascending
                         self.savedWords = words.sorted { word1, word2 in
-                            // Handle nil values - put words without reviews at the end
+                            // Known words go to the bottom
+                            if word1.is_known != word2.is_known {
+                                return !word1.is_known // non-known words first
+                            }
+
+                            // Within same known status, sort by next_review_date
                             guard let date1 = word1.next_review_date else { return false }
                             guard let date2 = word2.next_review_date else { return true }
 
@@ -128,6 +134,43 @@ struct SavedWordsView: View {
             }
         }
     }
+
+    @MainActor
+    private func toggleKnownStatus(_ word: SavedWord) async {
+        let newKnownStatus = !word.is_known
+        DictionaryService.shared.markWordAsKnown(wordID: word.id, isKnown: newKnownStatus) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    // Update local state
+                    if let index = self.savedWords.firstIndex(where: { $0.id == word.id }) {
+                        self.savedWords[index].is_known = newKnownStatus
+                    }
+
+                    // Re-sort to move known words to bottom
+                    self.savedWords.sort { word1, word2 in
+                        if word1.is_known != word2.is_known {
+                            return !word1.is_known
+                        }
+                        guard let date1 = word1.next_review_date else { return false }
+                        guard let date2 = word2.next_review_date else { return true }
+                        let formatter = ISO8601DateFormatter()
+                        guard let d1 = formatter.date(from: date1),
+                              let d2 = formatter.date(from: date2) else { return false }
+                        return d1 < d2
+                    }
+
+                    // Track analytics
+                    AnalyticsManager.shared.track(
+                        action: newKnownStatus ? .savedMarkKnown : .savedMarkLearning,
+                        metadata: ["word": word.word, "word_id": word.id]
+                    )
+                case .failure(let error):
+                    self.errorMessage = "Failed to update word: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
 }
 
 struct SavedWordsListView: View {
@@ -136,6 +179,7 @@ struct SavedWordsListView: View {
     let errorMessage: String?
     let onRefresh: () async -> Void
     let onDelete: (SavedWord) async -> Void
+    let onToggleKnown: (SavedWord) async -> Void
 
     @State private var filterText = ""
 
@@ -226,19 +270,13 @@ struct SavedWordsListView: View {
                                             ])
                                         }
                                     ) {
-                                        SavedWordRow(savedWord: savedWord)
+                                        SavedWordRow(
+                                            savedWord: savedWord,
+                                            onToggleKnown: { Task { await onToggleKnown(savedWord) } },
+                                            onDelete: { Task { await onDelete(savedWord) } }
+                                        )
                                     }
                                     .buttonStyle(PlainButtonStyle())
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            Task {
-                                                await onDelete(savedWord)
-                                            }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                        .tint(.red)
-                                    }
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -745,6 +783,8 @@ struct CalendarDayView: View {
 
 struct SavedWordRow: View {
     let savedWord: SavedWord
+    var onToggleKnown: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
     @ObservedObject private var userManager = UserManager.shared
 
     var body: some View {
@@ -788,9 +828,39 @@ struct SavedWordRow: View {
 
             // 7-box progress bar (from backend: 1-7 scale)
             WordProgressBar(progressLevel: savedWord.word_progress_level)
+
+            // Action menu button
+            if onToggleKnown != nil || onDelete != nil {
+                Menu {
+                    if let onToggleKnown = onToggleKnown {
+                        Button {
+                            onToggleKnown()
+                        } label: {
+                            if savedWord.is_known {
+                                Label("Still Learning", systemImage: "book.fill")
+                            } else {
+                                Label("Already Learned", systemImage: "checkmark.circle.fill")
+                            }
+                        }
+                    }
+
+                    if let onDelete = onDelete {
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 32, height: 32)
+                }
+            }
         }
         .padding(AppTheme.cardPadding)
-        .background(AppTheme.cardBackground)
+        .background(savedWord.is_known ? Color(red: 0.9, green: 0.98, blue: 0.9) : AppTheme.cardBackground)
         .cornerRadius(AppTheme.cardCornerRadius)
         .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, x: 0, y: 2)
     }
