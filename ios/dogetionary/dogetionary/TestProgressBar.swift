@@ -181,7 +181,7 @@ struct TestProgressBar: View {
                                     Image(systemName: current.symbol)
                                         .font(.system(size: 16))
                                         .foregroundColor(colorForAchievementTier(current.tier))
-                                    Text("\(achievements.saved_words) words")
+                                    Text("\(achievements.score) pts")
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundColor(.primary)
                                 }

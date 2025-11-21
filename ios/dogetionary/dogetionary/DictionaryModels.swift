@@ -300,10 +300,21 @@ struct ReviewSubmissionResponse: Codable {
     let review_count: Int
     let interval_days: Int
     let next_review_date: String
+    let new_score: Int?
+    let new_badge: NewBadge?
 
     private enum CodingKeys: String, CodingKey {
-        case success, word_id, response, review_count, interval_days, next_review_date
+        case success, word_id, response, review_count, interval_days, next_review_date, new_score, new_badge
     }
+}
+
+// Badge earned from review
+struct NewBadge: Codable {
+    let milestone: Int
+    let title: String
+    let symbol: String
+    let tier: String
+    let is_award: Bool
 }
 
 // Next Due Words Models
@@ -845,14 +856,14 @@ struct Achievement: Codable, Identifiable {
 /// Achievement progress response
 struct AchievementProgressResponse: Codable {
     let user_id: String
-    let saved_words: Int
+    let score: Int  // Score from reviews: failed = 1 point, success = 2 points
     let achievements: [Achievement]
     let next_milestone: Int?
     let next_achievement: AchievementInfo?
     let current_achievement: AchievementInfo?
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, saved_words, achievements, next_milestone, next_achievement, current_achievement
+        case user_id, score, achievements, next_milestone, next_achievement, current_achievement
     }
 }
 
@@ -866,5 +877,19 @@ struct AchievementInfo: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case milestone, title, symbol, tier, is_award
+    }
+}
+
+/// Practice status response for the Practice tab
+struct PracticeStatusResponse: Codable {
+    let user_id: String
+    let new_words_count: Int      // Scheduled new words for today
+    let due_words_count: Int      // Words due for review (overdue)
+    let stale_words_count: Int    // Words not reviewed in past 24 hours
+    let score: Int                // Current score from reviews
+    let has_practice: Bool        // Quick check: any practice available
+
+    private enum CodingKeys: String, CodingKey {
+        case user_id, new_words_count, due_words_count, stale_words_count, score, has_practice
     }
 }

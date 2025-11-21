@@ -16,7 +16,7 @@ struct AchievementView: View {
         guard let nextMilestone = progress.next_milestone else { return 1.0 }
         let currentMilestone = progress.current_achievement?.milestone ?? 0
         let totalRange = Double(nextMilestone - currentMilestone)
-        let currentProgress = Double(progress.saved_words - currentMilestone)
+        let currentProgress = Double(progress.score - currentMilestone)
         return min(currentProgress / totalRange, 1.0)
     }
 
@@ -55,8 +55,8 @@ struct AchievementView: View {
                     .foregroundColor(colorForTier(current.tier))
             }
 
-            // Word count
-            Text("\(progress.saved_words) words")
+            // Score count
+            Text("\(progress.score) pts")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.primary)
 
@@ -131,7 +131,7 @@ struct AchievementView: View {
 
                         HStack {
                             Spacer()
-                            Text("\(progress.saved_words) / \(next.milestone)")
+                            Text("\(progress.score) / \(next.milestone)")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
@@ -236,21 +236,21 @@ struct AchievementView_Previews: PreviewProvider {
 
         var body: some View {
             VStack(spacing: 20) {
-                // Preview with 18 words (unlocked first achievement)
+                // Preview with 180 score (unlocked first achievement)
                 AchievementView(
                     progress: AchievementProgressResponse(
                         user_id: "test",
-                        saved_words: 18,
+                        score: 180,
                         achievements: [
-                            Achievement(milestone: 10, title: "First Steps", symbol: "leaf.fill", tier: .beginner, is_award: false, unlocked: true),
-                            Achievement(milestone: 30, title: "Growing", symbol: "leaf.circle.fill", tier: .beginner, is_award: false, unlocked: false),
-                            Achievement(milestone: 50, title: "Blooming", symbol: "sparkles", tier: .beginner, is_award: false, unlocked: false),
-                            Achievement(milestone: 100, title: "Century", symbol: "star.fill", tier: .beginner, is_award: false, unlocked: false),
-                            Achievement(milestone: 500, title: "Word Master", symbol: "medal.fill", tier: .intermediate, is_award: true, unlocked: false)
+                            Achievement(milestone: 100, title: "First Steps", symbol: "leaf.fill", tier: .beginner, is_award: false, unlocked: true),
+                            Achievement(milestone: 300, title: "Growing", symbol: "leaf.circle.fill", tier: .beginner, is_award: false, unlocked: false),
+                            Achievement(milestone: 500, title: "Blooming", symbol: "sparkles", tier: .beginner, is_award: false, unlocked: false),
+                            Achievement(milestone: 1000, title: "Century", symbol: "star.fill", tier: .beginner, is_award: false, unlocked: false),
+                            Achievement(milestone: 5000, title: "Word Master", symbol: "medal.fill", tier: .intermediate, is_award: true, unlocked: false)
                         ],
-                        next_milestone: 30,
-                        next_achievement: AchievementInfo(milestone: 30, title: "Growing", symbol: "leaf.circle.fill", tier: .beginner, is_award: false),
-                        current_achievement: AchievementInfo(milestone: 10, title: "First Steps", symbol: "leaf.fill", tier: .beginner, is_award: false)
+                        next_milestone: 300,
+                        next_achievement: AchievementInfo(milestone: 300, title: "Growing", symbol: "leaf.circle.fill", tier: .beginner, is_award: false),
+                        current_achievement: AchievementInfo(milestone: 100, title: "First Steps", symbol: "leaf.fill", tier: .beginner, is_award: false)
                     ),
                     isExpanded: $isExpanded
                 )

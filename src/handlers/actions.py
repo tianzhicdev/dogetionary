@@ -289,6 +289,14 @@ def submit_review():
         # Record the current review time
         current_review_time = datetime.now()
 
+        # Get old score BEFORE inserting review (for badge calculation)
+        old_score_result = db_fetch_one("""
+            SELECT COALESCE(SUM(CASE WHEN response THEN 2 ELSE 1 END), 0) as score
+            FROM reviews
+            WHERE user_id = %s
+        """, (user_id,))
+        old_score = old_score_result['score'] if old_score_result else 0
+
         # Get existing review data and word creation date
         word_data = db_fetch_one("""
             SELECT sw.created_at
@@ -323,6 +331,26 @@ def submit_review():
             INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date)
             VALUES (%s, %s, %s, %s, %s)
         """, (user_id, word_id, response_bool, current_review_time, next_review_date), commit=True)
+
+        # Calculate new score AFTER inserting review
+        new_score = old_score + (2 if response_bool else 1)
+
+        # Check if user earned a new badge
+        from handlers.achievements import ACHIEVEMENTS
+        new_badge = None
+        for achievement in ACHIEVEMENTS:
+            milestone = achievement['milestone']
+            # Badge is newly earned if old_score < milestone <= new_score
+            if old_score < milestone <= new_score:
+                # This is the highest badge just earned (list is sorted by milestone)
+                new_badge = {
+                    "milestone": achievement['milestone'],
+                    "title": achievement['title'],
+                    "symbol": achievement['symbol'],
+                    "tier": achievement['tier'],
+                    "is_award": achievement['is_award']
+                }
+                # Don't break - keep going to find highest newly earned badge
 
         # Calculate simple stats for response
         review_count = len(all_reviews)
@@ -373,7 +401,9 @@ def submit_review():
             "review_count": review_count,
             "ease_factor": 2.5,
             "interval_days": interval_days,
-            "next_review_date": next_review_date.isoformat()
+            "next_review_date": next_review_date.isoformat(),
+            "new_score": new_score,
+            "new_badge": new_badge
         })
 
     except Exception as e:
