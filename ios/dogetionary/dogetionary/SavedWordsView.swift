@@ -12,12 +12,25 @@ struct SavedWordsView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var hasSchedule = false
-    @State private var selectedTab = 0
+    @State private var selectedView = 0  // 0 = Words, 1 = Schedule
 
     var body: some View {
         NavigationView {
-            TabView(selection: $selectedTab) {
-                    // Words Tab
+            VStack(spacing: 0) {
+                // Segmented control for switching views (only show if user has schedule)
+                if hasSchedule {
+                    Picker("View", selection: $selectedView) {
+                        Text("Words").tag(0)
+                        Text("Schedule").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(UIColor.systemBackground))
+                }
+
+                // Content based on selection
+                if selectedView == 0 {
                     SavedWordsListView(
                         savedWords: $savedWords,
                         isLoading: isLoading,
@@ -25,25 +38,11 @@ struct SavedWordsView: View {
                         onRefresh: { await loadSavedWords() },
                         onDelete: { word in await deleteSavedWord(word) }
                     )
-                    .tabItem {
-                        Image(systemName: "list.bullet")
-                        Text("Words")
-                    }
-                    .tag(0)
-
-                    // Schedule Tab (conditional)
-                    if hasSchedule {
-                        ScheduleView()
-                            .tabItem {
-                                Image(systemName: "calendar")
-                                Text("Schedule")
-                            }
-                            .tag(1)
-                    }
+                } else if hasSchedule {
+                    ScheduleView()
+                }
             }
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.visible, for: .tabBar)
-            .toolbarBackground(Color(UIColor.systemBackground), for: .tabBar)
         }
         .onAppear {
             Task {
