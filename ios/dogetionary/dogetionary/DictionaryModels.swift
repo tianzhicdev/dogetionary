@@ -235,9 +235,10 @@ struct SavedWord: Identifiable, Codable {
     let last_reviewed_at: String?
     let is_toefl: Bool?
     let is_ielts: Bool?
+    var is_known: Bool  // Whether user has marked this word as known
 
     private enum CodingKeys: String, CodingKey {
-        case id, word, learning_language, native_language, created_at, review_count, correct_reviews, incorrect_reviews, word_progress_level, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts
+        case id, word, learning_language, native_language, created_at, review_count, correct_reviews, incorrect_reviews, word_progress_level, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts, is_known
     }
 
     init(from decoder: Decoder) throws {
@@ -256,11 +257,12 @@ struct SavedWord: Identifiable, Codable {
         last_reviewed_at = try container.decodeIfPresent(String.self, forKey: .last_reviewed_at)
         is_toefl = try container.decodeIfPresent(Bool.self, forKey: .is_toefl)
         is_ielts = try container.decodeIfPresent(Bool.self, forKey: .is_ielts)
+        is_known = try container.decodeIfPresent(Bool.self, forKey: .is_known) ?? false
         metadata = nil // We'll skip decoding metadata for now
     }
 
     // Convenience initializer for testing
-    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, correct_reviews: Int, incorrect_reviews: Int, word_progress_level: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil) {
+    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, correct_reviews: Int, incorrect_reviews: Int, word_progress_level: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil, is_known: Bool = false) {
         self.id = id
         self.word = word
         self.learning_language = learning_language
@@ -276,6 +278,7 @@ struct SavedWord: Identifiable, Codable {
         self.last_reviewed_at = last_reviewed_at
         self.is_toefl = is_toefl
         self.is_ielts = is_ielts
+        self.is_known = is_known
     }
 }
 

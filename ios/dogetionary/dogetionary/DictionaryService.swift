@@ -342,6 +342,63 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    /// Mark a word as known (or learning)
+    /// Known words are excluded from reviews and schedules
+    func markWordAsKnown(wordID: Int, isKnown: Bool, completion: @escaping (Result<Bool, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/words/\(wordID)/mark-known") else {
+            logger.error("Invalid URL for mark-known endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Marking word ID: \(wordID) as \(isKnown ? "known" : "learning") for user: \(userID)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "is_known": isKnown
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            logger.error("Failed to encode mark-known request: \(error.localizedDescription)")
+            completion(.failure(DictionaryError.decodingError(error)))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.logger.error("Network error marking word as known: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for mark-known")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("Mark-known response status code: \(httpResponse.statusCode)")
+
+            if httpResponse.statusCode == 200 {
+                self.logger.info("Successfully marked word ID: \(wordID) as \(isKnown ? "known" : "learning")")
+                completion(.success(true))
+            } else if httpResponse.statusCode == 404 {
+                self.logger.error("Word not found: \(wordID)")
+                completion(.failure(DictionaryError.notFound))
+            } else {
+                self.logger.error("Server error marking word as known: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+            }
+        }.resume()
+    }
+
 
     // MARK: - Audio Methods
 
@@ -1951,9 +2008,10 @@ enum DictionaryError: LocalizedError {
     case invalidURL
     case invalidResponse
     case noData
+    case notFound
     case serverError(Int)
     case decodingError(Error)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:
@@ -1962,6 +2020,8 @@ enum DictionaryError: LocalizedError {
             return "Invalid response from server"
         case .noData:
             return "No data received"
+        case .notFound:
+            return "Word not found"
         case .serverError(let code):
             return "Server error: \(code)"
         case .decodingError(let error):
