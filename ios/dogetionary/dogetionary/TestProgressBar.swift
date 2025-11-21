@@ -13,9 +13,10 @@ struct TestProgressBar: View {
     let savedWords: Int
     let testType: String
     let streakDays: Int  // Streak days
+    let achievementProgress: AchievementProgressResponse?  // Optional achievements
+    @Binding var isExpanded: Bool  // Binding to track expansion state
 
     @State private var animatedProgress: Double = 0.0
-    @State private var showDetails = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -46,10 +47,10 @@ struct TestProgressBar: View {
                 // Expand/collapse button
                 Button(action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        showDetails.toggle()
+                        isExpanded.toggle()
                     }
                 }) {
-                    Image(systemName: showDetails ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                    Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.secondary)
                 }
@@ -92,11 +93,11 @@ struct TestProgressBar: View {
                                     RoundedRectangle(cornerRadius: 8)
                                         .frame(width: geometry.size.width * animatedProgress)
                                 )
-                                .offset(x: showDetails ? 0 : -100)
+                                .offset(x: isExpanded ? 0 : -100)
                                 .animation(
                                     Animation.linear(duration: 1.5)
                                         .repeatForever(autoreverses: false),
-                                    value: showDetails
+                                    value: isExpanded
                                 )
                         )
                 }
@@ -113,7 +114,7 @@ struct TestProgressBar: View {
             }
 
             // Detailed stats (expandable)
-            if showDetails {
+            if isExpanded {
                 VStack(spacing: 8) {
                     Divider()
 
@@ -163,6 +164,55 @@ struct TestProgressBar: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Spacer()
+                    }
+
+                    // Achievements section
+                    if let achievements = achievementProgress {
+                        Divider()
+                            .padding(.vertical, 4)
+
+                        VStack(spacing: 12) {
+                            HStack {
+                                Text("Achievements")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                if let current = achievements.current_achievement {
+                                    Image(systemName: current.symbol)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(colorForAchievementTier(current.tier))
+                                    Text("\(achievements.saved_words) words")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+
+                            // Badge grid (4 columns for compact display)
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible()),
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 12) {
+                                ForEach(achievements.achievements) { achievement in
+                                    VStack(spacing: 4) {
+                                        Image(systemName: achievement.symbol)
+                                            .font(.system(size: 20))
+                                            .foregroundColor(achievement.unlocked ? colorForAchievementTier(achievement.tier) : Color.gray.opacity(0.3))
+
+                                        Text("\(achievement.milestone)")
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(achievement.unlocked ? .primary : .secondary.opacity(0.5))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(achievement.unlocked ? colorForAchievementTier(achievement.tier).opacity(0.08) : Color.gray.opacity(0.05))
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.top, 4)
@@ -261,37 +311,66 @@ struct TestProgressBar: View {
             return .green
         }
     }
+
+    private func colorForAchievementTier(_ tier: AchievementTier) -> Color {
+        switch tier {
+        case .beginner:
+            return .green
+        case .intermediate:
+            return .blue
+        case .advanced:
+            return .purple
+        case .expert:
+            return .orange
+        }
+    }
 }
 
 // Preview
 struct TestProgressBar_Previews: PreviewProvider {
-    static var previews: some View {
-        VStack(spacing: 20) {
-            TestProgressBar(
-                progress: 0.15,
-                totalWords: 3500,
-                savedWords: 525,
-                testType: "TOEFL",
-                streakDays: 5
-            )
+    struct PreviewWrapper: View {
+        @State private var isExpanded1 = false
+        @State private var isExpanded2 = false
+        @State private var isExpanded3 = false
 
-            TestProgressBar(
-                progress: 0.67,
-                totalWords: 2800,
-                savedWords: 1876,
-                testType: "IELTS",
-                streakDays: 12
-            )
+        var body: some View {
+            VStack(spacing: 20) {
+                TestProgressBar(
+                    progress: 0.15,
+                    totalWords: 3500,
+                    savedWords: 525,
+                    testType: "TOEFL",
+                    streakDays: 5,
+                    achievementProgress: nil,
+                    isExpanded: $isExpanded1
+                )
 
-            TestProgressBar(
-                progress: 0.92,
-                totalWords: 5000,
-                savedWords: 4600,
-                testType: "BOTH",
-                streakDays: 0
-            )
+                TestProgressBar(
+                    progress: 0.67,
+                    totalWords: 2800,
+                    savedWords: 1876,
+                    testType: "IELTS",
+                    streakDays: 12,
+                    achievementProgress: nil,
+                    isExpanded: $isExpanded2
+                )
+
+                TestProgressBar(
+                    progress: 0.92,
+                    totalWords: 5000,
+                    savedWords: 4600,
+                    testType: "BOTH",
+                    streakDays: 0,
+                    achievementProgress: nil,
+                    isExpanded: $isExpanded3
+                )
+            }
+            .padding()
+            .background(Color(.systemGroupedBackground))
         }
-        .padding()
-        .background(Color(.systemGroupedBackground))
+    }
+
+    static var previews: some View {
+        PreviewWrapper()
     }
 }

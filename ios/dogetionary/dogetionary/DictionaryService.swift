@@ -1922,6 +1922,18 @@ class DictionaryService: ObservableObject {
         performNetworkRequest(url: url, responseType: StreakDaysResponse.self, completion: completion)
     }
 
+    func getAchievementProgress(completion: @escaping (Result<AchievementProgressResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/achievements/progress?user_id=\(userID)") else {
+            logger.error("Invalid URL for achievements endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Fetching achievement progress for user: \(userID)")
+        performNetworkRequest(url: url, responseType: AchievementProgressResponse.self, completion: completion)
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {
