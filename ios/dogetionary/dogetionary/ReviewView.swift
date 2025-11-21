@@ -57,9 +57,10 @@ struct ReviewView: View {
                 // Main content (scrollable area below fixed status bar)
                 ScrollView {
                     VStack(spacing: 16) {
-                        if isLoadingStatus || isLoading {
+                        if isLoadingStatus {
+                            // Initial loading of practice status
                             Spacer(minLength: 100)
-                            ProgressView("Loading...")
+                            ProgressView("Loading practice...")
                                 .padding()
                             Spacer(minLength: 100)
                         } else if let status = practiceStatus, !status.has_practice {
@@ -75,21 +76,42 @@ struct ReviewView: View {
                                     question: question,
                                     onAnswer: handleAnswer
                                 )
+                                .id(currentReview.word_id)  // Force new view instance for each question
+                            } else if isLoading {
+                                Spacer(minLength: 100)
+                                ProgressView("Loading question...")
+                                    .padding()
+                                Spacer(minLength: 100)
                             } else {
                                 Spacer(minLength: 100)
                                 TodayCompleteView(staleWordsCount: status.stale_words_count, onContinue: loadNextQuestion)
                                 Spacer(minLength: 100)
                             }
                         } else if let currentReview = currentReview, let question = currentReview.question {
-                            // Active practice
+                            // Active practice - use word_id as key to force view recreation on new question
                             EnhancedQuestionView(
                                 question: question,
                                 onAnswer: handleAnswer
                             )
-                        } else {
+                            .id(currentReview.word_id)  // Force new view instance for each question
+                        } else if isLoading {
                             // Loading next question
                             Spacer(minLength: 100)
                             ProgressView("Loading question...")
+                                .padding()
+                            Spacer(minLength: 100)
+                        } else {
+                            // Fallback - should not happen, but recover gracefully
+                            Spacer(minLength: 100)
+                            VStack(spacing: 16) {
+                                Text("Something went wrong")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                Button("Retry") {
+                                    loadPracticeStatus()
+                                }
+                                .buttonStyle(.bordered)
+                            }
                             Spacer(minLength: 100)
                         }
 
@@ -199,6 +221,10 @@ struct ReviewView: View {
     private func loadNextQuestion() {
         isLoading = true
         isLoadingStatus = false
+
+        // Reset answer state for new question
+        currentAnswer = nil
+        currentQuestionType = nil
 
         DictionaryService.shared.getNextReviewWordEnhanced { result in
             DispatchQueue.main.async {
