@@ -18,6 +18,7 @@ from handlers.enhanced_review import get_next_review_enhanced
 from handlers.streaks import get_streak_days
 from handlers.achievements import get_achievement_progress
 from handlers.known_words import mark_word_known
+from handlers.practice_status import get_practice_status
 
 # Create v3 blueprint
 v3_api = Blueprint('v3_api', __name__, url_prefix='/v3')
@@ -110,6 +111,9 @@ v3_api.route('/achievements/progress', methods=['GET'])(get_achievement_progress
 
 # Known Words (V3)
 v3_api.route('/words/<word_id>/mark-known', methods=['POST'])(mark_word_known)
+
+# Practice Status (V3)
+v3_api.route('/practice-status', methods=['GET'])(get_practice_status)
 
 # Feedback (V3)
 v3_api.route('/feedback', methods=['POST'])(submit_feedback)

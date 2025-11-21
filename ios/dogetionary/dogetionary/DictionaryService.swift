@@ -572,7 +572,9 @@ class DictionaryService: ObservableObject {
                     response: reviewRequest.response,
                     review_count: 0,
                     interval_days: 1,
-                    next_review_date: ""
+                    next_review_date: "",
+                    new_score: nil,
+                    new_badge: nil
                 )
                 completion(.success(mockResponse))
                 return
@@ -1989,6 +1991,20 @@ class DictionaryService: ObservableObject {
 
         logger.info("Fetching achievement progress for user: \(userID)")
         performNetworkRequest(url: url, responseType: AchievementProgressResponse.self, completion: completion)
+    }
+
+    // MARK: - Practice Status
+
+    func getPracticeStatus(completion: @escaping (Result<PracticeStatusResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/practice-status?user_id=\(userID)") else {
+            logger.error("Invalid URL for practice-status endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Fetching practice status for user: \(userID)")
+        performNetworkRequest(url: url, responseType: PracticeStatusResponse.self, completion: completion)
     }
 
 }

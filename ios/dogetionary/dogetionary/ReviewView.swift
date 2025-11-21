@@ -11,18 +11,24 @@ struct ReviewView: View {
     @State private var currentReview: EnhancedReviewResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var isSessionComplete = false
     @State private var reviewStartTime: Date?
-    @State private var dueCounts: DueCountsResponse?
-    @State private var isLoadingCounts = false
-    @State private var previousOverdueCount: Int? = nil
-    @State private var isGoalAchieved = false
-    @State private var reviewProgressStats: ReviewProgressStats?
-    @State private var newWordsRemainingToday: Int = 0  // NEW: Track scheduled new words remaining
-    @State private var showDefinitionSheet = false  // Show definition after answering
-    @State private var currentAnswer: Bool? = nil  // Track if answer was correct
-    @State private var currentQuestionType: String? = nil  // Track question type for submission
-    
+    @State private var showDefinitionSheet = false
+    @State private var currentAnswer: Bool? = nil
+    @State private var currentQuestionType: String? = nil
+
+    // Practice status
+    @State private var practiceStatus: PracticeStatusResponse?
+    @State private var isLoadingStatus = true
+
+    // Score tracking with animation
+    @State private var currentScore: Int = 0
+    @State private var scoreAnimationScale: CGFloat = 1.0
+    @State private var scoreAnimationColor: Color = .primary
+
+    // Badge celebration
+    @State private var showBadgeCelebration = false
+    @State private var earnedBadge: NewBadge?
+
     var body: some View {
         ZStack {
             // Soft blue gradient background
@@ -33,78 +39,84 @@ struct ReviewView: View {
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                    // Always show overdue count at top
-                    if isLoadingCounts {
-                        HStack {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                            Text("Loading counts...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+            VStack(spacing: 0) {
+                // Status bar at top (always visible, fixed position)
+                PracticeStatusBar(
+                    practiceStatus: practiceStatus,
+                    score: currentScore,
+                    scoreAnimationScale: scoreAnimationScale,
+                    scoreAnimationColor: scoreAnimationColor
+                )
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+                .background(
+                    Color(red: 0.95, green: 0.97, blue: 1.0)
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 2)
+                )
+
+                // Main content (scrollable area below fixed status bar)
+                ScrollView {
+                    VStack(spacing: 16) {
+                        if isLoadingStatus || isLoading {
+                            Spacer(minLength: 100)
+                            ProgressView("Loading...")
+                                .padding()
+                            Spacer(minLength: 100)
+                        } else if let status = practiceStatus, !status.has_practice {
+                            // Nothing to practice
+                            Spacer(minLength: 100)
+                            NothingToPracticeView()
+                            Spacer(minLength: 100)
+                        } else if let status = practiceStatus,
+                                  status.new_words_count == 0 && status.due_words_count == 0 && status.stale_words_count > 0 {
+                            // Today's practice complete, but stale words available
+                            if let currentReview = currentReview, let question = currentReview.question {
+                                EnhancedQuestionView(
+                                    question: question,
+                                    onAnswer: handleAnswer
+                                )
+                            } else {
+                                Spacer(minLength: 100)
+                                TodayCompleteView(staleWordsCount: status.stale_words_count, onContinue: loadNextQuestion)
+                                Spacer(minLength: 100)
+                            }
+                        } else if let currentReview = currentReview, let question = currentReview.question {
+                            // Active practice
+                            EnhancedQuestionView(
+                                question: question,
+                                onAnswer: handleAnswer
+                            )
+                        } else {
+                            // Loading next question
+                            Spacer(minLength: 100)
+                            ProgressView("Loading question...")
+                            Spacer(minLength: 100)
                         }
-                        .padding(.horizontal)
-                    } else if let dueCounts = dueCounts {
-                        OverdueCountView(dueCounts: dueCounts, newWordsRemainingToday: newWordsRemainingToday)
-                            .padding(.horizontal)
+
+                        if let errorMessage = errorMessage {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .font(.caption)
+                                .padding(.horizontal)
+                        }
                     }
+                    .padding(.top, 16)
+                }
+            }
 
-                    if isLoading {
-                        ProgressView("Loading practice...")
-                            .padding()
-                    } else if isGoalAchieved {
-                        ReviewGoalAchievedView(
-                            progressStats: reviewProgressStats,
-                            onContinue: {
-                                isGoalAchieved = false
-                                startReview()
-                            }
-                        )
-                    } else if isSessionComplete {
-                        ReviewCompleteView(
-                            progressStats: reviewProgressStats
-                        )
-                    } else if let currentReview = currentReview,
-                              let question = currentReview.question,
-                              !isSessionComplete {
-                        EnhancedQuestionView(
-                            question: question,
-                            onAnswer: { isCorrect in
-                                currentAnswer = isCorrect
-                                currentQuestionType = question.question_type
-
-                                if isCorrect {
-                                    // If correct, submit immediately and move to next word
-                                    submitReview(response: isCorrect, questionType: question.question_type)
-                                } else {
-                                    // If wrong, show definition sheet
-                                    showDefinitionSheet = true
-                                }
-                            }
-                        )
-                    } else {
-                        StartReviewState(
-                            dueCounts: dueCounts,
-                            isLoadingCounts: isLoadingCounts,
-                            newWordsRemainingToday: newWordsRemainingToday,
-                            onStart: startReview
-                        )
-                    }
-
-                    if let errorMessage = errorMessage {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                            .padding()
+            // Badge celebration overlay
+            if showBadgeCelebration, let badge = earnedBadge {
+                BadgeCelebrationView(badge: badge) {
+                    showBadgeCelebration = false
+                    earnedBadge = nil
                 }
             }
         }
         .onAppear {
-            loadDueCounts()
-            loadScheduledNewWordsCount()
+            loadPracticeStatus()
         }
         .refreshable {
-            await loadDueCountsAsync()
-            await loadScheduledNewWordsCountAsync()
+            await refreshPracticeStatus()
         }
         .sheet(isPresented: $showDefinitionSheet) {
             if let review = currentReview,
@@ -120,7 +132,6 @@ struct ReviewView: View {
                     isCorrect: currentAnswer ?? false,
                     onNext: {
                         showDefinitionSheet = false
-                        // Submit the answer and move to next word
                         if let answer = currentAnswer, let questionType = currentQuestionType {
                             submitReview(response: answer, questionType: questionType)
                         }
@@ -129,57 +140,65 @@ struct ReviewView: View {
             }
         }
     }
-    
-    private func loadDueCounts() {
-        isLoadingCounts = true
+
+    private func handleAnswer(_ isCorrect: Bool) {
+        guard let question = currentReview?.question else { return }
+        currentAnswer = isCorrect
+        currentQuestionType = question.question_type
+
+        if isCorrect {
+            submitReview(response: isCorrect, questionType: question.question_type)
+        } else {
+            showDefinitionSheet = true
+        }
+    }
+
+    private func loadPracticeStatus() {
+        isLoadingStatus = true
         errorMessage = nil
 
-        DictionaryService.shared.getDueCounts { result in
+        DictionaryService.shared.getPracticeStatus { result in
             DispatchQueue.main.async {
-                self.isLoadingCounts = false
-
                 switch result {
-                case .success(let counts):
-                    // Check if we just achieved the goal (overdue went from >0 to 0)
-                    // Only trigger during review session, not on initial load
-                    if let prevCount = self.previousOverdueCount,
-                       prevCount > 0 && counts.overdue_count == 0 {
-                        // Goal achieved! Load progress stats
-                        print("🏆 Goal achieved! Previous: \(prevCount), Current: \(counts.overdue_count)")
-                        print("🏆 isGoalAchieved before: \(self.isGoalAchieved)")
-                        self.loadProgressStats {
-                            print("🏆 Setting isGoalAchieved = true")
-                            self.isGoalAchieved = true
-                            print("🏆 After setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
-                        }
+                case .success(let status):
+                    self.practiceStatus = status
+                    self.currentScore = status.score
+
+                    // Auto-start if there's practice available
+                    if status.has_practice {
+                        self.loadNextQuestion()
                     } else {
-                        if let prevCount = self.previousOverdueCount {
-                            print("📊 Due counts update - Previous: \(prevCount), Current: \(counts.overdue_count)")
-                            if prevCount > 0 && counts.overdue_count == 0 {
-                                print("⚠️ Should have triggered goal but didn't - condition check failed")
-                            }
-                        } else {
-                            print("📊 First due counts load - Current: \(counts.overdue_count)")
-                        }
+                        self.isLoadingStatus = false
                     }
-                    self.previousOverdueCount = counts.overdue_count
-                    self.dueCounts = counts
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
+                    self.isLoadingStatus = false
                 }
             }
         }
     }
-    
-    private func startReview() {
-        // Track review start
-        AnalyticsManager.shared.track(action: .reviewStart, metadata: [
-            "overdue_count": dueCounts?.overdue_count ?? 0,
-            "total_count": dueCounts?.total_count ?? 0
-        ])
 
+    @MainActor
+    private func refreshPracticeStatus() async {
+        await withCheckedContinuation { continuation in
+            DictionaryService.shared.getPracticeStatus { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let status):
+                        self.practiceStatus = status
+                        self.currentScore = status.score
+                    case .failure:
+                        break
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    private func loadNextQuestion() {
         isLoading = true
-        errorMessage = nil
+        isLoadingStatus = false
 
         DictionaryService.shared.getNextReviewWordEnhanced { result in
             DispatchQueue.main.async {
@@ -187,21 +206,18 @@ struct ReviewView: View {
 
                 switch result {
                 case .success(let response):
-                    // Check if there's actually a word to review
                     if response.hasWordToReview {
                         self.currentReview = response
-                        self.isSessionComplete = false
                         self.reviewStartTime = Date()
-                        self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
                     } else {
-                        // No words available, show completion state
-                        self.isSessionComplete = true
+                        // No more words - refresh status
                         self.currentReview = nil
+                        self.refreshStatusAfterCompletion()
                     }
                 case .failure(let error):
-                    // Check if this is the "no words" case
                     if error.localizedDescription.contains("No words") {
-                        self.isSessionComplete = true
+                        self.currentReview = nil
+                        self.refreshStatusAfterCompletion()
                     } else {
                         self.errorMessage = error.localizedDescription
                     }
@@ -209,35 +225,14 @@ struct ReviewView: View {
             }
         }
     }
-    
-    @MainActor
-    private func loadDueCountsAsync() async {
-        await withCheckedContinuation { continuation in
-            loadDueCounts()
-            continuation.resume()
-        }
-    }
 
-    private func loadScheduledNewWordsCount() {
-        DictionaryService.shared.getTodaySchedule { result in
+    private func refreshStatusAfterCompletion() {
+        DictionaryService.shared.getPracticeStatus { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let schedule):
-                    // Count remaining new words from today's schedule
-                    self.newWordsRemainingToday = schedule.new_words?.count ?? 0
-                case .failure:
-                    // If schedule fetch fails, assume no scheduled words
-                    self.newWordsRemainingToday = 0
+                if case .success(let status) = result {
+                    self.practiceStatus = status
                 }
             }
-        }
-    }
-
-    @MainActor
-    private func loadScheduledNewWordsCountAsync() async {
-        await withCheckedContinuation { continuation in
-            loadScheduledNewWordsCount()
-            continuation.resume()
         }
     }
 
@@ -270,8 +265,19 @@ struct ReviewView: View {
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(_):
-                    self.moveToNextWord()
+                case .success(let submitResponse):
+                    // Update score with animation (correct = +2, incorrect = +1)
+                    self.animateScoreChange(points: response ? 2 : 1, isCorrect: response)
+
+                    // Check if user earned a new badge
+                    if let newBadge = submitResponse.new_badge {
+                        self.earnedBadge = newBadge
+                        self.showBadgeCelebration = true
+                    }
+
+                    // Load next question and refresh status
+                    self.loadNextQuestion()
+                    self.refreshStatusAfterCompletion()
                     // Update badge count after successful review
                     BackgroundTaskManager.shared.updateDueCountsAfterReview()
                 case .failure(let error):
@@ -281,102 +287,179 @@ struct ReviewView: View {
         }
     }
     
-    private func moveToNextWord() {
-        // Track review next action
-        AnalyticsManager.shared.track(action: .reviewNext)
+    private func animateScoreChange(points: Int, isCorrect: Bool) {
+        // Update score
+        currentScore += points
 
-        // Get the next word to review
-        isLoading = true
-        DictionaryService.shared.getNextReviewWordEnhanced { result in
-            DispatchQueue.main.async {
-                self.isLoading = false
+        // Set animation color based on result
+        scoreAnimationColor = isCorrect ? .green : .orange
 
-                switch result {
-                case .success(let response):
-                    // Always use the next word returned by backend
-                    self.currentReview = response
-                    self.reviewStartTime = Date()
-                    self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
+        // Animate scale up
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
+            scoreAnimationScale = 1.3
+        }
 
-                    // Refresh due counts after successfully loading next word
-                    self.loadDueCounts()
-                case .failure(_):
-                    // No more words - session complete
-                    print("🔚 Setting isSessionComplete = true")
-                    print("🔚 Before setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
-                    self.isSessionComplete = true
-                    print("🔚 After setting - isGoalAchieved: \(self.isGoalAchieved), isSessionComplete: \(self.isSessionComplete)")
-
-                    // Track review complete
-                    AnalyticsManager.shared.track(action: .reviewComplete)
-
-                    self.loadProgressStats {
-                        // Stats loaded for complete view
-                    }
-
-                    // Refresh due counts after session completes
-                    self.loadDueCounts()
-                }
+        // Animate back to normal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                self.scoreAnimationScale = 1.0
+                self.scoreAnimationColor = .primary
             }
         }
     }
-    
-    private func loadProgressStats(completion: @escaping () -> Void) {
-        DictionaryService.shared.getReviewProgressStats { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let stats):
-                    self.reviewProgressStats = stats
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    // Create empty stats on failure
-                    self.reviewProgressStats = ReviewProgressStats(
-                        reviews_today: 0,
-                        success_rate_today: 0,
-                        acquainted_to_familiar: 0,
-                        familiar_to_remembered: 0,
-                        remembered_to_unforgettable: 0,
-                        total_reviews: 0
-                    )
-                }
-                completion()
-            }
-        }
-    }
-    
 }
 
-struct StartReviewState: View {
-    let dueCounts: DueCountsResponse?
-    let isLoadingCounts: Bool
-    let newWordsRemainingToday: Int
-    let onStart: () -> Void
-
-    var totalWordsAvailable: Int {
-        (dueCounts?.total_count ?? 0) + newWordsRemainingToday
-    }
+// MARK: - Practice Status Bar
+struct PracticeStatusBar: View {
+    let practiceStatus: PracticeStatusResponse?
+    let score: Int
+    let scoreAnimationScale: CGFloat
+    let scoreAnimationColor: Color
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 64))
-                .foregroundColor(.secondary)
+        HStack(spacing: 12) {
+            // New words indicator
+            if let status = practiceStatus, status.new_words_count > 0 {
+                StatusPill(
+                    icon: "star.fill",
+                    count: status.new_words_count,
+                    label: "new",
+                    color: .blue
+                )
+            }
+
+            // Due words indicator
+            if let status = practiceStatus, status.due_words_count > 0 {
+                StatusPill(
+                    icon: "clock.fill",
+                    count: status.due_words_count,
+                    label: "due",
+                    color: .orange
+                )
+            }
+
+            Spacer()
+
+            // Score display
+            HStack(spacing: 6) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.yellow)
+
+                Text("\(score)")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(scoreAnimationColor)
+                    .scaleEffect(scoreAnimationScale)
+
+                Text("pts")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.08), radius: 3, x: 0, y: 1)
+            )
+        }
+    }
+}
+
+struct StatusPill: View {
+    let icon: String
+    let count: Int
+    let label: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+            Text("\(count)")
+                .font(.system(size: 14, weight: .semibold))
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            Capsule()
+                .fill(color.opacity(0.12))
+        )
+    }
+}
+
+// MARK: - Nothing to Practice View
+struct NothingToPracticeView: View {
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 72))
+                .foregroundColor(.green)
 
             VStack(spacing: 8) {
-                Text("Ready to Practice")
+                Text("All Caught Up!")
                     .font(.title2)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
 
+                Text("You have no words to practice right now.\nAdd more words or check back later!")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal)
+        }
+        .padding()
+    }
+}
 
-            Button("Start Practice") {
-                onStart()
+// MARK: - Today Complete View
+struct TodayCompleteView: View {
+    let staleWordsCount: Int
+    let onContinue: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "trophy.fill")
+                .font(.system(size: 72))
+                .foregroundColor(.yellow)
+
+            VStack(spacing: 8) {
+                Text("Today's Goal Complete!")
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Text("You've finished all new and due words for today.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(totalWordsAvailable == 0)
+
+            // Stale words option
+            VStack(spacing: 12) {
+                Text("Want to keep going?")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Button(action: onContinue) {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("Review \(staleWordsCount) stale word\(staleWordsCount == 1 ? "" : "s")")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(AppTheme.primaryBlue)
+                    .cornerRadius(12)
+                }
+
+                Text("Words not reviewed in 24+ hours")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 8)
         }
         .padding()
     }
@@ -832,245 +915,6 @@ struct ReviewSessionView: View {
     }
 }
 
-struct ReviewCompleteView: View {
-    let progressStats: ReviewProgressStats?
-
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.green)
-
-            Text("All Caught Up!")
-                .font(.title)
-                .fontWeight(.bold)
-
-            Text("No more words to practice right now")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            if let stats = progressStats {
-                VStack(spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Practice Today")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(stats.reviews_today)")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing) {
-                            Text("Success Rate")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(Int(stats.success_rate_today))%")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(stats.success_rate_today >= 80 ? .green : .orange)
-                        }
-                    }
-
-                    if stats.acquainted_to_familiar > 0 || stats.familiar_to_remembered > 0 || stats.remembered_to_unforgettable > 0 {
-                        Divider()
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Progress Today")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            if stats.acquainted_to_familiar > 0 {
-                                ProgressRow(label: "→ Familiar", count: stats.acquainted_to_familiar, color: .blue)
-                            }
-                            if stats.familiar_to_remembered > 0 {
-                                ProgressRow(label: "→ Remembered", count: stats.familiar_to_remembered, color: .purple)
-                            }
-                            if stats.remembered_to_unforgettable > 0 {
-                                ProgressRow(label: "→ Unforgettable", count: stats.remembered_to_unforgettable, color: .green)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-            }
-
-
-            Spacer()
-        }
-        .padding()
-    }
-}
-
-struct ReviewGoalAchievedView: View {
-    let progressStats: ReviewProgressStats?
-    let onContinue: () -> Void
-
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "trophy.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.yellow)
-
-            Text("Goal Achieved!")
-                .font(.title)
-                .fontWeight(.bold)
-
-            Text("You've cleared all overdue practice!")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            if let stats = progressStats {
-                VStack(spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Practice Today")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(stats.reviews_today)")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing) {
-                            Text("Success Rate")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(Int(stats.success_rate_today))%")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(stats.success_rate_today >= 80 ? .green : .orange)
-                        }
-                    }
-
-                    if stats.acquainted_to_familiar > 0 || stats.familiar_to_remembered > 0 || stats.remembered_to_unforgettable > 0 {
-                        Divider()
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Words Progressed")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            if stats.acquainted_to_familiar > 0 {
-                                ProgressRow(label: "→ Familiar", count: stats.acquainted_to_familiar, color: .blue)
-                            }
-                            if stats.familiar_to_remembered > 0 {
-                                ProgressRow(label: "→ Remembered", count: stats.familiar_to_remembered, color: .purple)
-                            }
-                            if stats.remembered_to_unforgettable > 0 {
-                                ProgressRow(label: "→ Unforgettable", count: stats.remembered_to_unforgettable, color: .green)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-            }
-
-            HStack(spacing: 12) {
-                Button("Continue") {
-                    onContinue()
-                }
-                .buttonStyle(.bordered)
-                .foregroundColor(.blue)
-
-            }
-
-            Spacer()
-        }
-        .padding()
-    }
-}
-
-struct ProgressRow: View {
-    let label: String
-    let count: Int
-    let color: Color
-
-    var body: some View {
-        HStack {
-            Circle()
-                .fill(color)
-                .frame(width: 8, height: 8)
-            Text(label)
-                .font(.footnote)
-            Spacer()
-            Text("\(count) word\(count == 1 ? "" : "s")")
-                .font(.footnote)
-                .fontWeight(.medium)
-        }
-    }
-}
-
-struct StatRow: View {
-    let label: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Text(label)
-                .foregroundColor(.secondary)
-            Spacer()
-            Text(value)
-                .fontWeight(.medium)
-        }
-    }
-}
-
-struct OverdueCountView: View {
-    let dueCounts: DueCountsResponse
-    var newWordsRemainingToday: Int = 0
-
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Image(systemName: "clock.fill")
-                    .foregroundColor(dueCounts.overdue_count > 0 ? .orange : .green)
-                    .font(.caption)
-
-                if dueCounts.overdue_count > 0 {
-                    Text("\(dueCounts.overdue_count) words overdue")
-                        .font(.subheadline)
-                        .foregroundColor(.orange)
-                } else {
-                    Text("No overdue words")
-                        .font(.subheadline)
-                        .foregroundColor(.green)
-                }
-
-                Spacer()
-
-                Text("\(dueCounts.total_count) total")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            // Display new words count if any
-            if newWordsRemainingToday > 0 {
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.blue)
-                        .font(.caption)
-
-                    Text("\(newWordsRemainingToday) new words to learn today")
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
-
-                    Spacer()
-                }
-            }
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
-    }
-}
 
 // MARK: - Definition Sheet View for Practice
 
@@ -1172,6 +1016,136 @@ struct DefinitionSheetView: View {
             }
             .navigationTitle("Word Definition")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+// MARK: - Badge Celebration View
+
+struct BadgeCelebrationView: View {
+    let badge: NewBadge
+    let onDismiss: () -> Void
+
+    @State private var scale: CGFloat = 0.5
+    @State private var opacity: Double = 0
+    @State private var iconRotation: Double = 0
+
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    dismissWithAnimation()
+                }
+
+            // Badge card
+            VStack(spacing: 20) {
+                // Badge icon with glow effect
+                ZStack {
+                    // Glow effect
+                    Circle()
+                        .fill(badgeColor.opacity(0.3))
+                        .frame(width: 140, height: 140)
+                        .blur(radius: 20)
+
+                    // Icon background
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [badgeColor, badgeColor.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 100, height: 100)
+                        .shadow(color: badgeColor.opacity(0.5), radius: 10, x: 0, y: 5)
+
+                    // Icon
+                    Image(systemName: badge.symbol)
+                        .font(.system(size: 44, weight: .bold))
+                        .foregroundColor(.white)
+                        .rotationEffect(.degrees(iconRotation))
+                }
+
+                // Title
+                Text("New Badge!")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+
+                // Badge name
+                Text(badge.title)
+                    .font(.title)
+                    .fontWeight(.heavy)
+                    .foregroundColor(badgeColor)
+
+                // Milestone
+                Text("\(badge.milestone) points reached")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+
+                // Dismiss button
+                Button(action: dismissWithAnimation) {
+                    Text("Continue")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(width: 150)
+                        .padding(.vertical, 12)
+                        .background(badgeColor)
+                        .cornerRadius(25)
+                }
+                .padding(.top, 10)
+            }
+            .padding(40)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(.systemBackground).opacity(0.95))
+                    .shadow(color: badgeColor.opacity(0.3), radius: 20, x: 0, y: 10)
+            )
+            .scaleEffect(scale)
+            .opacity(opacity)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                scale = 1.0
+                opacity = 1.0
+            }
+
+            // Subtle icon animation
+            withAnimation(.easeInOut(duration: 0.5).delay(0.3)) {
+                iconRotation = 360
+            }
+
+            // Auto-dismiss after 3 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                dismissWithAnimation()
+            }
+        }
+    }
+
+    private var badgeColor: Color {
+        switch badge.tier {
+        case "beginner":
+            return .green
+        case "intermediate":
+            return .blue
+        case "advanced":
+            return .purple
+        case "expert":
+            return .orange
+        default:
+            return .blue
+        }
+    }
+
+    private func dismissWithAnimation() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            scale = 0.8
+            opacity = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            onDismiss()
         }
     }
 }

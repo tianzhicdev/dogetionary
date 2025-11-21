@@ -129,8 +129,27 @@ the score does not have to sync back to the db, becuase it can always get calcul
 let's design first, mention updates in backend/ui and db (if any);
 
 
-
 2. practice mode interface 
+in the practice tab; lets redefign the UI:
+we allow users to refresh to get today's schedule:
+it should know the number of new words, the number of due words; and number of words that have not been reivewed in the past 24 hours, and score;
+perhaps we need a /v3/practice-status 
+
+on the top we should show a status bar: we display only # new words, # of due words and score;
+if  # new words, # of due words  are both 0; in the status bar we also display "Congrats! Today's learning practice is complete!" 
+
+if # new words, # of due words # of words that have not been reivewed in the past 24 hours are all 0; 
+we show "You've done so well, there is nothing to practice!"
+
+if any of the above is not 0, we just call /v3/next-review-word-with-new-words which automatically prioritize new words > due words > other words that have not ben reviewed in the past 24H;
+
+in other words, when user switch to practice tab, if there is something to practice, he see the question right away, not needing to click "start" button;
+when there is not anything to practice, he sees "You've done so well, there is nothing to practice!"
+
+
+
+
+
 
 3. animation for badge
 
