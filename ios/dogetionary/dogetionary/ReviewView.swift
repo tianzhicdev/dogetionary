@@ -7,14 +7,14 @@
 
 import SwiftUI
 
+// MARK: - Main Review View
+
 struct ReviewView: View {
+    // Core state
     @State private var currentReview: EnhancedReviewResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var reviewStartTime: Date?
-    @State private var showDefinitionSheet = false
-    @State private var currentAnswer: Bool? = nil
-    @State private var currentQuestionType: String? = nil
 
     // Practice status
     @State private var practiceStatus: PracticeStatusResponse?
@@ -29,9 +29,16 @@ struct ReviewView: View {
     @State private var showBadgeCelebration = false
     @State private var earnedBadge: NewBadge?
 
+    // Card swipe state
+    @State private var cardOffset: CGFloat = 0
+    @State private var cardOpacity: Double = 1
+    @State private var isAnswered = false
+    @State private var wasCorrect: Bool? = nil
+    @State private var pendingSubmission: (response: Bool, questionType: String)?
+
     var body: some View {
         ZStack {
-            // Soft blue gradient background
+            // Background
             LinearGradient(
                 colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
                 startPoint: .top,
@@ -40,7 +47,7 @@ struct ReviewView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Status bar at top (always visible, fixed position)
+                // Status bar (fixed at top)
                 PracticeStatusBar(
                     practiceStatus: practiceStatus,
                     score: currentScore,
@@ -54,75 +61,53 @@ struct ReviewView: View {
                         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 2)
                 )
 
-                // Main content (scrollable area below fixed status bar)
-                ScrollView {
-                    VStack(spacing: 16) {
-                        if isLoadingStatus {
-                            // Initial loading of practice status
-                            Spacer(minLength: 100)
-                            ProgressView("Loading practice...")
-                                .padding()
-                            Spacer(minLength: 100)
-                        } else if let status = practiceStatus, !status.has_practice {
-                            // Nothing to practice
-                            Spacer(minLength: 100)
-                            NothingToPracticeView()
-                            Spacer(minLength: 100)
-                        } else if let status = practiceStatus,
-                                  status.new_words_count == 0 && status.due_words_count == 0 && status.stale_words_count > 0 {
-                            // Today's practice complete, but stale words available
-                            if let currentReview = currentReview, let question = currentReview.question {
-                                EnhancedQuestionView(
-                                    question: question,
-                                    onAnswer: handleAnswer
-                                )
-                                .id(currentReview.word_id)  // Force new view instance for each question
-                            } else if isLoading {
-                                Spacer(minLength: 100)
-                                ProgressView("Loading question...")
-                                    .padding()
-                                Spacer(minLength: 100)
-                            } else {
-                                Spacer(minLength: 100)
-                                TodayCompleteView(staleWordsCount: status.stale_words_count, onContinue: loadNextQuestion)
-                                Spacer(minLength: 100)
+                // Main content area (fills remaining space)
+                ZStack {
+                    if isLoadingStatus {
+                        ProgressView("Loading practice...")
+                    } else if let status = practiceStatus, !status.has_practice {
+                        NothingToPracticeView()
+                    } else if let status = practiceStatus,
+                              status.new_words_count == 0 && status.due_words_count == 0 && status.stale_words_count > 0,
+                              currentReview == nil && !isLoading {
+                        TodayCompleteView(staleWordsCount: status.stale_words_count, onContinue: loadNextQuestion)
+                    } else if isLoading {
+                        ProgressView("Loading question...")
+                    } else if let review = currentReview, let question = review.question {
+                        // Question card with definition below
+                        QuestionCardView(
+                            question: question,
+                            definition: review.definition,
+                            word: review.word ?? "",
+                            learningLanguage: review.learning_language ?? "en",
+                            nativeLanguage: review.native_language ?? "en",
+                            isAnswered: $isAnswered,
+                            wasCorrect: $wasCorrect,
+                            onAnswer: handleAnswer,
+                            onSwipeComplete: handleSwipeComplete
+                        )
+                        .id(review.word_id)
+                        .offset(x: cardOffset)
+                        .opacity(cardOpacity)
+                    } else {
+                        VStack(spacing: 16) {
+                            Text("Something went wrong")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Button("Retry") {
+                                loadPracticeStatus()
                             }
-                        } else if let currentReview = currentReview, let question = currentReview.question {
-                            // Active practice - use word_id as key to force view recreation on new question
-                            EnhancedQuestionView(
-                                question: question,
-                                onAnswer: handleAnswer
-                            )
-                            .id(currentReview.word_id)  // Force new view instance for each question
-                        } else if isLoading {
-                            // Loading next question
-                            Spacer(minLength: 100)
-                            ProgressView("Loading question...")
-                                .padding()
-                            Spacer(minLength: 100)
-                        } else {
-                            // Fallback - should not happen, but recover gracefully
-                            Spacer(minLength: 100)
-                            VStack(spacing: 16) {
-                                Text("Something went wrong")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                Button("Retry") {
-                                    loadPracticeStatus()
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                            Spacer(minLength: 100)
-                        }
-
-                        if let errorMessage = errorMessage {
-                            Text(errorMessage)
-                                .foregroundColor(.red)
-                                .font(.caption)
-                                .padding(.horizontal)
+                            .buttonStyle(.bordered)
                         }
                     }
-                    .padding(.top, 16)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                        .padding()
                 }
             }
 
@@ -140,38 +125,34 @@ struct ReviewView: View {
         .refreshable {
             await refreshPracticeStatus()
         }
-        .sheet(isPresented: $showDefinitionSheet) {
-            if let review = currentReview,
-               let definition = review.definition,
-               let word = review.word,
-               let learningLang = review.learning_language,
-               let nativeLang = review.native_language {
-                DefinitionSheetView(
-                    word: word,
-                    definition: definition,
-                    learningLanguage: learningLang,
-                    nativeLanguage: nativeLang,
-                    isCorrect: currentAnswer ?? false,
-                    onNext: {
-                        showDefinitionSheet = false
-                        if let answer = currentAnswer, let questionType = currentQuestionType {
-                            submitReview(response: answer, questionType: questionType)
-                        }
-                    }
-                )
-            }
-        }
     }
 
-    private func handleAnswer(_ isCorrect: Bool) {
-        guard let question = currentReview?.question else { return }
-        currentAnswer = isCorrect
-        currentQuestionType = question.question_type
+    // MARK: - Actions
 
-        if isCorrect {
-            submitReview(response: isCorrect, questionType: question.question_type)
-        } else {
-            showDefinitionSheet = true
+    private func handleAnswer(_ isCorrect: Bool, questionType: String) {
+        isAnswered = true
+        wasCorrect = isCorrect
+        pendingSubmission = (response: isCorrect, questionType: questionType)
+    }
+
+    private func handleSwipeComplete() {
+        // Animate card off screen
+        withAnimation(.easeOut(duration: 0.25)) {
+            cardOffset = -UIScreen.main.bounds.width
+            cardOpacity = 0
+        }
+
+        // Submit and load next after animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if let submission = pendingSubmission {
+                submitReview(response: submission.response, questionType: submission.questionType)
+            }
+            // Reset card state for next question
+            cardOffset = 0
+            cardOpacity = 1
+            isAnswered = false
+            wasCorrect = nil
+            pendingSubmission = nil
         }
     }
 
@@ -185,8 +166,6 @@ struct ReviewView: View {
                 case .success(let status):
                     self.practiceStatus = status
                     self.currentScore = status.score
-
-                    // Auto-start if there's practice available
                     if status.has_practice {
                         self.loadNextQuestion()
                     } else {
@@ -205,12 +184,9 @@ struct ReviewView: View {
         await withCheckedContinuation { continuation in
             DictionaryService.shared.getPracticeStatus { result in
                 DispatchQueue.main.async {
-                    switch result {
-                    case .success(let status):
+                    if case .success(let status) = result {
                         self.practiceStatus = status
                         self.currentScore = status.score
-                    case .failure:
-                        break
                     }
                     continuation.resume()
                 }
@@ -222,10 +198,6 @@ struct ReviewView: View {
         isLoading = true
         isLoadingStatus = false
 
-        // Reset answer state for new question
-        currentAnswer = nil
-        currentQuestionType = nil
-
         DictionaryService.shared.getNextReviewWordEnhanced { result in
             DispatchQueue.main.async {
                 self.isLoading = false
@@ -236,7 +208,6 @@ struct ReviewView: View {
                         self.currentReview = response
                         self.reviewStartTime = Date()
                     } else {
-                        // No more words - refresh status
                         self.currentReview = nil
                         self.refreshStatusAfterCompletion()
                     }
@@ -269,20 +240,13 @@ struct ReviewView: View {
 
         let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
 
-        // Track review answer
-        if response {
-            AnalyticsManager.shared.track(action: .reviewAnswerCorrect, metadata: [
-                "word": word,
-                "question_type": questionType,
-                "response_time_ms": responseTime ?? 0
-            ])
-        } else {
-            AnalyticsManager.shared.track(action: .reviewAnswerIncorrect, metadata: [
-                "word": word,
-                "question_type": questionType,
-                "response_time_ms": responseTime ?? 0
-            ])
-        }
+        // Track analytics
+        let action: AnalyticsAction = response ? .reviewAnswerCorrect : .reviewAnswerIncorrect
+        AnalyticsManager.shared.track(action: action, metadata: [
+            "word": word,
+            "question_type": questionType,
+            "response_time_ms": responseTime ?? 0
+        ])
 
         DictionaryService.shared.submitReview(
             wordID: wordID,
@@ -292,19 +256,15 @@ struct ReviewView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let submitResponse):
-                    // Update score with animation (correct = +2, incorrect = +1)
                     self.animateScoreChange(points: response ? 2 : 1, isCorrect: response)
 
-                    // Check if user earned a new badge
                     if let newBadge = submitResponse.new_badge {
                         self.earnedBadge = newBadge
                         self.showBadgeCelebration = true
                     }
 
-                    // Load next question and refresh status
                     self.loadNextQuestion()
                     self.refreshStatusAfterCompletion()
-                    // Update badge count after successful review
                     BackgroundTaskManager.shared.updateDueCountsAfterReview()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
@@ -312,24 +272,151 @@ struct ReviewView: View {
             }
         }
     }
-    
-    private func animateScoreChange(points: Int, isCorrect: Bool) {
-        // Update score
-        currentScore += points
 
-        // Set animation color based on result
+    private func animateScoreChange(points: Int, isCorrect: Bool) {
+        currentScore += points
         scoreAnimationColor = isCorrect ? .green : .orange
 
-        // Animate scale up
         withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
             scoreAnimationScale = 1.3
         }
 
-        // Animate back to normal
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                 self.scoreAnimationScale = 1.0
                 self.scoreAnimationColor = .primary
+            }
+        }
+    }
+}
+
+// MARK: - Question Card View
+
+struct QuestionCardView: View {
+    let question: ReviewQuestion
+    let definition: DefinitionData?
+    let word: String
+    let learningLanguage: String
+    let nativeLanguage: String
+    @Binding var isAnswered: Bool
+    @Binding var wasCorrect: Bool?
+    let onAnswer: (Bool, String) -> Void
+    let onSwipeComplete: () -> Void
+
+    @State private var dragOffset: CGFloat = 0
+    @State private var showSwipeHint = false
+
+    private let swipeThreshold: CGFloat = 100
+
+    // Convert DefinitionData to Definition model for DefinitionCard
+    private var convertedDefinition: Definition? {
+        guard let def = definition else { return nil }
+
+        let groupedDefinitions = Dictionary(grouping: def.definitions) { $0.type }
+        let meanings = groupedDefinitions.map { (partOfSpeech, definitions) in
+            let definitionDetails = definitions.map { d in
+                let definitionText: String
+                if let nativeDefinition = d.definition_native,
+                   !nativeDefinition.isEmpty && nativeDefinition != d.definition {
+                    definitionText = "\(d.definition)\n\n\(nativeDefinition)"
+                } else {
+                    definitionText = d.definition
+                }
+                return DefinitionDetail(
+                    definition: definitionText,
+                    example: d.examples.first,
+                    synonyms: nil,
+                    antonyms: d.cultural_notes != nil ? [d.cultural_notes!] : nil
+                )
+            }
+            return Meaning(partOfSpeech: partOfSpeech, definitions: definitionDetails)
+        }
+
+        return Definition(
+            id: UUID(),
+            word: word,
+            phonetic: def.phonetic,
+            learning_language: learningLanguage,
+            native_language: nativeLanguage,
+            translations: def.translations ?? [],
+            meanings: meanings,
+            audioData: nil,
+            hasWordAudio: false,
+            exampleAudioAvailability: [:],
+            validWordScore: def.valid_word_score ?? 1.0,
+            suggestion: def.suggestion
+        )
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Question section
+                EnhancedQuestionView(
+                    question: question,
+                    onAnswer: { isCorrect in
+                        guard !isAnswered else { return }
+                        onAnswer(isCorrect, question.question_type)
+                    }
+                )
+                .disabled(isAnswered)
+
+                // Definition section (shown after answering)
+                if isAnswered {
+                    VStack(spacing: 16) {
+                        // Definition card
+                        if let def = convertedDefinition {
+                            DefinitionCard(definition: def)
+                                .padding(.horizontal)
+                        }
+
+                        // Swipe hint
+                        HStack {
+                            Image(systemName: "arrow.left")
+                            Text("Swipe left for next question")
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 20)
+                        .opacity(showSwipeHint ? 1 : 0)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+            }
+            .padding(.vertical, 20)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        )
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .offset(x: dragOffset)
+        .gesture(
+            isAnswered ?
+            DragGesture()
+                .onChanged { value in
+                    if value.translation.width < 0 {
+                        dragOffset = value.translation.width
+                    }
+                }
+                .onEnded { value in
+                    if value.translation.width < -swipeThreshold {
+                        onSwipeComplete()
+                    } else {
+                        withAnimation(.spring()) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+            : nil
+        )
+        .onChange(of: isAnswered) { _, newValue in
+            if newValue {
+                withAnimation(.easeIn.delay(0.5)) {
+                    showSwipeHint = true
+                }
             }
         }
     }
