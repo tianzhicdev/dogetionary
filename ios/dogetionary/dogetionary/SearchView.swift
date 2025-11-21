@@ -93,16 +93,9 @@ struct SearchView: View {
 
                         // Centered search bar (hidden when progress bar is expanded)
                         if !isProgressBarExpanded {
-                            VStack(spacing: 8) {
-                                searchBarView()
-                                    .padding(.horizontal, 24)
-
-                                Text("Every lookup becomes unforgettable")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .transition(.opacity)
+                            searchBarView()
+                                .padding(.horizontal, 24)
+                                .transition(.opacity)
                         }
                     }
                 }
