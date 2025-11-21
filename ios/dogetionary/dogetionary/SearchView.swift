@@ -72,7 +72,8 @@ struct SearchView: View {
                                     progress: progress.progress,
                                     totalWords: progress.total_words,
                                     savedWords: progress.saved_words,
-                                    testType: progress.test_type ?? "Test"
+                                    testType: progress.test_type ?? "Test",
+                                    streakDays: progress.streak_days
                                 )
                                 .padding(.horizontal)
                                 .padding(.top, 16)

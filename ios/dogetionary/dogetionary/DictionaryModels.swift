@@ -730,9 +730,10 @@ struct TestProgressResponse: Codable {
     let total_words: Int
     let saved_words: Int
     let progress: Double  // 0.0 to 1.0
+    let streak_days: Int  // Consecutive days of completing reviews
 
     private enum CodingKeys: String, CodingKey {
-        case has_schedule, test_type, total_words, saved_words, progress
+        case has_schedule, test_type, total_words, saved_words, progress, streak_days
     }
 }
 
@@ -800,5 +801,15 @@ struct EnhancedReviewSubmissionRequest: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case user_id, word_id, response, question_type
+    }
+}
+
+/// Streak Days Response
+struct StreakDaysResponse: Codable {
+    let user_id: String
+    let streak_days: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case user_id, streak_days
     }
 }

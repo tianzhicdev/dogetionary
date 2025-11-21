@@ -285,9 +285,6 @@ struct ReviewView: View {
         // Track review next action
         AnalyticsManager.shared.track(action: .reviewNext)
 
-        // Refresh due counts after each review
-        loadDueCounts()
-
         // Get the next word to review
         isLoading = true
         DictionaryService.shared.getNextReviewWordEnhanced { result in
@@ -300,6 +297,9 @@ struct ReviewView: View {
                     self.currentReview = response
                     self.reviewStartTime = Date()
                     self.newWordsRemainingToday = response.new_words_remaining_today ?? 0
+
+                    // Refresh due counts after successfully loading next word
+                    self.loadDueCounts()
                 case .failure(_):
                     // No more words - session complete
                     print("🔚 Setting isSessionComplete = true")
@@ -313,6 +313,9 @@ struct ReviewView: View {
                     self.loadProgressStats {
                         // Stats loaded for complete view
                     }
+
+                    // Refresh due counts after session completes
+                    self.loadDueCounts()
                 }
             }
         }
