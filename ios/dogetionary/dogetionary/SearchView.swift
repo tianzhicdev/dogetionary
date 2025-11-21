@@ -23,6 +23,13 @@ struct SearchView: View {
     @State private var testProgress: TestProgressResponse?
     @State private var isLoadingProgress = false
 
+    // Achievement progress state
+    @State private var achievementProgress: AchievementProgressResponse?
+    @State private var isLoadingAchievements = false
+
+    // Progress bar expansion state
+    @State private var isProgressBarExpanded = false
+
     private var isSearchActive: Bool {
         return !definitions.isEmpty || errorMessage != nil || isLoading
     }
@@ -73,7 +80,9 @@ struct SearchView: View {
                                     totalWords: progress.total_words,
                                     savedWords: progress.saved_words,
                                     testType: progress.test_type ?? "Test",
-                                    streakDays: progress.streak_days
+                                    streakDays: progress.streak_days,
+                                    achievementProgress: achievementProgress,
+                                    isExpanded: $isProgressBarExpanded
                                 )
                                 .padding(.horizontal)
                                 .padding(.top, 16)
@@ -82,15 +91,18 @@ struct SearchView: View {
                             }
                         }
 
-                        // Centered search bar (independent of progress bar)
-                        VStack(spacing: 8) {
-                            searchBarView()
-                                .padding(.horizontal, 24)
+                        // Centered search bar (hidden when progress bar is expanded)
+                        if !isProgressBarExpanded {
+                            VStack(spacing: 8) {
+                                searchBarView()
+                                    .padding(.horizontal, 24)
 
-                            Text("Every lookup becomes unforgettable")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
+                                Text("Every lookup becomes unforgettable")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .transition(.opacity)
                         }
                     }
                 }
@@ -133,10 +145,12 @@ struct SearchView: View {
         }
         .onAppear {
             loadTestProgress()
+            loadAchievementProgress()
         }
         .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { _ in
             // Refresh progress when a word is saved
             loadTestProgress()
+            loadAchievementProgress()
         }
     }
     
@@ -386,6 +400,25 @@ struct SearchView: View {
                 case .failure(let error):
                     print("Failed to load test progress: \(error.localizedDescription)")
                     // Silently fail - progress bar simply won't show
+                }
+            }
+        }
+    }
+
+    private func loadAchievementProgress() {
+        guard !isLoadingAchievements else { return }
+
+        isLoadingAchievements = true
+        DictionaryService.shared.getAchievementProgress { result in
+            DispatchQueue.main.async {
+                self.isLoadingAchievements = false
+
+                switch result {
+                case .success(let progress):
+                    self.achievementProgress = progress
+                case .failure(let error):
+                    print("Failed to load achievement progress: \(error.localizedDescription)")
+                    // Silently fail - achievements simply won't show
                 }
             }
         }

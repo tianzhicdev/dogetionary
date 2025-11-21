@@ -813,3 +813,55 @@ struct StreakDaysResponse: Codable {
         case user_id, streak_days
     }
 }
+
+// MARK: - Achievements
+
+/// Achievement tier
+enum AchievementTier: String, Codable {
+    case beginner
+    case intermediate
+    case advanced
+    case expert
+}
+
+/// Individual achievement
+struct Achievement: Codable, Identifiable {
+    let id = UUID()
+    let milestone: Int
+    let title: String
+    let symbol: String
+    let tier: AchievementTier
+    let is_award: Bool
+    let unlocked: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case milestone, title, symbol, tier, is_award, unlocked
+    }
+}
+
+/// Achievement progress response
+struct AchievementProgressResponse: Codable {
+    let user_id: String
+    let saved_words: Int
+    let achievements: [Achievement]
+    let next_milestone: Int?
+    let next_achievement: AchievementInfo?
+    let current_achievement: AchievementInfo?
+
+    private enum CodingKeys: String, CodingKey {
+        case user_id, saved_words, achievements, next_milestone, next_achievement, current_achievement
+    }
+}
+
+/// Achievement info (without unlocked status)
+struct AchievementInfo: Codable {
+    let milestone: Int
+    let title: String
+    let symbol: String
+    let tier: AchievementTier
+    let is_award: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case milestone, title, symbol, tier, is_award
+    }
+}

@@ -31,14 +31,6 @@ struct SavedWordsView: View {
                     }
                     .tag(0)
 
-                    // Stats Tab
-                    StatsView()
-                        .tabItem {
-                            Image(systemName: "chart.bar.fill")
-                            Text("Stats")
-                        }
-                        .tag(1)
-
                     // Schedule Tab (conditional)
                     if hasSchedule {
                         ScheduleView()
@@ -46,7 +38,7 @@ struct SavedWordsView: View {
                                 Image(systemName: "calendar")
                                 Text("Schedule")
                             }
-                            .tag(2)
+                            .tag(1)
                     }
             }
             .navigationBarTitleDisplayMode(.large)

@@ -16,6 +16,7 @@ from handlers.test_vocabulary import update_test_settings, get_test_settings, ad
 from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words, refresh_schedule_handler, get_test_progress
 from handlers.enhanced_review import get_next_review_enhanced
 from handlers.streaks import get_streak_days
+from handlers.achievements import get_achievement_progress
 
 # Create v3 blueprint
 v3_api = Blueprint('v3_api', __name__, url_prefix='/v3')
@@ -102,6 +103,9 @@ v3_api.route('/analytics/data', methods=['GET'])(get_analytics_data)
 
 # Streak Days (V3)
 v3_api.route('/get-streak-days', methods=['GET'])(get_streak_days)
+
+# Achievements (V3)
+v3_api.route('/achievements/progress', methods=['GET'])(get_achievement_progress)
 
 # Feedback (V3)
 v3_api.route('/feedback', methods=['POST'])(submit_feedback)
