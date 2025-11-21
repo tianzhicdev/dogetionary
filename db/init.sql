@@ -168,6 +168,17 @@ CREATE TABLE api_usage_logs (
     api_version VARCHAR(10)  -- 'v1', 'v2', 'v3', or NULL for unversioned
 );
 
+-- Streak Days table (track daily completion streaks per schedule)
+-- Note: This table is created by migration add_schedule_tables.sql
+-- Kept here for reference but will be created by migration
+-- CREATE TABLE streak_days (
+--     id SERIAL PRIMARY KEY,
+--     schedule_id INTEGER NOT NULL REFERENCES study_schedules(id) ON DELETE CASCADE,
+--     streak_date DATE NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     UNIQUE(schedule_id, streak_date)
+-- );
+
 -- Additional indexes for new tables
 CREATE INDEX idx_test_vocab_toefl ON test_vocabularies(is_toefl) WHERE is_toefl = TRUE;
 CREATE INDEX idx_test_vocab_ielts ON test_vocabularies(is_ielts) WHERE is_ielts = TRUE;
@@ -186,3 +197,5 @@ CREATE INDEX idx_notification_logs_type ON notification_logs(notification_type);
 CREATE INDEX idx_api_usage_endpoint_timestamp ON api_usage_logs(endpoint, timestamp DESC);
 CREATE INDEX idx_api_usage_timestamp ON api_usage_logs(timestamp DESC);
 CREATE INDEX idx_api_usage_user_id ON api_usage_logs(user_id);
+-- Streak days index created by migration
+-- CREATE INDEX idx_streak_days_schedule_date ON streak_days(schedule_id, streak_date DESC);

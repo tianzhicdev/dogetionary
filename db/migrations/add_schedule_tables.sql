@@ -41,4 +41,15 @@ CREATE TABLE IF NOT EXISTS daily_schedule_entries (
 CREATE INDEX IF NOT EXISTS idx_daily_entries_schedule ON daily_schedule_entries(schedule_id, scheduled_date);
 CREATE INDEX IF NOT EXISTS idx_daily_entries_date ON daily_schedule_entries(scheduled_date DESC);
 
+-- Step 1.4: Create streak_days table (tracks daily completion streaks per schedule)
+CREATE TABLE IF NOT EXISTS streak_days (
+    id SERIAL PRIMARY KEY,
+    schedule_id INTEGER NOT NULL REFERENCES study_schedules(id) ON DELETE CASCADE,
+    streak_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(schedule_id, streak_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_streak_days_schedule_date ON streak_days(schedule_id, streak_date DESC);
+
 COMMIT;

@@ -318,14 +318,53 @@ def submit_review():
         # Insert the new review with calculated next_review_date
         # Convert response to boolean (1 = correct/true, 0 = incorrect/false)
         response_bool = bool(response)
+        # Note: question_type is optional and not stored in base reviews table
         db_execute("""
-            INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date, question_type)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (user_id, word_id, response_bool, current_review_time, next_review_date, question_type), commit=True)
+            INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user_id, word_id, response_bool, current_review_time, next_review_date), commit=True)
 
         # Calculate simple stats for response
         review_count = len(all_reviews)
         interval_days = (next_review_date - current_review_time).days if next_review_date else 1
+
+        # Check if user has completed all reviews for today (0 overdue + 0 new words)
+        # If so, create a streak date record
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+
+            # Get due count after this review
+            cur.execute("""
+                SELECT
+                    COUNT(*) as total_count,
+                    COUNT(CASE
+                        WHEN COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
+                        THEN 1
+                    END) as due_count
+                FROM saved_words sw
+                LEFT JOIN (
+                    SELECT
+                        word_id,
+                        next_review_date,
+                        ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                    FROM reviews
+                ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+                WHERE sw.user_id = %s
+            """, (user_id,))
+
+            result = cur.fetchone()
+            due_count = result['due_count'] or 0
+
+            # If no more due words, create streak date
+            if due_count == 0:
+                from handlers.streaks import create_streak_date
+                create_streak_date(user_id)
+                logger.info(f"User {user_id} completed all reviews, streak date created")
+
+            cur.close()
+        finally:
+            conn.close()
 
         return jsonify({
             "success": True,

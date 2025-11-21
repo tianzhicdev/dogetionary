@@ -1907,6 +1907,21 @@ class DictionaryService: ObservableObject {
         performNetworkRequest(url: url, responseType: TestProgressResponse.self, completion: completion)
     }
 
+    // MARK: - Streak Days
+
+    /// Get the current streak days for the user
+    func getStreakDays(completion: @escaping (Result<StreakDaysResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/get-streak-days?user_id=\(userID)") else {
+            logger.error("Invalid URL for streak days endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Fetching streak days for user: \(userID)")
+        performNetworkRequest(url: url, responseType: StreakDaysResponse.self, completion: completion)
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {

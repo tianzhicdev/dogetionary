@@ -787,7 +787,8 @@ def get_test_progress():
                     "test_type": None,
                     "total_words": 0,
                     "saved_words": 0,
-                    "progress": 0.0
+                    "progress": 0.0,
+                    "streak_days": 0
                 }), 200
 
             # Determine test type
@@ -856,12 +857,17 @@ def get_test_progress():
             # Calculate progress
             progress = saved_words / total_words if total_words > 0 else 0.0
 
+            # Get streak days
+            from handlers.streaks import calculate_streak_days
+            streak_days = calculate_streak_days(user_id)
+
             return jsonify({
                 "has_schedule": True,
                 "test_type": test_type,
                 "total_words": total_words,
                 "saved_words": saved_words,
-                "progress": round(progress, 4)
+                "progress": round(progress, 4),
+                "streak_days": streak_days
             }), 200
 
         finally:

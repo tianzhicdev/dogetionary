@@ -12,6 +12,7 @@ struct TestProgressBar: View {
     let totalWords: Int
     let savedWords: Int
     let testType: String
+    let streakDays: Int  // Streak days
 
     @State private var animatedProgress: Double = 0.0
     @State private var showDetails = false
@@ -124,6 +125,22 @@ struct TestProgressBar: View {
                             Text("\(totalWords - savedWords)")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.orange)
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .center, spacing: 4) {
+                            Text("Streak")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            HStack(spacing: 4) {
+                                Image(systemName: "flame.fill")
+                                    .foregroundColor(streakDays > 0 ? .orange : .gray)
+                                    .font(.system(size: 14))
+                                Text("\(streakDays)")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(streakDays > 0 ? .orange : .gray)
+                            }
                         }
 
                         Spacer()
@@ -254,21 +271,24 @@ struct TestProgressBar_Previews: PreviewProvider {
                 progress: 0.15,
                 totalWords: 3500,
                 savedWords: 525,
-                testType: "TOEFL"
+                testType: "TOEFL",
+                streakDays: 5
             )
 
             TestProgressBar(
                 progress: 0.67,
                 totalWords: 2800,
                 savedWords: 1876,
-                testType: "IELTS"
+                testType: "IELTS",
+                streakDays: 12
             )
 
             TestProgressBar(
                 progress: 0.92,
                 totalWords: 5000,
                 savedWords: 4600,
-                testType: "BOTH"
+                testType: "BOTH",
+                streakDays: 0
             )
         }
         .padding()
