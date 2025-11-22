@@ -675,31 +675,46 @@ struct SchedulePracticeWord: Codable, Identifiable {
 /// Today's schedule entry with new words and practice words
 struct DailyScheduleEntry: Codable {
     let date: String
-    let user_has_schedule: Bool?  // NEW: Whether user has created any schedule (determines tab visibility)
+    let user_has_schedule: Bool?  // Whether user has created any schedule (determines tab visibility)
     let has_schedule: Bool  // Whether today has tasks scheduled
     let test_type: String?  // TOEFL, IELTS, or BOTH
     let user_name: String?  // User's name for personalization
-    let new_words: [String]?  // Optional when has_schedule is false
-    let test_practice_words: [SchedulePracticeWord]?  // Optional when has_schedule is false
-    let non_test_practice_words: [SchedulePracticeWord]?  // Optional when has_schedule is false
+    let new_words: [String]?  // Remaining new words (not yet reviewed today)
+    let new_words_completed: [String]?  // New words already reviewed today
+    let test_practice_words: [SchedulePracticeWord]?  // Remaining test practice words
+    let test_practice_words_completed: [SchedulePracticeWord]?  // Test practice words already reviewed today
+    let non_test_practice_words: [SchedulePracticeWord]?  // Remaining non-test practice words
+    let non_test_practice_words_completed: [SchedulePracticeWord]?  // Non-test practice words already reviewed today
     let summary: ScheduleSummary?
     let message: String?
 
     private enum CodingKeys: String, CodingKey {
-        case date, user_has_schedule, has_schedule, test_type, user_name, new_words, test_practice_words,
-             non_test_practice_words, summary, message
+        case date, user_has_schedule, has_schedule, test_type, user_name, new_words, new_words_completed,
+             test_practice_words, test_practice_words_completed, non_test_practice_words,
+             non_test_practice_words_completed, summary, message
     }
 }
 
 /// Summary of today's schedule
 struct ScheduleSummary: Codable {
     let total_new: Int
+    let total_new_remaining: Int?
+    let total_new_completed: Int?
     let total_test_practice: Int
+    let total_test_practice_remaining: Int?
+    let total_test_practice_completed: Int?
     let total_non_test_practice: Int
+    let total_non_test_practice_remaining: Int?
+    let total_non_test_practice_completed: Int?
     let total_words: Int
+    let total_remaining: Int?
+    let total_completed: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case total_new, total_test_practice, total_non_test_practice, total_words
+        case total_new, total_new_remaining, total_new_completed,
+             total_test_practice, total_test_practice_remaining, total_test_practice_completed,
+             total_non_test_practice, total_non_test_practice_remaining, total_non_test_practice_completed,
+             total_words, total_remaining, total_completed
     }
 }
 

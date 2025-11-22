@@ -43,6 +43,67 @@ def get_user_timezone(user_id: str) -> str:
         conn.close()
 
 
+def get_words_reviewed_on_date(user_id: str, target_date: date, timezone: str) -> Set[str]:
+    """
+    Get all words reviewed on a specific date in user's timezone.
+
+    Converts review timestamps from UTC to user timezone before comparing dates.
+
+    Args:
+        user_id: UUID of the user
+        target_date: The date to check (in user's timezone)
+        timezone: User's IANA timezone string
+
+    Returns:
+        Set of word strings reviewed on that date
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT DISTINCT sw.word
+            FROM reviews r
+            JOIN saved_words sw ON r.word_id = sw.id
+            WHERE r.user_id = %s
+              AND DATE(r.reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE %s) = %s
+        """, (user_id, timezone, target_date))
+        return {row['word'] for row in cur.fetchall()}
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_words_saved_on_date(user_id: str, target_date: date, timezone: str, learning_language: str = 'en') -> Set[str]:
+    """
+    Get all words saved on a specific date in user's timezone.
+
+    Converts created_at timestamps from UTC to user timezone before comparing dates.
+
+    Args:
+        user_id: UUID of the user
+        target_date: The date to check (in user's timezone)
+        timezone: User's IANA timezone string
+        learning_language: Language being learned (default: 'en')
+
+    Returns:
+        Set of word strings saved on that date
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT DISTINCT word
+            FROM saved_words
+            WHERE user_id = %s
+              AND learning_language = %s
+              AND DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE %s) = %s
+        """, (user_id, learning_language, timezone, target_date))
+        return {row['word'] for row in cur.fetchall()}
+    finally:
+        cur.close()
+        conn.close()
+
+
 def get_today_in_timezone(timezone: str) -> date:
     """
     Get today's date in the specified timezone.
@@ -96,13 +157,16 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
         conn.close()
 
 
-def get_user_saved_words(user_id: str, learning_language: str = 'en') -> Dict[str, Dict]:
+def get_user_saved_words(user_id: str, learning_language: str = 'en',
+                         exclude_date: date = None, timezone: str = None) -> Dict[str, Dict]:
     """
     Get all saved words for a user with their metadata.
 
     Args:
         user_id: UUID of the user
         learning_language: Language being learned (default: 'en')
+        exclude_date: Optional date to exclude words saved on this date (in user's timezone)
+        timezone: Required if exclude_date is provided - user's IANA timezone string
 
     Returns:
         Dictionary mapping word -> {id, created_at}
@@ -115,11 +179,21 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en') -> Dict[st
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT id, word, created_at
-            FROM saved_words
-            WHERE user_id = %s AND learning_language = %s
-        """, (user_id, learning_language))
+        if exclude_date and timezone:
+            # Exclude words saved on the specified date in user's timezone
+            cur.execute("""
+                SELECT id, word, created_at
+                FROM saved_words
+                WHERE user_id = %s
+                  AND learning_language = %s
+                  AND DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE %s) != %s
+            """, (user_id, learning_language, timezone, exclude_date))
+        else:
+            cur.execute("""
+                SELECT id, word, created_at
+                FROM saved_words
+                WHERE user_id = %s AND learning_language = %s
+            """, (user_id, learning_language))
 
         return {
             row['word']: {
@@ -133,12 +207,14 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en') -> Dict[st
         conn.close()
 
 
-def get_word_review_history(word_id: int) -> List[Dict]:
+def get_word_review_history(word_id: int, exclude_date: date = None, timezone: str = None) -> List[Dict]:
     """
     Get complete review history for a specific word.
 
     Args:
         word_id: ID from saved_words table
+        exclude_date: Optional date to exclude reviews from this date (in user's timezone)
+        timezone: Required if exclude_date is provided - user's IANA timezone string
 
     Returns:
         List of review dictionaries with 'reviewed_at' and 'response' keys,
@@ -152,12 +228,21 @@ def get_word_review_history(word_id: int) -> List[Dict]:
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT reviewed_at, response
-            FROM reviews
-            WHERE word_id = %s
-            ORDER BY reviewed_at ASC
-        """, (word_id,))
+        if exclude_date and timezone:
+            cur.execute("""
+                SELECT reviewed_at, response
+                FROM reviews
+                WHERE word_id = %s
+                  AND DATE(reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE %s) != %s
+                ORDER BY reviewed_at ASC
+            """, (word_id, timezone, exclude_date))
+        else:
+            cur.execute("""
+                SELECT reviewed_at, response
+                FROM reviews
+                WHERE word_id = %s
+                ORDER BY reviewed_at ASC
+            """, (word_id,))
         return [
             {'reviewed_at': r['reviewed_at'], 'response': r['response']}
             for r in cur.fetchall()
@@ -268,8 +353,9 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
         # Get all test vocabulary words
         all_test_words = get_test_vocabulary_words(test_type)
 
-        # Get user's saved words
-        saved_words_map = get_user_saved_words(user_id)
+        # Get user's saved words, EXCLUDING words saved today
+        # This ensures schedule reflects "start of day" state
+        saved_words_map = get_user_saved_words(user_id, exclude_date=today, timezone=user_tz)
 
         # Categorize saved words into test and non-test
         test_practice_words = set()
@@ -281,7 +367,7 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
             else:
                 non_test_practice_words.add(word)
 
-        # Calculate new words pool (test words NOT yet saved), sorted for deterministic order
+        # Calculate new words pool (test words NOT yet saved before today), sorted for deterministic order
         new_words_pool = sorted(all_test_words - set(saved_words_map.keys()))
 
         # Calculate daily new words (ceiling division)
@@ -292,8 +378,9 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
         non_test_practice_schedule = {}
 
         for word, info in saved_words_map.items():
-            # Get review history for this word
-            reviews = get_word_review_history(info['id'])
+            # Get review history for this word, EXCLUDING today's reviews
+            # This ensures schedule reflects "start of day" state
+            reviews = get_word_review_history(info['id'], exclude_date=today, timezone=user_tz)
             past_schedule = [(r['reviewed_at'], r['response']) for r in reviews]
 
             # Get future review dates (up to 7)

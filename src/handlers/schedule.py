@@ -17,7 +17,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.schedule_service import initiate_schedule, refresh_schedule, get_user_timezone, get_today_in_timezone
+from services.schedule_service import initiate_schedule, refresh_schedule, get_user_timezone, get_today_in_timezone, get_words_reviewed_on_date
 from utils.database import get_db_connection
 from handlers.admin import get_next_review_date_new
 
@@ -226,6 +226,9 @@ def get_today_schedule():
                     "message": "No tasks scheduled for today."
                 }), 200
 
+            # Get words already reviewed today (to mark as completed)
+            reviewed_today = get_words_reviewed_on_date(user_id, today, user_tz)
+
             new_words = result['new_words'] or []
             test_practice = result['test_practice_words'] or []
             non_test_practice = result['non_test_practice_words'] or []
@@ -234,7 +237,20 @@ def get_today_schedule():
             test_practice = filter_known_words_from_practice(test_practice, user_id, conn)
             non_test_practice = filter_known_words_from_practice(non_test_practice, user_id, conn)
 
-            total_words = len(new_words) + len(test_practice) + len(non_test_practice)
+            # Separate completed and remaining words
+            new_words_completed = [w for w in new_words if w in reviewed_today]
+            new_words_remaining = [w for w in new_words if w not in reviewed_today]
+
+            # For practice words (which are dicts with 'word' key)
+            test_practice_completed = [w for w in test_practice if w.get('word') in reviewed_today]
+            test_practice_remaining = [w for w in test_practice if w.get('word') not in reviewed_today]
+
+            non_test_practice_completed = [w for w in non_test_practice if w.get('word') in reviewed_today]
+            non_test_practice_remaining = [w for w in non_test_practice if w.get('word') not in reviewed_today]
+
+            total_remaining = len(new_words_remaining) + len(test_practice_remaining) + len(non_test_practice_remaining)
+            total_completed = len(new_words_completed) + len(test_practice_completed) + len(non_test_practice_completed)
+            total_words = total_remaining + total_completed
             has_tasks_today = total_words > 0
 
             return jsonify({
@@ -243,16 +259,27 @@ def get_today_schedule():
                 "has_schedule": has_tasks_today,  # Whether today has tasks
                 "test_type": test_type,
                 "user_name": user_name,
-                "new_words": new_words,
-                "test_practice_words": test_practice,
-                "non_test_practice_words": non_test_practice,
+                "new_words": new_words_remaining,
+                "new_words_completed": new_words_completed,
+                "test_practice_words": test_practice_remaining,
+                "test_practice_words_completed": test_practice_completed,
+                "non_test_practice_words": non_test_practice_remaining,
+                "non_test_practice_words_completed": non_test_practice_completed,
                 "summary": {
                     "total_new": len(new_words),
+                    "total_new_remaining": len(new_words_remaining),
+                    "total_new_completed": len(new_words_completed),
                     "total_test_practice": len(test_practice),
+                    "total_test_practice_remaining": len(test_practice_remaining),
+                    "total_test_practice_completed": len(test_practice_completed),
                     "total_non_test_practice": len(non_test_practice),
-                    "total_words": total_words
+                    "total_non_test_practice_remaining": len(non_test_practice_remaining),
+                    "total_non_test_practice_completed": len(non_test_practice_completed),
+                    "total_words": total_words,
+                    "total_remaining": total_remaining,
+                    "total_completed": total_completed
                 },
-                "message": "All tasks completed for today!" if not has_tasks_today else None
+                "message": "All tasks completed for today!" if total_remaining == 0 and total_words > 0 else None
             }), 200
 
         finally:
@@ -432,8 +459,14 @@ def get_schedule_range():
 
             results = cur.fetchall()
 
+            # Get words reviewed today (for marking completed on today's entry)
+            reviewed_today = get_words_reviewed_on_date(user_id, today, user_tz)
+
             schedules = []
             for row in results:
+                scheduled_date = row['scheduled_date']
+                is_today = (scheduled_date == today)
+
                 new_words = row['new_words'] or []
                 test_practice = row['test_practice_words'] or []
                 non_test_practice = row['non_test_practice_words'] or []
@@ -442,40 +475,67 @@ def get_schedule_range():
                 test_practice = filter_known_words_from_practice(test_practice, user_id, conn)
                 non_test_practice = filter_known_words_from_practice(non_test_practice, user_id, conn)
 
+                # For today, separate completed and remaining words
+                if is_today:
+                    new_words_completed = [w for w in new_words if w in reviewed_today]
+                    new_words_remaining = [w for w in new_words if w not in reviewed_today]
+
+                    test_practice_completed = [w for w in test_practice if w.get('word') in reviewed_today]
+                    test_practice_remaining = [w for w in test_practice if w.get('word') not in reviewed_today]
+
+                    non_test_practice_completed = [w for w in non_test_practice if w.get('word') in reviewed_today]
+                    non_test_practice_remaining = [w for w in non_test_practice if w.get('word') not in reviewed_today]
+
+                    total_remaining = len(new_words_remaining) + len(test_practice_remaining) + len(non_test_practice_remaining)
+                    total_completed = len(new_words_completed) + len(test_practice_completed) + len(non_test_practice_completed)
+                else:
+                    # Future days - no completed words
+                    new_words_remaining = new_words
+                    new_words_completed = []
+                    test_practice_remaining = test_practice
+                    test_practice_completed = []
+                    non_test_practice_remaining = non_test_practice
+                    non_test_practice_completed = []
+                    total_remaining = len(new_words) + len(test_practice) + len(non_test_practice)
+                    total_completed = 0
+
+                total_words = len(new_words) + len(test_practice) + len(non_test_practice)
+
+                # Build schedule entry
+                schedule_entry = {
+                    "date": scheduled_date.isoformat(),
+                    "has_schedule": True,
+                    "test_type": test_type,
+                    "new_words": new_words_remaining,
+                    "new_words_completed": new_words_completed,
+                    "test_practice_words": test_practice_remaining,
+                    "test_practice_words_completed": test_practice_completed,
+                    "non_test_practice_words": non_test_practice_remaining,
+                    "non_test_practice_words_completed": non_test_practice_completed,
+                    "summary": {
+                        "total_new": len(new_words),
+                        "total_new_remaining": len(new_words_remaining),
+                        "total_new_completed": len(new_words_completed),
+                        "total_test_practice": len(test_practice),
+                        "total_test_practice_remaining": len(test_practice_remaining),
+                        "total_test_practice_completed": len(test_practice_completed),
+                        "total_non_test_practice": len(non_test_practice),
+                        "total_non_test_practice_remaining": len(non_test_practice_remaining),
+                        "total_non_test_practice_completed": len(non_test_practice_completed),
+                        "total_words": total_words,
+                        "total_remaining": total_remaining,
+                        "total_completed": total_completed
+                    }
+                }
+
                 # Filter based on only_new_words parameter
                 if only_new_words:
-                    # Only include days with new words
+                    # Only include days with new words (remaining or completed)
                     if len(new_words) > 0:
-                        schedules.append({
-                            "date": row['scheduled_date'].isoformat(),
-                            "has_schedule": True,
-                            "test_type": test_type,
-                            "new_words": new_words,
-                            "test_practice_words": test_practice,
-                            "non_test_practice_words": non_test_practice,
-                            "summary": {
-                                "total_new": len(new_words),
-                                "total_test_practice": len(test_practice),
-                                "total_non_test_practice": len(non_test_practice),
-                                "total_words": len(new_words) + len(test_practice) + len(non_test_practice)
-                            }
-                        })
+                        schedules.append(schedule_entry)
                 else:
-                    # Include all days (even with 0 words)
-                    schedules.append({
-                        "date": row['scheduled_date'].isoformat(),
-                        "has_schedule": True,
-                        "test_type": test_type,
-                        "new_words": new_words,
-                        "test_practice_words": test_practice,
-                        "non_test_practice_words": non_test_practice,
-                        "summary": {
-                            "total_new": len(new_words),
-                            "total_test_practice": len(test_practice),
-                            "total_non_test_practice": len(non_test_practice),
-                            "total_words": len(new_words) + len(test_practice) + len(non_test_practice)
-                        }
-                    })
+                    # Include all days
+                    schedules.append(schedule_entry)
 
             return jsonify({
                 "schedules": schedules,
