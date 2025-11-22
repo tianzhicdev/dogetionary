@@ -1238,7 +1238,7 @@ struct BadgeCelebrationView: View {
                 Text("New Badge!")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.blue)
 
                 // Badge name
                 Text(badge.title)
