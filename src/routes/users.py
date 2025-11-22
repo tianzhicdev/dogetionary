@@ -1,6 +1,6 @@
 from flask import Blueprint
 from handlers.users import handle_user_preferences, get_supported_languages
-from handlers.reads import get_leaderboard
+from handlers.reads import get_leaderboard, get_leaderboard_v2
 from handlers.pronunciation import (
     practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
 )
@@ -16,6 +16,7 @@ users_bp.route('/languages', methods=['GET'])(get_supported_languages)
 
 # Leaderboard
 users_bp.route('/leaderboard', methods=['GET'])(get_leaderboard)
+users_bp.route('/leaderboard-score', methods=['GET'])(get_leaderboard_v2)
 
 # Pronunciation
 users_bp.route('/pronunciation/practice', methods=['POST'])(practice_pronunciation)

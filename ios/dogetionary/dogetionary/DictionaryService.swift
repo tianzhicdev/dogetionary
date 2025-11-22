@@ -1346,7 +1346,8 @@ class DictionaryService: ObservableObject {
     }
     
     func getLeaderboard(completion: @escaping (Result<[LeaderboardEntry], Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/v3/leaderboard") else {
+        // Use score-based endpoint which ranks by score instead of review count
+        guard let url = URL(string: "\(baseURL)/v3/leaderboard-score") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }

@@ -5,7 +5,7 @@
 from flask import Blueprint
 from handlers.actions import save_word, delete_saved_word_v2, submit_feedback, submit_review
 from handlers.users import handle_user_preferences, get_supported_languages
-from handlers.reads import get_due_counts, get_review_progress_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard, get_combined_metrics
+from handlers.reads import get_due_counts, get_review_progress_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard, get_leaderboard_v2, get_combined_metrics
 from handlers.admin import test_review_intervals, fix_next_review_dates, privacy_agreement, support_page, health_check
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
@@ -61,6 +61,7 @@ v3_api.route('/weekly_review_counts', methods=['GET'])(get_weekly_review_counts)
 v3_api.route('/progress_funnel', methods=['GET'])(get_progress_funnel)
 v3_api.route('/review_activity', methods=['GET'])(get_review_activity)
 v3_api.route('/leaderboard', methods=['GET'])(get_leaderboard)
+v3_api.route('/leaderboard-score', methods=['GET'])(get_leaderboard_v2)
 v3_api.route('/combined_metrics', methods=['GET'])(get_combined_metrics)
 
 # Pronunciation Features (V3)
