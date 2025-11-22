@@ -48,6 +48,9 @@ class AnalyticsService:
             'settings_timezone_update': 'settings',
 
             'saved_view_details': 'saved',
+            'saved_mark_known': 'saved',
+            'saved_mark_learning': 'saved',
+            'saved_delete_word': 'saved',
 
             'feedback_submit': 'feedback',
 

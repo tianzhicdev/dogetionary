@@ -56,13 +56,13 @@ struct LeaderboardView: View {
                         )
                     } else {
                         ScrollView {
-                            VStack(spacing: AppTheme.cardSpacing) {
+                            VStack(spacing: 6) {
                                 ForEach(leaderboard) { entry in
                                     LeaderboardRowView(entry: entry, isCurrentUser: entry.user_id == userManager.userID)
                                 }
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical, AppTheme.cardSpacing)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
                         }
                     }
             }
@@ -103,99 +103,103 @@ struct LeaderboardRowView: View {
     let isCurrentUser: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Rank
+        HStack(spacing: 10) {
+            // Rank badge
             RankBadgeView(rank: entry.rank)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
+            // Name and motto
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
                     Text(entry.user_name)
-                        .font(AppTheme.titleFont)
-                        .fontWeight(isCurrentUser ? .bold : .medium)
+                        .font(.system(size: 15, weight: isCurrentUser ? .semibold : .medium))
                         .foregroundColor(isCurrentUser ? AppTheme.primaryBlue : .primary)
+                        .lineLimit(1)
 
                     if isCurrentUser {
-                        Text("(You)")
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppTheme.primaryBlue)
-                            .fontWeight(.medium)
+                        Text("You")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(AppTheme.primaryBlue)
+                            .cornerRadius(4)
                     }
                 }
 
                 if !entry.user_motto.isEmpty {
                     Text(entry.user_motto)
-                        .font(AppTheme.captionFont)
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 2) {
+            // Score with icon
+            HStack(spacing: 4) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(red: 1.0, green: 0.75, blue: 0.3))
                 Text("\(entry.score ?? entry.total_reviews)")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(isCurrentUser ? AppTheme.primaryBlue : .primary)
-
-                Text("score")
-                    .font(AppTheme.smallCaptionFont)
-                    .foregroundColor(.secondary)
             }
         }
-        .padding(AppTheme.cardPadding)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(
             isCurrentUser ?
-            AppTheme.primaryBlue.opacity(0.1) :
-            AppTheme.cardBackground
+            AppTheme.primaryBlue.opacity(0.08) :
+            Color.white
         )
-        .cornerRadius(AppTheme.cardCornerRadius)
-        .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, x: 0, y: 2)
+        .cornerRadius(10)
+        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
     }
 }
 
 struct RankBadgeView: View {
     let rank: Int
-    
+
     private var badgeColor: Color {
         switch rank {
         case 1:
-            return .yellow
+            return Color(red: 1.0, green: 0.84, blue: 0.3)
         case 2:
-            return Color(.systemGray2)
+            return Color(red: 0.75, green: 0.75, blue: 0.78)
         case 3:
-            return Color(.brown)
+            return Color(red: 0.8, green: 0.55, blue: 0.35)
         default:
-            return Color(.systemGray4)
+            return Color(red: 0.92, green: 0.93, blue: 0.95)
         }
     }
-    
+
     private var textColor: Color {
         switch rank {
         case 1:
-            return .orange
+            return Color(red: 0.7, green: 0.5, blue: 0.1)
         case 2:
-            return .black
+            return Color(red: 0.4, green: 0.4, blue: 0.45)
         case 3:
             return .white
         default:
-            return .black
+            return Color(red: 0.5, green: 0.5, blue: 0.55)
         }
     }
-    
+
     var body: some View {
         ZStack {
             Circle()
                 .fill(badgeColor)
-                .frame(width: 36, height: 36)
-            
+                .frame(width: 30, height: 30)
+
             if rank <= 3 {
                 Image(systemName: "crown.fill")
-                    .font(.system(size: 16))
+                    .font(.system(size: 13))
                     .foregroundColor(textColor)
             } else {
                 Text("\(rank)")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(textColor)
             }
         }

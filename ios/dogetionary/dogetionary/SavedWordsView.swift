@@ -258,7 +258,7 @@ struct SavedWordsListView: View {
 
                         // Word list
                         ScrollView {
-                            LazyVStack(spacing: AppTheme.cardSpacing) {
+                            LazyVStack(spacing: 6) {
                                 ForEach(filteredWords) { savedWord in
                                     NavigationLink(destination: WordDetailView(savedWord: savedWord)
                                         .onAppear {
@@ -279,8 +279,8 @@ struct SavedWordsListView: View {
                                     .buttonStyle(PlainButtonStyle())
                                 }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
                         }
                     }
                 }
@@ -788,45 +788,42 @@ struct SavedWordRow: View {
     @ObservedObject private var userManager = UserManager.shared
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             // Word name with test badges
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
-                    Text(savedWord.word)
-                        .font(AppTheme.titleFont)
-                        .foregroundColor(.primary)
+            HStack(spacing: 6) {
+                Text(savedWord.word)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
 
-                    // Show test labels only if user has enabled tests
-                    testLabels
+                // Show test labels only if user has enabled tests
+                testLabels
+            }
+
+            Spacer(minLength: 8)
+
+            // Review counts - compact inline
+            HStack(spacing: 6) {
+                HStack(spacing: 2) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(Color(red: 1.0, green: 0.5, blue: 0.5))
+                    Text("\(savedWord.incorrect_reviews)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
 
-                // Review counts
-                HStack(spacing: 8) {
-                    // Incorrect reviews
-                    HStack(spacing: 2) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
-                        Text("\(savedWord.incorrect_reviews)")
-                            .font(AppTheme.badgeLabelFont)
-                            .foregroundColor(.secondary)
-                    }
-
-                    // Correct reviews
-                    HStack(spacing: 2) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(AppTheme.testPracticeColor)
-                        Text("\(savedWord.correct_reviews)")
-                            .font(AppTheme.badgeLabelFont)
-                            .foregroundColor(.secondary)
-                    }
+                HStack(spacing: 2) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(Color(red: 0.4, green: 0.75, blue: 0.5))
+                    Text("\(savedWord.correct_reviews)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
             }
 
-            Spacer()
-
-            // 7-box progress bar (from backend: 1-7 scale)
+            // 7-level progress indicator
             WordProgressBar(progressLevel: savedWord.word_progress_level)
 
             // Action menu button
@@ -853,111 +850,96 @@ struct SavedWordRow: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
-                        .frame(width: 32, height: 32)
+                        .frame(width: 24, height: 24)
                 }
             }
         }
-        .padding(AppTheme.cardPadding)
-        .background(savedWord.is_known ? Color(red: 0.9, green: 0.98, blue: 0.9) : AppTheme.cardBackground)
-        .cornerRadius(AppTheme.cardCornerRadius)
-        .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, x: 0, y: 2)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(savedWord.is_known ? Color(red: 0.94, green: 0.99, blue: 0.94) : Color.white)
+        .cornerRadius(10)
+        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
     }
 
     @ViewBuilder
     private var testLabels: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             if userManager.toeflEnabled && (savedWord.is_toefl == true) {
-                Text("TOEFL")
-                    .font(.caption2)
-                    .fontWeight(.semibold)
+                Text("T")
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.blue, Color.cyan],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .frame(width: 16, height: 16)
+                    .background(Color.blue)
                     .cornerRadius(4)
             }
 
             if userManager.ieltsEnabled && (savedWord.is_ielts == true) {
-                Text("IELTS")
-                    .font(.caption2)
-                    .fontWeight(.semibold)
+                Text("I")
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 0.4, green: 0.8, blue: 0.6), Color.green],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .frame(width: 16, height: 16)
+                    .background(Color.green)
                     .cornerRadius(4)
             }
         }
     }
 }
 
-// MARK: - 7-Box Progress Bar
+// MARK: - 7-Level Progress Indicator
 
 struct WordProgressBar: View {
     let progressLevel: Int  // 1-7 scale from backend
 
-    // Color for each box based on index and progress level
-    private func colorForBox(at index: Int) -> LinearGradient {
-        // Boxes are filled from left to right up to progressLevel
-        let isFilled = (index + 1) <= progressLevel
-
-        if !isFilled {
-            // Empty box - light gray
+    // Gradient color based on progress level
+    private var progressColor: LinearGradient {
+        if progressLevel <= 2 {
+            // Red-orange for low progress
             return LinearGradient(
-                colors: [Color(red: 0.92, green: 0.94, blue: 0.97), Color(red: 0.88, green: 0.90, blue: 0.95)],
-                startPoint: .top,
-                endPoint: .bottom
+                colors: [Color(red: 1.0, green: 0.45, blue: 0.4), Color(red: 1.0, green: 0.55, blue: 0.35)],
+                startPoint: .leading,
+                endPoint: .trailing
             )
-        }
-
-        // Filled boxes: red (1-2), yellow (3-5), green (6-7)
-        let boxNumber = index + 1
-        if boxNumber <= 2 {
-            // Red boxes (low progress)
+        } else if progressLevel <= 4 {
+            // Orange-yellow for medium progress
             return LinearGradient(
-                colors: [Color(red: 1.0, green: 0.4, blue: 0.4), Color(red: 0.9, green: 0.3, blue: 0.3)],
-                startPoint: .top,
-                endPoint: .bottom
+                colors: [Color(red: 1.0, green: 0.7, blue: 0.3), Color(red: 1.0, green: 0.85, blue: 0.35)],
+                startPoint: .leading,
+                endPoint: .trailing
             )
-        } else if boxNumber <= 5 {
-            // Yellow boxes (medium progress)
+        } else if progressLevel <= 6 {
+            // Yellow-green for good progress
             return LinearGradient(
-                colors: [Color(red: 1.0, green: 0.8, blue: 0.2), Color(red: 0.95, green: 0.7, blue: 0.1)],
-                startPoint: .top,
-                endPoint: .bottom
+                colors: [Color(red: 0.6, green: 0.85, blue: 0.4), Color(red: 0.45, green: 0.8, blue: 0.5)],
+                startPoint: .leading,
+                endPoint: .trailing
             )
         } else {
-            // Green boxes (high progress)
+            // Green-teal for mastered
             return LinearGradient(
-                colors: [Color(red: 0.4, green: 0.8, blue: 0.5), Color(red: 0.3, green: 0.7, blue: 0.4)],
-                startPoint: .top,
-                endPoint: .bottom
+                colors: [Color(red: 0.3, green: 0.75, blue: 0.55), Color(red: 0.2, green: 0.7, blue: 0.65)],
+                startPoint: .leading,
+                endPoint: .trailing
             )
         }
     }
 
+    private var emptyColor: Color {
+        Color(red: 0.92, green: 0.93, blue: 0.95)
+    }
+
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 2) {
             ForEach(0..<7, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(colorForBox(at: index))
-                    .frame(width: 8, height: 24)
+                let isFilled = (index + 1) <= progressLevel
+
+                Capsule()
+                    .fill(isFilled ? AnyShapeStyle(progressColor) : AnyShapeStyle(emptyColor))
+                    .frame(width: 4, height: index < progressLevel ? 14 : 10)
             }
         }
+        .frame(height: 14)
     }
 }
 
