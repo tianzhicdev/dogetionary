@@ -158,7 +158,8 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
 
 
 def get_user_saved_words(user_id: str, learning_language: str = 'en',
-                         exclude_date: date = None, timezone: str = None) -> Dict[str, Dict]:
+                         exclude_date: date = None, timezone: str = None,
+                         exclude_only_test_words: bool = False, test_type: str = None) -> Dict[str, Dict]:
     """
     Get all saved words for a user with their metadata.
 
@@ -167,6 +168,9 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
         learning_language: Language being learned (default: 'en')
         exclude_date: Optional date to exclude words saved on this date (in user's timezone)
         timezone: Required if exclude_date is provided - user's IANA timezone string
+        exclude_only_test_words: If True, only exclude test vocabulary words saved on exclude_date
+                                 (non-test words saved on that date will still be included)
+        test_type: Required if exclude_only_test_words is True - 'TOEFL', 'IELTS', or 'BOTH'
 
     Returns:
         Dictionary mapping word -> {id, created_at}
@@ -180,14 +184,35 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
     cur = conn.cursor()
     try:
         if exclude_date and timezone:
-            # Exclude words saved on the specified date in user's timezone
-            cur.execute("""
-                SELECT id, word, created_at
-                FROM saved_words
-                WHERE user_id = %s
-                  AND learning_language = %s
-                  AND DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE %s) != %s
-            """, (user_id, learning_language, timezone, exclude_date))
+            if exclude_only_test_words and test_type:
+                # Only exclude TEST words saved on the specified date
+                # Non-test words saved today are still included (they won't appear in new_words)
+                cur.execute("""
+                    SELECT sw.id, sw.word, sw.created_at
+                    FROM saved_words sw
+                    LEFT JOIN test_vocabularies tv ON sw.word = tv.word
+                    WHERE sw.user_id = %s
+                      AND sw.learning_language = %s
+                      AND (
+                          -- Include if: NOT saved today, OR not a test word for user's test type
+                          DATE(sw.created_at AT TIME ZONE 'UTC' AT TIME ZONE %s) != %s
+                          OR NOT COALESCE(
+                              (%s = 'TOEFL' AND tv.is_toefl = TRUE)
+                              OR (%s = 'IELTS' AND tv.is_ielts = TRUE)
+                              OR (%s = 'BOTH' AND (tv.is_toefl = TRUE OR tv.is_ielts = TRUE)),
+                              FALSE
+                          )
+                      )
+                """, (user_id, learning_language, timezone, exclude_date, test_type, test_type, test_type))
+            else:
+                # Exclude ALL words saved on the specified date in user's timezone
+                cur.execute("""
+                    SELECT id, word, created_at
+                    FROM saved_words
+                    WHERE user_id = %s
+                      AND learning_language = %s
+                      AND DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE %s) != %s
+                """, (user_id, learning_language, timezone, exclude_date))
         else:
             cur.execute("""
                 SELECT id, word, created_at
@@ -353,9 +378,16 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
         # Get all test vocabulary words
         all_test_words = get_test_vocabulary_words(test_type)
 
-        # Get user's saved words, EXCLUDING words saved today
-        # This ensures schedule reflects "start of day" state
-        saved_words_map = get_user_saved_words(user_id, exclude_date=today, timezone=user_tz)
+        # Get user's saved words, EXCLUDING only TEST words saved today
+        # Test words saved today will appear in "new_words" for today
+        # Non-test words saved today are included for practice scheduling
+        saved_words_map = get_user_saved_words(
+            user_id,
+            exclude_date=today,
+            timezone=user_tz,
+            exclude_only_test_words=True,
+            test_type=test_type
+        )
 
         # Categorize saved words into test and non-test
         test_practice_words = set()
