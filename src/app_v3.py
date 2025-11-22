@@ -15,6 +15,7 @@ from handlers.static_site import get_all_words, get_words_summary, get_featured_
 from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count
 from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words, refresh_schedule_handler, get_test_progress
 from handlers.enhanced_review import get_next_review_enhanced
+from handlers.review_batch import get_review_words_batch
 from handlers.streaks import get_streak_days
 from handlers.achievements import get_achievement_progress
 from handlers.known_words import mark_word_known
@@ -37,6 +38,7 @@ v3_api.route('/saved_words', methods=['GET'])(get_saved_words)
 v3_api.route('/review_next', methods=['GET'])(get_next_review_word_v2)  # V2 as default in V3
 v3_api.route('/review_next_enhanced', methods=['GET'])(get_next_review_enhanced)  # V3 Enhanced with diverse question types
 v3_api.route('/next-review-word-with-scheduled-new-words', methods=['GET'])(get_next_review_word_with_scheduled_new_words)  # V3 with schedule integration
+v3_api.route('/next-review-words-batch', methods=['GET'])(get_review_words_batch)  # Batch fetch for performance
 v3_api.route('/reviews/submit', methods=['POST'])(submit_review)
 v3_api.route('/due_counts', methods=['GET'])(get_due_counts)
 v3_api.route('/reviews/progress_stats', methods=['GET'])(get_review_progress_stats)

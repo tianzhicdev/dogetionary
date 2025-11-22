@@ -23,6 +23,12 @@ struct dogetionaryApp: App {
         // Initialize analytics with new session
         AnalyticsManager.shared.newSession()
         AnalyticsManager.shared.track(action: .appLaunch)
+
+        // Sync device timezone to backend
+        DictionaryService.shared.syncTimezone()
+
+        // Clear and refresh question queue on app launch
+        QuestionQueueManager.shared.forceRefresh()
     }
     var body: some Scene {
         WindowGroup {
@@ -37,6 +43,8 @@ struct dogetionaryApp: App {
                 // Generate new session when app becomes active from background
                 if oldPhase == .background || oldPhase == .inactive {
                     AnalyticsManager.shared.newSession()
+                    // Refresh question queue when returning from background
+                    QuestionQueueManager.shared.forceRefresh()
                 }
 
                 AnalyticsManager.shared.track(action: .appForeground)

@@ -806,15 +806,17 @@ struct EnhancedReviewResponse: Codable {
     }
 }
 
-/// Enhanced review submission (backward compatible)
+/// Enhanced review submission using composite key (word + learning_language + native_language)
 struct EnhancedReviewSubmissionRequest: Codable {
     let user_id: String
-    let word_id: Int
+    let word: String
+    let learning_language: String
+    let native_language: String
     let response: Bool
     let question_type: String?  // Optional for backward compatibility
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, word_id, response, question_type
+        case user_id, word, learning_language, native_language, response, question_type
     }
 }
 
@@ -826,6 +828,39 @@ struct StreakDaysResponse: Codable {
     private enum CodingKeys: String, CodingKey {
         case user_id, streak_days
     }
+}
+
+// MARK: - Batch Review Questions (Performance Optimization)
+
+/// Single question from batch endpoint
+struct BatchReviewQuestion: Codable, Identifiable {
+    var id: String { word }  // Use word as unique ID (composite key with learning_language + native_language)
+    let word: String
+    let saved_word_id: Int?  // null for new words, present for saved words
+    let source: String  // "new", "test_practice", "non_test_practice", "not_due_yet"
+    let position: Int   // Position in sorted queue (0-indexed)
+    let learning_language: String
+    let native_language: String
+    let question: ReviewQuestion
+    let definition: DefinitionData?
+
+    /// Human-readable source type for debug display
+    var sourceLabel: String {
+        switch source {
+        case "new": return "New"
+        case "test_practice": return "Test"
+        case "non_test_practice": return "Prac"
+        case "not_due_yet": return "Extra"
+        default: return source
+        }
+    }
+}
+
+/// Batch endpoint response
+struct BatchReviewResponse: Codable {
+    let questions: [BatchReviewQuestion]
+    let total_available: Int
+    let has_more: Bool
 }
 
 // MARK: - Achievements
@@ -883,13 +918,14 @@ struct AchievementInfo: Codable {
 /// Practice status response for the Practice tab
 struct PracticeStatusResponse: Codable {
     let user_id: String
-    let new_words_count: Int      // Scheduled new words for today
-    let due_words_count: Int      // Words due for review (overdue)
-    let stale_words_count: Int    // Words not reviewed in past 24 hours
-    let score: Int                // Current score from reviews
-    let has_practice: Bool        // Quick check: any practice available
+    let new_words_count: Int           // Scheduled new words for today
+    let test_practice_count: Int       // Test practice words from today's schedule
+    let non_test_practice_count: Int   // Non-test practice words from today's schedule
+    let not_due_yet_count: Int         // Words reviewed before, last review > 24h ago, not due yet
+    let score: Int                     // Current score from reviews
+    let has_practice: Bool             // Quick check: any practice available
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, new_words_count, due_words_count, stale_words_count, score, has_practice
+        case user_id, new_words_count, test_practice_count, non_test_practice_count, not_due_yet_count, score, has_practice
     }
 }

@@ -31,6 +31,7 @@ from handlers.admin import get_next_review_date_new
 import logging
 logger = logging.getLogger(__name__)
 
+
 def save_word():
     try:
         data = request.get_json()
@@ -270,16 +271,24 @@ def get_next_review_word():
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
 
 def submit_review():
+    """
+    Submit a review for a word.
+
+    Uses composite key (word, learning_language, native_language) to identify words.
+    If word is not yet saved, it will be saved first.
+    """
     try:
         data = request.get_json()
 
         user_id = data.get('user_id')
-        word_id = data.get('word_id')
+        word = data.get('word')
+        learning_language = data.get('learning_language')
+        native_language = data.get('native_language')
         response = data.get('response')
         question_type = data.get('question_type', 'recognition')  # Optional, defaults to recognition
 
-        if not all([user_id, word_id is not None, response is not None]):
-            return jsonify({"error": "user_id, word_id, and response are required"}), 400
+        if not all([user_id, word, learning_language, native_language, response is not None]):
+            return jsonify({"error": "user_id, word, learning_language, native_language, and response are required"}), 400
 
         try:
             uuid.UUID(user_id)
@@ -297,40 +306,67 @@ def submit_review():
         """, (user_id,))
         old_score = old_score_result['score'] if old_score_result else 0
 
-        # Get existing review data and word creation date
-        word_data = db_fetch_one("""
-            SELECT sw.created_at
-            FROM saved_words sw
-            WHERE sw.id = %s AND sw.user_id = %s
-        """, (word_id, user_id))
+        # Use a single connection for the entire transaction
+        conn = get_db_connection()
+        cur = conn.cursor()
 
-        if not word_data:
-            return jsonify({"error": "Word not found"}), 404
+        try:
+            # Look up word in saved_words using composite key, or create if not exists
+            cur.execute("""
+                SELECT id, created_at
+                FROM saved_words
+                WHERE user_id = %s AND word = %s AND learning_language = %s AND native_language = %s
+            """, (user_id, word, learning_language, native_language))
+            word_data = cur.fetchone()
 
-        created_at = word_data['created_at']
+            if word_data:
+                # Word already saved
+                word_id = word_data['id']
+                created_at = word_data['created_at']
+            else:
+                # Word not saved yet - save it now
+                cur.execute("""
+                    INSERT INTO saved_words (user_id, word, learning_language, native_language)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id, created_at
+                """, (user_id, word, learning_language, native_language))
+                new_word = cur.fetchone()
+                word_id = new_word['id']
+                created_at = new_word['created_at']
+                logger.info(f"Created new saved_word for '{word}' (id={word_id}) for user {user_id}")
 
-        reviews_data = db_fetch_all("""
-            SELECT response, reviewed_at FROM reviews
-            WHERE user_id = %s AND word_id = %s
-            ORDER BY reviewed_at ASC
-        """, (user_id, word_id))
+            # Get existing reviews
+            cur.execute("""
+                SELECT response, reviewed_at FROM reviews
+                WHERE user_id = %s AND word_id = %s
+                ORDER BY reviewed_at ASC
+            """, (user_id, word_id))
+            reviews_data = cur.fetchall()
 
-        existing_reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in reviews_data]
+            existing_reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in reviews_data]
 
-        # Add current review to history for next review calculation
-        all_reviews = existing_reviews + [{"response": response, "reviewed_at": current_review_time}]
+            # Add current review to history for next review calculation
+            all_reviews = existing_reviews + [{"response": response, "reviewed_at": current_review_time}]
 
-        # Calculate next review date using new algorithm
-        next_review_date = get_next_review_date_new(all_reviews, created_at)
+            # Calculate next review date using new algorithm
+            next_review_date = get_next_review_date_new(all_reviews, created_at)
 
-        # Insert the new review with calculated next_review_date
-        # Convert response to boolean (1 = correct/true, 0 = incorrect/false)
-        response_bool = bool(response)
-        # Note: question_type is optional and not stored in base reviews table
-        db_execute("""
-            INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, word_id, response_bool, current_review_time, next_review_date), commit=True)
+            # Insert the new review with calculated next_review_date
+            # Convert response to boolean (1 = correct/true, 0 = incorrect/false)
+            response_bool = bool(response)
+            # Note: question_type is optional and not stored in base reviews table
+            cur.execute("""
+                INSERT INTO reviews (user_id, word_id, response, reviewed_at, next_review_date)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user_id, word_id, response_bool, current_review_time, next_review_date))
+
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cur.close()
+            conn.close()
 
         # Calculate new score AFTER inserting review
         new_score = old_score + (2 if response_bool else 1)
@@ -396,7 +432,8 @@ def submit_review():
 
         return jsonify({
             "success": True,
-            "word_id": word_id,
+            "word": word,
+            "word_id": word_id,  # saved_word_id for reference
             "response": response,
             "review_count": review_count,
             "ease_factor": 2.5,

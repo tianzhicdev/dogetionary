@@ -1,5 +1,9 @@
--- Dogetionary Database Schema v4 - Ultra Simplified Architecture
--- Minimal tables with calculated spaced repetition
+-- Dogetionary Database Schema v5 - Complete Schema with All Migrations
+-- All tables and indexes merged from migrations
+
+-- ============================================================
+-- CORE TABLES
+-- ============================================================
 
 -- User Preferences Table (language settings)
 CREATE TABLE user_preferences (
@@ -20,6 +24,8 @@ CREATE TABLE user_preferences (
     daily_reminder_time TIME DEFAULT '09:00:00',
     weekly_report_enabled BOOLEAN DEFAULT TRUE,
     streak_notifications_enabled BOOLEAN DEFAULT TRUE,
+    -- Timezone (from add_schedule_tables migration)
+    timezone VARCHAR(50) DEFAULT 'UTC',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -53,6 +59,7 @@ CREATE TABLE saved_words (
     word VARCHAR(255) NOT NULL,
     learning_language VARCHAR(10) NOT NULL,
     native_language VARCHAR(10) NOT NULL,
+    is_known BOOLEAN DEFAULT FALSE,  -- From migration 005
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}'::jsonb,
     UNIQUE(user_id, word, learning_language, native_language)
@@ -64,11 +71,72 @@ CREATE TABLE reviews (
     user_id UUID NOT NULL,
     word_id INTEGER NOT NULL REFERENCES saved_words(id) ON DELETE CASCADE,
     response BOOLEAN NOT NULL,
+    question_type VARCHAR(50) DEFAULT 'recognition',  -- From migration 004
     reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     next_review_date TIMESTAMP
 );
 
--- Create illustration table for AI-generated word illustrations
+-- ============================================================
+-- REVIEW QUESTIONS CACHE (from migration 004)
+-- ============================================================
+
+-- Review questions cache table for LLM-generated questions
+CREATE TABLE review_questions (
+    id SERIAL PRIMARY KEY,
+    word VARCHAR(255) NOT NULL,
+    learning_language VARCHAR(10) NOT NULL,
+    native_language VARCHAR(10) NOT NULL,
+    question_type VARCHAR(50) NOT NULL,  -- 'recognition', 'mc_definition', 'mc_word', 'fill_blank'
+    question_data JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word, learning_language, native_language, question_type)
+);
+
+COMMENT ON TABLE review_questions IS 'Cache for LLM-generated review questions to avoid regenerating same questions';
+COMMENT ON COLUMN reviews.question_type IS 'Type of question shown during review: recognition, mc_definition, mc_word, fill_blank';
+
+-- ============================================================
+-- SCHEDULE TABLES (from add_schedule_tables migration)
+-- ============================================================
+
+-- Study schedules table
+CREATE TABLE study_schedules (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES user_preferences(user_id) ON DELETE CASCADE,
+    test_type VARCHAR(20) NOT NULL CHECK (test_type IN ('TOEFL', 'IELTS', 'BOTH')),
+    target_end_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id)
+);
+
+-- Daily schedule entries table
+CREATE TABLE daily_schedule_entries (
+    id SERIAL PRIMARY KEY,
+    schedule_id INTEGER NOT NULL REFERENCES study_schedules(id) ON DELETE CASCADE,
+    scheduled_date DATE NOT NULL,
+    new_words JSONB DEFAULT '[]'::jsonb,
+    test_practice_words JSONB DEFAULT '[]'::jsonb,
+    non_test_practice_words JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(schedule_id, scheduled_date)
+);
+
+-- Streak days table (tracks daily completion streaks per schedule)
+CREATE TABLE streak_days (
+    id SERIAL PRIMARY KEY,
+    schedule_id INTEGER NOT NULL REFERENCES study_schedules(id) ON DELETE CASCADE,
+    streak_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(schedule_id, streak_date)
+);
+
+-- ============================================================
+-- SUPPORTING TABLES
+-- ============================================================
+
+-- Illustration table for AI-generated word illustrations
 CREATE TABLE illustrations (
     word VARCHAR(255) NOT NULL,
     language VARCHAR(10) NOT NULL,
@@ -79,9 +147,6 @@ CREATE TABLE illustrations (
     PRIMARY KEY (word, language)
 );
 
--- Add index for better performance
-CREATE INDEX idx_illustrations_word_lang ON illustrations(word, language);
-
 -- User Feedback Table
 CREATE TABLE user_feedback (
     id SERIAL PRIMARY KEY,
@@ -89,21 +154,6 @@ CREATE TABLE user_feedback (
     feedback TEXT NOT NULL CHECK (LENGTH(feedback) <= 500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Add index for feedback queries
-CREATE INDEX idx_user_feedback_user_id ON user_feedback(user_id);
-CREATE INDEX idx_user_feedback_created_at ON user_feedback(created_at);
-
--- Indexes for performance
-CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);
-CREATE INDEX idx_definitions_schema_version ON definitions(schema_version);
-CREATE INDEX idx_saved_words_user_id ON saved_words(user_id);
-CREATE INDEX idx_reviews_user_id ON reviews(user_id);
-CREATE INDEX idx_reviews_word_id ON reviews(word_id);
-CREATE INDEX idx_reviews_reviewed_at ON reviews(reviewed_at);
-CREATE INDEX idx_reviews_next_review_date ON reviews(next_review_date);
-CREATE INDEX idx_user_preferences_learning_lang ON user_preferences(learning_language);
-CREATE INDEX idx_user_preferences_native_lang ON user_preferences(native_language);
 
 -- Test vocabulary table to store TOEFL/IELTS words
 CREATE TABLE test_vocabularies (
@@ -168,34 +218,70 @@ CREATE TABLE api_usage_logs (
     api_version VARCHAR(10)  -- 'v1', 'v2', 'v3', or NULL for unversioned
 );
 
--- Streak Days table (track daily completion streaks per schedule)
--- Note: This table is created by migration add_schedule_tables.sql
--- Kept here for reference but will be created by migration
--- CREATE TABLE streak_days (
---     id SERIAL PRIMARY KEY,
---     schedule_id INTEGER NOT NULL REFERENCES study_schedules(id) ON DELETE CASCADE,
---     streak_date DATE NOT NULL,
---     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---     UNIQUE(schedule_id, streak_date)
--- );
+-- ============================================================
+-- INDEXES
+-- ============================================================
 
--- Additional indexes for new tables
-CREATE INDEX idx_test_vocab_toefl ON test_vocabularies(is_toefl) WHERE is_toefl = TRUE;
-CREATE INDEX idx_test_vocab_ielts ON test_vocabularies(is_ielts) WHERE is_ielts = TRUE;
+-- User preferences indexes
+CREATE INDEX idx_user_preferences_learning_lang ON user_preferences(learning_language);
+CREATE INDEX idx_user_preferences_native_lang ON user_preferences(native_language);
+CREATE INDEX idx_user_preferences_timezone ON user_preferences(timezone);
 CREATE INDEX idx_user_pref_test_enabled ON user_preferences(user_id)
     WHERE toefl_enabled = TRUE OR ielts_enabled = TRUE;
+
+-- Definitions indexes
+CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);
+CREATE INDEX idx_definitions_schema_version ON definitions(schema_version);
+
+-- Saved words indexes
+CREATE INDEX idx_saved_words_user_id ON saved_words(user_id);
+CREATE INDEX idx_saved_words_is_known ON saved_words(user_id, is_known);
+
+-- Reviews indexes
+CREATE INDEX idx_reviews_user_id ON reviews(user_id);
+CREATE INDEX idx_reviews_word_id ON reviews(word_id);
+CREATE INDEX idx_reviews_reviewed_at ON reviews(reviewed_at);
+CREATE INDEX idx_reviews_next_review_date ON reviews(next_review_date);
+CREATE INDEX idx_reviews_question_type ON reviews(question_type);
+
+-- Review questions indexes
+CREATE INDEX idx_review_questions_lookup ON review_questions(word, learning_language, native_language, question_type);
+
+-- Schedule indexes
+CREATE INDEX idx_study_schedules_user ON study_schedules(user_id);
+CREATE INDEX idx_study_schedules_end_date ON study_schedules(target_end_date);
+CREATE INDEX idx_daily_entries_schedule ON daily_schedule_entries(schedule_id, scheduled_date);
+CREATE INDEX idx_daily_entries_date ON daily_schedule_entries(scheduled_date DESC);
+CREATE INDEX idx_streak_days_schedule_date ON streak_days(schedule_id, streak_date DESC);
+
+-- Illustrations indexes
+CREATE INDEX idx_illustrations_word_lang ON illustrations(word, language);
+
+-- User feedback indexes
+CREATE INDEX idx_user_feedback_user_id ON user_feedback(user_id);
+CREATE INDEX idx_user_feedback_created_at ON user_feedback(created_at);
+
+-- Test vocabularies indexes
+CREATE INDEX idx_test_vocab_toefl ON test_vocabularies(is_toefl) WHERE is_toefl = TRUE;
+CREATE INDEX idx_test_vocab_ielts ON test_vocabularies(is_ielts) WHERE is_ielts = TRUE;
+
+-- User actions indexes
 CREATE INDEX idx_user_actions_user_id ON user_actions(user_id);
 CREATE INDEX idx_user_actions_action ON user_actions(action);
 CREATE INDEX idx_user_actions_category ON user_actions(category);
 CREATE INDEX idx_user_actions_created_at ON user_actions(created_at DESC);
 CREATE INDEX idx_user_actions_daily ON user_actions(DATE(created_at), action);
 CREATE INDEX idx_user_actions_user_date ON user_actions(user_id, created_at DESC);
+
+-- Pronunciation indexes
 CREATE INDEX idx_pronunciation_user_id ON pronunciation_practice(user_id);
 CREATE INDEX idx_pronunciation_word ON pronunciation_practice(word);
+
+-- Notification logs indexes
 CREATE INDEX idx_notification_logs_user_id ON notification_logs(user_id);
 CREATE INDEX idx_notification_logs_type ON notification_logs(notification_type);
+
+-- API usage indexes
 CREATE INDEX idx_api_usage_endpoint_timestamp ON api_usage_logs(endpoint, timestamp DESC);
 CREATE INDEX idx_api_usage_timestamp ON api_usage_logs(timestamp DESC);
 CREATE INDEX idx_api_usage_user_id ON api_usage_logs(user_id);
--- Streak days index created by migration
--- CREATE INDEX idx_streak_days_schedule_date ON streak_days(schedule_id, streak_date DESC);
