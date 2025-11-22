@@ -188,6 +188,57 @@ Return ONLY valid JSON:
 }}"""
 
 
+def shuffle_question_options(question_data: Dict) -> Dict:
+    """
+    Shuffle the options in a multiple choice question to randomize answer position.
+
+    Args:
+        question_data: Question dict with 'options' list and 'correct_answer'
+
+    Returns:
+        Question dict with shuffled options and updated correct_answer
+    """
+    if 'options' not in question_data or 'correct_answer' not in question_data:
+        return question_data
+
+    options = question_data['options']
+    correct_id = question_data['correct_answer']
+
+    # Check if options are dicts or strings
+    if not options or not isinstance(options[0], dict):
+        # Options are strings or empty - can't shuffle with ID tracking
+        logger.warning(f"Options are not dicts (type: {type(options[0]) if options else 'empty'}), skipping shuffle")
+        return question_data
+
+    # Find the correct answer text
+    correct_text = None
+    for opt in options:
+        if opt.get('id') == correct_id:
+            correct_text = opt.get('text')
+            break
+
+    if correct_text is None:
+        logger.warning("Could not find correct answer in options, skipping shuffle")
+        return question_data
+
+    # Shuffle the options
+    random.shuffle(options)
+
+    # Reassign IDs (A, B, C, D) and find new correct answer position
+    new_correct_id = None
+    id_labels = ['A', 'B', 'C', 'D']
+    for i, opt in enumerate(options):
+        if opt.get('text') == correct_text:
+            new_correct_id = id_labels[i]
+        opt['id'] = id_labels[i]
+
+    question_data['options'] = options
+    question_data['correct_answer'] = new_correct_id
+
+    logger.info(f"Shuffled options, correct answer moved from {correct_id} to {new_correct_id}")
+    return question_data
+
+
 def call_openai_for_question(prompt: str) -> Dict:
     """
     Call OpenAI API to generate question based on prompt.
@@ -293,8 +344,10 @@ def get_or_generate_question(
         question_type: Specific type or None for random selection
 
     Returns:
-        Dict containing question data
+        Dict containing question data with shuffled options
     """
+    import copy
+
     # Select random question type if not specified
     if question_type is None:
         question_type = get_random_question_type()
@@ -302,12 +355,19 @@ def get_or_generate_question(
     # Check cache first
     cached = get_cached_question(word, learning_lang, native_lang, question_type)
     if cached:
-        return cached
+        # Make a deep copy so we don't modify the cached version
+        question = copy.deepcopy(cached)
+    else:
+        # Generate new question
+        question = generate_question_with_llm(word, definition, learning_lang, native_lang, question_type)
 
-    # Generate new question
-    question = generate_question_with_llm(word, definition, learning_lang, native_lang, question_type)
+        # Cache for future use (before shuffling, so cache has consistent order)
+        cache_question(word, learning_lang, native_lang, question_type, question)
 
-    # Cache for future use
-    cache_question(word, learning_lang, native_lang, question_type, question)
+        # Make a copy for shuffling
+        question = copy.deepcopy(question)
+
+    # Always shuffle options before returning (so correct answer isn't always A)
+    question = shuffle_question_options(question)
 
     return question

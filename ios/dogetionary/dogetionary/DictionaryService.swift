@@ -214,6 +214,41 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    /// Check if a specific word is saved - efficient single-word check
+    func isWordSaved(word: String, learningLanguage: String, nativeLanguage: String, completion: @escaping (Result<(isSaved: Bool, savedWordId: Int?), Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        let wordEncoded = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word
+
+        guard let url = URL(string: "\(baseURL)/v3/is-word-saved?user_id=\(userID)&word=\(wordEncoded)&learning_lang=\(learningLanguage)&native_lang=\(nativeLanguage)") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            do {
+                let result = try JSONDecoder().decode(IsWordSavedResponse.self, from: data)
+                completion(.success((isSaved: result.is_saved, savedWordId: result.saved_word_id)))
+            } catch {
+                completion(.failure(DictionaryError.decodingError(error)))
+            }
+        }.resume()
+    }
+
     func searchWord(_ word: String, completion: @escaping (Result<[Definition], Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         let learningLang = UserManager.shared.learningLanguage

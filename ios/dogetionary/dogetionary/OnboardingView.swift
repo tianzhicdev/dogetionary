@@ -19,7 +19,23 @@ struct OnboardingView: View {
     @State private var vocabularyCount: Int = 0
     @State private var studyPlans: [(days: Int, wordsPerDay: Int)] = []
     @State private var isLoadingVocabulary = false
-    @State private var userName = ""
+    @State private var userName: String = {
+        let names = [
+            "Vocabulary Ninja",
+            "Word Wizard",
+            "Dictionary Doge",
+            "Lexicon Legend",
+            "Vocab Viking",
+            "Grammar Guru",
+            "Spelling Senpai",
+            "Word Nerd Supreme",
+            "Captain Vocabulary",
+            "The Wordinator",
+            "Sir Learns-a-Lot",
+            "Professor Vocab"
+        ]
+        return names.randomElement() ?? "Word Wizard"
+    }()
     @State private var searchWord = "unforgettable"
     @State private var isSubmitting = false
     @State private var isSearching = false
@@ -78,6 +94,12 @@ struct OnboardingView: View {
                     // Username Page
                     usernamePage
                         .tag(usernamePageIndex)
+
+                    // Schedule Preview Page (only if test prep enabled)
+                    if showDurationPage {
+                        schedulePreviewPage
+                            .tag(schedulePageIndex)
+                    }
 
                     // Search Word Page
                     searchWordPage
@@ -349,6 +371,13 @@ struct OnboardingView: View {
         .buttonStyle(PlainButtonStyle())
     }
 
+    // MARK: - Schedule Preview Page
+
+    private var schedulePreviewPage: some View {
+        // Reuse the existing ScheduleView
+        ScheduleView()
+    }
+
     // MARK: - Search Word Page
 
     private var searchWordPage: some View {
@@ -385,8 +414,11 @@ struct OnboardingView: View {
 
     private var totalPages: Int {
         if selectedLearningLanguage == "en" {
-            return showDurationPage ? 6 : 5
+            // With test: Learning, Native, TestPrep, Duration, Username, Schedule, Search = 7 pages
+            // Without test: Learning, Native, TestPrep, Username, Search = 5 pages
+            return showDurationPage ? 7 : 5
         }
+        // Non-English: Learning, Native, Username, Search = 4 pages
         return 4
     }
 
@@ -402,9 +434,16 @@ struct OnboardingView: View {
         return 2
     }
 
+    private var schedulePageIndex: Int {
+        // Only valid when showDurationPage is true
+        return 5
+    }
+
     private var searchPageIndex: Int {
         if selectedLearningLanguage == "en" {
-            return showDurationPage ? 5 : 4
+            // With test: page 6 (after schedule preview at page 5)
+            // Without test: page 4 (after username at page 3)
+            return showDurationPage ? 6 : 4
         }
         return 3
     }
@@ -445,6 +484,13 @@ struct OnboardingView: View {
                 return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
             }
         case 5:
+            // Schedule preview page (English with test) - always allow proceeding
+            if showDurationPage {
+                return true // Schedule preview - always can proceed
+            } else {
+                return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
+            }
+        case 6:
             // Search page (English with test)
             return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         default:
@@ -470,6 +516,11 @@ struct OnboardingView: View {
         } else if currentPage == usernamePageIndex {
             // Submit onboarding data first
             submitOnboarding()
+        } else if currentPage == schedulePageIndex && showDurationPage {
+            // Schedule preview page - just advance to search
+            withAnimation {
+                currentPage = searchPageIndex
+            }
         } else if currentPage == searchPageIndex {
             // Perform search and dismiss onboarding
             performSearch()
@@ -544,9 +595,13 @@ struct OnboardingView: View {
                     }
                     AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
 
-                    // Move to search page
+                    // Move to next page (schedule preview if test enabled, otherwise search)
                     withAnimation {
-                        currentPage = searchPageIndex
+                        if self.showDurationPage {
+                            currentPage = schedulePageIndex
+                        } else {
+                            currentPage = searchPageIndex
+                        }
                     }
 
                 case .failure(let error):

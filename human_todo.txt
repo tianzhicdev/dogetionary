@@ -117,9 +117,6 @@ please design first
 
 4. practice mode
 
--- done --
-
-
 1. badge system
 
 let's change how the badge system work; we move from saved_words based to number of reviews based; do not change the icons and everything. make the number to get the badge to be 10x the current number; (because reviews are easier)
@@ -145,13 +142,35 @@ if any of the above is not 0, we just call /v3/next-review-word-with-new-words w
 
 in other words, when user switch to practice tab, if there is something to practice, he see the question right away, not needing to click "start" button;
 when there is not anything to practice, he sees "You've done so well, there is nothing to practice!"
+let's design this first;
+
+
+performance: 
+it is quite slow for loading the next question; let's do the following
+create endpint v3/next-review-word-with-new-words/<count>
+when user first come to practice mode, we should load just 3 questions;
+but on the backgroud we should make sure that we have at least 10 questions in a queue;
+when a user answers one question, we should refill the queue in ios mem so that we always have 10 questions (or less if user do not have more than 10 to practice anyway);
+the in mem queue should be unique and ordered 
+we should show the queue in real time on the screen in debug mode;
+let's discuss first: how do we ensure order and dedupe? (if we have 3 in the in mem queue and we ask backend for 10 more, likely the 3 in mem are returned too);
+
+a. schedule should be made deterministically with deterministic order b.in practice mode, practicable words are basically words scheduled for today and words that are not due but not have been reviewed in the past 24h, we should call it "not-due-yet" words;
+b. to keep the logic simple, v3/next-review-words-batch should be today's words from schedule + "not-due-yet" words;
+
+
+-- done --
 
 
 
+2. animation for badge
+
+in leaderboard mode, we should use score instead of practice count; let's create a new endpoint for this so older version of the app can still work;
 
 
+2.1 in the saved words list view, we should 1. make the list more compact, we should try to fix the word itself and the review counts on the same row, only overflow to the second row if the word is too long;
+2.the 7 blocks bar is kind ugly, can we user something better to indicate the progress?
 
-3. animation for badge
 
 4. some questions pronunciations are erroneous, we need a reporting/fixing mechanism;
 
@@ -160,6 +179,8 @@ when there is not anything to practice, he sees "You've done so well, there is n
 
 
 6. changing schedule affect streak
+
+3. toefl ielts words
 
 
 

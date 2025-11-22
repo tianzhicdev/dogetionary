@@ -242,26 +242,19 @@ struct DefinitionCard: View {
     private func checkIfWordIsSaved() {
         isCheckingStatus = true
 
-        DictionaryService.shared.getSavedWords { result in
+        // Use efficient single-word check endpoint instead of fetching all saved words
+        DictionaryService.shared.isWordSaved(
+            word: definition.word,
+            learningLanguage: definition.learning_language,
+            nativeLanguage: definition.native_language
+        ) { result in
             DispatchQueue.main.async {
                 isCheckingStatus = false
 
                 switch result {
-                case .success(let savedWords):
-                    // Check if word is saved with current user language settings
-                    if let foundWord = savedWords.first(where: {
-                        $0.word.lowercased() == definition.word.lowercased() &&
-                        $0.learning_language == definition.learning_language &&
-                        $0.native_language == definition.native_language
-                    }) {
-                        // Word is saved with definition's language settings
-                        isSaved = true
-                        savedWordId = foundWord.id
-                    } else {
-                        // Word is not saved with definition's language settings
-                        isSaved = false
-                        savedWordId = nil
-                    }
+                case .success(let (saved, wordId)):
+                    isSaved = saved
+                    savedWordId = wordId
                 case .failure:
                     // If we can't check, assume not saved
                     isSaved = false
