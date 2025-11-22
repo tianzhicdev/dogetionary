@@ -374,8 +374,8 @@ struct OnboardingView: View {
     // MARK: - Schedule Preview Page
 
     private var schedulePreviewPage: some View {
-        // Reuse the existing ScheduleView
-        ScheduleView()
+        // Reuse the existing ScheduleView in embedded mode (no NavigationStack)
+        ScheduleView(embedded: true)
     }
 
     // MARK: - Search Word Page

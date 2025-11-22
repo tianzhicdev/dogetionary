@@ -666,6 +666,53 @@ def get_leaderboard():
         return jsonify({"error": f"Failed to get leaderboard: {str(e)}"}), 500
 
 
+def get_leaderboard_v2():
+    """Get leaderboard with all users ranked by score (correct=2pts, wrong=1pt)"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Get all users with their scores, name, and motto
+        # Score = 2 points for correct answers, 1 point for wrong answers
+        cur.execute("""
+            SELECT
+                up.user_id,
+                COALESCE(up.user_name, 'Anonymous') as user_name,
+                COALESCE(up.user_motto, '') as user_motto,
+                COALESCE(SUM(CASE WHEN r.response THEN 2 ELSE 1 END), 0) as score,
+                COALESCE(COUNT(r.id), 0) as total_reviews
+            FROM user_preferences up
+            LEFT JOIN reviews r ON up.user_id = r.user_id
+            GROUP BY up.user_id, up.user_name, up.user_motto
+            ORDER BY score DESC, total_reviews DESC, up.user_name ASC
+        """)
+
+        leaderboard = []
+        rank = 1
+        for row in cur.fetchall():
+            leaderboard.append({
+                "rank": rank,
+                "user_id": row['user_id'],
+                "user_name": row['user_name'],
+                "user_motto": row['user_motto'],
+                "score": row['score'],
+                "total_reviews": row['total_reviews']
+            })
+            rank += 1
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "leaderboard": leaderboard,
+            "total_users": len(leaderboard)
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting leaderboard v2: {str(e)}")
+        return jsonify({"error": f"Failed to get leaderboard: {str(e)}"}), 500
+
+
 def get_review_progress_stats():
     """Get review progress statistics for ReviewGoalAchievedView"""
     try:

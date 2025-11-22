@@ -15,16 +15,40 @@ struct ScheduleView: View {
     @State private var testType: String?
     @State private var userName: String?
 
+    /// When true, shows without NavigationStack wrapper (for embedding in onboarding)
+    var embedded: Bool = false
+
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Simple gradient background
-                LinearGradient(
-                    colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+        if embedded {
+            scheduleContent
+        } else {
+            NavigationStack {
+                scheduleContent
+                    .navigationTitle("Study Plan")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+        }
+    }
+
+    private var scheduleContent: some View {
+        ZStack {
+            // Simple gradient background
+            LinearGradient(
+                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Title for embedded mode
+                if embedded {
+                    Text(userName != nil ? "\(userName!)'s Study Plan" : "Your Study Plan")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+                }
 
                 Group {
                     if isLoading {
@@ -33,6 +57,7 @@ struct ScheduleView: View {
                             Text("Loading schedule...")
                                 .foregroundColor(.secondary)
                         }
+                        .frame(maxHeight: .infinity)
                     } else if let error = errorMessage {
                         VStack(spacing: 16) {
                             Image(systemName: "exclamationmark.triangle")
@@ -43,6 +68,7 @@ struct ScheduleView: View {
                                 .multilineTextAlignment(.center)
                                 .padding()
                         }
+                        .frame(maxHeight: .infinity)
                     } else if !schedules.isEmpty {
                         SimpleScheduleListView(schedules: schedules)
                     } else {
@@ -59,20 +85,20 @@ struct ScheduleView: View {
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal)
                             }
+                            .frame(maxHeight: .infinity)
                         } else {
                             NoScheduleView(message: "No schedule available. Enable test preparation to create a schedule.")
                         }
                     }
                 }
             }
-            .navigationBarTitleDisplayMode(.large)
-            .task {
-                // Always refresh when view appears (navigating to Schedule tab)
-                await loadScheduleRangeAsync()
-            }
-            .refreshable {
-                await loadScheduleRangeAsync()
-            }
+        }
+        .task {
+            // Always refresh when view appears (navigating to Schedule tab)
+            await loadScheduleRangeAsync()
+        }
+        .refreshable {
+            await loadScheduleRangeAsync()
         }
     }
 

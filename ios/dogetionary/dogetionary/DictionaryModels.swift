@@ -437,9 +437,10 @@ struct LeaderboardEntry: Codable, Identifiable {
     let user_name: String
     let user_motto: String
     let total_reviews: Int
-    
+    let score: Int?  // New field: 2 pts for correct, 1 pt for wrong
+
     private enum CodingKeys: String, CodingKey {
-        case rank, user_id, user_name, user_motto, total_reviews
+        case rank, user_id, user_name, user_motto, total_reviews, score
     }
 }
 

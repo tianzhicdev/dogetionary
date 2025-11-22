@@ -12,7 +12,7 @@ struct SavedWordsView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var hasSchedule = false
-    @State private var selectedView = 0  // 0 = Words, 1 = Schedule
+    @State private var selectedView = 0  // 0 = Schedule, 1 = Words
 
     var body: some View {
         NavigationView {
@@ -20,8 +20,8 @@ struct SavedWordsView: View {
                 // Segmented control for switching views (only show if user has schedule)
                 if hasSchedule {
                     Picker("View", selection: $selectedView) {
-                        Text("Words").tag(0)
-                        Text("Schedule").tag(1)
+                        Text("Schedule").tag(0)
+                        Text("Words").tag(1)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 16)
@@ -30,7 +30,9 @@ struct SavedWordsView: View {
                 }
 
                 // Content based on selection
-                if selectedView == 0 {
+                if selectedView == 0 && hasSchedule {
+                    ScheduleView()
+                } else {
                     SavedWordsListView(
                         savedWords: $savedWords,
                         isLoading: isLoading,
@@ -39,8 +41,6 @@ struct SavedWordsView: View {
                         onDelete: { word in await deleteSavedWord(word) },
                         onToggleKnown: { word in await toggleKnownStatus(word) }
                     )
-                } else if hasSchedule {
-                    ScheduleView()
                 }
             }
             .navigationBarTitleDisplayMode(.large)

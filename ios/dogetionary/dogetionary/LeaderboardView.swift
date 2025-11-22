@@ -133,12 +133,12 @@ struct LeaderboardRowView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(entry.total_reviews)")
+                Text("\(entry.score ?? entry.total_reviews)")
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(isCurrentUser ? AppTheme.primaryBlue : .primary)
 
-                Text("practice")
+                Text("score")
                     .font(AppTheme.smallCaptionFont)
                     .foregroundColor(.secondary)
             }
