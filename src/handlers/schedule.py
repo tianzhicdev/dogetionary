@@ -50,7 +50,7 @@ def filter_known_words_from_practice(practice_words, user_id, conn):
         SELECT id FROM saved_words
         WHERE user_id = %s AND id = ANY(%s) AND is_known = TRUE
     """, (user_id, word_ids))
-    known_ids = {row[0] for row in cur.fetchall()}
+    known_ids = {row['id'] for row in cur.fetchall()}
     cur.close()
 
     # Filter out known words
