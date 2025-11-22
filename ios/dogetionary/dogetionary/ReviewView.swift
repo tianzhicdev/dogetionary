@@ -10,9 +10,11 @@ import SwiftUI
 // MARK: - Main Review View
 
 struct ReviewView: View {
-    // Core state
-    @State private var currentReview: EnhancedReviewResponse?
-    @State private var isLoading = false
+    // Queue manager for instant question loading
+    @StateObject private var queueManager = QuestionQueueManager.shared
+
+    // Current question from queue
+    @State private var currentQuestion: BatchReviewQuestion?
     @State private var errorMessage: String?
     @State private var reviewStartTime: Date?
 
@@ -65,39 +67,42 @@ struct ReviewView: View {
                 ZStack {
                     if isLoadingStatus {
                         ProgressView("Loading practice...")
-                    } else if let status = practiceStatus, !status.has_practice {
+                    } else if let status = practiceStatus, !status.has_practice, !queueManager.hasQuestions {
                         NothingToPracticeView()
-                    } else if let status = practiceStatus,
-                              status.new_words_count == 0 && status.due_words_count == 0 && status.stale_words_count > 0,
-                              currentReview == nil && !isLoading {
-                        TodayCompleteView(staleWordsCount: status.stale_words_count, onContinue: loadNextQuestion)
-                    } else if isLoading {
+                    } else if queueManager.isFetching && currentQuestion == nil {
                         ProgressView("Loading question...")
-                    } else if let review = currentReview, let question = review.question {
+                    } else if let question = currentQuestion {
                         // Question card with definition below
                         QuestionCardView(
-                            question: question,
-                            definition: review.definition,
-                            word: review.word ?? "",
-                            learningLanguage: review.learning_language ?? "en",
-                            nativeLanguage: review.native_language ?? "en",
+                            question: question.question,
+                            definition: question.definition,
+                            word: question.word,
+                            learningLanguage: question.learning_language,
+                            nativeLanguage: question.native_language,
                             isAnswered: $isAnswered,
                             wasCorrect: $wasCorrect,
                             onAnswer: handleAnswer,
                             onSwipeComplete: handleSwipeComplete
                         )
-                        .id(review.word_id)
+                        .id(question.word)
                         .offset(x: cardOffset)
                         .opacity(cardOpacity)
+                    } else if !queueManager.hasMore && !queueManager.hasQuestions {
+                        NothingToPracticeView()
                     } else {
                         VStack(spacing: 16) {
-                            Text("Something went wrong")
+                            Text("Loading questions...")
                                 .font(.headline)
                                 .foregroundColor(.secondary)
-                            Button("Retry") {
-                                loadPracticeStatus()
+                            if queueManager.isFetching {
+                                ProgressView()
+                            } else {
+                                Button("Retry") {
+                                    queueManager.forceRefresh()
+                                    loadPracticeStatus()
+                                }
+                                .buttonStyle(.bordered)
                             }
-                            .buttonStyle(.bordered)
                         }
                     }
                 }
@@ -118,12 +123,27 @@ struct ReviewView: View {
                     earnedBadge = nil
                 }
             }
+
+            // Debug overlay (bottom-left)
+            VStack {
+                Spacer()
+                HStack {
+                    QueueDebugOverlay()
+                    Spacer()
+                }
+            }
         }
         .onAppear {
             loadPracticeStatus()
         }
         .refreshable {
             await refreshPracticeStatus()
+        }
+        // Watch for queue updates when current question is nil
+        .onChange(of: queueManager.queueCount) { _, newCount in
+            if currentQuestion == nil && newCount > 0 {
+                loadNextQuestionFromQueue()
+            }
         }
     }
 
@@ -166,10 +186,11 @@ struct ReviewView: View {
                 case .success(let status):
                     self.practiceStatus = status
                     self.currentScore = status.score
-                    if status.has_practice {
-                        self.loadNextQuestion()
-                    } else {
-                        self.isLoadingStatus = false
+                    self.isLoadingStatus = false
+
+                    // Load first question from queue
+                    if status.has_practice || self.queueManager.hasQuestions {
+                        self.loadNextQuestionFromQueue()
                     }
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
@@ -181,6 +202,9 @@ struct ReviewView: View {
 
     @MainActor
     private func refreshPracticeStatus() async {
+        // Force refresh the queue
+        queueManager.forceRefresh()
+
         await withCheckedContinuation { continuation in
             DictionaryService.shared.getPracticeStatus { result in
                 DispatchQueue.main.async {
@@ -194,32 +218,19 @@ struct ReviewView: View {
         }
     }
 
-    private func loadNextQuestion() {
-        isLoading = true
-        isLoadingStatus = false
-
-        DictionaryService.shared.getNextReviewWordEnhanced { result in
-            DispatchQueue.main.async {
-                self.isLoading = false
-
-                switch result {
-                case .success(let response):
-                    if response.hasWordToReview {
-                        self.currentReview = response
-                        self.reviewStartTime = Date()
-                    } else {
-                        self.currentReview = nil
-                        self.refreshStatusAfterCompletion()
-                    }
-                case .failure(let error):
-                    if error.localizedDescription.contains("No words") {
-                        self.currentReview = nil
-                        self.refreshStatusAfterCompletion()
-                    } else {
-                        self.errorMessage = error.localizedDescription
-                    }
-                }
-            }
+    private func loadNextQuestionFromQueue() {
+        // Try to get next question from queue (instant!)
+        if let nextQuestion = queueManager.popQuestion() {
+            currentQuestion = nextQuestion
+            reviewStartTime = Date()
+        } else if queueManager.hasMore {
+            // Queue empty but more available - wait for fetch
+            // The queue manager will trigger a fetch automatically
+            currentQuestion = nil
+        } else {
+            // No more questions
+            currentQuestion = nil
+            refreshStatusAfterCompletion()
         }
     }
 
@@ -234,10 +245,11 @@ struct ReviewView: View {
     }
 
     private func submitReview(response: Bool, questionType: String) {
-        guard let currentReview = currentReview,
-              let word = currentReview.word,
-              let wordID = currentReview.word_id else { return }
+        guard let question = currentQuestion else { return }
 
+        let word = question.word
+        let learningLanguage = question.learning_language
+        let nativeLanguage = question.native_language
         let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
 
         // Track analytics
@@ -249,7 +261,9 @@ struct ReviewView: View {
         ])
 
         DictionaryService.shared.submitReview(
-            wordID: wordID,
+            word: word,
+            learningLanguage: learningLanguage,
+            nativeLanguage: nativeLanguage,
             response: response,
             questionType: questionType
         ) { result in
@@ -263,7 +277,8 @@ struct ReviewView: View {
                         self.showBadgeCelebration = true
                     }
 
-                    self.loadNextQuestion()
+                    // Load next question from queue (instant!)
+                    self.loadNextQuestionFromQueue()
                     self.refreshStatusAfterCompletion()
                     BackgroundTaskManager.shared.updateDueCountsAfterReview()
                 case .failure(let error):
@@ -430,8 +445,8 @@ struct PracticeStatusBar: View {
     let scoreAnimationColor: Color
 
     var body: some View {
-        HStack(spacing: 12) {
-            // New words indicator
+        HStack(spacing: 8) {
+            // New words indicator (from schedule)
             if let status = practiceStatus, status.new_words_count > 0 {
                 StatusPill(
                     icon: "star.fill",
@@ -441,13 +456,33 @@ struct PracticeStatusBar: View {
                 )
             }
 
-            // Due words indicator
-            if let status = practiceStatus, status.due_words_count > 0 {
+            // Test practice words indicator
+            if let status = practiceStatus, status.test_practice_count > 0 {
                 StatusPill(
-                    icon: "clock.fill",
-                    count: status.due_words_count,
-                    label: "due",
+                    icon: "book.fill",
+                    count: status.test_practice_count,
+                    label: "test",
                     color: .orange
+                )
+            }
+
+            // Non-test practice words indicator
+            if let status = practiceStatus, status.non_test_practice_count > 0 {
+                StatusPill(
+                    icon: "repeat",
+                    count: status.non_test_practice_count,
+                    label: "prac",
+                    color: .green
+                )
+            }
+
+            // Not-due-yet words indicator (extra practice)
+            if let status = practiceStatus, status.not_due_yet_count > 0 {
+                StatusPill(
+                    icon: "arrow.counterclockwise",
+                    count: status.not_due_yet_count,
+                    label: "extra",
+                    color: .purple
                 )
             }
 

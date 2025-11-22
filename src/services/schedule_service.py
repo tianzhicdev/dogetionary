@@ -281,8 +281,8 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
             else:
                 non_test_practice_words.add(word)
 
-        # Calculate new words pool (test words NOT yet saved)
-        new_words_pool = list(all_test_words - set(saved_words_map.keys()))
+        # Calculate new words pool (test words NOT yet saved), sorted for deterministic order
+        new_words_pool = sorted(all_test_words - set(saved_words_map.keys()))
 
         # Calculate daily new words (ceiling division)
         daily_new_words = max(1, (len(new_words_pool) + days_remaining - 1) // days_remaining)

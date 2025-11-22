@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var userManager = UserManager.shared
     @StateObject private var notificationManager = NotificationManager.shared
+    @StateObject private var questionQueue = QuestionQueueManager.shared
     @State private var selectedTab = 0
     @State private var reviewBadgeCount = 0
     @State private var showOnboarding = false
@@ -92,6 +93,8 @@ struct ContentView: View {
             Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
                 reviewBadgeCount = BackgroundTaskManager.shared.cachedOverdueCount
             }
+
+            // Note: Question queue is preloaded in dogetionaryApp.init() via forceRefresh()
         }
         .onChange(of: userManager.hasCompletedOnboarding) { _, completed in
             if completed {
