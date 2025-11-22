@@ -1264,6 +1264,73 @@ def generate_word_definition():
         return jsonify({"error": f"Failed to generate definition: {str(e)}"}), 500
 
 
+def is_word_saved():
+    """Check if a specific word is saved for a user - efficient single-word check
+
+    GET /v3/is-word-saved?user_id=XXX&word=XXX&learning_lang=XX&native_lang=XX
+
+    Returns:
+        {
+            "is_saved": true/false,
+            "saved_word_id": 123 or null
+        }
+    """
+    try:
+        user_id = request.args.get('user_id')
+        word = request.args.get('word')
+        learning_lang = request.args.get('learning_lang')
+        native_lang = request.args.get('native_lang')
+
+        if not user_id or not word:
+            return jsonify({"error": "user_id and word parameters are required"}), 400
+
+        try:
+            uuid.UUID(user_id)
+        except ValueError:
+            return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
+
+        word_normalized = word.strip().lower()
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Build query based on whether language params are provided
+        if learning_lang and native_lang:
+            cur.execute("""
+                SELECT id FROM saved_words
+                WHERE user_id = %s
+                  AND LOWER(word) = %s
+                  AND learning_language = %s
+                  AND native_language = %s
+                LIMIT 1
+            """, (user_id, word_normalized, learning_lang, native_lang))
+        else:
+            cur.execute("""
+                SELECT id FROM saved_words
+                WHERE user_id = %s AND LOWER(word) = %s
+                LIMIT 1
+            """, (user_id, word_normalized))
+
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if result:
+            return jsonify({
+                "is_saved": True,
+                "saved_word_id": result['id']
+            })
+        else:
+            return jsonify({
+                "is_saved": False,
+                "saved_word_id": None
+            })
+
+    except Exception as e:
+        logger.error(f"Error checking if word is saved: {str(e)}")
+        return jsonify({"error": f"Failed to check word status: {str(e)}"}), 500
+
+
 def get_all_words_for_language_pair(learning_lang, native_lang):
     """Get all words for a specific language pair
 

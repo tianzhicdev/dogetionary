@@ -11,7 +11,6 @@ struct ScheduleView: View {
     @State private var schedules: [DailyScheduleEntry] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var hasLoadedInitially = false
     @State private var userHasSchedule = false
     @State private var testType: String?
     @State private var userName: String?
@@ -66,12 +65,10 @@ struct ScheduleView: View {
                     }
                 }
             }
-            .navigationTitle(userName != nil ? "\(userName!)'s Study Plan" : "Study Plan")
             .navigationBarTitleDisplayMode(.large)
             .task {
-                guard !isLoading && !hasLoadedInitially else { return }
+                // Always refresh when view appears (navigating to Schedule tab)
                 await loadScheduleRangeAsync()
-                hasLoadedInitially = true
             }
             .refreshable {
                 await loadScheduleRangeAsync()

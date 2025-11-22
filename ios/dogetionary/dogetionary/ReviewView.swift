@@ -446,7 +446,8 @@ struct QuestionCardView: View {
         )
         .onChange(of: isAnswered) { _, newValue in
             if newValue {
-                withAnimation(.easeIn.delay(0.5)) {
+                // Show swipe hint immediately (no delay)
+                withAnimation(.easeIn) {
                     showSwipeHint = true
                 }
             }

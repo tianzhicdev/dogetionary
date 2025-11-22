@@ -218,6 +218,12 @@ struct SavedWordsResponse: Codable {
     }
 }
 
+/// Response for efficient single-word saved check
+struct IsWordSavedResponse: Codable {
+    let is_saved: Bool
+    let saved_word_id: Int?
+}
+
 struct SavedWord: Identifiable, Codable {
     let id: Int
     let word: String
