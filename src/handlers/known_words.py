@@ -79,7 +79,7 @@ def mark_word_known(word_id):
             UPDATE saved_words
             SET is_known = %s
             WHERE id = %s AND user_id = %s
-        """, (is_known, word_id, user_id))
+        """, (is_known, word_id, user_id), commit=True)
 
         logger.info(f"Word {word_id} marked as {'known' if is_known else 'learning'} for user {user_id}")
 
