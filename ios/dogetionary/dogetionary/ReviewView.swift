@@ -188,8 +188,16 @@ struct ReviewView: View {
                     self.currentScore = status.score
                     self.isLoadingStatus = false
 
-                    // Load first question from queue
-                    if status.has_practice || self.queueManager.hasQuestions {
+                    // If there's practice available, ensure the queue is loading
+                    if status.has_practice {
+                        // If queue is empty and not currently fetching, trigger a fetch
+                        if !self.queueManager.hasQuestions && !self.queueManager.isFetching {
+                            self.queueManager.forceRefresh()
+                        }
+                        // Try to load from queue (might be populated already)
+                        self.loadNextQuestionFromQueue()
+                    } else if self.queueManager.hasQuestions {
+                        // No scheduled practice but queue has questions (e.g., extra practice)
                         self.loadNextQuestionFromQueue()
                     }
                 case .failure(let error):
@@ -219,19 +227,28 @@ struct ReviewView: View {
     }
 
     private func loadNextQuestionFromQueue() {
-        // Try to get next question from queue (instant!)
-        if let nextQuestion = queueManager.popQuestion() {
+        // Peek at the current question (don't remove until submitted)
+        if let nextQuestion = queueManager.currentQuestion() {
             currentQuestion = nextQuestion
             reviewStartTime = Date()
         } else if queueManager.hasMore {
-            // Queue empty but more available - wait for fetch
-            // The queue manager will trigger a fetch automatically
+            // Queue empty but more available - trigger fetch if not already fetching
             currentQuestion = nil
+            if !queueManager.isFetching {
+                queueManager.refillIfNeeded()
+            }
         } else {
             // No more questions
             currentQuestion = nil
             refreshStatusAfterCompletion()
         }
+    }
+
+    private func advanceToNextQuestion() {
+        // Remove the current question from queue (after submit)
+        _ = queueManager.popQuestion()
+        // Load the next one
+        loadNextQuestionFromQueue()
     }
 
     private func refreshStatusAfterCompletion() {
@@ -277,8 +294,8 @@ struct ReviewView: View {
                         self.showBadgeCelebration = true
                     }
 
-                    // Load next question from queue (instant!)
-                    self.loadNextQuestionFromQueue()
+                    // Advance to next question (removes current from queue)
+                    self.advanceToNextQuestion()
                     self.refreshStatusAfterCompletion()
                     BackgroundTaskManager.shared.updateDueCountsAfterReview()
                 case .failure(let error):

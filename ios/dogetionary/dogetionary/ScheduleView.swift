@@ -144,9 +144,9 @@ struct SimpleScheduleListView: View {
 
     private var filteredSchedules: [DailyScheduleEntry] {
         schedules.filter { entry in
-            let hasNewWords = (entry.new_words?.isEmpty == false)
-            let hasTestPractice = (entry.test_practice_words?.isEmpty == false)
-            let hasNonTestPractice = (entry.non_test_practice_words?.isEmpty == false)
+            let hasNewWords = (entry.new_words?.isEmpty == false) || (entry.new_words_completed?.isEmpty == false)
+            let hasTestPractice = (entry.test_practice_words?.isEmpty == false) || (entry.test_practice_words_completed?.isEmpty == false)
+            let hasNonTestPractice = (entry.non_test_practice_words?.isEmpty == false) || (entry.non_test_practice_words_completed?.isEmpty == false)
             return hasNewWords || hasTestPractice || hasNonTestPractice
         }
     }
@@ -232,14 +232,22 @@ struct DayCard: View {
                     }
 
                     HStack(spacing: 8) {
-                        if let newCount = entry.new_words?.count, newCount > 0 {
-                            TaskBadge(count: newCount, label: "New", color: Color(red: 1.0, green: 0.6, blue: 0.4))
+                        let newTotal = (entry.new_words?.count ?? 0) + (entry.new_words_completed?.count ?? 0)
+                        let newCompleted = entry.new_words_completed?.count ?? 0
+                        if newTotal > 0 {
+                            TaskBadge(count: newTotal, completed: newCompleted, label: "New", color: Color(red: 1.0, green: 0.6, blue: 0.4))
                         }
-                        if let testCount = entry.test_practice_words?.count, testCount > 0 {
-                            TaskBadge(count: testCount, label: testLabel, color: Color(red: 0.4, green: 0.8, blue: 0.6))
+
+                        let testTotal = (entry.test_practice_words?.count ?? 0) + (entry.test_practice_words_completed?.count ?? 0)
+                        let testCompleted = entry.test_practice_words_completed?.count ?? 0
+                        if testTotal > 0 {
+                            TaskBadge(count: testTotal, completed: testCompleted, label: testLabel, color: Color(red: 0.4, green: 0.8, blue: 0.6))
                         }
-                        if let practiceCount = entry.non_test_practice_words?.count, practiceCount > 0 {
-                            TaskBadge(count: practiceCount, label: "Custom", color: Color(red: 0.5, green: 0.7, blue: 1.0))
+
+                        let practiceTotal = (entry.non_test_practice_words?.count ?? 0) + (entry.non_test_practice_words_completed?.count ?? 0)
+                        let practiceCompleted = entry.non_test_practice_words_completed?.count ?? 0
+                        if practiceTotal > 0 {
+                            TaskBadge(count: practiceTotal, completed: practiceCompleted, label: "Custom", color: Color(red: 0.5, green: 0.7, blue: 1.0))
                         }
                     }
                 }
@@ -253,28 +261,40 @@ struct DayCard: View {
 
             // Word lists
             VStack(spacing: 12) {
-                if let newWords = entry.new_words, !newWords.isEmpty {
+                // New words section (show if there are remaining OR completed words)
+                let newWords = entry.new_words ?? []
+                let newWordsCompleted = entry.new_words_completed ?? []
+                if !newWords.isEmpty || !newWordsCompleted.isEmpty {
                     WordSection(
                         label: "New Words",
                         words: newWords,
+                        completedWords: newWordsCompleted,
                         backgroundColor: Color(red: 1.0, green: 0.95, blue: 0.9),
                         textColor: Color(red: 0.8, green: 0.4, blue: 0.2)
                     )
                 }
 
-                if let testWords = entry.test_practice_words, !testWords.isEmpty {
+                // Test practice section
+                let testWords = entry.test_practice_words ?? []
+                let testWordsCompleted = entry.test_practice_words_completed ?? []
+                if !testWords.isEmpty || !testWordsCompleted.isEmpty {
                     WordSection(
                         label: "\(testLabel) Practice",
                         words: testWords.map { $0.word },
+                        completedWords: testWordsCompleted.map { $0.word },
                         backgroundColor: Color(red: 0.9, green: 0.98, blue: 0.95),
                         textColor: Color(red: 0.2, green: 0.6, blue: 0.4)
                     )
                 }
 
-                if let practiceWords = entry.non_test_practice_words, !practiceWords.isEmpty {
+                // Non-test practice section
+                let practiceWords = entry.non_test_practice_words ?? []
+                let practiceWordsCompleted = entry.non_test_practice_words_completed ?? []
+                if !practiceWords.isEmpty || !practiceWordsCompleted.isEmpty {
                     WordSection(
                         label: "Custom Practice",
                         words: practiceWords.map { $0.word },
+                        completedWords: practiceWordsCompleted.map { $0.word },
                         backgroundColor: Color(red: 0.95, green: 0.97, blue: 1.0),
                         textColor: Color(red: 0.3, green: 0.5, blue: 0.9)
                     )
@@ -320,20 +340,36 @@ struct DayCard: View {
 
 struct TaskBadge: View {
     let count: Int
+    let completed: Int
     let label: String
     let color: Color
 
+    init(count: Int, completed: Int = 0, label: String, color: Color) {
+        self.count = count
+        self.completed = completed
+        self.label = label
+        self.color = color
+    }
+
     var body: some View {
         HStack(spacing: 4) {
-            Text("\(count)")
-                .font(.system(size: 12, weight: .bold))
+            if completed > 0 {
+                Text("\(completed)/\(count)")
+                    .font(.system(size: 12, weight: .bold))
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.green)
+            } else {
+                Text("\(count)")
+                    .font(.system(size: 12, weight: .bold))
+            }
             Text(label)
                 .font(.system(size: 11, weight: .medium))
         }
-        .foregroundColor(color)
+        .foregroundColor(completed == count && count > 0 ? .green : color)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(color.opacity(0.15))
+        .background((completed == count && count > 0 ? Color.green : color).opacity(0.15))
         .cornerRadius(6)
     }
 }
@@ -343,8 +379,21 @@ struct TaskBadge: View {
 struct WordSection: View {
     let label: String
     let words: [String]
+    let completedWords: [String]
     let backgroundColor: Color
     let textColor: Color
+
+    init(label: String, words: [String], completedWords: [String] = [], backgroundColor: Color, textColor: Color) {
+        self.label = label
+        self.words = words
+        self.completedWords = completedWords
+        self.backgroundColor = backgroundColor
+        self.textColor = textColor
+    }
+
+    private var totalCount: Int {
+        words.count + completedWords.count
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -352,15 +401,33 @@ struct WordSection: View {
                 Text(label)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.secondary)
-                Text("(\(words.count))")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+                if completedWords.isEmpty {
+                    Text("(\(words.count))")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("(\(completedWords.count)/\(totalCount) done)")
+                        .font(.system(size: 12))
+                        .foregroundColor(.green)
+                }
             }
 
-            Text(words.joined(separator: ", "))
-                .font(.system(size: 15))
-                .foregroundColor(textColor)
-                .lineSpacing(4)
+            // Completed words with strikethrough
+            if !completedWords.isEmpty {
+                Text(completedWords.joined(separator: ", "))
+                    .font(.system(size: 15))
+                    .strikethrough(true, color: .gray)
+                    .foregroundColor(.gray)
+                    .lineSpacing(4)
+            }
+
+            // Remaining words
+            if !words.isEmpty {
+                Text(words.joined(separator: ", "))
+                    .font(.system(size: 15))
+                    .foregroundColor(textColor)
+                    .lineSpacing(4)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
