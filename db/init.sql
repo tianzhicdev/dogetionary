@@ -36,6 +36,9 @@ CREATE TABLE audio (
     language VARCHAR(10) NOT NULL,
     audio_data BYTEA NOT NULL,
     content_type VARCHAR(50) DEFAULT 'audio/mpeg',
+    ai_verified BOOLEAN DEFAULT FALSE,
+    ai_verification_comment TEXT,
+    version INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (text_content, language)
 );
@@ -47,6 +50,9 @@ CREATE TABLE definitions (
     native_language VARCHAR(10) NOT NULL,
     definition_data JSONB NOT NULL,
     schema_version INTEGER NOT NULL DEFAULT 1,
+    ai_verified BOOLEAN DEFAULT FALSE,
+    ai_verification_comment TEXT,
+    version INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (word, learning_language, native_language)
@@ -88,6 +94,9 @@ CREATE TABLE review_questions (
     native_language VARCHAR(10) NOT NULL,
     question_type VARCHAR(50) NOT NULL,  -- 'recognition', 'mc_definition', 'mc_word', 'fill_blank'
     question_data JSONB NOT NULL,
+    ai_verified BOOLEAN DEFAULT FALSE,
+    ai_verification_comment TEXT,
+    version INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(word, learning_language, native_language, question_type)
 );
@@ -232,6 +241,7 @@ CREATE INDEX idx_user_pref_test_enabled ON user_preferences(user_id)
 -- Definitions indexes
 CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);
 CREATE INDEX idx_definitions_schema_version ON definitions(schema_version);
+CREATE INDEX idx_definitions_unverified ON definitions(ai_verified) WHERE ai_verified = FALSE;
 
 -- Saved words indexes
 CREATE INDEX idx_saved_words_user_id ON saved_words(user_id);
