@@ -333,7 +333,8 @@ def get_review_words_batch():
                     definition_data = fetch_and_cache_definition(word, word_learning_lang, word_native_lang)
 
                     if definition_data is None:
-                        question_type = 'recognition'
+                        logger.warning(f"Could not fetch definition for '{word}', skipping")
+                        continue  # Skip words without definitions
 
                 # Generate question
                 question = get_or_generate_question(

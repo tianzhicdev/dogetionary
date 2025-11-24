@@ -289,6 +289,37 @@ struct SettingsView: View {
                     }
                 }
 
+                Section(header: Text("Notifications")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Daily Reminder")
+                                .font(.subheadline)
+                            Spacer()
+                            DatePicker("", selection: $userManager.reminderTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+
+                        Text("You'll receive a reminder to practice at this time each day")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Divider()
+
+                        HStack {
+                            Text("Timezone")
+                                .font(.subheadline)
+                            Spacer()
+                            Text(TimeZone.current.identifier)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Text("Timezone is automatically detected from your device")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 Section(header: Text("Feedback")) {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Help us improve Unforgettable Dictionary")
