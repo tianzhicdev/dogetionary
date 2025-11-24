@@ -865,21 +865,23 @@ struct SavedWordRow: View {
 
     @ViewBuilder
     private var testLabels: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             if userManager.toeflEnabled && (savedWord.is_toefl == true) {
-                Text("T")
-                    .font(.system(size: 9, weight: .bold))
+                Text("TOEFL")
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(width: 16, height: 16)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
                     .background(Color.blue)
                     .cornerRadius(4)
             }
 
             if userManager.ieltsEnabled && (savedWord.is_ielts == true) {
-                Text("I")
-                    .font(.system(size: 9, weight: .bold))
+                Text("IELTS")
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(width: 16, height: 16)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
                     .background(Color.green)
                     .cornerRadius(4)
             }

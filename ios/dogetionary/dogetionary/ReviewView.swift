@@ -297,7 +297,7 @@ struct ReviewView: View {
                     // Advance to next question (removes current from queue)
                     self.advanceToNextQuestion()
                     self.refreshStatusAfterCompletion()
-                    BackgroundTaskManager.shared.updateDueCountsAfterReview()
+                    BackgroundTaskManager.shared.updatePracticeCountsAfterReview()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
