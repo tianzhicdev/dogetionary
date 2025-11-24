@@ -885,6 +885,16 @@ struct SavedWordRow: View {
                     .background(Color.green)
                     .cornerRadius(4)
             }
+
+            if userManager.tianzEnabled && (savedWord.is_tianz == true) {
+                Text("TIANZ")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(Color.orange)
+                    .cornerRadius(4)
+            }
         }
     }
 }

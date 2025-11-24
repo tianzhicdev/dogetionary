@@ -19,8 +19,10 @@ class UserManager: ObservableObject {
     private let hasRequestedAppRatingKey = "DogetionaryHasRequestedAppRating"
     private let toeflEnabledKey = "DogetionaryToeflEnabled"
     private let ieltsEnabledKey = "DogetionaryIeltsEnabled"
+    private let tianzEnabledKey = "DogetionaryTianzEnabled"
     private let toeflTargetDaysKey = "DogetionaryToeflTargetDays"
     private let ieltsTargetDaysKey = "DogetionaryIeltsTargetDays"
+    private let tianzTargetDaysKey = "DogetionaryTianzTargetDays"
     private let hasCompletedOnboardingKey = "DogetionaryHasCompletedOnboarding"
     private let reminderTimeKey = "DogetionaryReminderTime"
 
@@ -111,6 +113,31 @@ class UserManager: ObservableObject {
             }
         }
     }
+    @Published var tianzEnabled: Bool {
+        didSet {
+            let wasEnabled = oldValue
+            UserDefaults.standard.set(tianzEnabled, forKey: tianzEnabledKey)
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+                // Create schedule when toggled from off to on
+                if !wasEnabled && tianzEnabled {
+                    createScheduleForTestType("TIANZ", targetDays: tianzTargetDays)
+                }
+            }
+        }
+    }
+    @Published var tianzTargetDays: Int {
+        didSet {
+            UserDefaults.standard.set(tianzTargetDays, forKey: tianzTargetDaysKey)
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+                // Recreate schedule if TIANZ is enabled and days changed
+                if tianzEnabled && oldValue != tianzTargetDays {
+                    createScheduleForTestType("TIANZ", targetDays: tianzTargetDays)
+                }
+            }
+        }
+    }
 
     @Published var reminderTime: Date {
         didSet {
@@ -153,12 +180,15 @@ class UserManager: ObservableObject {
         // Load test preparation settings or set defaults
         self.toeflEnabled = UserDefaults.standard.bool(forKey: toeflEnabledKey)
         self.ieltsEnabled = UserDefaults.standard.bool(forKey: ieltsEnabledKey)
+        self.tianzEnabled = UserDefaults.standard.bool(forKey: tianzEnabledKey)
 
         // Load target days with default of 30 days
         let savedToeflTargetDays = UserDefaults.standard.integer(forKey: toeflTargetDaysKey)
         self.toeflTargetDays = savedToeflTargetDays > 0 ? savedToeflTargetDays : 30
         let savedIeltsTargetDays = UserDefaults.standard.integer(forKey: ieltsTargetDaysKey)
         self.ieltsTargetDays = savedIeltsTargetDays > 0 ? savedIeltsTargetDays : 30
+        let savedTianzTargetDays = UserDefaults.standard.integer(forKey: tianzTargetDaysKey)
+        self.tianzTargetDays = savedTianzTargetDays > 0 ? savedTianzTargetDays : 30
 
         // Load reminder time with default of 9:00 AM
         if let savedReminderTime = UserDefaults.standard.object(forKey: reminderTimeKey) as? Date {
@@ -187,6 +217,8 @@ class UserManager: ObservableObject {
                 return "TOEFL"
             } else if self.ieltsEnabled {
                 return "IELTS"
+            } else if self.tianzEnabled {
+                return "TIANZ"
             } else {
                 return nil
             }
@@ -215,14 +247,16 @@ class UserManager: ObservableObject {
     }
 
     private func syncTestSettingsToServer() {
-        logger.info("Syncing test settings to server - TOEFL: \(self.toeflEnabled) (\(self.toeflTargetDays) days), IELTS: \(self.ieltsEnabled) (\(self.ieltsTargetDays) days)")
+        logger.info("Syncing test settings to server - TOEFL: \(self.toeflEnabled) (\(self.toeflTargetDays) days), IELTS: \(self.ieltsEnabled) (\(self.ieltsTargetDays) days), TIANZ: \(self.tianzEnabled) (\(self.tianzTargetDays) days)")
 
         DictionaryService.shared.updateTestSettings(
             userID: self.userID,
             toeflEnabled: self.toeflEnabled,
             ieltsEnabled: self.ieltsEnabled,
+            tianzEnabled: self.tianzEnabled,
             toeflTargetDays: self.toeflTargetDays,
-            ieltsTargetDays: self.ieltsTargetDays
+            ieltsTargetDays: self.ieltsTargetDays,
+            tianzTargetDays: self.tianzTargetDays
         ) { result in
             switch result {
             case .success(_):
@@ -244,13 +278,15 @@ class UserManager: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    self.logger.info("Successfully fetched test settings from server: toefl=\(response.settings.toefl_enabled), ielts=\(response.settings.ielts_enabled)")
+                    self.logger.info("Successfully fetched test settings from server: toefl=\(response.settings.toefl_enabled), ielts=\(response.settings.ielts_enabled), tianz=\(response.settings.tianz_enabled)")
 
                     // Update local settings if they're different from server
                     if self.toeflEnabled != response.settings.toefl_enabled ||
                        self.ieltsEnabled != response.settings.ielts_enabled ||
+                       self.tianzEnabled != response.settings.tianz_enabled ||
                        self.toeflTargetDays != response.settings.toefl_target_days ||
-                       self.ieltsTargetDays != response.settings.ielts_target_days {
+                       self.ieltsTargetDays != response.settings.ielts_target_days ||
+                       self.tianzTargetDays != response.settings.tianz_target_days {
                         self.logger.info("Updating local test settings to match server")
 
                         // Set flag to prevent sync loop
@@ -259,8 +295,10 @@ class UserManager: ObservableObject {
                         // Update published properties
                         self.toeflEnabled = response.settings.toefl_enabled
                         self.ieltsEnabled = response.settings.ielts_enabled
+                        self.tianzEnabled = response.settings.tianz_enabled
                         self.toeflTargetDays = response.settings.toefl_target_days
                         self.ieltsTargetDays = response.settings.ielts_target_days
+                        self.tianzTargetDays = response.settings.tianz_target_days
 
                         // Reset flag
                         self.isSyncingFromServer = false

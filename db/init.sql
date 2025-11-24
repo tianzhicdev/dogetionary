@@ -15,9 +15,11 @@ CREATE TABLE user_preferences (
     -- Test preparation settings
     toefl_enabled BOOLEAN DEFAULT FALSE,
     ielts_enabled BOOLEAN DEFAULT FALSE,
+    tianz_enabled BOOLEAN DEFAULT FALSE,
     last_test_words_added DATE,
     toefl_target_days INTEGER DEFAULT 30,
     ielts_target_days INTEGER DEFAULT 30,
+    tianz_target_days INTEGER DEFAULT 30,
     -- Notification settings
     push_notifications_enabled BOOLEAN DEFAULT TRUE,
     email_notifications_enabled BOOLEAN DEFAULT FALSE,
@@ -112,7 +114,7 @@ COMMENT ON COLUMN reviews.question_type IS 'Type of question shown during review
 CREATE TABLE study_schedules (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES user_preferences(user_id) ON DELETE CASCADE,
-    test_type VARCHAR(20) NOT NULL CHECK (test_type IN ('TOEFL', 'IELTS', 'BOTH')),
+    test_type VARCHAR(20) NOT NULL CHECK (test_type IN ('TOEFL', 'IELTS', 'BOTH', 'TIANZ')),
     target_end_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -164,12 +166,13 @@ CREATE TABLE user_feedback (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Test vocabulary table to store TOEFL/IELTS words
+-- Test vocabulary table to store TOEFL/IELTS/TIANZ words
 CREATE TABLE test_vocabularies (
     word VARCHAR(100) NOT NULL,
     language VARCHAR(10) NOT NULL DEFAULT 'en',
     is_toefl BOOLEAN DEFAULT FALSE,
     is_ielts BOOLEAN DEFAULT FALSE,
+    is_tianz BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (word, language)
 );
@@ -236,7 +239,7 @@ CREATE INDEX idx_user_preferences_learning_lang ON user_preferences(learning_lan
 CREATE INDEX idx_user_preferences_native_lang ON user_preferences(native_language);
 CREATE INDEX idx_user_preferences_timezone ON user_preferences(timezone);
 CREATE INDEX idx_user_pref_test_enabled ON user_preferences(user_id)
-    WHERE toefl_enabled = TRUE OR ielts_enabled = TRUE;
+    WHERE toefl_enabled = TRUE OR ielts_enabled = TRUE OR tianz_enabled = TRUE;
 
 -- Definitions indexes
 CREATE INDEX idx_definitions_word_learning ON definitions(word, learning_language);
@@ -274,6 +277,7 @@ CREATE INDEX idx_user_feedback_created_at ON user_feedback(created_at);
 -- Test vocabularies indexes
 CREATE INDEX idx_test_vocab_toefl ON test_vocabularies(is_toefl) WHERE is_toefl = TRUE;
 CREATE INDEX idx_test_vocab_ielts ON test_vocabularies(is_ielts) WHERE is_ielts = TRUE;
+CREATE INDEX idx_test_vocab_tianz ON test_vocabularies(is_tianz) WHERE is_tianz = TRUE;
 
 -- User actions indexes
 CREATE INDEX idx_user_actions_user_id ON user_actions(user_id);

@@ -27,15 +27,16 @@ def read_csv_words(file_path):
     return words
 
 def import_test_vocabularies(conn):
-    """Import TOEFL and IELTS words into database"""
+    """Import TOEFL, IELTS, and TIANZ words into database"""
     cur = conn.cursor()
 
     # Get the project root directory
     project_root = Path(__file__).parent.parent
 
-    # Read TOEFL and IELTS words
+    # Read TOEFL, IELTS, and TIANZ words
     toefl_file = project_root / 'web' / 'toefl.csv'
     ielts_file = project_root / 'web' / 'ielts.csv'
+    tianz_file = project_root / 'web' / 'tianz.csv'
 
     print(f"Reading TOEFL words from {toefl_file}")
     toefl_words = read_csv_words(toefl_file) if toefl_file.exists() else set()
@@ -45,29 +46,25 @@ def import_test_vocabularies(conn):
     ielts_words = read_csv_words(ielts_file) if ielts_file.exists() else set()
     print(f"Found {len(ielts_words)} IELTS words")
 
-    # Find words that are in both lists
-    both_words = toefl_words & ielts_words
-    toefl_only = toefl_words - both_words
-    ielts_only = ielts_words - both_words
+    print(f"Reading TIANZ words from {tianz_file}")
+    tianz_words = read_csv_words(tianz_file) if tianz_file.exists() else set()
+    print(f"Found {len(tianz_words)} TIANZ words")
 
-    print(f"Words in both: {len(both_words)}")
-    print(f"TOEFL only: {len(toefl_only)}")
-    print(f"IELTS only: {len(ielts_only)}")
+    # Get all unique words
+    all_words = toefl_words | ielts_words | tianz_words
 
-    # Prepare data for insertion
+    print(f"\nTotal unique words: {len(all_words)}")
+    print(f"TOEFL words: {len(toefl_words)}")
+    print(f"IELTS words: {len(ielts_words)}")
+    print(f"TIANZ words: {len(tianz_words)}")
+
+    # Prepare data for insertion - each word with its test memberships
     data = []
-
-    # Words that appear in both tests
-    for word in both_words:
-        data.append((word, 'en', True, True))
-
-    # TOEFL-only words
-    for word in toefl_only:
-        data.append((word, 'en', True, False))
-
-    # IELTS-only words
-    for word in ielts_only:
-        data.append((word, 'en', False, True))
+    for word in all_words:
+        is_toefl = word in toefl_words
+        is_ielts = word in ielts_words
+        is_tianz = word in tianz_words
+        data.append((word, 'en', is_toefl, is_ielts, is_tianz))
 
     # Insert into database
     try:
@@ -78,11 +75,12 @@ def import_test_vocabularies(conn):
         print(f"Inserting {len(data)} vocabulary entries...")
         execute_batch(cur,
             """
-            INSERT INTO test_vocabularies (word, language, is_toefl, is_ielts)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO test_vocabularies (word, language, is_toefl, is_ielts, is_tianz)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (word, language) DO UPDATE SET
                 is_toefl = EXCLUDED.is_toefl,
-                is_ielts = EXCLUDED.is_ielts
+                is_ielts = EXCLUDED.is_ielts,
+                is_tianz = EXCLUDED.is_tianz
             """,
             data,
             page_size=100
@@ -96,7 +94,7 @@ def import_test_vocabularies(conn):
                 COUNT(*) as total,
                 COUNT(CASE WHEN is_toefl THEN 1 END) as toefl_count,
                 COUNT(CASE WHEN is_ielts THEN 1 END) as ielts_count,
-                COUNT(CASE WHEN is_toefl AND is_ielts THEN 1 END) as both_count
+                COUNT(CASE WHEN is_tianz THEN 1 END) as tianz_count
             FROM test_vocabularies
             WHERE language = 'en'
         """)
@@ -106,7 +104,7 @@ def import_test_vocabularies(conn):
         print(f"  Total words: {stats[0]}")
         print(f"  TOEFL words: {stats[1]}")
         print(f"  IELTS words: {stats[2]}")
-        print(f"  Words in both: {stats[3]}")
+        print(f"  TIANZ words: {stats[3]}")
 
         print("\n✅ Import completed successfully!")
 
@@ -124,7 +122,7 @@ def verify_import(conn):
     print("\nSample TOEFL-only words:")
     cur.execute("""
         SELECT word FROM test_vocabularies
-        WHERE language = 'en' AND is_toefl = TRUE AND is_ielts = FALSE
+        WHERE language = 'en' AND is_toefl = TRUE AND is_ielts = FALSE AND is_tianz = FALSE
         ORDER BY RANDOM() LIMIT 5
     """)
     for row in cur.fetchall():
@@ -133,16 +131,16 @@ def verify_import(conn):
     print("\nSample IELTS-only words:")
     cur.execute("""
         SELECT word FROM test_vocabularies
-        WHERE language = 'en' AND is_ielts = TRUE AND is_toefl = FALSE
+        WHERE language = 'en' AND is_ielts = TRUE AND is_toefl = FALSE AND is_tianz = FALSE
         ORDER BY RANDOM() LIMIT 5
     """)
     for row in cur.fetchall():
         print(f"  - {row[0]}")
 
-    print("\nSample words in both tests:")
+    print("\nSample TIANZ words:")
     cur.execute("""
         SELECT word FROM test_vocabularies
-        WHERE language = 'en' AND is_toefl = TRUE AND is_ielts = TRUE
+        WHERE language = 'en' AND is_tianz = TRUE
         ORDER BY RANDOM() LIMIT 5
     """)
     for row in cur.fetchall():
@@ -166,6 +164,7 @@ def main():
                 language VARCHAR(10) NOT NULL DEFAULT 'en',
                 is_toefl BOOLEAN DEFAULT FALSE,
                 is_ielts BOOLEAN DEFAULT FALSE,
+                is_tianz BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (word, language)
             )

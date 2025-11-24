@@ -241,10 +241,11 @@ struct SavedWord: Identifiable, Codable {
     let last_reviewed_at: String?
     let is_toefl: Bool?
     let is_ielts: Bool?
+    let is_tianz: Bool?
     var is_known: Bool  // Whether user has marked this word as known
 
     private enum CodingKeys: String, CodingKey {
-        case id, word, learning_language, native_language, created_at, review_count, correct_reviews, incorrect_reviews, word_progress_level, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts, is_known
+        case id, word, learning_language, native_language, created_at, review_count, correct_reviews, incorrect_reviews, word_progress_level, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts, is_tianz, is_known
     }
 
     init(from decoder: Decoder) throws {
@@ -263,12 +264,13 @@ struct SavedWord: Identifiable, Codable {
         last_reviewed_at = try container.decodeIfPresent(String.self, forKey: .last_reviewed_at)
         is_toefl = try container.decodeIfPresent(Bool.self, forKey: .is_toefl)
         is_ielts = try container.decodeIfPresent(Bool.self, forKey: .is_ielts)
+        is_tianz = try container.decodeIfPresent(Bool.self, forKey: .is_tianz)
         is_known = try container.decodeIfPresent(Bool.self, forKey: .is_known) ?? false
         metadata = nil // We'll skip decoding metadata for now
     }
 
     // Convenience initializer for testing
-    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, correct_reviews: Int, incorrect_reviews: Int, word_progress_level: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil, is_known: Bool = false) {
+    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, correct_reviews: Int, incorrect_reviews: Int, word_progress_level: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil, is_tianz: Bool? = nil, is_known: Bool = false) {
         self.id = id
         self.word = word
         self.learning_language = learning_language
@@ -284,6 +286,7 @@ struct SavedWord: Identifiable, Codable {
         self.last_reviewed_at = last_reviewed_at
         self.is_toefl = is_toefl
         self.is_ielts = is_ielts
+        self.is_tianz = is_tianz
         self.is_known = is_known
     }
 }
@@ -540,14 +543,16 @@ struct AllMarker: Codable {
 struct TestSettings: Codable {
     let toefl_enabled: Bool
     let ielts_enabled: Bool
+    let tianz_enabled: Bool
     let last_test_words_added: String?
     let learning_language: String
     let native_language: String
     let toefl_target_days: Int
     let ielts_target_days: Int
+    let tianz_target_days: Int
 
     private enum CodingKeys: String, CodingKey {
-        case toefl_enabled, ielts_enabled, last_test_words_added, learning_language, native_language, toefl_target_days, ielts_target_days
+        case toefl_enabled, ielts_enabled, tianz_enabled, last_test_words_added, learning_language, native_language, toefl_target_days, ielts_target_days, tianz_target_days
     }
 }
 
@@ -573,9 +578,10 @@ struct TestSettingsResponse: Codable {
 struct TestProgressData: Codable {
     let toefl: TestProgress?
     let ielts: TestProgress?
+    let tianz: TestProgress?
 
     private enum CodingKeys: String, CodingKey {
-        case toefl, ielts
+        case toefl, ielts, tianz
     }
 }
 
@@ -583,11 +589,13 @@ struct TestSettingsUpdateRequest: Codable {
     let user_id: String
     let toefl_enabled: Bool?
     let ielts_enabled: Bool?
+    let tianz_enabled: Bool?
     let toefl_target_days: Int?
     let ielts_target_days: Int?
+    let tianz_target_days: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days
+        case user_id, toefl_enabled, ielts_enabled, tianz_enabled, toefl_target_days, ielts_target_days, tianz_target_days
     }
 }
 
@@ -613,12 +621,10 @@ struct TestVocabularyStatistics: Codable {
     let total_unique_words: Int
     let toefl_words: Int
     let ielts_words: Int
-    let words_in_both: Int
-    let toefl_exclusive: Int
-    let ielts_exclusive: Int
+    let tianz_words: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case total_unique_words, toefl_words, ielts_words, words_in_both, toefl_exclusive, ielts_exclusive
+        case total_unique_words, toefl_words, ielts_words, tianz_words
     }
 }
 

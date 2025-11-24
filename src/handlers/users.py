@@ -107,8 +107,8 @@ def handle_user_preferences(user_id):
                 return jsonify({"error": "Learning language and native language cannot be the same"}), 400
 
             # Validate test prep values if provided
-            if test_prep and test_prep not in ['TOEFL', 'IELTS']:
-                return jsonify({"error": "test_prep must be 'TOEFL' or 'IELTS'"}), 400
+            if test_prep and test_prep not in ['TOEFL', 'IELTS', 'TIANZ']:
+                return jsonify({"error": "test_prep must be 'TOEFL', 'IELTS', or 'TIANZ'"}), 400
 
             # Validate study duration if provided (10-100 days)
             if study_duration_days and (study_duration_days < 10 or study_duration_days > 100):
@@ -120,17 +120,19 @@ def handle_user_preferences(user_id):
             # Determine test settings based on test_prep selection
             toefl_enabled = (test_prep == 'TOEFL')
             ielts_enabled = (test_prep == 'IELTS')
+            tianz_enabled = (test_prep == 'TIANZ')
             # Always preserve the study_duration_days if provided, even when test prep is disabled
             # This ensures the "complete in" setting is always synced with what was selected in onboarding
             toefl_target_days = study_duration_days if study_duration_days else 30
             ielts_target_days = study_duration_days if study_duration_days else 30
+            tianz_target_days = study_duration_days if study_duration_days else 30
 
             cur.execute("""
                 INSERT INTO user_preferences (
                     user_id, learning_language, native_language, user_name, user_motto,
-                    toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days
+                    toefl_enabled, ielts_enabled, tianz_enabled, toefl_target_days, ielts_target_days, tianz_target_days
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (user_id)
                 DO UPDATE SET
                     learning_language = EXCLUDED.learning_language,
@@ -139,11 +141,13 @@ def handle_user_preferences(user_id):
                     user_motto = EXCLUDED.user_motto,
                     toefl_enabled = EXCLUDED.toefl_enabled,
                     ielts_enabled = EXCLUDED.ielts_enabled,
+                    tianz_enabled = EXCLUDED.tianz_enabled,
                     toefl_target_days = EXCLUDED.toefl_target_days,
                     ielts_target_days = EXCLUDED.ielts_target_days,
+                    tianz_target_days = EXCLUDED.tianz_target_days,
                     updated_at = CURRENT_TIMESTAMP
             """, (user_id, learning_lang, native_lang, user_name, user_motto,
-                  toefl_enabled, ielts_enabled, toefl_target_days, ielts_target_days))
+                  toefl_enabled, ielts_enabled, tianz_enabled, toefl_target_days, ielts_target_days, tianz_target_days))
             conn.commit()
             conn.close()
 

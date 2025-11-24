@@ -245,6 +245,8 @@ struct TestProgressBar: View {
             return [Color.blue, Color.cyan]
         case "IELTS":
             return [Color.purple, Color.pink]
+        case "TIANZ":
+            return [Color.orange, Color.yellow]
         case "BOTH":
             return [Color.blue, Color.purple, Color.pink]
         default:

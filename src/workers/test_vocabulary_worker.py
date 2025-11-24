@@ -17,9 +17,10 @@ def add_daily_test_words_for_all_users():
                 learning_language,
                 native_language,
                 toefl_enabled,
-                ielts_enabled
+                ielts_enabled,
+                tianz_enabled
             FROM user_preferences
-            WHERE (toefl_enabled = TRUE OR ielts_enabled = TRUE)
+            WHERE (toefl_enabled = TRUE OR ielts_enabled = TRUE OR tianz_enabled = TRUE)
             AND (last_test_words_added IS NULL OR last_test_words_added < CURRENT_DATE)
         """)
         logger.info(f"Found {len(users)} users needing daily test words")
@@ -34,6 +35,7 @@ def add_daily_test_words_for_all_users():
                 native_language = user['native_language']
                 toefl_enabled = user['toefl_enabled']
                 ielts_enabled = user['ielts_enabled']
+                tianz_enabled = user['tianz_enabled']
 
                 with db_cursor(commit=True) as cur:
                     # Get random test words not already saved
@@ -50,14 +52,15 @@ def add_daily_test_words_for_all_users():
                             WHERE tv.language = %s
                             AND (
                                 (%s = TRUE AND tv.is_toefl = TRUE) OR
-                                (%s = TRUE AND tv.is_ielts = TRUE)
+                                (%s = TRUE AND tv.is_ielts = TRUE) OR
+                                (%s = TRUE AND tv.is_tianz = TRUE)
                             )
                             AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
                         )
                         SELECT word FROM available_words
                         ORDER BY RANDOM()
                         LIMIT 10
-                    """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled))
+                    """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled, tianz_enabled))
 
                     words_to_add = cur.fetchall()
                     words_added = 0

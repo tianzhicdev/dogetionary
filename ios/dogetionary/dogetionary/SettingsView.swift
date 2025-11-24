@@ -130,164 +130,7 @@ struct SettingsView: View {
                     }
                 }
 
-                Section(header: Text("Test Preparation")) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Enable daily vocabulary practice for standardized tests")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        VStack(spacing: 12) {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("TOEFL Preparation")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                    Text("Test of English as a Foreign Language")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Toggle("", isOn: $userManager.toeflEnabled)
-                                    .labelsHidden()
-                                    .onChange(of: userManager.toeflEnabled) { _, newValue in
-                                        // Mutually exclusive: disable IELTS when TOEFL is enabled
-                                        if newValue && userManager.ieltsEnabled {
-                                            userManager.ieltsEnabled = false
-                                        }
-
-                                        // Track test preparation changes
-                                        AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
-                                            "test_type": "toefl",
-                                            "enabled": newValue
-                                        ])
-                                    }
-                            }
-
-                            if userManager.toeflEnabled {
-                                HStack {
-                                    Picker("complete in: ", selection: $userManager.toeflTargetDays) {
-                                        ForEach([30, 40, 50, 60, 70], id: \.self) { days in
-                                            Text("\(days) days")
-                                                .tag(days)
-                                        }
-                                    }
-                                    .pickerStyle(MenuPickerStyle())
-                                    .tint(.blue)
-                                }
-                            }
-
-                            if let progress = testProgress?.toefl, userManager.toeflEnabled {
-                                HStack {
-                                    Text("Progress:")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                }
-                            }
-
-                            Divider()
-
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("IELTS Preparation")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                    Text("International English Language Testing System")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Toggle("", isOn: $userManager.ieltsEnabled)
-                                    .labelsHidden()
-                                    .onChange(of: userManager.ieltsEnabled) { _, newValue in
-                                        // Mutually exclusive: disable TOEFL when IELTS is enabled
-                                        if newValue && userManager.toeflEnabled {
-                                            userManager.toeflEnabled = false
-                                        }
-
-                                        // Track test preparation changes
-                                        AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
-                                            "test_type": "ielts",
-                                            "enabled": newValue
-                                        ])
-                                    }
-                            }
-
-                            if userManager.ieltsEnabled {
-                                HStack {
-                                    Picker("complete in: ", selection: $userManager.ieltsTargetDays) {
-                                        ForEach([30, 40, 50, 60, 70], id: \.self) { days in
-                                            Text("\(days) days")
-                                                .tag(days)
-                                        }
-                                    }
-                                    .pickerStyle(MenuPickerStyle())
-                                    .tint(.blue)
-                                }
-                            }
-
-                            if let progress = testProgress?.ielts, userManager.ieltsEnabled {
-                                HStack {
-                                    Text("Progress:")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                        }
-
-                        if userManager.toeflEnabled || userManager.ieltsEnabled {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Daily Words")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
-                                let dailyWordsText = buildDailyWordsText()
-                                Text(dailyWordsText)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        if let stats = vocabularyStats {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Vocabulary Database")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
-                                HStack {
-                                    Text("TOEFL: \(stats.toefl_words) words")
-                                        .font(.caption2)
-                                        .foregroundColor(.blue)
-                                    Spacer()
-                                    Text("IELTS: \(stats.ielts_words) words")
-                                        .font(.caption2)
-                                        .foregroundColor(.green)
-                                }
-
-                                Text("Shared: \(stats.words_in_both) words")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        if isLoadingTestStats {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Loading test statistics...")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
+                testPreparationSection
 
                 Section(header: Text("Notifications")) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -568,6 +411,240 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
+    private var tianzTestSection: some View {
+        Divider()
+
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Tianz Test")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text("Testing vocabulary list (20 words)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: $userManager.tianzEnabled)
+                .labelsHidden()
+                .onChange(of: userManager.tianzEnabled) { _, newValue in
+                    // Mutually exclusive: disable others when Tianz is enabled
+                    if newValue {
+                        if userManager.toeflEnabled { userManager.toeflEnabled = false }
+                        if userManager.ieltsEnabled { userManager.ieltsEnabled = false }
+                    }
+
+                    // Track test preparation changes
+                    AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
+                        "test_type": "tianz",
+                        "enabled": newValue
+                    ])
+                }
+        }
+
+        if userManager.tianzEnabled {
+            HStack {
+                Picker("complete in: ", selection: $userManager.tianzTargetDays) {
+                    ForEach([30, 40, 50, 60, 70], id: \.self) { days in
+                        Text("\(days) days")
+                            .tag(days)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                .tint(.blue)
+            }
+        }
+
+        if let progress = testProgress?.tianz, userManager.tianzEnabled {
+            HStack {
+                Text("Progress:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var testPreparationSection: some View {
+        Section(header: Text("Test Preparation")) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Enable daily vocabulary practice for standardized tests")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                VStack(spacing: 12) {
+                    toeflTestSection
+                    Divider()
+                    ieltsTestSection
+                    tianzTestSection
+                }
+
+                dailyWordsSection
+
+                vocabularyStatsSection
+
+                if isLoadingTestStats {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading test statistics...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var toeflTestSection: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("TOEFL Preparation")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text("Test of English as a Foreign Language")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: $userManager.toeflEnabled)
+                .labelsHidden()
+                .onChange(of: userManager.toeflEnabled) { _, newValue in
+                    if newValue {
+                        if userManager.ieltsEnabled { userManager.ieltsEnabled = false }
+                        if userManager.tianzEnabled { userManager.tianzEnabled = false }
+                    }
+                    AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
+                        "test_type": "toefl",
+                        "enabled": newValue
+                    ])
+                }
+        }
+
+        if userManager.toeflEnabled {
+            HStack {
+                Picker("complete in: ", selection: $userManager.toeflTargetDays) {
+                    ForEach([30, 40, 50, 60, 70], id: \.self) { days in
+                        Text("\(days) days").tag(days)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                .tint(.blue)
+            }
+        }
+
+        if let progress = testProgress?.toefl, userManager.toeflEnabled {
+            HStack {
+                Text("Progress:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ieltsTestSection: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("IELTS Preparation")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text("International English Language Testing System")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: $userManager.ieltsEnabled)
+                .labelsHidden()
+                .onChange(of: userManager.ieltsEnabled) { _, newValue in
+                    if newValue {
+                        if userManager.toeflEnabled { userManager.toeflEnabled = false }
+                        if userManager.tianzEnabled { userManager.tianzEnabled = false }
+                    }
+                    AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
+                        "test_type": "ielts",
+                        "enabled": newValue
+                    ])
+                }
+        }
+
+        if userManager.ieltsEnabled {
+            HStack {
+                Picker("complete in: ", selection: $userManager.ieltsTargetDays) {
+                    ForEach([30, 40, 50, 60, 70], id: \.self) { days in
+                        Text("\(days) days").tag(days)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                .tint(.blue)
+            }
+        }
+
+        if let progress = testProgress?.ielts, userManager.ieltsEnabled {
+            HStack {
+                Text("Progress:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dailyWordsSection: some View {
+        if userManager.toeflEnabled || userManager.ieltsEnabled || userManager.tianzEnabled {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Daily Words")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                let dailyWordsText = buildDailyWordsText()
+                Text(dailyWordsText)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var vocabularyStatsSection: some View {
+        if let stats = vocabularyStats {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Vocabulary Database")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    Text("TOEFL: \(stats.toefl_words) words")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                    Spacer()
+                    Text("IELTS: \(stats.ielts_words) words")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                }
+
+                if let tianzWords = stats.tianz_words {
+                    Text("Tianz: \(tianzWords) words")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+            }
+        }
+    }
+
     private func buildDailyWordsText() -> String {
         var parts: [String] = []
 
@@ -581,6 +658,12 @@ struct SettingsView: View {
             let remaining = max(0, stats.ielts_words - progress.saved)
             let dailyWords = max(1, Int(ceil(Double(remaining) / Double(userManager.ieltsTargetDays))))
             parts.append("IELTS: ~\(dailyWords)/day")
+        }
+
+        if userManager.tianzEnabled, let progress = testProgress?.tianz, let stats = vocabularyStats {
+            let remaining = max(0, (stats.tianz_words ?? 0) - progress.saved)
+            let dailyWords = max(1, Int(ceil(Double(remaining) / Double(userManager.tianzTargetDays))))
+            parts.append("Tianz: ~\(dailyWords)/day")
         }
 
         if parts.isEmpty {
