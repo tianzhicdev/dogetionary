@@ -12,10 +12,18 @@ struct ContentView: View {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var questionQueue = QuestionQueueManager.shared
     @StateObject private var backgroundTaskManager = BackgroundTaskManager.shared
+    @StateObject private var appVersionManager = AppVersionManager.shared
     @State private var selectedTab = 0
     @State private var showOnboarding = false
 
     var body: some View {
+        // Show force upgrade view if required
+        if appVersionManager.requiresUpgrade {
+            ForceUpgradeView(
+                upgradeURL: appVersionManager.upgradeURL,
+                message: appVersionManager.upgradeMessage
+            )
+        } else {
         VStack(spacing: 0) {
             // App banner at the top
             AppBanner()
@@ -62,6 +70,9 @@ struct ContentView: View {
             OnboardingView()
         }
         .onAppear {
+            // Check app version on launch
+            appVersionManager.checkVersion()
+
             // Initialize user manager to generate UUID if needed
             _ = userManager.getUserID()
 
@@ -114,6 +125,7 @@ struct ContentView: View {
             }
             AnalyticsManager.shared.track(action: action)
         }
+        } // end else (not requiring upgrade)
     }
 }
 

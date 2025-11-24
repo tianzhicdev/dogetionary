@@ -2142,6 +2142,26 @@ class DictionaryService: ObservableObject {
         performNetworkRequest(url: url, responseType: PracticeStatusResponse.self, completion: completion)
     }
 
+    // MARK: - App Version Check
+
+    /// Get the current app version from the bundle
+    static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    /// Check if the current app version is supported
+    func checkAppVersion(completion: @escaping (Result<AppVersionResponse, Error>) -> Void) {
+        let version = DictionaryService.appVersion
+        guard let url = URL(string: "\(baseURL)/v3/app-version?platform=ios&version=\(version)") else {
+            logger.error("Invalid URL for app-version endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Checking app version: \(version)")
+        performNetworkRequest(url: url, responseType: AppVersionResponse.self, completion: completion)
+    }
+
 }
 
 struct ReviewActivityResponse: Codable {
