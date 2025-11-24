@@ -572,6 +572,62 @@ class TestRunner:
             self.log(f"✗ Review complete logic test failed with error: {e}")
             self.failed += 1
 
+    def test_app_version_endpoint(self):
+        """Test the app version check endpoint"""
+        self.log("Testing /v3/app-version endpoint...")
+
+        try:
+            # Test with valid version
+            response = requests.get(
+                f"{BASE_URL}/v3/app-version",
+                params={"platform": "ios", "version": "1.0.0"}
+            )
+            self.assert_status_code(response, 200, "/v3/app-version with valid params")
+
+            data = response.json()
+            self.assert_json_contains(data, "status", "Response contains status")
+
+            # Verify status is one of the expected values
+            valid_statuses = ["ok", "upgrade_required", "upgrade_recommended"]
+            if data.get("status") in valid_statuses:
+                self.log(f"✓ Status is valid: {data.get('status')}")
+                self.passed += 1
+            else:
+                self.log(f"✗ Invalid status: {data.get('status')}")
+                self.failed += 1
+
+            # Test missing platform parameter
+            response = requests.get(
+                f"{BASE_URL}/v3/app-version",
+                params={"version": "1.0.0"}
+            )
+            self.assert_status_code(response, 400, "/v3/app-version without platform")
+
+            # Test missing version parameter
+            response = requests.get(
+                f"{BASE_URL}/v3/app-version",
+                params={"platform": "ios"}
+            )
+            self.assert_status_code(response, 400, "/v3/app-version without version")
+
+            # Test with non-ios platform (should return ok)
+            response = requests.get(
+                f"{BASE_URL}/v3/app-version",
+                params={"platform": "android", "version": "1.0.0"}
+            )
+            self.assert_status_code(response, 200, "/v3/app-version with android platform")
+            data = response.json()
+            if data.get("status") == "ok":
+                self.log("✓ Non-iOS platform returns ok")
+                self.passed += 1
+            else:
+                self.log(f"✗ Non-iOS platform should return ok, got: {data.get('status')}")
+                self.failed += 1
+
+        except Exception as e:
+            self.log(f"✗ /v3/app-version endpoint failed with error: {e}")
+            self.failed += 1
+
     def run_all_tests(self):
         """Run all integration tests"""
         self.log("Starting integration tests...")
@@ -591,6 +647,7 @@ class TestRunner:
         self.test_combined_metrics_endpoint()
         self.test_next_review_word_with_scheduled_new_words()
         self.test_review_complete_logic()
+        self.test_app_version_endpoint()
 
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
 

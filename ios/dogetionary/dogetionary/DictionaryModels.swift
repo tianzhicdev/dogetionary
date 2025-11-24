@@ -951,3 +951,25 @@ struct PracticeStatusResponse: Codable {
         case user_id, new_words_count, test_practice_count, non_test_practice_count, not_due_yet_count, score, has_practice
     }
 }
+
+// MARK: - App Version Check
+
+/// App version check status
+enum AppVersionStatus: String, Codable {
+    case ok = "ok"
+    case upgradeRequired = "upgrade_required"
+    case upgradeRecommended = "upgrade_recommended"
+}
+
+/// App version check response
+struct AppVersionResponse: Codable {
+    let status: AppVersionStatus
+    let min_version: String?
+    let latest_version: String?
+    let upgrade_url: String?
+    let message: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case status, min_version, latest_version, upgrade_url, message
+    }
+}

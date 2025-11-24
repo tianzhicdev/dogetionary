@@ -6,3 +6,4 @@ uuid
 pytz>=2023.3
 schedule>=1.2.0
 groq>=0.4.0
+packaging>=23.0
