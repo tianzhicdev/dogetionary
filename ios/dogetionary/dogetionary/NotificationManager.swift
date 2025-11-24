@@ -50,20 +50,25 @@ class NotificationManager: NSObject, ObservableObject {
         }
     }
 
-    func scheduleDailyNotification() {
+    func scheduleDailyNotification(at time: Date? = nil) {
         // Cancel any existing notifications first
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["daily-review-reminder"])
 
         // Create the notification content
         let content = UNMutableNotificationContent()
-        content.title = "Time to Review! 📚"
+        content.title = "Time to Review!"
         content.sound = .default
         content.categoryIdentifier = "REVIEW_REMINDER"
 
-        // Set the trigger for 11:59 AM daily
+        // Get hour and minute from the provided time, or use UserManager's reminderTime
+        let reminderTime = time ?? UserManager.shared.reminderTime
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: reminderTime)
+        let minute = calendar.component(.minute, from: reminderTime)
+
         var dateComponents = DateComponents()
-        dateComponents.hour = 11
-        dateComponents.minute = 59
+        dateComponents.hour = hour
+        dateComponents.minute = minute
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 
@@ -79,7 +84,9 @@ class NotificationManager: NSObject, ObservableObject {
             if let error = error {
                 print("❌ Error scheduling notification: \(error.localizedDescription)")
             } else {
-                print("✅ Daily notification scheduled for 11:59 AM")
+                let formatter = DateFormatter()
+                formatter.timeStyle = .short
+                print("✅ Daily notification scheduled for \(formatter.string(from: reminderTime))")
 
                 // Immediately check for overdue words to update the notification body
                 self.updateNotificationWithOverdueCount()
@@ -124,10 +131,12 @@ class NotificationManager: NSObject, ObservableObject {
         content.sound = .default
         content.categoryIdentifier = "REVIEW_REMINDER"
 
-        // Set the trigger for 11:59 AM
+        // Use user's configured reminder time
+        let reminderTime = UserManager.shared.reminderTime
+        let calendar = Calendar.current
         var dateComponents = DateComponents()
-        dateComponents.hour = 11
-        dateComponents.minute = 59
+        dateComponents.hour = calendar.component(.hour, from: reminderTime)
+        dateComponents.minute = calendar.component(.minute, from: reminderTime)
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 

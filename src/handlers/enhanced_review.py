@@ -184,10 +184,10 @@ def get_next_review_enhanced():
                 logger.info(f"Word '{word}' has no definition_data, fetching from LLM...")
                 definition_data = fetch_and_cache_definition(word, learning_lang, native_lang)
 
-                # If fetch still fails, fall back to recognition question
+                # If fetch still fails, use mc_definition as fallback (simplest question type)
                 if definition_data is None:
-                    logger.warning(f"Failed to fetch definition for '{word}', forcing recognition question")
-                    question_type = 'recognition'
+                    logger.warning(f"Failed to fetch definition for '{word}', skipping this word")
+                    return jsonify({"error": f"Could not fetch definition for word: {word}"}), 500
                 else:
                     logger.info(f"Successfully fetched definition for '{word}', will generate enhanced question")
 

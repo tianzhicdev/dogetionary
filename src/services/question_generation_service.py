@@ -24,10 +24,9 @@ LANG_NAMES = {
 
 # Question type weights for random selection
 QUESTION_TYPE_WEIGHTS = {
-    'mc_definition': 0.35,   # Most common - tests comprehension
-    'mc_word': 0.30,         # Tests recognition
+    'mc_definition': 0.40,   # Most common - tests comprehension
+    'mc_word': 0.30,         # Tests word recognition from definition
     'fill_blank': 0.30,      # Tests contextual usage
-    'recognition': 0.05      # Occasional easy win
 }
 
 
@@ -296,15 +295,6 @@ def generate_question_with_llm(
         Dict containing question data ready to send to client
     """
     logger.info(f"Generating {question_type} question for word: {word}")
-
-    # Recognition type doesn't need LLM
-    if question_type == 'recognition':
-        return {
-            "question_type": "recognition",
-            "word": word,
-            "question_text": "Do you remember this word?",
-            "show_definition": True
-        }
 
     # Select appropriate prompt generator
     if question_type == 'mc_definition':

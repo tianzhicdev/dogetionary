@@ -285,7 +285,7 @@ def submit_review():
         learning_language = data.get('learning_language')
         native_language = data.get('native_language')
         response = data.get('response')
-        question_type = data.get('question_type', 'recognition')  # Optional, defaults to recognition
+        question_type = data.get('question_type', 'mc_definition')  # Optional, defaults to mc_definition
 
         if not all([user_id, word, learning_language, native_language, response is not None]):
             return jsonify({"error": "user_id, word, learning_language, native_language, and response are required"}), 400

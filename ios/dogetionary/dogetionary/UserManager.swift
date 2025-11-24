@@ -22,6 +22,7 @@ class UserManager: ObservableObject {
     private let toeflTargetDaysKey = "DogetionaryToeflTargetDays"
     private let ieltsTargetDaysKey = "DogetionaryIeltsTargetDays"
     private let hasCompletedOnboardingKey = "DogetionaryHasCompletedOnboarding"
+    private let reminderTimeKey = "DogetionaryReminderTime"
 
     internal var isSyncingFromServer = false
 
@@ -110,6 +111,14 @@ class UserManager: ObservableObject {
             }
         }
     }
+
+    @Published var reminderTime: Date {
+        didSet {
+            UserDefaults.standard.set(reminderTime, forKey: reminderTimeKey)
+            // Reschedule notification with new time
+            NotificationManager.shared.scheduleDailyNotification(at: reminderTime)
+        }
+    }
     
     private init() {
         // Try to load existing user ID from UserDefaults
@@ -150,6 +159,17 @@ class UserManager: ObservableObject {
         self.toeflTargetDays = savedToeflTargetDays > 0 ? savedToeflTargetDays : 30
         let savedIeltsTargetDays = UserDefaults.standard.integer(forKey: ieltsTargetDaysKey)
         self.ieltsTargetDays = savedIeltsTargetDays > 0 ? savedIeltsTargetDays : 30
+
+        // Load reminder time with default of 9:00 AM
+        if let savedReminderTime = UserDefaults.standard.object(forKey: reminderTimeKey) as? Date {
+            self.reminderTime = savedReminderTime
+        } else {
+            // Default to 9:00 AM today
+            var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+            components.hour = 9
+            components.minute = 0
+            self.reminderTime = Calendar.current.date(from: components) ?? Date()
+        }
 
         logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage), Onboarding: \(self.hasCompletedOnboarding)")
     }
