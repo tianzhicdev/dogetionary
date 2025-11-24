@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration via environment variables (can be overridden in production)
 # Defaults are set to allow all versions during development
-IOS_MIN_VERSION = os.environ.get('IOS_MIN_VERSION', '4.0.0')
+IOS_MIN_VERSION = os.environ.get('IOS_MIN_VERSION', '1.0.0')
 IOS_LATEST_VERSION = os.environ.get('IOS_LATEST_VERSION', '5.0.0')
 IOS_APP_STORE_URL = os.environ.get('IOS_APP_STORE_URL', 'https://apps.apple.com/app/id6752226667')
 FORCE_UPGRADE_MESSAGE = os.environ.get('FORCE_UPGRADE_MESSAGE', 'Please update to the latest version to continue using the app.')

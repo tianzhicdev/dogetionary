@@ -266,6 +266,7 @@ struct OnboardingView: View {
             VStack(spacing: 16) {
                 testPrepButton(title: "TOEFL", icon: "", testType: "TOEFL")
                 testPrepButton(title: "IELTS", icon: "", testType: "IELTS")
+                testPrepButton(title: "Tianz Test", icon: "", testType: "TIANZ")
                 testPrepButton(title: "Neither", icon: "", testType: nil)
             }
             .padding(.horizontal, 24)
@@ -437,7 +438,7 @@ struct OnboardingView: View {
 
     private var showDurationPage: Bool {
         return selectedLearningLanguage == "en" &&
-               (selectedTestPrep == "TOEFL" || selectedTestPrep == "IELTS")
+               (selectedTestPrep == "TOEFL" || selectedTestPrep == "IELTS" || selectedTestPrep == "TIANZ")
     }
 
     private var usernamePageIndex: Int {
@@ -577,13 +578,20 @@ struct OnboardingView: View {
                         if testPrep == "TOEFL" {
                             userManager.toeflEnabled = true
                             userManager.ieltsEnabled = false
+                            userManager.tianzEnabled = false
                         } else if testPrep == "IELTS" {
                             userManager.toeflEnabled = false
                             userManager.ieltsEnabled = true
+                            userManager.tianzEnabled = false
+                        } else if testPrep == "TIANZ" {
+                            userManager.toeflEnabled = false
+                            userManager.ieltsEnabled = false
+                            userManager.tianzEnabled = true
                         }
                     } else {
                         userManager.toeflEnabled = false
                         userManager.ieltsEnabled = false
+                        userManager.tianzEnabled = false
                     }
 
                     userManager.isSyncingFromServer = false
@@ -645,7 +653,7 @@ struct OnboardingView: View {
     }
 
     private func fetchVocabularyCount() {
-        guard let testType = selectedTestPrep, testType == "TOEFL" || testType == "IELTS" else {
+        guard let testType = selectedTestPrep, testType == "TOEFL" || testType == "IELTS" || testType == "TIANZ" else {
             return
         }
 

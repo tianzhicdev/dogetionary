@@ -11,6 +11,7 @@ Provides REST API endpoints for:
 from flask import jsonify, request
 from datetime import datetime, date
 import logging
+import json
 import sys
 import os
 
@@ -65,7 +66,7 @@ def create_schedule():
     Request body:
         {
             "user_id": "uuid",
-            "test_type": "TOEFL|IELTS|BOTH",
+            "test_type": "TOEFL|IELTS|TIANZ|BOTH",
             "target_end_date": "YYYY-MM-DD"
         }
 
@@ -92,8 +93,8 @@ def create_schedule():
         if not all([user_id, test_type, target_end_date]):
             return jsonify({"error": "user_id, test_type, and target_end_date are required"}), 400
 
-        if test_type not in ['TOEFL', 'IELTS', 'BOTH']:
-            return jsonify({"error": "test_type must be 'TOEFL', 'IELTS', or 'BOTH'"}), 400
+        if test_type not in ['TOEFL', 'IELTS', 'TIANZ', 'BOTH']:
+            return jsonify({"error": "test_type must be 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'"}), 400
 
         # Parse date
         try:
@@ -162,14 +163,14 @@ def get_today_schedule():
         cur = conn.cursor()
 
         try:
-            # Check if user has test prep enabled (TOEFL or IELTS) and get user_name
+            # Check if user has test prep enabled (TOEFL, IELTS, or TIANZ) and get user_name
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled, user_name FROM user_preferences
+                SELECT toefl_enabled, ielts_enabled, tianz_enabled, user_name FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
 
             prefs = cur.fetchone()
-            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
+            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'] or prefs['tianz_enabled'])
             user_name = prefs['user_name'] if prefs and prefs.get('user_name') else None
 
             # Check if user has any schedule created at all and get test_type
@@ -418,14 +419,14 @@ def get_schedule_range():
         cur = conn.cursor()
 
         try:
-            # Check if user has test prep enabled (TOEFL or IELTS) and get user_name
+            # Check if user has test prep enabled (TOEFL, IELTS, or TIANZ) and get user_name
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled, user_name FROM user_preferences
+                SELECT toefl_enabled, ielts_enabled, tianz_enabled, user_name FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
 
             prefs = cur.fetchone()
-            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
+            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'] or prefs['tianz_enabled'])
             user_name = prefs['user_name'] if prefs and prefs.get('user_name') else None
 
             # Get test_type from schedule
@@ -694,9 +695,9 @@ def get_next_review_word_with_scheduled_new_words():
                 updated_new_words = new_words[1:]  # Remove first element
                 cur.execute("""
                     UPDATE daily_schedule_entries
-                    SET new_words = %s, updated_at = CURRENT_TIMESTAMP
+                    SET new_words = %s::jsonb, updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
-                """, (updated_new_words, schedule_entry['id']))
+                """, (json.dumps(updated_new_words), schedule_entry['id']))
 
                 conn.commit()
 
@@ -851,7 +852,7 @@ def get_test_progress():
     Response:
         {
             "has_schedule": true,
-            "test_type": "TOEFL" | "IELTS" | "BOTH",
+            "test_type": "TOEFL" | "IELTS" | "TIANZ" | "BOTH",
             "total_words": 3500,
             "saved_words": 150,
             "progress": 0.043  // saved_words / total_words

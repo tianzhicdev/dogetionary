@@ -127,7 +127,7 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
     Get all vocabulary words for a specific test type.
 
     Args:
-        test_type: One of 'TOEFL', 'IELTS', or 'BOTH'
+        test_type: One of 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'
 
     Returns:
         Set of word strings for the specified test(s)
@@ -135,8 +135,8 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
     Raises:
         ValueError: If test_type is invalid
     """
-    if test_type not in ['TOEFL', 'IELTS', 'BOTH']:
-        raise ValueError(f"Invalid test_type: {test_type}. Must be 'TOEFL', 'IELTS', or 'BOTH'")
+    if test_type not in ['TOEFL', 'IELTS', 'TIANZ', 'BOTH']:
+        raise ValueError(f"Invalid test_type: {test_type}. Must be 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'")
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -148,6 +148,7 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
             AND (
                 (%(test_type)s = 'TOEFL' AND is_toefl = TRUE) OR
                 (%(test_type)s = 'IELTS' AND is_ielts = TRUE) OR
+                (%(test_type)s = 'TIANZ' AND is_tianz = TRUE) OR
                 (%(test_type)s = 'BOTH' AND (is_toefl = TRUE OR is_ielts = TRUE))
             )
         """, {'test_type': test_type})
@@ -170,7 +171,7 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
         timezone: Required if exclude_date is provided - user's IANA timezone string
         exclude_only_test_words: If True, only exclude test vocabulary words saved on exclude_date
                                  (non-test words saved on that date will still be included)
-        test_type: Required if exclude_only_test_words is True - 'TOEFL', 'IELTS', or 'BOTH'
+        test_type: Required if exclude_only_test_words is True - 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'
 
     Returns:
         Dictionary mapping word -> {id, created_at}
@@ -199,11 +200,12 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
                           OR NOT COALESCE(
                               (%s = 'TOEFL' AND tv.is_toefl = TRUE)
                               OR (%s = 'IELTS' AND tv.is_ielts = TRUE)
+                              OR (%s = 'TIANZ' AND tv.is_tianz = TRUE)
                               OR (%s = 'BOTH' AND (tv.is_toefl = TRUE OR tv.is_ielts = TRUE)),
                               FALSE
                           )
                       )
-                """, (user_id, learning_language, timezone, exclude_date, test_type, test_type, test_type))
+                """, (user_id, learning_language, timezone, exclude_date, test_type, test_type, test_type, test_type))
             else:
                 # Exclude ALL words saved on the specified date in user's timezone
                 cur.execute("""
@@ -343,7 +345,7 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
 
     Args:
         user_id: UUID of the user
-        test_type: 'TOEFL', 'IELTS', or 'BOTH'
+        test_type: 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'
         target_end_date: The date user wants to complete preparation by
 
     Returns:
