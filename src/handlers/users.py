@@ -110,9 +110,9 @@ def handle_user_preferences(user_id):
             if test_prep and test_prep not in ['TOEFL', 'IELTS']:
                 return jsonify({"error": "test_prep must be 'TOEFL' or 'IELTS'"}), 400
 
-            # Validate study duration if provided
-            if study_duration_days and study_duration_days not in [30, 40, 50, 60, 70]:
-                return jsonify({"error": "study_duration_days must be 30, 40, 50, 60, or 70"}), 400
+            # Validate study duration if provided (10-100 days)
+            if study_duration_days and (study_duration_days < 10 or study_duration_days > 100):
+                return jsonify({"error": "study_duration_days must be between 10 and 100"}), 400
 
             conn = get_db_connection()
             cur = conn.cursor()

@@ -10,22 +10,30 @@ import BackgroundTasks
 import UIKit
 import os.log
 
-class BackgroundTaskManager {
+class BackgroundTaskManager: ObservableObject {
     static let shared = BackgroundTaskManager()
     private let logger = Logger(subsystem: "com.dogetionary.app", category: "BackgroundTask")
 
     private let refreshTaskIdentifier = "com.dogetionary.refresh"
-    private let cachedOverdueCountKey = "DogetionaryCachedOverdueCount"
+    private let cachedPracticeCountKey = "DogetionaryCachedPracticeCount"
     private let lastCountUpdateKey = "DogetionaryLastCountUpdate"
 
-    private init() {}
+    @Published var practiceCount: Int = 0
+
+    private init() {
+        // Load cached value on init
+        practiceCount = UserDefaults.standard.integer(forKey: cachedPracticeCountKey)
+    }
 
     // MARK: - Cache Management
 
-    var cachedOverdueCount: Int {
-        get { UserDefaults.standard.integer(forKey: cachedOverdueCountKey) }
+    var cachedPracticeCount: Int {
+        get { UserDefaults.standard.integer(forKey: cachedPracticeCountKey) }
         set {
-            UserDefaults.standard.set(newValue, forKey: cachedOverdueCountKey)
+            UserDefaults.standard.set(newValue, forKey: cachedPracticeCountKey)
+            DispatchQueue.main.async {
+                self.practiceCount = newValue
+            }
             updateAppBadge(newValue)
         }
     }
@@ -64,9 +72,9 @@ class BackgroundTaskManager {
         // Schedule the next refresh
         scheduleAppRefresh()
 
-        // Create a task to fetch due counts
+        // Create a task to fetch practice counts
         let fetchTask = Task {
-            await fetchAndUpdateDueCounts()
+            await fetchAndUpdatePracticeCounts()
             task.setTaskCompleted(success: true)
         }
 
@@ -80,15 +88,16 @@ class BackgroundTaskManager {
     // MARK: - Fetching and Updating
 
     @MainActor
-    func fetchAndUpdateDueCounts() async {
-        logger.info("Fetching due counts in background")
+    func fetchAndUpdatePracticeCounts() async {
+        logger.info("Fetching practice status in background")
 
         await withCheckedContinuation { continuation in
-            DictionaryService.shared.getDueCounts { result in
+            DictionaryService.shared.getPracticeStatus { result in
                 switch result {
-                case .success(let counts):
-                    self.logger.info("Background fetch successful - Overdue: \(counts.overdue_count)")
-                    self.cachedOverdueCount = counts.overdue_count
+                case .success(let status):
+                    let totalCount = status.new_words_count + status.test_practice_count + status.non_test_practice_count
+                    self.logger.info("Background fetch successful - Practice count: \(totalCount)")
+                    self.cachedPracticeCount = totalCount
                     self.lastCountUpdate = Date()
                 case .failure(let error):
                     self.logger.error("Background fetch failed: \(error.localizedDescription)")
@@ -98,14 +107,15 @@ class BackgroundTaskManager {
         }
     }
 
-    func updateDueCountsAfterReview() {
-        logger.info("Updating due counts after review")
+    func updatePracticeCountsAfterReview() {
+        logger.info("Updating practice counts after review")
 
-        DictionaryService.shared.getDueCounts { result in
+        DictionaryService.shared.getPracticeStatus { result in
             switch result {
-            case .success(let counts):
-                self.logger.info("Post-review update - Overdue: \(counts.overdue_count)")
-                self.cachedOverdueCount = counts.overdue_count
+            case .success(let status):
+                let totalCount = status.new_words_count + status.test_practice_count + status.non_test_practice_count
+                self.logger.info("Post-review update - Practice count: \(totalCount)")
+                self.cachedPracticeCount = totalCount
                 self.lastCountUpdate = Date()
             case .failure(let error):
                 self.logger.error("Post-review update failed: \(error.localizedDescription)")
@@ -123,7 +133,7 @@ class BackgroundTaskManager {
     }
 
     func clearBadge() {
-        cachedOverdueCount = 0
+        cachedPracticeCount = 0
     }
 
     // MARK: - Timer for Foreground Updates
@@ -135,13 +145,13 @@ class BackgroundTaskManager {
 
         // Initial fetch
         Task {
-            await fetchAndUpdateDueCounts()
+            await fetchAndUpdatePracticeCounts()
         }
 
         // Schedule hourly updates
         foregroundTimer = Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { _ in
             Task {
-                await self.fetchAndUpdateDueCounts()
+                await self.fetchAndUpdatePracticeCounts()
             }
         }
 

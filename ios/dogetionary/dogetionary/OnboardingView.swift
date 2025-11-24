@@ -15,7 +15,7 @@ struct OnboardingView: View {
     @State private var selectedLearningLanguage = "en"
     @State private var selectedNativeLanguage = "fr"
     @State private var selectedTestPrep: String? = nil // TOEFL, IELTS, or nil
-    @State private var selectedStudyDuration: Int? = nil // 30, 40, 50, 60, or 70
+    @State private var selectedStudyDuration: Double = 30 // 10-100 days via slider
     @State private var vocabularyCount: Int = 0
     @State private var studyPlans: [(days: Int, wordsPerDay: Int)] = []
     @State private var isLoadingVocabulary = false
@@ -310,7 +310,7 @@ struct OnboardingView: View {
                     .font(.system(size: 28, weight: .bold))
                     .multilineTextAlignment(.center)
 
-                Text("Choose your study plan for \(selectedTestPrep ?? "")")
+                Text("Set your study timeline for \(selectedTestPrep ?? "")")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -324,9 +324,48 @@ struct OnboardingView: View {
                 ProgressView()
                     .scaleEffect(1.5)
             } else {
-                VStack(spacing: 16) {
-                    ForEach(studyPlans, id: \.days) { plan in
-                        studyDurationButton(days: plan.days, wordsPerDay: plan.wordsPerDay)
+                VStack(spacing: 32) {
+                    // Duration display
+                    VStack(spacing: 8) {
+                        Text("\(Int(selectedStudyDuration))")
+                            .font(.system(size: 72, weight: .bold))
+                            .foregroundColor(.blue)
+                        Text("days")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Slider
+                    VStack(spacing: 8) {
+                        Slider(value: $selectedStudyDuration, in: 10...100, step: 5)
+                            .tint(.blue)
+
+                        HStack {
+                            Text("10 days")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("100 days")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+
+                    // Words per day calculation
+                    if vocabularyCount > 0 {
+                        let wordsPerDay = max(1, vocabularyCount / Int(selectedStudyDuration))
+                        VStack(spacing: 4) {
+                            Text("~\(wordsPerDay) new words per day")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("\(vocabularyCount) total \(selectedTestPrep ?? "") words")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(12)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -335,40 +374,14 @@ struct OnboardingView: View {
             Spacer()
         }
         .onAppear {
-            if studyPlans.isEmpty {
-                fetchVocabularyCount()
-            }
+            fetchVocabularyCount()
         }
-    }
-
-    private func studyDurationButton(days: Int, wordsPerDay: Int) -> some View {
-        Button(action: {
-            selectedStudyDuration = days
-        }) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(days) days")
-                        .font(.headline)
-                    Text("~\(wordsPerDay) new words per day")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                if selectedStudyDuration == days {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.blue)
-                        .font(.title3)
-                }
-            }
-            .padding()
-            .background(selectedStudyDuration == days ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(selectedStudyDuration == days ? Color.blue : Color.clear, lineWidth: 2)
-            )
+        .onChange(of: selectedTestPrep) { _, _ in
+            // Reset and refetch when test type changes
+            studyPlans = []
+            selectedStudyDuration = 30
+            fetchVocabularyCount()
         }
-        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Schedule Preview Page
@@ -469,7 +482,7 @@ struct OnboardingView: View {
             // Study duration (if test) or Username (if no test) or Search (non-English)
             if selectedLearningLanguage == "en" {
                 if showDurationPage {
-                    return selectedStudyDuration != nil // Study duration page
+                    return true // Slider always has a value
                 } else {
                     return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
                 }
@@ -540,7 +553,7 @@ struct OnboardingView: View {
             userName: trimmedName,
             userMotto: "",
             testPrep: selectedTestPrep,
-            studyDurationDays: selectedStudyDuration
+            studyDurationDays: Int(selectedStudyDuration)
         ) { result in
             DispatchQueue.main.async {
                 isSubmitting = false
@@ -555,12 +568,10 @@ struct OnboardingView: View {
                     userManager.userName = trimmedName
 
                     // Update test prep settings
-                    // Always update target days if duration was selected, even if test prep is disabled
-                    if let duration = selectedStudyDuration {
-                        // Update both target days to keep them in sync
-                        userManager.toeflTargetDays = duration
-                        userManager.ieltsTargetDays = duration
-                    }
+                    // Update both target days to keep them in sync
+                    let duration = Int(selectedStudyDuration)
+                    userManager.toeflTargetDays = duration
+                    userManager.ieltsTargetDays = duration
 
                     if let testPrep = selectedTestPrep {
                         if testPrep == "TOEFL" {
@@ -578,7 +589,7 @@ struct OnboardingView: View {
                     userManager.isSyncingFromServer = false
 
                     // Create schedule if test prep was enabled
-                    if let testPrep = selectedTestPrep, let duration = selectedStudyDuration {
+                    if let testPrep = selectedTestPrep {
                         createSchedule(testType: testPrep, targetDays: duration)
                     }
 
@@ -589,8 +600,6 @@ struct OnboardingView: View {
                     ]
                     if let testPrep = selectedTestPrep {
                         metadata["test_prep"] = testPrep
-                    }
-                    if let duration = selectedStudyDuration {
                         metadata["study_duration_days"] = duration
                     }
                     AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
@@ -677,10 +686,8 @@ struct OnboardingView: View {
                             return nil
                         }
 
-                        // Auto-select 60 days if available
-                        if let defaultPlan = studyPlans.first(where: { $0.days == 60 }) {
-                            selectedStudyDuration = defaultPlan.days
-                        }
+                        // Auto-select 30 days as default
+                        selectedStudyDuration = 30
                     } else {
                         setDefaultStudyPlans()
                     }
@@ -693,20 +700,12 @@ struct OnboardingView: View {
     }
 
     private func setDefaultStudyPlans() {
-        // Fallback to default study plans if API fails
+        // Fallback to default vocabulary count if API fails
         // Assuming ~3500 words for typical test vocabulary
-        let defaultTotalWords = 3500
-        studyPlans = [
-            (days: 70, wordsPerDay: 50),
-            (days: 60, wordsPerDay: 59),
-            (days: 50, wordsPerDay: 70),
-            (days: 40, wordsPerDay: 88),
-            (days: 30, wordsPerDay: 117)
-        ]
-        vocabularyCount = defaultTotalWords
+        vocabularyCount = 3500
 
-        // Auto-select 60 days
-        selectedStudyDuration = 60
+        // Keep 30 days as default
+        selectedStudyDuration = 30
     }
 
     private func createSchedule(testType: String, targetDays: Int) {

@@ -11,8 +11,8 @@ struct ContentView: View {
     @StateObject private var userManager = UserManager.shared
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var questionQueue = QuestionQueueManager.shared
+    @StateObject private var backgroundTaskManager = BackgroundTaskManager.shared
     @State private var selectedTab = 0
-    @State private var reviewBadgeCount = 0
     @State private var showOnboarding = false
 
     var body: some View {
@@ -41,7 +41,7 @@ struct ContentView: View {
                     Text("Practice")
                 }
                 .tag(2)
-                .badge(reviewBadgeCount)
+                .badge(backgroundTaskManager.practiceCount)
 
             LeaderboardView()
                 .tabItem {
@@ -86,19 +86,16 @@ struct ContentView: View {
                 }
             }
 
-            // Set initial badge count from cache
-            reviewBadgeCount = BackgroundTaskManager.shared.cachedOverdueCount
-
-            // Start listening for badge updates
-            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-                reviewBadgeCount = BackgroundTaskManager.shared.cachedOverdueCount
-            }
-
-            // Note: Question queue is preloaded in dogetionaryApp.init() via forceRefresh()
+            // Note: Practice badge count is automatically updated via @Published practiceCount
+            // Synced at: app start (startForegroundTimer), after onboarding, after each review
         }
         .onChange(of: userManager.hasCompletedOnboarding) { _, completed in
             if completed {
                 showOnboarding = false
+                // Sync practice counts after onboarding (schedule may have been created)
+                Task {
+                    await BackgroundTaskManager.shared.fetchAndUpdatePracticeCounts()
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .shouldNavigateToReview)) { _ in
