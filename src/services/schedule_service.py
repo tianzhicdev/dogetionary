@@ -336,7 +336,11 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
     Get all vocabulary words for a specific test type.
 
     Args:
-        test_type: One of 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'
+        test_type: One of the level-based types:
+                   - 'TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED'
+                   - 'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED'
+                   - 'TIANZ'
+                   - Legacy: 'TOEFL', 'IELTS', 'BOTH'
 
     Returns:
         Set of word strings for the specified test(s)
@@ -344,23 +348,44 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
     Raises:
         ValueError: If test_type is invalid
     """
-    if test_type not in ['TOEFL', 'IELTS', 'TIANZ', 'BOTH']:
-        raise ValueError(f"Invalid test_type: {test_type}. Must be 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'")
+    # Column mapping for level-based test types
+    VOCAB_COLUMN_MAPPING = {
+        'TOEFL_BEGINNER': 'is_toefl_beginner',
+        'TOEFL_INTERMEDIATE': 'is_toefl_intermediate',
+        'TOEFL_ADVANCED': 'is_toefl_advanced',
+        'IELTS_BEGINNER': 'is_ielts_beginner',
+        'IELTS_INTERMEDIATE': 'is_ielts_intermediate',
+        'IELTS_ADVANCED': 'is_ielts_advanced',
+        'TIANZ': 'is_tianz',
+        # Legacy mappings
+        'TOEFL': 'is_toefl_advanced',
+        'IELTS': 'is_ielts_advanced',
+    }
 
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT DISTINCT word
-            FROM test_vocabularies
-            WHERE language = 'en'
-            AND (
-                (%(test_type)s = 'TOEFL' AND is_toefl = TRUE) OR
-                (%(test_type)s = 'IELTS' AND is_ielts = TRUE) OR
-                (%(test_type)s = 'TIANZ' AND is_tianz = TRUE) OR
-                (%(test_type)s = 'BOTH' AND (is_toefl = TRUE OR is_ielts = TRUE))
-            )
-        """, {'test_type': test_type})
+        if test_type == 'BOTH':
+            # Legacy: both TOEFL and IELTS advanced
+            cur.execute("""
+                SELECT DISTINCT word
+                FROM test_vocabularies
+                WHERE language = 'en'
+                AND (is_toefl_advanced = TRUE OR is_ielts_advanced = TRUE)
+            """)
+        elif test_type in VOCAB_COLUMN_MAPPING:
+            # Level-based or simple test type
+            vocab_column = VOCAB_COLUMN_MAPPING[test_type]
+            cur.execute(f"""
+                SELECT DISTINCT word
+                FROM test_vocabularies
+                WHERE language = 'en'
+                AND {vocab_column} = TRUE
+            """)
+        else:
+            valid_types = ', '.join(VOCAB_COLUMN_MAPPING.keys()) + ', BOTH'
+            raise ValueError(f"Invalid test_type: {test_type}. Must be one of: {valid_types}")
+
         return set(row['word'] for row in cur.fetchall())
     finally:
         cur.close()
