@@ -665,11 +665,10 @@ struct CreateScheduleResponse: Codable {
     }
 }
 
-/// Word in a practice session with expected retention
+/// Word in a practice session
 struct SchedulePracticeWord: Codable, Identifiable {
     let word: String
     let word_id: Int?  // Can be null for new words not yet saved
-    let expected_retention: Double
     let review_number: Int
 
     var id: String {
@@ -681,7 +680,7 @@ struct SchedulePracticeWord: Codable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case word, word_id, expected_retention, review_number
+        case word, word_id, review_number
     }
 }
 
