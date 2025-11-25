@@ -73,12 +73,14 @@ from handlers.test_vocabulary import (
     get_test_settings,
     add_daily_test_words,
     get_test_vocabulary_stats,
-    manual_daily_job
+    manual_daily_job,
+    get_test_config
 )
 app.route('/api/test-prep/settings', methods=['PUT'])(update_test_settings)
 app.route('/api/test-prep/settings', methods=['GET'])(get_test_settings)
 app.route('/api/test-prep/add-words', methods=['POST'])(add_daily_test_words)
 app.route('/api/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
+app.route('/api/test-prep/config', methods=['GET'])(get_test_config)
 app.route('/test-review-intervals', methods=['GET'])(test_review_intervals) 
 app.route('/fix_next_review_dates', methods=['POST'])(fix_next_review_dates)
 app.route('/privacy', methods=['GET'])(privacy_agreement)

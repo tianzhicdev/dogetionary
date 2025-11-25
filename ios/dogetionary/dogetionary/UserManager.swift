@@ -160,14 +160,8 @@ class UserManager: ObservableObject {
             logger.info("Generated new user ID: \(newUserID)")
         }
 
-        // Load onboarding status
-        #if DEBUG
-        // In debug mode, check onboarding status from UserDefaults
+        // Load onboarding status from UserDefaults
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: hasCompletedOnboardingKey)
-        #else
-        // In production, check if onboarding is completed
-        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: hasCompletedOnboardingKey)
-        #endif
 
         // Load language preferences or set defaults
         self.learningLanguage = UserDefaults.standard.string(forKey: learningLanguageKey) ?? "en"

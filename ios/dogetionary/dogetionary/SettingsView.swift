@@ -22,6 +22,7 @@ struct SettingsView: View {
     @State private var testProgress: TestProgressData?
     @State private var vocabularyStats: TestVocabularyStatistics?
     @State private var isLoadingTestStats = false
+    @State private var developerModeEnabled = DebugConfig.isDeveloperModeEnabled
     
     var body: some View {
         ZStack {
@@ -34,246 +35,19 @@ struct SettingsView: View {
             .ignoresSafeArea()
 
             Form {
-                #if DEBUG
-                Section(header: Text("User Information")) {
-                    HStack {
-                        Text("User ID:")
-                        Spacer()
-                        Text(userManager.userID)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                #endif
-                
-                Section(header: Text("Profile")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Name")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            TextField("Enter your name", text: $userManager.userName)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .onSubmit {
-                                    // Track profile name update
-                                    AnalyticsManager.shared.track(action: .profileNameUpdate, metadata: [
-                                        "name_length": userManager.userName.count
-                                    ])
-                                }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Motto")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            TextField("Enter your motto", text: $userManager.userMotto)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .onSubmit {
-                                    // Track profile motto update
-                                    AnalyticsManager.shared.track(action: .profileMottoUpdate, metadata: [
-                                        "motto_length": userManager.userMotto.count
-                                    ])
-                                }
-                        }
-                    }
-                }
-                
-                Section(header: Text("Language Preferences")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Spacer()
-                            Picker("Learning Language", selection: learningLanguageBinding) {
-                                ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
-                                    HStack {
-                                        Text(name)
-                                        Text("(\(code.uppercased()))")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .tag(code)
-                                }
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .tint(.blue)
-                        }
+                debugUserInfoSection
+                profileSection
+                languagePreferencesSection
 
-                        HStack {
-                            Spacer()
-                            Picker("Native Language", selection: nativeLanguageBinding) {
-                                ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
-                                    HStack {
-                                        Text(name)
-                                        Text("(\(code.uppercased()))")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .tag(code)
-                                }
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .tint(.blue)
-                        }
-                    }
-                    
-                    // Show current selection summary
-                    if let learningLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.learningLanguage }),
-                       let nativeLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.nativeLanguage }) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Current Configuration")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("Learning \(learningLang.1) → Native \(nativeLang.1)")
-                                .font(.footnote)
-                                .foregroundColor(.blue)
-                        }
-                        .padding(.top, 8)
-                    }
+                // Only show test preparation for English learning language
+                if userManager.learningLanguage == "en" {
+                    testPreparationSection
                 }
 
-                testPreparationSection
-
-                Section(header: Text("Notifications")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Daily Reminder")
-                                .font(.subheadline)
-                            Spacer()
-                            DatePicker("", selection: $userManager.reminderTime, displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                        }
-
-                        Text("You'll receive a reminder to practice at this time each day")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        Divider()
-
-                        HStack {
-                            Text("Timezone")
-                                .font(.subheadline)
-                            Spacer()
-                            Text(TimeZone.current.identifier)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Text("Timezone is automatically detected from your device")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Section(header: Text("Feedback")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Help us improve Unforgettable Dictionary")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        TextField("Share your thoughts, suggestions, or report issues...", text: $feedbackText, axis: .vertical)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .lineLimit(3...6)
-
-                        HStack {
-                            Text("\(feedbackText.count)/500")
-                                .font(.caption2)
-                                .foregroundColor(feedbackText.count > 450 ? .orange : .secondary)
-
-                            Spacer()
-
-                            if isSubmittingFeedback {
-                                HStack {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                    Text("Submitting...")
-                                        .font(.caption)
-                                }
-                            } else {
-                                Button("Submit") {
-                                    submitFeedback()
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .disabled(feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            }
-                        }
-                    }
-                }
-
-                #if DEBUG
-                Section(header: Text("API Configuration")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Current Environment:")
-                            Spacer()
-                            Text(currentEnvironment)
-                                .fontWeight(.medium)
-                                .foregroundColor(environmentColor)
-                        }
-                        
-                        Text("Base URL: \(Configuration.effectiveBaseURL)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if Configuration.environment == .development {
-                        Toggle("Force Production Mode", isOn: $forceProduction)
-                            .onChange(of: forceProduction) { _, newValue in
-                                // This will trigger DictionaryService to use new URL
-                                NotificationCenter.default.post(name: .environmentChanged, object: nil)
-                            }
-                    }
-                }
-                
-                Section(header: Text("Environment Info")) {
-                    HStack {
-                        Text("Build Configuration:")
-                        Spacer()
-                        Text("Debug")
-                            .foregroundColor(.orange)
-                    }
-                    
-                    HStack {
-                        Text("Default Environment:")
-                        Spacer()
-                        Text(Configuration.environment == .development ? "Development" : "Production")
-                            .foregroundColor(Configuration.environment == .development ? .blue : .green)
-                    }
-                }
-                
-                Section(header: Text("Test Connection")) {
-                    Button(action: {
-                        testConnection()
-                    }) {
-                        HStack {
-                            if isTestingConnection {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                    .padding(.trailing, 8)
-                            }
-                            Text(isTestingConnection ? "Testing..." : "Test API Connection")
-                        }
-                    }
-                    .disabled(isTestingConnection)
-                    .foregroundColor(.blue)
-                    
-                    if !connectionTestResult.isEmpty {
-                        HStack {
-                            Image(systemName: connectionTestResult.contains("✅") ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(connectionTestResult.contains("✅") ? .green : .red)
-                            Text(connectionTestResult)
-                                .font(.caption)
-                        }
-                    }
-                }
-
-                Section(header: Text("Reset Onboarding")) {
-                    Button(action: {
-                        UserManager.shared.resetOnboarding()
-                    }) {
-                        Text("Reset Onboarding")
-                            .foregroundColor(.blue)
-                    }
-                }
-                #endif
+                notificationsSection
+                feedbackSection
+                debugAPIConfigSection
+                developerOptionsSection
             }
             .onTapGesture {
                 // Dismiss keyboard when tapping outside text fields
@@ -351,8 +125,283 @@ struct SettingsView: View {
             }
         )
     }
-    
-    
+
+    // MARK: - Form Sections
+
+    @ViewBuilder
+    private var debugUserInfoSection: some View {
+        if DebugConfig.showUserID {
+            Section(header: Text("Debug Info")) {
+                HStack {
+                    Text("User ID:")
+                    Spacer()
+                    Text(userManager.userID)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var profileSection: some View {
+        Section(header: Text("Profile")) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Name")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextField("Enter your name", text: $userManager.userName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .onSubmit {
+                            AnalyticsManager.shared.track(action: .profileNameUpdate, metadata: [
+                                "name_length": userManager.userName.count
+                            ])
+                        }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Motto")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextField("Enter your motto", text: $userManager.userMotto)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .onSubmit {
+                            AnalyticsManager.shared.track(action: .profileMottoUpdate, metadata: [
+                                "motto_length": userManager.userMotto.count
+                            ])
+                        }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var languagePreferencesSection: some View {
+        Section(header: Text("Language Preferences")) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Spacer()
+                    Picker("Learning Language", selection: learningLanguageBinding) {
+                        ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
+                            HStack {
+                                Text(name)
+                                Text("(\(code.uppercased()))")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .tag(code)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .tint(.blue)
+                }
+
+                HStack {
+                    Spacer()
+                    Picker("Native Language", selection: nativeLanguageBinding) {
+                        ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
+                            HStack {
+                                Text(name)
+                                Text("(\(code.uppercased()))")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .tag(code)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .tint(.blue)
+                }
+            }
+
+            if let learningLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.learningLanguage }),
+               let nativeLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.nativeLanguage }) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Current Configuration")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("Learning \(learningLang.1) → Native \(nativeLang.1)")
+                        .font(.footnote)
+                        .foregroundColor(.blue)
+                }
+                .padding(.top, 8)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var notificationsSection: some View {
+        Section(header: Text("Notifications")) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Daily Reminder")
+                        .font(.subheadline)
+                    Spacer()
+                    DatePicker("", selection: $userManager.reminderTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                }
+
+                Text("You'll receive a reminder to practice at this time each day")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Divider()
+
+                HStack {
+                    Text("Timezone")
+                        .font(.subheadline)
+                    Spacer()
+                    Text(TimeZone.current.identifier)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Text("Timezone is automatically detected from your device")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var feedbackSection: some View {
+        Section(header: Text("Feedback")) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Help us improve Unforgettable Dictionary")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                TextField("Share your thoughts, suggestions, or report issues...", text: $feedbackText, axis: .vertical)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .lineLimit(3...6)
+
+                HStack {
+                    Text("\(feedbackText.count)/500")
+                        .font(.caption2)
+                        .foregroundColor(feedbackText.count > 450 ? .orange : .secondary)
+
+                    Spacer()
+
+                    if isSubmittingFeedback {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Submitting...")
+                                .font(.caption)
+                        }
+                    } else {
+                        Button("Submit") {
+                            submitFeedback()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var debugAPIConfigSection: some View {
+        if DebugConfig.showAPIConfig {
+            Section(header: Text("API Configuration")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Current Environment:")
+                        Spacer()
+                        Text(currentEnvironment)
+                            .fontWeight(.medium)
+                            .foregroundColor(environmentColor)
+                    }
+
+                    Text("Base URL: \(Configuration.effectiveBaseURL)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                if Configuration.environment == .development {
+                    Toggle("Force Production Mode", isOn: $forceProduction)
+                        .onChange(of: forceProduction) { _, newValue in
+                            NotificationCenter.default.post(name: .environmentChanged, object: nil)
+                        }
+                }
+            }
+
+            Section(header: Text("Environment Info")) {
+                HStack {
+                    Text("Build Configuration:")
+                    Spacer()
+                    Text("Debug")
+                        .foregroundColor(.orange)
+                }
+
+                HStack {
+                    Text("Default Environment:")
+                    Spacer()
+                    Text(Configuration.environment == .development ? "Development" : "Production")
+                        .foregroundColor(Configuration.environment == .development ? .blue : .green)
+                }
+            }
+
+            Section(header: Text("Test Connection")) {
+                Button(action: {
+                    testConnection()
+                }) {
+                    HStack {
+                        if isTestingConnection {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.trailing, 8)
+                        }
+                        Text(isTestingConnection ? "Testing..." : "Test API Connection")
+                    }
+                }
+                .disabled(isTestingConnection)
+                .foregroundColor(.blue)
+
+                if !connectionTestResult.isEmpty {
+                    HStack {
+                        Image(systemName: connectionTestResult.contains("✅") ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundColor(connectionTestResult.contains("✅") ? .green : .red)
+                        Text(connectionTestResult)
+                            .font(.caption)
+                    }
+                }
+            }
+
+            Section(header: Text("Reset Onboarding")) {
+                Button(action: {
+                    UserManager.shared.resetOnboarding()
+                }) {
+                    Text("Reset Onboarding")
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var developerOptionsSection: some View {
+        Section(header: Text("Developer Options")) {
+            Toggle("Developer Mode", isOn: $developerModeEnabled)
+                .onChange(of: developerModeEnabled) { _, newValue in
+                    DebugConfig.isDeveloperModeEnabled = newValue
+                    AnalyticsManager.shared.track(action: .settingsDeveloperMode, metadata: [
+                        "enabled": newValue
+                    ])
+                }
+
+            if developerModeEnabled {
+                Text("Developer features enabled. User ID, API config, test vocabularies, and other debug info will be visible.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Helper Methods
+
     private func submitFeedback() {
         print("🔍 submitFeedback() called")
         print("🔍 feedbackText: '\(feedbackText)'")
@@ -480,7 +529,11 @@ struct SettingsView: View {
                     toeflTestSection
                     Divider()
                     ieltsTestSection
-                    tianzTestSection
+
+                    // Only show Tianz test in developer mode
+                    if DebugConfig.showTianzTest {
+                        tianzTestSection
+                    }
                 }
 
                 dailyWordsSection

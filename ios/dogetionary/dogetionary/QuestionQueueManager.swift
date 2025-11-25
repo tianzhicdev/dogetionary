@@ -26,12 +26,8 @@ class QuestionQueueManager: ObservableObject {
     @Published private(set) var totalAvailable = 0
     @Published private(set) var lastError: String?
 
-    // Debug mode - enable by default for development
-    #if DEBUG
-    @Published var debugMode = true
-    #else
-    @Published var debugMode = false
-    #endif
+    // Developer mode - controlled by DebugConfig
+    @Published var debugMode = DebugConfig.enableDebugLogging
 
     private init() {}
 
