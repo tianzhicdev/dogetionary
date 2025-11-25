@@ -1736,20 +1736,48 @@ class DictionaryService: ObservableObject {
         performNetworkRequest(url: url, responseType: TestSettingsResponse.self, completion: completion)
     }
 
-    func updateTestSettings(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, tianzEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, tianzTargetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
+    /// Update test settings using V3 API format with test_type
+    func updateTestSettings(userID: String, testType: TestType?, targetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings") else {
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        let requestBody = TestSettingsUpdateRequest(userID: userID, testType: testType, targetDays: targetDays)
+
+        guard let body = try? JSONEncoder().encode(requestBody) else {
+            logger.error("Failed to encode test settings update request")
+            completion(.failure(DictionaryError.decodingError(NSError(domain: "EncodingError", code: 0))))
+            return
+        }
+
+        logger.info("Updating test settings - testType: \(testType?.rawValue ?? "nil"), targetDays: \(targetDays ?? 0)")
+
+        performNetworkRequest(
+            url: url,
+            method: "PUT",
+            body: body,
+            responseType: TestSettingsUpdateResponse.self,
+            completion: completion
+        )
+    }
+
+    /// Legacy method: Update test settings using old API format (for backward compatibility)
+    @available(*, deprecated, message: "Use updateTestSettings(userID:testType:targetDays:completion:) instead")
+    func updateTestSettingsLegacy(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, tianzEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, tianzTargetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings") else {
             completion(.failure(DictionaryError.invalidURL))
             return
         }
 
         let requestBody = TestSettingsUpdateRequest(
-            user_id: userID,
-            toefl_enabled: toeflEnabled,
-            ielts_enabled: ieltsEnabled,
-            tianz_enabled: tianzEnabled,
-            toefl_target_days: toeflTargetDays,
-            ielts_target_days: ieltsTargetDays,
-            tianz_target_days: tianzTargetDays
+            userID: userID,
+            toeflEnabled: toeflEnabled,
+            ieltsEnabled: ieltsEnabled,
+            tianzEnabled: tianzEnabled,
+            toeflTargetDays: toeflTargetDays,
+            ieltsTargetDays: ieltsTargetDays,
+            tianzTargetDays: tianzTargetDays
         )
 
         guard let body = try? JSONEncoder().encode(requestBody) else {
