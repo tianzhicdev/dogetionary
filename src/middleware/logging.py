@@ -32,7 +32,7 @@ def setup_logging(app):
             f.write('test\n')
         os.remove(test_file)
 
-        # Add rotating file handler
+        # Add rotating file handler for ALL logs (INFO+)
         file_handler = RotatingFileHandler(
             f'{logs_dir}/app.log',
             maxBytes=10*1024*1024,  # 10MB
@@ -42,12 +42,24 @@ def setup_logging(app):
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         app.logger.addHandler(file_handler)
 
+        # Add separate rotating file handler for ERRORS ONLY
+        error_handler = RotatingFileHandler(
+            f'{logs_dir}/error.log',
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=10  # Keep more error logs
+        )
+        error_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
+        error_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - [%(pathname)s:%(lineno)d] - %(message)s'
+        ))
+        app.logger.addHandler(error_handler)
+
         # Force a log entry to test file handler
         app.logger.info("File handler test - this should appear in app.log")
 
-        app.logger.info("=== DOGETIONARY REFACTORED LOGGING INITIALIZED (Console + File) ===")
+        app.logger.info("=== DOGETIONARY LOGGING INITIALIZED (Console + File + Error File) ===")
     except Exception as e:
-        app.logger.info(f"=== DOGETIONARY REFACTORED LOGGING INITIALIZED (Console only - File error: {e}) ===")
+        app.logger.info(f"=== DOGETIONARY LOGGING INITIALIZED (Console only - File error: {e}) ===")
 
     app.logger.info("=== DOGETIONARY REFACTORED LOGGING INITIALIZED ===")
 

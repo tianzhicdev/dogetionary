@@ -34,9 +34,9 @@ def import_test_vocabularies(conn):
     project_root = Path(__file__).parent.parent
 
     # Read TOEFL, IELTS, and TIANZ words
-    toefl_file = project_root / 'web' / 'toefl.csv'
-    ielts_file = project_root / 'web' / 'ielts.csv'
-    tianz_file = project_root / 'web' / 'tianz.csv'
+    toefl_file = project_root / 'resources' / 'toefl-4889.csv'
+    ielts_file = project_root / 'resources' / 'ielts-4323.csv'
+    tianz_file = project_root / 'resources' / 'tianz.csv'
 
     print(f"Reading TOEFL words from {toefl_file}")
     toefl_words = read_csv_words(toefl_file) if toefl_file.exists() else set()

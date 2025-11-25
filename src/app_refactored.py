@@ -13,14 +13,21 @@ app = Flask(__name__)
 
 # Import and setup logging middleware
 from middleware.logging import setup_logging, log_request_info, log_response_info
-from middleware.api_usage_tracker import track_request_start, track_request_end
+from middleware.api_usage_tracker import track_request_start as track_api_usage_start, track_request_end as track_api_usage_end
+from middleware.error_handler import register_error_handlers
+from middleware.metrics import metrics_endpoint
+from middleware.metrics_middleware import track_request_start as track_metrics_start, track_request_end as track_metrics_end
+
 setup_logging(app)
+register_error_handlers(app)
 
 # Register middleware
 app.before_request(log_request_info)
-app.before_request(track_request_start)
+app.before_request(track_api_usage_start)
+app.before_request(track_metrics_start)
 app.after_request(log_response_info)
-app.after_request(track_request_end)
+app.after_request(track_api_usage_end)
+app.after_request(track_metrics_end)
 
 
 from handlers.actions import save_word, delete_saved_word, delete_saved_word_v2, submit_feedback, submit_review, get_next_review_word
@@ -92,6 +99,9 @@ app.route('/analytics/track', methods=['POST'])(track_user_action)
 app.route('/analytics/data', methods=['GET'])(get_analytics_data) # perhaps we dont need it but it is ok for now
 app.route('/pronunciation/history', methods=['GET'])(get_pronunciation_history) # not used by ios
 app.route('/api/test-prep/run-daily-job', methods=['POST'])(manual_daily_job)
+
+# Prometheus metrics endpoint
+app.route('/metrics', methods=['GET'])(metrics_endpoint)
 
 # Register v3 API blueprint
 try:
