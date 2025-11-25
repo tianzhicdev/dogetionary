@@ -7,7 +7,7 @@ import time
 from typing import Dict, Any
 
 # Base URL for the API
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://localhost:5001"
 
 class TestRunner:
     def __init__(self):

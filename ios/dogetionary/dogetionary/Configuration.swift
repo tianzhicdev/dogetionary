@@ -16,7 +16,7 @@ struct Configuration {
         var baseURL: String {
             switch self {
             case .development:
-                return "http://localhost:5000"
+                return "http://localhost:5001"
             case .production:
                 return "https://dogetionary.webhop.net/api"
             }

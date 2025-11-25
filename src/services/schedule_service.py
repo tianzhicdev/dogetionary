@@ -19,7 +19,216 @@ from handlers.admin import get_next_review_date_new
 from utils.database import get_db_connection
 import pytz
 from datetime import date
-from typing import Dict, Set
+from typing import Dict, Set, Callable, List as ListType
+
+
+def calc_schedule(
+    today: date,
+    target_end_date: date,
+    all_test_words: Set[str],
+    saved_words_with_reviews: Dict[str, Dict],  # word -> {id, created_at, reviews: List[{reviewed_at, response}], is_known: bool}
+    words_saved_today: Set[str],
+    words_reviewed_today: Set[str],
+    get_schedule_fn: Callable,  # Function(past_schedule, created_at) -> future_reviews
+    all_saved_words: Set[str] = None,  # ALL saved words including known ones
+) -> Dict:
+    """
+    Pure function to calculate study schedule distribution.
+
+    This function has NO side effects and does NOT access the database.
+    All inputs must be provided as parameters.
+
+    IMPORTANT: saved_words_with_reviews should NOT include words marked as is_known=TRUE.
+    Known words are excluded from practice scheduling at the data-fetching layer.
+    However, all_saved_words SHOULD include known words to exclude them from new_words_pool.
+
+    Args:
+        today: Start date for schedule (date object)
+        target_end_date: End date for schedule (date object)
+        all_test_words: Set of all test vocabulary words for the user's test type
+        saved_words_with_reviews: Map of word -> {
+            'id': int,
+            'created_at': datetime,
+            'reviews': List[{'reviewed_at': datetime, 'response': str}],
+            'is_known': bool (should always be False in this dict)
+        }
+        words_saved_today: Set of words saved on 'today' (in user's timezone)
+        words_reviewed_today: Set of words reviewed on 'today' (in user's timezone)
+        get_schedule_fn: Function to calculate future review dates
+                         Signature: (past_schedule: List[(datetime, str)], created_at: datetime)
+                                   -> List[(datetime, str)]
+        all_saved_words: Set of ALL saved word names (including known words) to exclude from new_words_pool.
+                        If None, defaults to saved_words_with_reviews.keys()
+
+    Returns:
+        {
+            'daily_schedules': {
+                'YYYY-MM-DD': {
+                    'new_words': [str],
+                    'test_practice': [{'word': str, 'word_id': int|None, 'review_number': int}],
+                    'non_test_practice': [{'word': str, 'word_id': int, 'review_number': int}]
+                }
+            },
+            'metadata': {
+                'days_remaining': int,
+                'total_new_words': int,
+                'daily_new_words': int,
+                'test_practice_words_count': int,
+                'non_test_practice_words_count': int
+            }
+        }
+
+    Raises:
+        ValueError: If target_end_date is not in the future
+    """
+    # Validation
+    days_remaining = (target_end_date - today).days
+    if days_remaining <= 0:
+        raise ValueError("target_end_date must be in the future")
+
+    # If all_saved_words not provided, use saved_words_with_reviews keys (backward compatibility)
+    if all_saved_words is None:
+        all_saved_words = set(saved_words_with_reviews.keys())
+
+    # Categorize saved words into test and non-test
+    test_practice_words = set()
+    non_test_practice_words = set()
+
+    for word in saved_words_with_reviews.keys():
+        if word in all_test_words:
+            test_practice_words.add(word)
+        else:
+            non_test_practice_words.add(word)
+
+    # Calculate new words pool (test words NOT yet saved, including known words)
+    # Use all_saved_words to exclude BOTH unknown AND known saved words
+    new_words_pool = sorted(all_test_words - all_saved_words)
+
+    # Get words done today (saved OR reviewed) - these should be excluded from tomorrow onwards
+    words_done_today = (words_saved_today | words_reviewed_today) & all_test_words  # Only test words
+
+    # Calculate daily new words (ceiling division)
+    daily_new_words = max(1, (len(new_words_pool) + days_remaining - 1) // days_remaining)
+
+    # Calculate practice schedules for all saved words
+    test_practice_schedule = {}
+    non_test_practice_schedule = {}
+
+    for word, info in saved_words_with_reviews.items():
+        # Convert reviews to the format expected by get_schedule_fn
+        past_schedule = [(r['reviewed_at'], r['response']) for r in info['reviews']]
+
+        # Get future review dates (up to 7)
+        future_reviews = get_schedule_fn(past_schedule, info['created_at'])
+
+        # Determine which schedule to add to
+        target_schedule = test_practice_schedule if word in test_practice_words else non_test_practice_schedule
+
+        # Add reviews that fall within our schedule window
+        for idx, (review_date, _) in enumerate(future_reviews):
+            if today <= review_date.date() <= target_end_date:
+                if word not in target_schedule:
+                    target_schedule[word] = []
+
+                target_schedule[word].append({
+                    'date': review_date.date(),
+                    'review_number': len(info['reviews']) + idx + 1,
+                    'word_id': info['id']
+                })
+
+    # Build daily schedule and calculate projected reviews for new words
+    schedule = {}
+    new_word_index = 0
+    today_allocated_words = set()  # Track words allocated to today for exclusion from tomorrow onwards
+
+    for day_offset in range(days_remaining):
+        current_date = today + timedelta(days=day_offset)
+        is_today = (day_offset == 0)
+
+        # Assign new words for this day
+        day_new_words = []
+        words_to_allocate = daily_new_words
+
+        while len(day_new_words) < words_to_allocate and new_word_index < len(new_words_pool):
+            word = new_words_pool[new_word_index]
+            new_word_index += 1
+
+            # For tomorrow onwards, skip words that were:
+            # 1. Allocated to today's schedule, OR
+            # 2. Saved/reviewed today (even if not in schedule)
+            # This prevents today's words from reappearing in future days
+            # even if the user regenerates the schedule with a different duration
+            # NOTE: For TODAY itself, we don't exclude words_done_today because
+            # they should appear in today's new_words list
+            if not is_today and (word in today_allocated_words or word in words_done_today):
+                continue
+
+            day_new_words.append(word)
+
+            # Track today's allocations for exclusion from future days
+            if is_today:
+                today_allocated_words.add(word)
+
+            # Calculate projected future reviews for this new word
+            # Treat the day it's introduced as the "created_at" date
+            created_datetime = datetime.combine(current_date, datetime.min.time())
+            future_reviews = get_schedule_fn([], created_datetime)  # Empty past, treat as brand new
+
+            # Determine which schedule to add to
+            is_test_word = word in all_test_words
+            target_schedule = test_practice_schedule if is_test_word else non_test_practice_schedule
+
+            # Add future reviews that fall within schedule window
+            if word not in target_schedule:
+                target_schedule[word] = []
+
+            for idx, (review_datetime, _) in enumerate(future_reviews):
+                review_date = review_datetime.date()
+                if today <= review_date <= target_end_date:
+                    target_schedule[word].append({
+                        'date': review_date,
+                        'review_number': idx + 1,
+                        'word_id': None  # No word_id yet since not saved
+                    })
+
+        # Find test practice words due this day
+        day_test_practice = []
+        for word, reviews in test_practice_schedule.items():
+            for review_info in reviews:
+                if review_info['date'] == current_date:
+                    day_test_practice.append({
+                        'word': word,
+                        'word_id': review_info['word_id'],
+                        'review_number': review_info['review_number']
+                    })
+
+        # Find non-test practice words due this day
+        day_non_test_practice = []
+        for word, reviews in non_test_practice_schedule.items():
+            for review_info in reviews:
+                if review_info['date'] == current_date:
+                    day_non_test_practice.append({
+                        'word': word,
+                        'word_id': review_info['word_id'],
+                        'review_number': review_info['review_number']
+                    })
+
+        schedule[current_date.isoformat()] = {
+            'new_words': day_new_words,
+            'test_practice': day_test_practice,
+            'non_test_practice': day_non_test_practice
+        }
+
+    return {
+        'daily_schedules': schedule,
+        'metadata': {
+            'days_remaining': days_remaining,
+            'total_new_words': len(new_words_pool),
+            'daily_new_words': daily_new_words,
+            'test_practice_words_count': len(test_practice_words),
+            'non_test_practice_words_count': len(non_test_practice_words)
+        }
+    }
 
 
 def get_user_timezone(user_id: str) -> str:
@@ -164,6 +373,9 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
     """
     Get all saved words for a user with their metadata.
 
+    IMPORTANT: Words marked as is_known=TRUE are EXCLUDED from results.
+    Known words should not appear in practice schedules or new word allocations.
+
     Args:
         user_id: UUID of the user
         learning_language: Language being learned (default: 'en')
@@ -174,12 +386,12 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
         test_type: Required if exclude_only_test_words is True - 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'
 
     Returns:
-        Dictionary mapping word -> {id, created_at}
+        Dictionary mapping word -> {id, created_at, is_known}
 
     Example:
         >>> words = get_user_saved_words('user-uuid')
         >>> words['apple']
-        {'id': 123, 'created_at': datetime(2025, 1, 1)}
+        {'id': 123, 'created_at': datetime(2025, 1, 1), 'is_known': False}
     """
     conn = get_db_connection()
     cur = conn.cursor()
@@ -188,12 +400,14 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
             if exclude_only_test_words and test_type:
                 # Only exclude TEST words saved on the specified date
                 # Non-test words saved today are still included (they won't appear in new_words)
+                # ALWAYS exclude words marked as is_known=TRUE
                 cur.execute("""
-                    SELECT sw.id, sw.word, sw.created_at
+                    SELECT sw.id, sw.word, sw.created_at, sw.is_known
                     FROM saved_words sw
                     LEFT JOIN test_vocabularies tv ON sw.word = tv.word
                     WHERE sw.user_id = %s
                       AND sw.learning_language = %s
+                      AND sw.is_known = FALSE
                       AND (
                           -- Include if: NOT saved today, OR not a test word for user's test type
                           DATE(sw.created_at AT TIME ZONE 'UTC' AT TIME ZONE %s) != %s
@@ -208,24 +422,30 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
                 """, (user_id, learning_language, timezone, exclude_date, test_type, test_type, test_type, test_type))
             else:
                 # Exclude ALL words saved on the specified date in user's timezone
+                # ALWAYS exclude words marked as is_known=TRUE
                 cur.execute("""
-                    SELECT id, word, created_at
+                    SELECT id, word, created_at, is_known
                     FROM saved_words
                     WHERE user_id = %s
                       AND learning_language = %s
+                      AND is_known = FALSE
                       AND DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE %s) != %s
                 """, (user_id, learning_language, timezone, exclude_date))
         else:
+            # ALWAYS exclude words marked as is_known=TRUE
             cur.execute("""
-                SELECT id, word, created_at
+                SELECT id, word, created_at, is_known
                 FROM saved_words
-                WHERE user_id = %s AND learning_language = %s
+                WHERE user_id = %s
+                  AND learning_language = %s
+                  AND is_known = FALSE
             """, (user_id, learning_language))
 
         return {
             row['word']: {
                 'id': row['id'],
-                'created_at': row['created_at']
+                'created_at': row['created_at'],
+                'is_known': row['is_known']
             }
             for row in cur.fetchall()
         }
@@ -336,12 +556,9 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
     Generate complete study schedule from today to target_end_date.
 
     This function:
-    1. Calculates how many new words to introduce per day
-    2. Gets all test vocabulary words and filters out already-saved ones
-    3. Categorizes saved words into test/non-test practice words
-    4. Calculates review schedules for all saved words
-    5. Distributes new words and practice reviews across days
-    6. Saves schedule to database
+    1. Fetches all required data from database
+    2. Calls calc_schedule() to generate the schedule
+    3. Saves the schedule to database
 
     Args:
         user_id: UUID of the user
@@ -363,19 +580,15 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
         ValueError: If target_end_date is not in the future
     """
     import json
-    from handlers.admin import calculate_retention
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
+        # Step 1: Fetch all required data from database
         # Get today in user's timezone
         user_tz = get_user_timezone(user_id)
         today = get_today_in_timezone(user_tz)
-
-        days_remaining = (target_end_date - today).days
-        if days_remaining <= 0:
-            raise ValueError("target_end_date must be in the future")
 
         # Get all test vocabulary words
         all_test_words = get_test_vocabulary_words(test_type)
@@ -383,6 +596,7 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
         # Get user's saved words, EXCLUDING only TEST words saved today
         # Test words saved today will appear in "new_words" for today
         # Non-test words saved today are included for practice scheduling
+        # NOTE: This excludes words with is_known=TRUE
         saved_words_map = get_user_saved_words(
             user_id,
             exclude_date=today,
@@ -391,127 +605,47 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
             test_type=test_type
         )
 
-        # Categorize saved words into test and non-test
-        test_practice_words = set()
-        non_test_practice_words = set()
+        # Also fetch ALL saved words (including known ones) for new_words_pool exclusion
+        cur.execute("""
+            SELECT word FROM saved_words
+            WHERE user_id = %s AND learning_language = 'en'
+        """, (user_id,))
+        all_saved_words = {row['word'] for row in cur.fetchall()}
 
-        for word in saved_words_map.keys():
-            if word in all_test_words:
-                test_practice_words.add(word)
-            else:
-                non_test_practice_words.add(word)
-
-        # Calculate new words pool (test words NOT yet saved before today), sorted for deterministic order
-        new_words_pool = sorted(all_test_words - set(saved_words_map.keys()))
-
-        # Calculate daily new words (ceiling division)
-        daily_new_words = max(1, (len(new_words_pool) + days_remaining - 1) // days_remaining)
-
-        # Calculate practice schedules for all saved words
-        test_practice_schedule = {}
-        non_test_practice_schedule = {}
-
+        # Build saved_words_with_reviews by fetching review history for each saved word
+        # Note: saved_words_map already excludes words with is_known=TRUE
+        saved_words_with_reviews = {}
         for word, info in saved_words_map.items():
-            # Get review history for this word, EXCLUDING today's reviews
-            # This ensures schedule reflects "start of day" state
-            reviews = get_word_review_history(info['id'], exclude_date=today, timezone=user_tz)
-            past_schedule = [(r['reviewed_at'], r['response']) for r in reviews]
+            # Get review history for this word, INCLUDING today's reviews
+            # If a review happened at 9am and schedule is generated at 10am,
+            # that review should count towards calculating the next review date
+            reviews = get_word_review_history(info['id'], exclude_date=None, timezone=user_tz)
 
-            # Get future review dates (up to 7)
-            future_reviews = get_schedule(past_schedule, info['created_at'])
-
-            # Determine which schedule to add to
-            target_schedule = test_practice_schedule if word in test_practice_words else non_test_practice_schedule
-
-            # Add reviews that fall within our schedule window
-            for idx, (review_date, _) in enumerate(future_reviews):
-                if today <= review_date.date() <= target_end_date:
-                    # Calculate expected retention at review time
-                    retention = calculate_retention(reviews, review_date, info['created_at'])
-
-                    if word not in target_schedule:
-                        target_schedule[word] = []
-
-                    target_schedule[word].append({
-                        'date': review_date.date(),
-                        'retention': retention,
-                        'review_number': len(reviews) + idx + 1,
-                        'word_id': info['id']
-                    })
-
-        # Build daily schedule and calculate projected reviews for new words
-        schedule = {}
-        new_word_index = 0
-
-        for day_offset in range(days_remaining):
-            current_date = today + timedelta(days=day_offset)
-
-            # Assign new words for this day
-            day_new_words = []
-            for _ in range(daily_new_words):
-                if new_word_index < len(new_words_pool):
-                    word = new_words_pool[new_word_index]
-                    day_new_words.append(word)
-
-                    # Calculate projected future reviews for this new word
-                    # Treat the day it's introduced as the "created_at" date
-                    created_datetime = datetime.combine(current_date, datetime.min.time())
-                    future_reviews = get_schedule([], created_datetime)  # Empty past, treat as brand new
-
-                    # Determine which schedule to add to
-                    is_test_word = word in all_test_words
-                    target_schedule = test_practice_schedule if is_test_word else non_test_practice_schedule
-
-                    # Add future reviews that fall within schedule window
-                    if word not in target_schedule:
-                        target_schedule[word] = []
-
-                    for idx, (review_datetime, _) in enumerate(future_reviews):
-                        review_date = review_datetime.date()
-                        if today <= review_date <= target_end_date:
-                            # Calculate expected retention (starts high for new words)
-                            retention = 0.9 if idx == 0 else max(0.1, 0.9 - (idx * 0.1))
-
-                            target_schedule[word].append({
-                                'date': review_date,
-                                'retention': retention,
-                                'review_number': idx + 1,
-                                'word_id': None  # No word_id yet since not saved
-                            })
-
-                    new_word_index += 1
-
-            # Find test practice words due this day
-            day_test_practice = []
-            for word, reviews in test_practice_schedule.items():
-                for review_info in reviews:
-                    if review_info['date'] == current_date:
-                        day_test_practice.append({
-                            'word': word,
-                            'word_id': review_info['word_id'],
-                            'expected_retention': round(review_info['retention'], 2),
-                            'review_number': review_info['review_number']
-                        })
-
-            # Find non-test practice words due this day
-            day_non_test_practice = []
-            for word, reviews in non_test_practice_schedule.items():
-                for review_info in reviews:
-                    if review_info['date'] == current_date:
-                        day_non_test_practice.append({
-                            'word': word,
-                            'word_id': review_info['word_id'],
-                            'expected_retention': round(review_info['retention'], 2),
-                            'review_number': review_info['review_number']
-                        })
-
-            schedule[current_date.isoformat()] = {
-                'new_words': day_new_words,
-                'test_practice': day_test_practice,
-                'non_test_practice': day_non_test_practice
+            saved_words_with_reviews[word] = {
+                'id': info['id'],
+                'created_at': info['created_at'],
+                'reviews': reviews,
+                'is_known': info['is_known']  # Should always be False since we filter at DB level
             }
 
-        # Save to database - delete existing schedule first
+        # Get words saved/reviewed today - these should be excluded from tomorrow onwards
+        words_saved_today = get_words_saved_on_date(user_id, today, user_tz)
+        words_reviewed_today = get_words_reviewed_on_date(user_id, today, user_tz)
+
+        # Step 2: Call calc_schedule() to generate the schedule
+        schedule_result = calc_schedule(
+            today=today,
+            target_end_date=target_end_date,
+            all_test_words=all_test_words,
+            saved_words_with_reviews=saved_words_with_reviews,
+            words_saved_today=words_saved_today,
+            words_reviewed_today=words_reviewed_today,
+            get_schedule_fn=get_schedule,
+            all_saved_words=all_saved_words  # Include known words to exclude from new_words_pool
+        )
+
+        # Step 3: Save the schedule to database
+        # Delete existing schedule first
         cur.execute("DELETE FROM study_schedules WHERE user_id = %s", (user_id,))
 
         # Insert new schedule
@@ -524,7 +658,7 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
         schedule_id = cur.fetchone()['id']
 
         # Insert daily entries
-        for date_str, entry in schedule.items():
+        for date_str, entry in schedule_result['daily_schedules'].items():
             cur.execute("""
                 INSERT INTO daily_schedule_entries
                 (schedule_id, scheduled_date, new_words, test_practice_words, non_test_practice_words)
@@ -539,13 +673,14 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
 
         conn.commit()
 
+        # Return metadata with schedule_id added
         return {
             'schedule_id': schedule_id,
-            'days_remaining': days_remaining,
-            'total_new_words': len(new_words_pool),
-            'daily_new_words': daily_new_words,
-            'test_practice_words_count': len(test_practice_words),
-            'non_test_practice_words_count': len(non_test_practice_words)
+            'days_remaining': schedule_result['metadata']['days_remaining'],
+            'total_new_words': schedule_result['metadata']['total_new_words'],
+            'daily_new_words': schedule_result['metadata']['daily_new_words'],
+            'test_practice_words_count': schedule_result['metadata']['test_practice_words_count'],
+            'non_test_practice_words_count': schedule_result['metadata']['non_test_practice_words_count']
         }
 
     except Exception as e:
