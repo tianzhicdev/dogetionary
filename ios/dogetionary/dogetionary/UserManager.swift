@@ -224,6 +224,9 @@ class UserManager: ObservableObject {
     }
 
     private init() {
+        // Prevent didSet blocks from running during initialization
+        isSyncingFromServer = true
+
         // Try to load existing user ID from UserDefaults
         if let savedUserID = UserDefaults.standard.string(forKey: userIDKey) {
             self.userID = savedUserID
@@ -293,6 +296,9 @@ class UserManager: ObservableObject {
                 self.targetDays = self.tianzTargetDays
             }
         }
+
+        // Re-enable property synchronization after initialization
+        isSyncingFromServer = false
 
         logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage), Onboarding: \(self.hasCompletedOnboarding)")
     }

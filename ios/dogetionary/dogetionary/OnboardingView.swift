@@ -14,7 +14,7 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var selectedLearningLanguage = "en"
     @State private var selectedNativeLanguage = "fr"
-    @State private var selectedTestPrep: String? = nil // TOEFL, IELTS, or nil
+    @State private var selectedTestType: TestType? = nil // Level-based test selection
     @State private var selectedStudyDuration: Double = 30 // 10-100 days via slider
     @State private var vocabularyCount: Int = 0
     @State private var studyPlans: [(days: Int, wordsPerDay: Int)] = []
@@ -253,7 +253,7 @@ struct OnboardingView: View {
                     .font(.system(size: 28, weight: .bold))
                     .multilineTextAlignment(.center)
 
-                Text("We can help you prepare for standardized tests")
+                Text("Choose your test level")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -261,42 +261,59 @@ struct OnboardingView: View {
             .padding(.horizontal, 24)
             .padding(.top, 40)
 
-            Spacer()
+            ScrollView {
+                VStack(spacing: 12) {
+                    // TOEFL options
+                    testPrepButton(title: "TOEFL Beginner", subtitle: "Foundation vocabulary", testType: .toeflBeginner)
+                    testPrepButton(title: "TOEFL Intermediate", subtitle: "Includes beginner words", testType: .toeflIntermediate)
+                    testPrepButton(title: "TOEFL Advanced", subtitle: "Complete TOEFL vocabulary", testType: .toeflAdvanced)
 
-            VStack(spacing: 16) {
-                testPrepButton(title: "TOEFL", icon: "", testType: "TOEFL")
-                testPrepButton(title: "IELTS", icon: "", testType: "IELTS")
-                testPrepButton(title: "Tianz Test", icon: "", testType: "TIANZ")
-                testPrepButton(title: "Neither", icon: "", testType: nil)
+                    Divider().padding(.vertical, 8)
+
+                    // IELTS options
+                    testPrepButton(title: "IELTS Beginner", subtitle: "Foundation vocabulary", testType: .ieltsBeginner)
+                    testPrepButton(title: "IELTS Intermediate", subtitle: "Includes beginner words", testType: .ieltsIntermediate)
+                    testPrepButton(title: "IELTS Advanced", subtitle: "Complete IELTS vocabulary", testType: .ieltsAdvanced)
+
+                    Divider().padding(.vertical, 8)
+
+                    // TIANZ option
+                    testPrepButton(title: "Tianz Test", subtitle: "Specialized vocabulary", testType: .tianz)
+
+                    // Neither option
+                    testPrepButton(title: "None", subtitle: "Skip test preparation", testType: nil)
+                }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
-
-            Spacer()
         }
     }
 
-    private func testPrepButton(title: String, icon: String, testType: String?) -> some View {
+    private func testPrepButton(title: String, subtitle: String, testType: TestType?) -> some View {
         Button(action: {
-            selectedTestPrep = testType
+            selectedTestType = testType
         }) {
             HStack {
-                Text(icon)
-                    .font(.title2)
-                Text(title)
-                    .font(.headline)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
-                if selectedTestPrep == testType {
+                if selectedTestType == testType {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.blue)
                         .font(.title3)
                 }
             }
             .padding()
-            .background(selectedTestPrep == testType ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+            .background(selectedTestType == testType ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(selectedTestPrep == testType ? Color.blue : Color.clear, lineWidth: 2)
+                    .stroke(selectedTestType == testType ? Color.blue : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -311,7 +328,7 @@ struct OnboardingView: View {
                     .font(.system(size: 28, weight: .bold))
                     .multilineTextAlignment(.center)
 
-                Text("Set your study timeline for \(selectedTestPrep ?? "")")
+                Text("Set your study timeline for \(selectedTestType?.displayName ?? "")")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -360,7 +377,7 @@ struct OnboardingView: View {
                             Text("~\(wordsPerDay) new words per day")
                                 .font(.headline)
                                 .foregroundColor(.primary)
-                            Text("\(vocabularyCount) total \(selectedTestPrep ?? "") words")
+                            Text("\(vocabularyCount) total \(selectedTestType?.displayName ?? "") words")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -377,7 +394,7 @@ struct OnboardingView: View {
         .onAppear {
             fetchVocabularyCount()
         }
-        .onChange(of: selectedTestPrep) { _, _ in
+        .onChange(of: selectedTestType) { _, _ in
             // Reset and refetch when test type changes
             studyPlans = []
             selectedStudyDuration = 30
@@ -437,8 +454,7 @@ struct OnboardingView: View {
     }
 
     private var showDurationPage: Bool {
-        return selectedLearningLanguage == "en" &&
-               (selectedTestPrep == "TOEFL" || selectedTestPrep == "IELTS" || selectedTestPrep == "TIANZ")
+        return selectedLearningLanguage == "en" && selectedTestType != nil
     }
 
     private var usernamePageIndex: Int {
@@ -553,7 +569,7 @@ struct OnboardingView: View {
             nativeLanguage: selectedNativeLanguage,
             userName: trimmedName,
             userMotto: "",
-            testPrep: selectedTestPrep,
+            testPrep: selectedTestType?.rawValue,  // Use raw value for legacy API
             studyDurationDays: Int(selectedStudyDuration)
         ) { result in
             DispatchQueue.main.async {
@@ -568,37 +584,16 @@ struct OnboardingView: View {
                     userManager.nativeLanguage = selectedNativeLanguage
                     userManager.userName = trimmedName
 
-                    // Update test prep settings
-                    // Update both target days to keep them in sync
+                    // Update test prep settings using V3 API
                     let duration = Int(selectedStudyDuration)
-                    userManager.toeflTargetDays = duration
-                    userManager.ieltsTargetDays = duration
-
-                    if let testPrep = selectedTestPrep {
-                        if testPrep == "TOEFL" {
-                            userManager.toeflEnabled = true
-                            userManager.ieltsEnabled = false
-                            userManager.tianzEnabled = false
-                        } else if testPrep == "IELTS" {
-                            userManager.toeflEnabled = false
-                            userManager.ieltsEnabled = true
-                            userManager.tianzEnabled = false
-                        } else if testPrep == "TIANZ" {
-                            userManager.toeflEnabled = false
-                            userManager.ieltsEnabled = false
-                            userManager.tianzEnabled = true
-                        }
-                    } else {
-                        userManager.toeflEnabled = false
-                        userManager.ieltsEnabled = false
-                        userManager.tianzEnabled = false
-                    }
+                    userManager.activeTestType = selectedTestType
+                    userManager.targetDays = duration
 
                     userManager.isSyncingFromServer = false
 
-                    // Create schedule if test prep was enabled
-                    if let testPrep = selectedTestPrep {
-                        createSchedule(testType: testPrep, targetDays: duration)
+                    // Create schedule if test type was selected
+                    if let testType = selectedTestType {
+                        createSchedule(testType: testType.rawValue, targetDays: duration)
                     }
 
                     // Track analytics
@@ -606,8 +601,8 @@ struct OnboardingView: View {
                         "learning_language": selectedLearningLanguage,
                         "native_language": selectedNativeLanguage
                     ]
-                    if let testPrep = selectedTestPrep {
-                        metadata["test_prep"] = testPrep
+                    if let testType = selectedTestType {
+                        metadata["test_type"] = testType.rawValue
                         metadata["study_duration_days"] = duration
                     }
                     AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
@@ -653,14 +648,14 @@ struct OnboardingView: View {
     }
 
     private func fetchVocabularyCount() {
-        guard let testType = selectedTestPrep, testType == "TOEFL" || testType == "IELTS" || testType == "TIANZ" else {
+        guard let testType = selectedTestType else {
             return
         }
 
         isLoadingVocabulary = true
 
         let baseURL = Configuration.effectiveBaseURL
-        guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=\(testType)") else {
+        guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=\(testType.rawValue)") else {
             isLoadingVocabulary = false
             setDefaultStudyPlans()
             return
