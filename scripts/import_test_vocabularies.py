@@ -19,11 +19,23 @@ def read_csv_words(file_path):
     """Read words from CSV file"""
     words = set()
     with open(file_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            word = row['word'].strip().lower()
-            if word:
-                words.add(word)
+        # Check if file has headers
+        first_line = f.readline().strip()
+        f.seek(0)  # Reset to beginning
+
+        # If first line looks like a header (contains 'word'), use DictReader
+        if first_line.lower() == 'word' or ',' in first_line:
+            reader = csv.DictReader(f)
+            for row in reader:
+                word = row.get('word', '').strip().lower()
+                if word:
+                    words.add(word)
+        else:
+            # No headers, just read each line as a word
+            for line in f:
+                word = line.strip().lower()
+                if word:
+                    words.add(word)
     return words
 
 def import_test_vocabularies(conn):
