@@ -554,19 +554,114 @@ struct AllMarker: Codable {
 
 // MARK: - Test Preparation Models
 
+/// Test type enum with all available test levels
+enum TestType: String, Codable, CaseIterable {
+    case toeflBeginner = "TOEFL_BEGINNER"
+    case toeflIntermediate = "TOEFL_INTERMEDIATE"
+    case toeflAdvanced = "TOEFL_ADVANCED"
+    case ieltsBeginner = "IELTS_BEGINNER"
+    case ieltsIntermediate = "IELTS_INTERMEDIATE"
+    case ieltsAdvanced = "IELTS_ADVANCED"
+    case tianz = "TIANZ"
+
+    /// Display name for UI
+    var displayName: String {
+        switch self {
+        case .toeflBeginner: return "TOEFL Beginner"
+        case .toeflIntermediate: return "TOEFL Intermediate"
+        case .toeflAdvanced: return "TOEFL Advanced"
+        case .ieltsBeginner: return "IELTS Beginner"
+        case .ieltsIntermediate: return "IELTS Intermediate"
+        case .ieltsAdvanced: return "IELTS Advanced"
+        case .tianz: return "Tianz Test"
+        }
+    }
+
+    /// Base test name (TOEFL, IELTS, or TIANZ)
+    var baseTest: String {
+        switch self {
+        case .toeflBeginner, .toeflIntermediate, .toeflAdvanced:
+            return "TOEFL"
+        case .ieltsBeginner, .ieltsIntermediate, .ieltsAdvanced:
+            return "IELTS"
+        case .tianz:
+            return "TIANZ"
+        }
+    }
+
+    /// Level name (Beginner, Intermediate, Advanced, or nil for TIANZ)
+    var level: String? {
+        switch self {
+        case .toeflBeginner, .ieltsBeginner:
+            return "Beginner"
+        case .toeflIntermediate, .ieltsIntermediate:
+            return "Intermediate"
+        case .toeflAdvanced, .ieltsAdvanced:
+            return "Advanced"
+        case .tianz:
+            return nil
+        }
+    }
+}
+
 struct TestSettings: Codable {
-    let toefl_enabled: Bool
-    let ielts_enabled: Bool
-    let tianz_enabled: Bool
+    // V3 API: active test type
+    let active_test: String?  // "TOEFL_BEGINNER", "IELTS_ADVANCED", etc., or null
+    let target_days: Int?
+
+    // Legacy fields for backward compatibility
+    let toefl_enabled: Bool?
+    let ielts_enabled: Bool?
+    let tianz_enabled: Bool?
+    let toefl_target_days: Int?
+    let ielts_target_days: Int?
+    let tianz_target_days: Int?
+
     let last_test_words_added: String?
     let learning_language: String
     let native_language: String
-    let toefl_target_days: Int
-    let ielts_target_days: Int
-    let tianz_target_days: Int
 
     private enum CodingKeys: String, CodingKey {
-        case toefl_enabled, ielts_enabled, tianz_enabled, last_test_words_added, learning_language, native_language, toefl_target_days, ielts_target_days, tianz_target_days
+        case active_test, target_days
+        case toefl_enabled, ielts_enabled, tianz_enabled
+        case toefl_target_days, ielts_target_days, tianz_target_days
+        case last_test_words_added, learning_language, native_language
+    }
+
+    /// Get active test type from either new or legacy format
+    var activeTestType: TestType? {
+        if let activeTest = active_test {
+            return TestType(rawValue: activeTest)
+        }
+        // Fallback to legacy format (map to advanced level)
+        if toefl_enabled == true {
+            return .toeflAdvanced
+        }
+        if ielts_enabled == true {
+            return .ieltsAdvanced
+        }
+        if tianz_enabled == true {
+            return .tianz
+        }
+        return nil
+    }
+
+    /// Get target days from either new or legacy format
+    var effectiveTargetDays: Int {
+        if let days = target_days {
+            return days
+        }
+        // Fallback to legacy format
+        if toefl_enabled == true, let days = toefl_target_days {
+            return days
+        }
+        if ielts_enabled == true, let days = ielts_target_days {
+            return days
+        }
+        if tianz_enabled == true, let days = tianz_target_days {
+            return days
+        }
+        return 30  // Default
     }
 }
 
@@ -590,17 +685,46 @@ struct TestSettingsResponse: Codable {
 }
 
 struct TestProgressData: Codable {
+    // V3 API: single progress for active test
+    let progress: TestProgress?
+
+    // Legacy: individual progress for each test
     let toefl: TestProgress?
     let ielts: TestProgress?
     let tianz: TestProgress?
 
     private enum CodingKeys: String, CodingKey {
+        case progress
         case toefl, ielts, tianz
+    }
+
+    /// Get progress for a specific test type
+    func progress(for testType: TestType?) -> TestProgress? {
+        // Try V3 API first
+        if let progress = progress {
+            return progress
+        }
+        // Fallback to legacy format
+        guard let testType = testType else { return nil }
+        switch testType {
+        case .toeflBeginner, .toeflIntermediate, .toeflAdvanced:
+            return toefl
+        case .ieltsBeginner, .ieltsIntermediate, .ieltsAdvanced:
+            return ielts
+        case .tianz:
+            return tianz
+        }
     }
 }
 
 struct TestSettingsUpdateRequest: Codable {
     let user_id: String
+
+    // V3 API format (preferred)
+    let test_type: String?  // "TOEFL_BEGINNER", null, etc.
+    let target_days: Int?
+
+    // Legacy API format for backward compatibility
     let toefl_enabled: Bool?
     let ielts_enabled: Bool?
     let tianz_enabled: Bool?
@@ -609,7 +733,37 @@ struct TestSettingsUpdateRequest: Codable {
     let tianz_target_days: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, toefl_enabled, ielts_enabled, tianz_enabled, toefl_target_days, ielts_target_days, tianz_target_days
+        case user_id
+        case test_type, target_days
+        case toefl_enabled, ielts_enabled, tianz_enabled
+        case toefl_target_days, ielts_target_days, tianz_target_days
+    }
+
+    /// Create request using new V3 API format
+    init(userID: String, testType: TestType?, targetDays: Int?) {
+        self.user_id = userID
+        self.test_type = testType?.rawValue
+        self.target_days = targetDays
+        // Legacy fields set to nil
+        self.toefl_enabled = nil
+        self.ielts_enabled = nil
+        self.tianz_enabled = nil
+        self.toefl_target_days = nil
+        self.ielts_target_days = nil
+        self.tianz_target_days = nil
+    }
+
+    /// Create request using legacy API format (for backward compatibility)
+    init(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, tianzEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, tianzTargetDays: Int?) {
+        self.user_id = userID
+        self.test_type = nil
+        self.target_days = nil
+        self.toefl_enabled = toeflEnabled
+        self.ielts_enabled = ieltsEnabled
+        self.tianz_enabled = tianzEnabled
+        self.toefl_target_days = toeflTargetDays
+        self.ielts_target_days = ieltsTargetDays
+        self.tianz_target_days = tianzTargetDays
     }
 }
 

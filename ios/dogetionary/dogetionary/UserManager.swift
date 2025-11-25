@@ -17,6 +17,10 @@ class UserManager: ObservableObject {
     private let userNameKey = "DogetionaryUserName"
     private let userMottoKey = "DogetionaryUserMotto"
     private let hasRequestedAppRatingKey = "DogetionaryHasRequestedAppRating"
+    // V3 API keys
+    private let testTypeKey = "DogetionaryTestType"
+    private let targetDaysKey = "DogetionaryTargetDays"
+    // Legacy keys (kept for backward compatibility during transition)
     private let toeflEnabledKey = "DogetionaryToeflEnabled"
     private let ieltsEnabledKey = "DogetionaryIeltsEnabled"
     private let tianzEnabledKey = "DogetionaryTianzEnabled"
@@ -63,29 +67,61 @@ class UserManager: ObservableObject {
             }
         }
     }
-    @Published var toeflEnabled: Bool {
+
+    // MARK: - V3 API Test Preparation Properties
+
+    /// Active test type (V3 API format)
+    @Published var activeTestType: TestType? {
         didSet {
-            let wasEnabled = oldValue
-            UserDefaults.standard.set(toeflEnabled, forKey: toeflEnabledKey)
+            if let testType = activeTestType {
+                UserDefaults.standard.set(testType.rawValue, forKey: testTypeKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: testTypeKey)
+            }
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
-                // Create schedule when toggled from off to on
-                if !wasEnabled && toeflEnabled {
-                    createScheduleForTestType("TOEFL", targetDays: toeflTargetDays)
+                // Create schedule when test type changes
+                if let testType = activeTestType, oldValue != activeTestType {
+                    createScheduleForTestType(testType.rawValue, targetDays: targetDays)
                 }
+                // Sync legacy properties for backward compatibility
+                updateLegacyPropertiesFromActive()
+            }
+        }
+    }
+
+    /// Target days for study plan (V3 API format)
+    @Published var targetDays: Int {
+        didSet {
+            UserDefaults.standard.set(targetDays, forKey: targetDaysKey)
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+                // Recreate schedule if test is enabled and days changed
+                if let testType = activeTestType, oldValue != targetDays {
+                    createScheduleForTestType(testType.rawValue, targetDays: targetDays)
+                }
+                // Sync legacy properties for backward compatibility
+                updateLegacyPropertiesFromActive()
+            }
+        }
+    }
+
+    // MARK: - Legacy Test Preparation Properties (deprecated)
+
+    /// Legacy property for backward compatibility
+    @Published var toeflEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(toeflEnabled, forKey: toeflEnabledKey)
+            if !isSyncingFromServer {
+                updateActiveFromLegacyProperties()
             }
         }
     }
     @Published var ieltsEnabled: Bool {
         didSet {
-            let wasEnabled = oldValue
             UserDefaults.standard.set(ieltsEnabled, forKey: ieltsEnabledKey)
             if !isSyncingFromServer {
-                syncTestSettingsToServer()
-                // Create schedule when toggled from off to on
-                if !wasEnabled && ieltsEnabled {
-                    createScheduleForTestType("IELTS", targetDays: ieltsTargetDays)
-                }
+                updateActiveFromLegacyProperties()
             }
         }
     }
@@ -93,11 +129,7 @@ class UserManager: ObservableObject {
         didSet {
             UserDefaults.standard.set(toeflTargetDays, forKey: toeflTargetDaysKey)
             if !isSyncingFromServer {
-                syncTestSettingsToServer()
-                // Recreate schedule if TOEFL is enabled and days changed
-                if toeflEnabled && oldValue != toeflTargetDays {
-                    createScheduleForTestType("TOEFL", targetDays: toeflTargetDays)
-                }
+                updateActiveFromLegacyProperties()
             }
         }
     }
@@ -105,24 +137,15 @@ class UserManager: ObservableObject {
         didSet {
             UserDefaults.standard.set(ieltsTargetDays, forKey: ieltsTargetDaysKey)
             if !isSyncingFromServer {
-                syncTestSettingsToServer()
-                // Recreate schedule if IELTS is enabled and days changed
-                if ieltsEnabled && oldValue != ieltsTargetDays {
-                    createScheduleForTestType("IELTS", targetDays: ieltsTargetDays)
-                }
+                updateActiveFromLegacyProperties()
             }
         }
     }
     @Published var tianzEnabled: Bool {
         didSet {
-            let wasEnabled = oldValue
             UserDefaults.standard.set(tianzEnabled, forKey: tianzEnabledKey)
             if !isSyncingFromServer {
-                syncTestSettingsToServer()
-                // Create schedule when toggled from off to on
-                if !wasEnabled && tianzEnabled {
-                    createScheduleForTestType("TIANZ", targetDays: tianzTargetDays)
-                }
+                updateActiveFromLegacyProperties()
             }
         }
     }
@@ -130,11 +153,7 @@ class UserManager: ObservableObject {
         didSet {
             UserDefaults.standard.set(tianzTargetDays, forKey: tianzTargetDaysKey)
             if !isSyncingFromServer {
-                syncTestSettingsToServer()
-                // Recreate schedule if TIANZ is enabled and days changed
-                if tianzEnabled && oldValue != tianzTargetDays {
-                    createScheduleForTestType("TIANZ", targetDays: tianzTargetDays)
-                }
+                updateActiveFromLegacyProperties()
             }
         }
     }
@@ -146,7 +165,64 @@ class UserManager: ObservableObject {
             NotificationManager.shared.scheduleDailyNotification(at: reminderTime)
         }
     }
-    
+
+    // MARK: - Helper Methods for Property Synchronization
+
+    /// Update legacy properties based on active test type (for backward compatibility)
+    private func updateLegacyPropertiesFromActive() {
+        guard !isSyncingFromServer else { return }
+
+        isSyncingFromServer = true
+        defer { isSyncingFromServer = false }
+
+        // Map active test type to legacy boolean flags
+        if let testType = activeTestType {
+            switch testType {
+            case .toeflBeginner, .toeflIntermediate, .toeflAdvanced:
+                toeflEnabled = true
+                ieltsEnabled = false
+                tianzEnabled = false
+                toeflTargetDays = targetDays
+            case .ieltsBeginner, .ieltsIntermediate, .ieltsAdvanced:
+                toeflEnabled = false
+                ieltsEnabled = true
+                tianzEnabled = false
+                ieltsTargetDays = targetDays
+            case .tianz:
+                toeflEnabled = false
+                ieltsEnabled = false
+                tianzEnabled = true
+                tianzTargetDays = targetDays
+            }
+        } else {
+            toeflEnabled = false
+            ieltsEnabled = false
+            tianzEnabled = false
+        }
+    }
+
+    /// Update active test type based on legacy properties (for backward compatibility)
+    private func updateActiveFromLegacyProperties() {
+        guard !isSyncingFromServer else { return }
+
+        isSyncingFromServer = true
+        defer { isSyncingFromServer = false }
+
+        // Map legacy boolean flags to active test type (default to advanced level)
+        if toeflEnabled {
+            activeTestType = .toeflAdvanced
+            targetDays = toeflTargetDays
+        } else if ieltsEnabled {
+            activeTestType = .ieltsAdvanced
+            targetDays = ieltsTargetDays
+        } else if tianzEnabled {
+            activeTestType = .tianz
+            targetDays = tianzTargetDays
+        } else {
+            activeTestType = nil
+        }
+    }
+
     private init() {
         // Try to load existing user ID from UserDefaults
         if let savedUserID = UserDefaults.standard.string(forKey: userIDKey) {
@@ -171,12 +247,21 @@ class UserManager: ObservableObject {
         self.userName = UserDefaults.standard.string(forKey: userNameKey) ?? ""
         self.userMotto = UserDefaults.standard.string(forKey: userMottoKey) ?? ""
 
-        // Load test preparation settings or set defaults
+        // Load V3 API test preparation settings
+        if let savedTestType = UserDefaults.standard.string(forKey: testTypeKey) {
+            self.activeTestType = TestType(rawValue: savedTestType)
+        } else {
+            self.activeTestType = nil
+        }
+        let savedTargetDays = UserDefaults.standard.integer(forKey: targetDaysKey)
+        self.targetDays = savedTargetDays > 0 ? savedTargetDays : 30
+
+        // Load legacy test preparation settings (for backward compatibility)
         self.toeflEnabled = UserDefaults.standard.bool(forKey: toeflEnabledKey)
         self.ieltsEnabled = UserDefaults.standard.bool(forKey: ieltsEnabledKey)
         self.tianzEnabled = UserDefaults.standard.bool(forKey: tianzEnabledKey)
 
-        // Load target days with default of 30 days
+        // Load legacy target days with default of 30 days
         let savedToeflTargetDays = UserDefaults.standard.integer(forKey: toeflTargetDaysKey)
         self.toeflTargetDays = savedToeflTargetDays > 0 ? savedToeflTargetDays : 30
         let savedIeltsTargetDays = UserDefaults.standard.integer(forKey: ieltsTargetDaysKey)
@@ -193,6 +278,20 @@ class UserManager: ObservableObject {
             components.hour = 9
             components.minute = 0
             self.reminderTime = Calendar.current.date(from: components) ?? Date()
+        }
+
+        // If no V3 settings but have legacy settings, migrate from legacy
+        if self.activeTestType == nil && (self.toeflEnabled || self.ieltsEnabled || self.tianzEnabled) {
+            if self.toeflEnabled {
+                self.activeTestType = .toeflAdvanced
+                self.targetDays = self.toeflTargetDays
+            } else if self.ieltsEnabled {
+                self.activeTestType = .ieltsAdvanced
+                self.targetDays = self.ieltsTargetDays
+            } else if self.tianzEnabled {
+                self.activeTestType = .tianz
+                self.targetDays = self.tianzTargetDays
+            }
         }
 
         logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage), Onboarding: \(self.hasCompletedOnboarding)")
@@ -241,16 +340,13 @@ class UserManager: ObservableObject {
     }
 
     private func syncTestSettingsToServer() {
-        logger.info("Syncing test settings to server - TOEFL: \(self.toeflEnabled) (\(self.toeflTargetDays) days), IELTS: \(self.ieltsEnabled) (\(self.ieltsTargetDays) days), TIANZ: \(self.tianzEnabled) (\(self.tianzTargetDays) days)")
+        logger.info("Syncing test settings to server - Test Type: \(self.activeTestType?.rawValue ?? "nil"), Target Days: \(self.targetDays)")
 
+        // Use V3 API format
         DictionaryService.shared.updateTestSettings(
             userID: self.userID,
-            toeflEnabled: self.toeflEnabled,
-            ieltsEnabled: self.ieltsEnabled,
-            tianzEnabled: self.tianzEnabled,
-            toeflTargetDays: self.toeflTargetDays,
-            ieltsTargetDays: self.ieltsTargetDays,
-            tianzTargetDays: self.tianzTargetDays
+            testType: self.activeTestType,
+            targetDays: self.targetDays
         ) { result in
             switch result {
             case .success(_):
@@ -272,27 +368,24 @@ class UserManager: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    self.logger.info("Successfully fetched test settings from server: toefl=\(response.settings.toefl_enabled), ielts=\(response.settings.ielts_enabled), tianz=\(response.settings.tianz_enabled)")
+                    let serverTestType = response.settings.activeTestType
+                    let serverTargetDays = response.settings.effectiveTargetDays
+
+                    self.logger.info("Successfully fetched test settings from server: testType=\(serverTestType?.rawValue ?? "nil"), targetDays=\(serverTargetDays)")
 
                     // Update local settings if they're different from server
-                    if self.toeflEnabled != response.settings.toefl_enabled ||
-                       self.ieltsEnabled != response.settings.ielts_enabled ||
-                       self.tianzEnabled != response.settings.tianz_enabled ||
-                       self.toeflTargetDays != response.settings.toefl_target_days ||
-                       self.ieltsTargetDays != response.settings.ielts_target_days ||
-                       self.tianzTargetDays != response.settings.tianz_target_days {
+                    if self.activeTestType != serverTestType || self.targetDays != serverTargetDays {
                         self.logger.info("Updating local test settings to match server")
 
                         // Set flag to prevent sync loop
                         self.isSyncingFromServer = true
 
-                        // Update published properties
-                        self.toeflEnabled = response.settings.toefl_enabled
-                        self.ieltsEnabled = response.settings.ielts_enabled
-                        self.tianzEnabled = response.settings.tianz_enabled
-                        self.toeflTargetDays = response.settings.toefl_target_days
-                        self.ieltsTargetDays = response.settings.ielts_target_days
-                        self.tianzTargetDays = response.settings.tianz_target_days
+                        // Update V3 properties
+                        self.activeTestType = serverTestType
+                        self.targetDays = serverTargetDays
+
+                        // Update legacy properties for backward compatibility
+                        self.updateLegacyPropertiesFromActive()
 
                         // Reset flag
                         self.isSyncingFromServer = false
