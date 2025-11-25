@@ -14,6 +14,9 @@ struct dogetionaryApp: App {
     @Environment(\.scenePhase) var scenePhase
 
     init() {
+        // Initialize debug configuration
+        DebugConfig.setupDefaults()
+
         // Set up notification center delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
 

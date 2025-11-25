@@ -12,7 +12,7 @@ from handlers.analytics import track_user_action, get_analytics_data
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
 from handlers.words import get_next_review_word_v2, get_saved_words, get_word_definition_v3, get_word_details, get_audio, get_illustration, generate_word_definition, get_all_words_for_language_pair
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
-from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count
+from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count, get_test_config
 from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words, refresh_schedule_handler, get_test_progress
 from handlers.enhanced_review import get_next_review_enhanced
 from handlers.review_batch import get_review_words_batch
@@ -83,6 +83,7 @@ v3_api.route('/api/test-prep/settings', methods=['PUT'])(update_test_settings)
 v3_api.route('/api/test-prep/settings', methods=['GET'])(get_test_settings)
 v3_api.route('/api/test-prep/add-words', methods=['POST'])(add_daily_test_words)
 v3_api.route('/api/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
+v3_api.route('/api/test-prep/config', methods=['GET'])(get_test_config)  # Language -> tests mapping
 v3_api.route('/api/test-prep/run-daily-job', methods=['POST'])(manual_daily_job)
 v3_api.route('/api/test-vocabulary-count', methods=['GET'])(get_test_vocabulary_count)  # New onboarding endpoint
 

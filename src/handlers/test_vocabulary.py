@@ -506,3 +506,71 @@ def manual_daily_job():
     except Exception as e:
         logger.error(f"Manual daily job failed: {e}")
         return jsonify({"error": "Failed to run daily job"}), 500
+
+
+def get_test_config():
+    """
+    Get test vocabulary configuration mapping languages to available tests.
+    Returns which tests are available for each learning language.
+
+    Response format:
+    {
+        "config": {
+            "en": {
+                "tests": [
+                    {"code": "TOEFL", "name": "TOEFL Preparation", "description": "Test of English as a Foreign Language"},
+                    {"code": "IELTS", "name": "IELTS Preparation", "description": "International English Language Testing System"},
+                    {"code": "TIANZ", "name": "Tianz Test", "description": "Testing vocabulary list (20 words)", "testing_only": true}
+                ]
+            },
+            "fr": {
+                "tests": []  # Future: French tests
+            },
+            "es": {
+                "tests": []  # Future: Spanish tests
+            }
+        }
+    }
+    """
+    try:
+        # Static configuration - in the future this could be database-driven
+        config = {
+            "en": {
+                "tests": [
+                    {
+                        "code": "TOEFL",
+                        "name": "TOEFL Preparation",
+                        "description": "Test of English as a Foreign Language",
+                        "testing_only": False
+                    },
+                    {
+                        "code": "IELTS",
+                        "name": "IELTS Preparation",
+                        "description": "International English Language Testing System",
+                        "testing_only": False
+                    },
+                    {
+                        "code": "TIANZ",
+                        "name": "Tianz Test",
+                        "description": "Testing vocabulary list (20 words)",
+                        "testing_only": True  # Only visible in developer mode
+                    }
+                ]
+            },
+            # Future language support
+            "fr": {"tests": []},
+            "es": {"tests": []},
+            "de": {"tests": []},
+            "it": {"tests": []},
+            "pt": {"tests": []},
+            "ja": {"tests": []},
+            "ko": {"tests": []},
+            "zh": {"tests": []}
+        }
+
+        logger.info("Test configuration fetched successfully")
+        return jsonify({"config": config}), 200
+
+    except Exception as e:
+        logger.error(f"Error getting test config: {e}")
+        return jsonify({"error": "Internal server error"}), 500

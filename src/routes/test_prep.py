@@ -13,6 +13,55 @@ test_prep_bp.route('/settings', methods=['GET'])(get_test_settings)
 test_prep_bp.route('/add-words', methods=['POST'])(add_daily_test_words)
 test_prep_bp.route('/stats', methods=['GET'])(get_test_vocabulary_stats)
 
+@test_prep_bp.route('/config', methods=['GET'])
+def get_test_config_endpoint():
+    """
+    Get test vocabulary configuration mapping languages to available tests.
+    Returns which tests are available for each learning language.
+    """
+    try:
+        # Static configuration - in the future this could be database-driven
+        config = {
+            "en": {
+                "tests": [
+                    {
+                        "code": "TOEFL",
+                        "name": "TOEFL Preparation",
+                        "description": "Test of English as a Foreign Language",
+                        "testing_only": False
+                    },
+                    {
+                        "code": "IELTS",
+                        "name": "IELTS Preparation",
+                        "description": "International English Language Testing System",
+                        "testing_only": False
+                    },
+                    {
+                        "code": "TIANZ",
+                        "name": "Tianz Test",
+                        "description": "Testing vocabulary list (20 words)",
+                        "testing_only": True  # Only visible in developer mode
+                    }
+                ]
+            },
+            # Future language support
+            "fr": {"tests": []},
+            "es": {"tests": []},
+            "de": {"tests": []},
+            "it": {"tests": []},
+            "pt": {"tests": []},
+            "ja": {"tests": []},
+            "ko": {"tests": []},
+            "zh": {"tests": []}
+        }
+
+        logging.info("Test configuration fetched successfully")
+        return jsonify({"config": config}), 200
+
+    except Exception as e:
+        logging.error(f"Error getting test config: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @test_prep_bp.route('/run-daily-job', methods=['POST'])
 def manual_daily_job():
     """Manual trigger for daily test vocabulary job"""

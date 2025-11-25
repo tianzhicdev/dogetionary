@@ -77,15 +77,15 @@ struct ContentView: View {
             _ = userManager.getUserID()
 
             // Check if onboarding needs to be shown
-            #if DEBUG
-            // In debug mode, always show onboarding
-            showOnboarding = true
-            #else
-            // In production, only show if not completed
-            if !userManager.hasCompletedOnboarding {
+            if DebugConfig.isDeveloperModeEnabled {
+                // In developer mode, always show onboarding
                 showOnboarding = true
+            } else {
+                // Otherwise, only show if not completed
+                if !userManager.hasCompletedOnboarding {
+                    showOnboarding = true
+                }
             }
-            #endif
 
             // Sync user preferences from server on app startup
             userManager.syncPreferencesFromServer()

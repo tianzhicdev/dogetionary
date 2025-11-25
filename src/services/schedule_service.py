@@ -593,15 +593,15 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
         # Get all test vocabulary words
         all_test_words = get_test_vocabulary_words(test_type)
 
-        # Get user's saved words, EXCLUDING only TEST words saved today
-        # Test words saved today will appear in "new_words" for today
-        # Non-test words saved today are included for practice scheduling
+        # Get ALL user's saved words for practice scheduling
+        # We don't exclude any words here - practice scheduling needs all saved words with their review history
+        # The exclusion of words saved/reviewed today happens in calc_schedule for new_words allocation
         # NOTE: This excludes words with is_known=TRUE
         saved_words_map = get_user_saved_words(
             user_id,
-            exclude_date=today,
+            exclude_date=None,  # Don't exclude anything for practice scheduling
             timezone=user_tz,
-            exclude_only_test_words=True,
+            exclude_only_test_words=False,  # Include all saved words
             test_type=test_type
         )
 
