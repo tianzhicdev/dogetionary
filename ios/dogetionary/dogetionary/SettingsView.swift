@@ -521,18 +521,77 @@ struct SettingsView: View {
     private var testPreparationSection: some View {
         Section(header: Text("Test Preparation")) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Enable daily vocabulary practice for standardized tests")
+                Text("Choose your test level for daily vocabulary practice")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                VStack(spacing: 12) {
-                    toeflTestSection
-                    Divider()
-                    ieltsTestSection
+                // Test type picker
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Test Level")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
 
-                    // Only show Tianz test in developer mode
-                    if DebugConfig.showTianzTest {
-                        tianzTestSection
+                    Picker("Test Level", selection: $userManager.activeTestType) {
+                        Text("None").tag(nil as TestType?)
+                        Divider()
+                        Text("TOEFL Beginner").tag(TestType.toeflBeginner as TestType?)
+                        Text("TOEFL Intermediate").tag(TestType.toeflIntermediate as TestType?)
+                        Text("TOEFL Advanced").tag(TestType.toeflAdvanced as TestType?)
+                        Divider()
+                        Text("IELTS Beginner").tag(TestType.ieltsBeginner as TestType?)
+                        Text("IELTS Intermediate").tag(TestType.ieltsIntermediate as TestType?)
+                        Text("IELTS Advanced").tag(TestType.ieltsAdvanced as TestType?)
+                        if DebugConfig.showTianzTest {
+                            Divider()
+                            Text("Tianz Test").tag(TestType.tianz as TestType?)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.blue)
+                    .onChange(of: userManager.activeTestType) { oldValue, newValue in
+                        AnalyticsManager.shared.track(action: .profileTestPrep, metadata: [
+                            "test_type": newValue?.rawValue ?? "none",
+                            "enabled": newValue != nil
+                        ])
+                    }
+
+                    if let testType = userManager.activeTestType {
+                        Text(testTypeDescription(testType))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Target days picker (only show if test selected)
+                if userManager.activeTestType != nil {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Complete in:")
+                                .font(.subheadline)
+                            Picker("", selection: $userManager.targetDays) {
+                                ForEach([30, 40, 50, 60, 70, 80, 90, 100], id: \.self) { days in
+                                    Text("\(days) days").tag(days)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(.blue)
+                        }
+                    }
+                }
+
+                // Progress (only show if test selected)
+                if let testType = userManager.activeTestType,
+                   let progress = testProgress?.progress(for: testType) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Progress:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
                     }
                 }
 
@@ -550,6 +609,25 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func testTypeDescription(_ testType: TestType) -> String {
+        switch testType {
+        case .toeflBeginner:
+            return "Foundation TOEFL vocabulary (~796 words)"
+        case .toeflIntermediate:
+            return "Intermediate TOEFL vocabulary (~1,995 words, includes beginner)"
+        case .toeflAdvanced:
+            return "Complete TOEFL vocabulary (~4,874 words, all levels)"
+        case .ieltsBeginner:
+            return "Foundation IELTS vocabulary (~800 words)"
+        case .ieltsIntermediate:
+            return "Intermediate IELTS vocabulary (~2,000 words, includes beginner)"
+        case .ieltsAdvanced:
+            return "Complete IELTS vocabulary (~4,323 words, all levels)"
+        case .tianz:
+            return "Specialized Tianz test vocabulary"
         }
     }
 
