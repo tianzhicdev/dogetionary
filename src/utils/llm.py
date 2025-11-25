@@ -7,8 +7,17 @@ Supports multiple providers: OpenAI (gpt-5-nano, gpt-4o-mini) and Groq (llama-4-
 
 import logging
 import os
+import time
 import openai
 from typing import Dict, List, Any, Optional
+from middleware.metrics import (
+    llm_calls_total,
+    llm_request_duration_seconds,
+    llm_tokens_total,
+    llm_cost_usd_total,
+    llm_errors_total,
+    estimate_cost
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +109,10 @@ def llm_completion(
         >>> print(response)
         '{"message": "Hello! How can I help you today?"}'
     """
+    # Start timing for metrics
+    start_time = time.time()
+    provider = None
+
     try:
         # Auto-detect provider based on model name
         provider = get_provider_for_model(model_name)
@@ -108,6 +121,9 @@ def llm_completion(
         if provider == "groq":
             if not GROQ_AVAILABLE:
                 logger.error("Groq SDK not available. Install with: pip install groq")
+                # Track error
+                llm_calls_total.labels(provider='groq', model=model_name, status='error').inc()
+                llm_errors_total.labels(provider='groq', model=model_name, error_type='sdk_unavailable').inc()
                 return None
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             logger.debug(f"Auto-detected Groq provider for model={model_name}")
@@ -136,18 +152,63 @@ def llm_completion(
         logger.debug(f"Making LLM completion call with provider={provider}, model={model_name}, response_format={response_format is not None}")
         response = client.chat.completions.create(**params)
 
+        # Calculate duration
+        duration = time.time() - start_time
+
         # Extract content
         content = response.choices[0].message.content
 
         if not content:
             logger.error(f"{provider.upper()} returned empty content. Model: {model_name}, Response: {response}")
+            # Track as error - empty response
+            llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
+            llm_errors_total.labels(provider=provider, model=model_name, error_type='empty_response').inc()
+            llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
             return None
+
+        # Track successful call metrics
+        llm_calls_total.labels(provider=provider, model=model_name, status='success').inc()
+        llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
+
+        # Track token usage if available
+        if hasattr(response, 'usage') and response.usage:
+            prompt_tokens = getattr(response.usage, 'prompt_tokens', 0)
+            completion_tokens = getattr(response.usage, 'completion_tokens', 0)
+
+            if prompt_tokens > 0:
+                llm_tokens_total.labels(provider=provider, model=model_name, type='prompt').inc(prompt_tokens)
+            if completion_tokens > 0:
+                llm_tokens_total.labels(provider=provider, model=model_name, type='completion').inc(completion_tokens)
+
+            # Estimate and track cost
+            cost = estimate_cost(provider, model_name, response.usage)
+            if cost > 0:
+                llm_cost_usd_total.labels(provider=provider, model=model_name).inc(cost)
+                logger.debug(f"LLM call cost: ${cost:.6f} (provider={provider}, model={model_name}, prompt={prompt_tokens}, completion={completion_tokens})")
 
         return content.strip()
 
     except openai.APIError as e:
+        duration = time.time() - start_time
+        error_type = type(e).__name__
         logger.error(f"OpenAI API error: {e}", exc_info=True)
+
+        # Track error metrics
+        if provider:
+            llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
+            llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
+            llm_errors_total.labels(provider=provider, model=model_name, error_type=error_type).inc()
+
         return None
     except Exception as e:
+        duration = time.time() - start_time
+        error_type = type(e).__name__
         logger.error(f"Unexpected error in llm_completion (provider={provider}): {e}", exc_info=True)
+
+        # Track error metrics
+        if provider:
+            llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
+            llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
+            llm_errors_total.labels(provider=provider, model=model_name, error_type=error_type).inc()
+
         return None
