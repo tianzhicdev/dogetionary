@@ -337,6 +337,9 @@ struct QuestionCardView: View {
 
     @State private var dragOffset: CGFloat = 0
     @State private var showSwipeHint = false
+    @State private var isExcluded = false
+    @State private var showToast = false
+    @State private var toastMessage = ""
 
     private let swipeThreshold: CGFloat = 100
 
@@ -402,6 +405,22 @@ struct QuestionCardView: View {
                                 .padding(.horizontal)
                         }
 
+                        // Exclude from practice button
+                        Button(action: toggleExclusion) {
+                            HStack {
+                                Image(systemName: isExcluded ? "checkmark.circle.fill" : "xmark.circle")
+                                    .font(.system(size: 16, weight: .medium))
+                                Text(isExcluded ? "Excluded from practice" : "Exclude this word from practice")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .foregroundColor(isExcluded ? .white : .red)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(isExcluded ? Color.gray : Color.red.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        .padding(.horizontal)
+
                         // Swipe hint
                         HStack {
                             Image(systemName: "arrow.left")
@@ -449,6 +468,62 @@ struct QuestionCardView: View {
                 // Show swipe hint immediately (no delay)
                 withAnimation(.easeIn) {
                     showSwipeHint = true
+                }
+            }
+        }
+        .overlay(
+            Group {
+                if showToast {
+                    VStack {
+                        Spacer()
+                        Text(toastMessage)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.black.opacity(0.8))
+                            .cornerRadius(8)
+                            .padding(.bottom, 50)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+        )
+    }
+
+    private func toggleExclusion() {
+        let newExcludedStatus = !isExcluded
+
+        DictionaryService.shared.toggleExcludeFromPractice(word: word, excluded: newExcludedStatus) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self.isExcluded = response.is_excluded
+                    self.toastMessage = response.message
+                    self.showToast = true
+
+                    // Hide toast after 2 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation {
+                            self.showToast = false
+                        }
+                    }
+
+                    // Track analytics
+                    AnalyticsManager.shared.track(
+                        action: response.is_excluded ? .savedMarkKnown : .savedMarkLearning,
+                        metadata: ["word": self.word, "source": "review"]
+                    )
+                case .failure(let error):
+                    self.toastMessage = "Failed to update: \(error.localizedDescription)"
+                    self.showToast = true
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation {
+                            self.showToast = false
+                        }
+                    }
                 }
             }
         }

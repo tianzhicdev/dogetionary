@@ -10,7 +10,7 @@ from handlers.admin import test_review_intervals, fix_next_review_dates, privacy
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
-from handlers.words import get_next_review_word_v2, get_saved_words, get_word_definition_v3, get_word_details, get_audio, get_illustration, generate_word_definition, get_all_words_for_language_pair
+from handlers.words import get_next_review_word_v2, get_saved_words, get_word_definition_v3, get_word_details, get_audio, get_illustration, generate_word_definition, get_all_words_for_language_pair, toggle_exclude_from_practice
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
 from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count, get_test_config
 from handlers.schedule import create_schedule, get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words, refresh_schedule_handler, get_test_progress
@@ -77,6 +77,7 @@ v3_api.route('/words/featured', methods=['GET'])(get_featured_words)
 
 # Bulk Operations (V3)
 v3_api.route('/api/words/generate', methods=['POST'])(generate_word_definition)
+v3_api.route('/words/toggle-exclude', methods=['POST'])(toggle_exclude_from_practice)
 
 # Test Vocabulary (V3)
 v3_api.route('/api/test-prep/settings', methods=['PUT'])(update_test_settings)

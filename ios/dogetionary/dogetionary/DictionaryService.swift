@@ -434,6 +434,73 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    /// Toggle whether a word is excluded from practice by word string
+    /// Excluded words will not appear in practice sessions
+    func toggleExcludeFromPractice(word: String, excluded: Bool, completion: @escaping (Result<ToggleExcludeResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/words/toggle-exclude") else {
+            logger.error("Invalid URL for toggle-exclude endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Toggling exclusion for word: '\(word)' to \(excluded) for user: \(userID)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "word": word,
+            "excluded": excluded
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            logger.error("Failed to encode toggle-exclude request: \(error.localizedDescription)")
+            completion(.failure(DictionaryError.decodingError(error)))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.logger.error("Network error toggling exclusion: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.logger.error("Invalid response type for toggle-exclude")
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            self.logger.info("Toggle-exclude response status code: \(httpResponse.statusCode)")
+
+            guard let data = data else {
+                self.logger.error("No data received for toggle-exclude")
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                do {
+                    let response = try JSONDecoder().decode(ToggleExcludeResponse.self, from: data)
+                    self.logger.info("Successfully toggled exclusion for word: '\(word)'")
+                    completion(.success(response))
+                } catch {
+                    self.logger.error("Failed to decode toggle-exclude response: \(error.localizedDescription)")
+                    completion(.failure(DictionaryError.decodingError(error)))
+                }
+            } else {
+                self.logger.error("Server error toggling exclusion: \(httpResponse.statusCode)")
+                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+            }
+        }.resume()
+    }
+
 
     // MARK: - Audio Methods
 

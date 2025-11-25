@@ -1372,3 +1372,72 @@ def get_all_words_for_language_pair(learning_lang, native_lang):
     except Exception as e:
         logger.error(f"Error getting all words for {learning_lang}->{native_lang}: {str(e)}")
         return jsonify({"error": f"Failed to get words: {str(e)}"}), 500
+
+def toggle_exclude_from_practice():
+    """
+    Toggle whether a word is excluded from practice.
+    POST /v3/words/toggle-exclude
+
+    Request JSON:
+    {
+        "user_id": "uuid",
+        "word": "string",
+        "excluded": true/false
+    }
+
+    Response:
+    {
+        "success": true,
+        "word_id": "uuid",
+        "word": "string",
+        "is_excluded": true/false,
+        "message": "Word excluded from practice"
+    }
+    """
+    try:
+        from services.user_service import toggle_word_exclusion
+
+        data = request.get_json()
+
+        # Validate required fields
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
+
+        user_id = data.get('user_id')
+        word = data.get('word')
+        excluded = data.get('excluded')
+
+        if not user_id or not word or excluded is None:
+            return jsonify({
+                "error": "Missing required fields",
+                "required": ["user_id", "word", "excluded"]
+            }), 400
+
+        # Validate UUID format
+        try:
+            import uuid
+            uuid.UUID(user_id)
+        except ValueError:
+            return jsonify({"error": "Invalid user_id format"}), 400
+
+        # Validate excluded is boolean
+        if not isinstance(excluded, bool):
+            return jsonify({"error": "excluded must be a boolean"}), 400
+
+        # Call service function
+        result = toggle_word_exclusion(user_id, word, excluded)
+
+        if not result.get('success'):
+            error_msg = result.get('message', 'Unknown error')
+            logger.warning(f"Failed to toggle exclusion for word='{word}', user_id={user_id}: {error_msg}")
+            return jsonify(result), 400
+
+        logger.info(f"Toggled exclusion for word='{word}', user_id={user_id}, excluded={excluded}")
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"Error in toggle_exclude_from_practice: {str(e)}", exc_info=True)
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500

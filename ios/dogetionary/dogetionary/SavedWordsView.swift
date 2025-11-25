@@ -834,9 +834,9 @@ struct SavedWordRow: View {
                             onToggleKnown()
                         } label: {
                             if savedWord.is_known {
-                                Label("Still Learning", systemImage: "book.fill")
+                                Label("Include in Practice", systemImage: "book.fill")
                             } else {
-                                Label("Already Learned", systemImage: "checkmark.circle.fill")
+                                Label("Exclude from Practice", systemImage: "xmark.circle.fill")
                             }
                         }
                     }
@@ -858,7 +858,7 @@ struct SavedWordRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(savedWord.is_known ? Color(red: 0.94, green: 0.99, blue: 0.94) : Color.white)
+        .background(savedWord.is_known ? Color(red: 1.0, green: 0.898, blue: 0.898) : Color.white)
         .cornerRadius(10)
         .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
     }
