@@ -326,6 +326,20 @@ struct NewBadge: Codable {
     let is_award: Bool
 }
 
+// Toggle exclude from practice response
+struct ToggleExcludeResponse: Codable {
+    let success: Bool
+    let word_id: String?
+    let word: String
+    let is_excluded: Bool
+    let previous_status: Bool
+    let message: String
+
+    private enum CodingKeys: String, CodingKey {
+        case success, word_id, word, is_excluded, previous_status, message
+    }
+}
+
 // Next Due Words Models
 struct NextDueWordsResponse: Codable {
     let user_id: String

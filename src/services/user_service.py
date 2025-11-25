@@ -103,4 +103,103 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
         # Note: app.logger reference will need to be handled
         print(f"Error getting user preferences: {str(e)}")
         return 'en', 'zh', 'LearningExplorer', 'Every word is a new adventure!'
-        
+
+def toggle_word_exclusion(user_id: str, word: str, excluded: bool) -> dict:
+    """
+    Toggle whether a word is excluded from practice (marks as known/unknown).
+    If word is not yet saved, it will be automatically saved first.
+
+    Args:
+        user_id: UUID of the user
+        word: The word to toggle
+        excluded: True to exclude from practice, False to include
+
+    Returns:
+        dict with success status, word info, and message
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if word exists in saved_words for this user
+        cur.execute("""
+            SELECT id, word, is_known
+            FROM saved_words
+            WHERE user_id = %s AND word = %s
+        """, (user_id, word.lower()))
+
+        result = cur.fetchone()
+
+        if not result:
+            # Word not saved yet - save it first, then mark as excluded
+            # Get user's language preferences
+            cur.execute("""
+                SELECT learning_language, native_language
+                FROM user_preferences
+                WHERE user_id = %s
+            """, (user_id,))
+
+            prefs = cur.fetchone()
+            if not prefs:
+                cur.close()
+                conn.close()
+                return {
+                    "success": False,
+                    "error": "User preferences not found",
+                    "message": "Unable to save word - user preferences not configured"
+                }
+
+            learning_language = prefs['learning_language']
+            native_language = prefs['native_language']
+
+            # Save the word
+            cur.execute("""
+                INSERT INTO saved_words
+                (user_id, word, learning_language, native_language, is_known)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+            """, (user_id, word.lower(), learning_language, native_language, excluded))
+
+            word_id = cur.fetchone()['id']
+            current_status = False  # Word was just created, so previous status is False
+
+            conn.commit()
+
+            message = "Word saved and excluded from practice" if excluded else "Word saved and included in practice"
+
+            print(f"Auto-saved word '{word}' for user {user_id} with is_known={excluded}")
+        else:
+            # Word exists - update the exclusion status
+            word_id = result['id']
+            current_status = result['is_known']
+
+            # Update the exclusion status
+            cur.execute("""
+                UPDATE saved_words
+                SET is_known = %s
+                WHERE id = %s
+            """, (excluded, word_id))
+
+            conn.commit()
+
+            message = "Word excluded from practice" if excluded else "Word included in practice"
+
+        cur.close()
+        conn.close()
+
+        return {
+            "success": True,
+            "word_id": str(word_id),
+            "word": word,
+            "is_excluded": excluded,
+            "previous_status": current_status,
+            "message": message
+        }
+
+    except Exception as e:
+        print(f"Error toggling word exclusion: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Failed to update word exclusion status"
+        }
