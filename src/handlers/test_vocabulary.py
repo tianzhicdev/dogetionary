@@ -84,22 +84,28 @@ def update_test_settings():
                 if test_type and test_type not in TEST_TYPE_MAPPING:
                     return jsonify({"error": f"Invalid test_type. Must be one of: {', '.join(TEST_TYPE_MAPPING.keys())}, or null"}), 400
 
-                # Build SQL to disable all tests
-                disable_all = ', '.join([f"{col} = FALSE" for col in ALL_TEST_ENABLE_COLUMNS])
-
                 if test_type:
-                    # Enable the selected test
+                    # Enable the selected test, disable all others
                     enabled_col, target_days_col, _ = TEST_TYPE_MAPPING[test_type]
+
+                    # Build SET clause: all columns FALSE except the selected one
+                    set_clauses = []
+                    for col in ALL_TEST_ENABLE_COLUMNS:
+                        if col == enabled_col:
+                            set_clauses.append(f"{col} = TRUE")
+                        else:
+                            set_clauses.append(f"{col} = FALSE")
+                    set_clauses.append(f"{target_days_col} = %s")
+
                     query = f"""
                         UPDATE user_preferences
-                        SET {disable_all},
-                            {enabled_col} = TRUE,
-                            {target_days_col} = %s
+                        SET {', '.join(set_clauses)}
                         WHERE user_id = %s
                     """
                     cur.execute(query, (target_days, user_id))
                 else:
                     # Disable all tests
+                    disable_all = ', '.join([f"{col} = FALSE" for col in ALL_TEST_ENABLE_COLUMNS])
                     query = f"""
                         UPDATE user_preferences
                         SET {disable_all},
