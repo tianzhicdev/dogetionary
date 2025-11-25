@@ -19,9 +19,45 @@ logger = logging.getLogger(__name__)
 # Configuration
 DAILY_TEST_WORDS = 10  # Number of words to add per day (compile-time configurable)
 
+# Test type mapping: test_type -> (enabled_column, target_days_column, vocab_column)
+TEST_TYPE_MAPPING = {
+    'TOEFL_BEGINNER': ('toefl_beginner_enabled', 'toefl_beginner_target_days', 'is_toefl_beginner'),
+    'TOEFL_INTERMEDIATE': ('toefl_intermediate_enabled', 'toefl_intermediate_target_days', 'is_toefl_intermediate'),
+    'TOEFL_ADVANCED': ('toefl_advanced_enabled', 'toefl_advanced_target_days', 'is_toefl_advanced'),
+    'IELTS_BEGINNER': ('ielts_beginner_enabled', 'ielts_beginner_target_days', 'is_ielts_beginner'),
+    'IELTS_INTERMEDIATE': ('ielts_intermediate_enabled', 'ielts_intermediate_target_days', 'is_ielts_intermediate'),
+    'IELTS_ADVANCED': ('ielts_advanced_enabled', 'ielts_advanced_target_days', 'is_ielts_advanced'),
+    'TIANZ': ('tianz_enabled', 'tianz_target_days', 'is_tianz'),
+    # Legacy mappings for backward compatibility
+    'TOEFL': ('toefl_advanced_enabled', 'toefl_advanced_target_days', 'is_toefl_advanced'),
+    'IELTS': ('ielts_advanced_enabled', 'ielts_advanced_target_days', 'is_ielts_advanced'),
+}
+
+# All test enable columns (for disabling all tests)
+ALL_TEST_ENABLE_COLUMNS = [
+    'toefl_beginner_enabled', 'toefl_intermediate_enabled', 'toefl_advanced_enabled',
+    'ielts_beginner_enabled', 'ielts_intermediate_enabled', 'ielts_advanced_enabled',
+    'tianz_enabled'
+]
+
 def update_test_settings():
     """
-    Update user's test preparation settings (enable/disable TOEFL/IELTS/TIANZ, target days)
+    Update user's test preparation settings using level-based test types.
+
+    New API format:
+    {
+        "user_id": "uuid",
+        "test_type": "TOEFL_INTERMEDIATE",  // One of the TEST_TYPE_MAPPING keys, or null to disable
+        "target_days": 45  // Optional, defaults to 30
+    }
+
+    Legacy format (still supported):
+    {
+        "user_id": "uuid",
+        "toefl_enabled": true,
+        "toefl_target_days": 45,
+        ...
+    }
     """
     try:
         data = request.get_json()
@@ -30,115 +66,59 @@ def update_test_settings():
         if not user_id:
             return jsonify({"error": "User ID is required"}), 400
 
-        # Get optional parameters
-        toefl_enabled = data.get('toefl_enabled')
-        ielts_enabled = data.get('ielts_enabled')
-        tianz_enabled = data.get('tianz_enabled')
-        toefl_target_days = data.get('toefl_target_days')
-        ielts_target_days = data.get('ielts_target_days')
-        tianz_target_days = data.get('tianz_target_days')
+        # Check for new API format (test_type parameter)
+        test_type = data.get('test_type')
+        target_days = data.get('target_days', 30)
 
-        if all(param is None for param in [toefl_enabled, ielts_enabled, tianz_enabled, toefl_target_days, ielts_target_days, tianz_target_days]):
-            return jsonify({"error": "At least one setting must be provided"}), 400
-
-        # Validate: Only one test can be enabled at a time
-        # First, get current settings to determine final state
         conn = get_db_connection()
         cur = conn.cursor()
 
         try:
-            cur.execute("""
-                SELECT toefl_enabled, ielts_enabled, tianz_enabled FROM user_preferences
-                WHERE user_id = %s
-            """, (user_id,))
-
-            current = cur.fetchone()
-            if not current:
+            # Verify user exists
+            cur.execute("SELECT user_id FROM user_preferences WHERE user_id = %s", (user_id,))
+            if not cur.fetchone():
                 return jsonify({"error": "User not found"}), 404
 
-            # Calculate final state
-            final_toefl = toefl_enabled if toefl_enabled is not None else current['toefl_enabled']
-            final_ielts = ielts_enabled if ielts_enabled is not None else current['ielts_enabled']
-            final_tianz = tianz_enabled if tianz_enabled is not None else current['tianz_enabled']
+            if test_type is not None:
+                # New API format: use test_type string
+                if test_type and test_type not in TEST_TYPE_MAPPING:
+                    return jsonify({"error": f"Invalid test_type. Must be one of: {', '.join(TEST_TYPE_MAPPING.keys())}, or null"}), 400
 
-            # Enforce mutual exclusivity - only one test can be active
-            enabled_count = sum([final_toefl, final_ielts, final_tianz])
-            if enabled_count > 1:
-                return jsonify({"error": "Only one test can be active at a time."}), 400
+                # Build SQL to disable all tests
+                disable_all = ', '.join([f"{col} = FALSE" for col in ALL_TEST_ENABLE_COLUMNS])
 
-            # If all are being disabled, we'll delete the schedule later
-            all_disabled = (not final_toefl) and (not final_ielts) and (not final_tianz)
+                if test_type:
+                    # Enable the selected test
+                    enabled_col, target_days_col, _ = TEST_TYPE_MAPPING[test_type]
+                    query = f"""
+                        UPDATE user_preferences
+                        SET {disable_all},
+                            {enabled_col} = TRUE,
+                            {target_days_col} = %s
+                        WHERE user_id = %s
+                    """
+                    cur.execute(query, (target_days, user_id))
+                else:
+                    # Disable all tests
+                    query = f"""
+                        UPDATE user_preferences
+                        SET {disable_all},
+                            last_test_words_added = NULL
+                        WHERE user_id = %s
+                    """
+                    cur.execute(query, (user_id,))
 
-            # Build dynamic update query
-            update_fields = []
-            params = []
+                    # Delete schedule if all tests disabled
+                    cur.execute("DELETE FROM study_schedules WHERE user_id = %s", (user_id,))
 
-            if toefl_enabled is not None:
-                update_fields.append("toefl_enabled = %s")
-                params.append(toefl_enabled)
+                conn.commit()
 
-            if ielts_enabled is not None:
-                update_fields.append("ielts_enabled = %s")
-                params.append(ielts_enabled)
+                # Return new format response
+                return get_test_settings_response(user_id, cur)
 
-            if tianz_enabled is not None:
-                update_fields.append("tianz_enabled = %s")
-                params.append(tianz_enabled)
-
-            if toefl_target_days is not None:
-                update_fields.append("toefl_target_days = %s")
-                params.append(toefl_target_days)
-
-            if ielts_target_days is not None:
-                update_fields.append("ielts_target_days = %s")
-                params.append(ielts_target_days)
-
-            if tianz_target_days is not None:
-                update_fields.append("tianz_target_days = %s")
-                params.append(tianz_target_days)
-
-            # If disabling all tests, clear the last_test_words_added date
-            if all_disabled:
-                update_fields.append("last_test_words_added = NULL")
-
-            params.append(user_id)
-
-            # Update user preferences
-            query = f"""
-                UPDATE user_preferences
-                SET {', '.join(update_fields)}
-                WHERE user_id = %s
-                RETURNING toefl_enabled, ielts_enabled, tianz_enabled, last_test_words_added, toefl_target_days, ielts_target_days, tianz_target_days
-            """
-            cur.execute(query, params)
-
-            result = cur.fetchone()
-
-            if not result:
-                return jsonify({"error": "User not found"}), 404
-
-            # If all tests are disabled, delete the schedule
-            if all_disabled:
-                logger.info(f"All tests disabled for user {user_id}, deleting schedule")
-                cur.execute("""
-                    DELETE FROM study_schedules WHERE user_id = %s
-                """, (user_id,))
-                logger.info(f"Deleted schedule for user {user_id}")
-
-            conn.commit()
-
-            return jsonify({
-                "success": True,
-                "settings": {
-                    "toefl_enabled": result['toefl_enabled'],
-                    "ielts_enabled": result['ielts_enabled'],
-                    "tianz_enabled": result['tianz_enabled'],
-                    "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
-                    "toefl_target_days": result['toefl_target_days'],
-                    "ielts_target_days": result['ielts_target_days'],
-                    "tianz_target_days": result['tianz_target_days']
-                }
-            }), 200
+            else:
+                # Legacy API format: handle old parameters
+                return handle_legacy_update(data, user_id, cur, conn)
 
         finally:
             cur.close()
@@ -147,6 +127,136 @@ def update_test_settings():
     except Exception as e:
         logger.error(f"Error updating test settings: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+
+def handle_legacy_update(data, user_id, cur, conn):
+    """Handle legacy update_test_settings API format"""
+    toefl_enabled = data.get('toefl_enabled')
+    ielts_enabled = data.get('ielts_enabled')
+    tianz_enabled = data.get('tianz_enabled')
+    toefl_target_days = data.get('toefl_target_days')
+    ielts_target_days = data.get('ielts_target_days')
+    tianz_target_days = data.get('tianz_target_days')
+
+    if all(param is None for param in [toefl_enabled, ielts_enabled, tianz_enabled,
+                                        toefl_target_days, ielts_target_days, tianz_target_days]):
+        return jsonify({"error": "At least one setting must be provided"}), 400
+
+    # Get current settings
+    cur.execute("""
+        SELECT toefl_enabled, ielts_enabled, tianz_enabled,
+               toefl_advanced_enabled, ielts_advanced_enabled
+        FROM user_preferences
+        WHERE user_id = %s
+    """, (user_id,))
+    current = cur.fetchone()
+    if not current:
+        return jsonify({"error": "User not found"}), 404
+
+    # Map old flags to new level flags (use advanced level)
+    if toefl_enabled is not None:
+        toefl_enabled_new = 'toefl_advanced_enabled'
+        toefl_target_col = 'toefl_advanced_target_days'
+    if ielts_enabled is not None:
+        ielts_enabled_new = 'ielts_advanced_enabled'
+        ielts_target_col = 'ielts_advanced_target_days'
+
+    # Build update
+    update_fields = []
+    params = []
+
+    if toefl_enabled is not None:
+        update_fields.append("toefl_advanced_enabled = %s")
+        params.append(toefl_enabled)
+    if ielts_enabled is not None:
+        update_fields.append("ielts_advanced_enabled = %s")
+        params.append(ielts_enabled)
+    if tianz_enabled is not None:
+        update_fields.append("tianz_enabled = %s")
+        params.append(tianz_enabled)
+    if toefl_target_days is not None:
+        update_fields.append("toefl_advanced_target_days = %s")
+        params.append(toefl_target_days)
+    if ielts_target_days is not None:
+        update_fields.append("ielts_advanced_target_days = %s")
+        params.append(ielts_target_days)
+    if tianz_target_days is not None:
+        update_fields.append("tianz_target_days = %s")
+        params.append(tianz_target_days)
+
+    params.append(user_id)
+
+    query = f"""
+        UPDATE user_preferences
+        SET {', '.join(update_fields)}
+        WHERE user_id = %s
+    """
+    cur.execute(query, params)
+    conn.commit()
+
+    # Return legacy format response
+    cur.execute("""
+        SELECT toefl_enabled, ielts_enabled, tianz_enabled,
+               last_test_words_added,
+               toefl_target_days, ielts_target_days, tianz_target_days,
+               toefl_advanced_enabled, ielts_advanced_enabled
+        FROM user_preferences
+        WHERE user_id = %s
+    """, (user_id,))
+    result = cur.fetchone()
+
+    return jsonify({
+        "success": True,
+        "settings": {
+            "toefl_enabled": result['toefl_advanced_enabled'],
+            "ielts_enabled": result['ielts_advanced_enabled'],
+            "tianz_enabled": result['tianz_enabled'],
+            "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
+            "toefl_target_days": result['toefl_target_days'],
+            "ielts_target_days": result['ielts_target_days'],
+            "tianz_target_days": result['tianz_target_days']
+        }
+    }), 200
+
+
+def get_test_settings_response(user_id, cur):
+    """Helper to build test settings response in new format"""
+    # Get all test settings
+    select_cols = ', '.join(ALL_TEST_ENABLE_COLUMNS)
+    target_cols = [TEST_TYPE_MAPPING[tt][1] for tt in ['TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED',
+                                                         'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED', 'TIANZ']]
+    select_target = ', '.join(target_cols)
+
+    cur.execute(f"""
+        SELECT {select_cols}, {select_target}, last_test_words_added
+        FROM user_preferences
+        WHERE user_id = %s
+    """, (user_id,))
+    result = cur.fetchone()
+
+    if not result:
+        return jsonify({"error": "User not found"}), 404
+
+    # Determine active test
+    active_test = None
+    target_days = 30
+
+    for test_type, (enabled_col, target_col, _) in TEST_TYPE_MAPPING.items():
+        if test_type in ['TOEFL', 'IELTS']:  # Skip legacy mappings
+            continue
+        if result[enabled_col]:
+            active_test = test_type
+            target_days = result[target_col]
+            break
+
+    return jsonify({
+        "success": True,
+        "settings": {
+            "active_test": active_test,
+            "target_days": target_days,
+            "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None
+        }
+    }), 200
 
 
 def get_test_settings():
@@ -441,8 +551,14 @@ def get_test_vocabulary_stats():
 
 def get_test_vocabulary_count():
     """
-    Get test vocabulary count and calculate study plans
-    V3 API endpoint for onboarding
+    Get test vocabulary count and calculate study plans.
+    V3 API endpoint for onboarding.
+
+    Supports level-based test types:
+    - TOEFL_BEGINNER, TOEFL_INTERMEDIATE, TOEFL_ADVANCED
+    - IELTS_BEGINNER, IELTS_INTERMEDIATE, IELTS_ADVANCED
+    - TIANZ
+    - Legacy: TOEFL, IELTS (mapped to ADVANCED)
     """
     try:
         test_type = request.args.get('test_type')
@@ -450,28 +566,19 @@ def get_test_vocabulary_count():
         if not test_type:
             return jsonify({"error": "test_type parameter is required"}), 400
 
-        if test_type not in ['TOEFL', 'IELTS', 'TIANZ']:
-            return jsonify({"error": "test_type must be 'TOEFL', 'IELTS', or 'TIANZ'"}), 400
+        if test_type not in TEST_TYPE_MAPPING:
+            valid_types = ', '.join(TEST_TYPE_MAPPING.keys())
+            return jsonify({"error": f"Invalid test_type. Must be one of: {valid_types}"}), 400
+
+        # Get vocab column for this test type
+        _, _, vocab_column = TEST_TYPE_MAPPING[test_type]
 
         # Get total count of words for the specified test
-        if test_type == 'TOEFL':
-            total_words = db_fetch_scalar("""
-                SELECT COUNT(DISTINCT word)
-                FROM test_vocabularies
-                WHERE language = 'en' AND is_toefl = TRUE
-            """) or 0
-        elif test_type == 'IELTS':
-            total_words = db_fetch_scalar("""
-                SELECT COUNT(DISTINCT word)
-                FROM test_vocabularies
-                WHERE language = 'en' AND is_ielts = TRUE
-            """) or 0
-        else:  # TIANZ
-            total_words = db_fetch_scalar("""
-                SELECT COUNT(DISTINCT word)
-                FROM test_vocabularies
-                WHERE language = 'en' AND is_tianz = TRUE
-            """) or 0
+        total_words = db_fetch_scalar(f"""
+            SELECT COUNT(DISTINCT word)
+            FROM test_vocabularies
+            WHERE language = 'en' AND {vocab_column} = TRUE
+        """) or 0
 
         # Calculate study plans for 5 durations
         study_plans = []
