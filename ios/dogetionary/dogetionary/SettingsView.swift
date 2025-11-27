@@ -38,12 +38,6 @@ struct SettingsView: View {
                 debugUserInfoSection
                 profileSection
                 languagePreferencesSection
-
-                // Only show test preparation for English learning language
-                if userManager.learningLanguage == "en" {
-                    testPreparationSection
-                }
-
                 notificationsSection
                 feedbackSection
                 debugAPIConfigSection

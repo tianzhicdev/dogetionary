@@ -11,50 +11,27 @@ struct SavedWordsView: View {
     @State private var savedWords: [SavedWord] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var hasSchedule = false
-    @State private var selectedView = 0  // 0 = Schedule, 1 = Words
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Segmented control for switching views (only show if user has schedule)
-                if hasSchedule {
-                    Picker("View", selection: $selectedView) {
-                        Text("Schedule").tag(0)
-                        Text("Words").tag(1)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(UIColor.systemBackground))
-                }
-
-                // Content based on selection
-                if selectedView == 0 && hasSchedule {
-                    ScheduleView()
-                } else {
-                    SavedWordsListView(
-                        savedWords: $savedWords,
-                        isLoading: isLoading,
-                        errorMessage: errorMessage,
-                        onRefresh: { await loadSavedWords() },
-                        onDelete: { word in await deleteSavedWord(word) },
-                        onToggleKnown: { word in await toggleKnownStatus(word) }
-                    )
-                }
-            }
+            SavedWordsListView(
+                savedWords: $savedWords,
+                isLoading: isLoading,
+                errorMessage: errorMessage,
+                onRefresh: { await loadSavedWords() },
+                onDelete: { word in await deleteSavedWord(word) },
+                onToggleKnown: { word in await toggleKnownStatus(word) }
+            )
             .navigationBarTitleDisplayMode(.large)
         }
         .onAppear {
             Task {
                 await loadSavedWords()
-                checkSchedule()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSavedWords)) { _ in
             Task {
                 await loadSavedWords()
-                checkSchedule()
             }
         }
     }
@@ -115,21 +92,6 @@ struct SavedWordsView: View {
                     ])
                 case .failure(let error):
                     self.errorMessage = "Failed to delete word: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-
-    private func checkSchedule() {
-        DictionaryService.shared.getTodaySchedule { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let entry):
-                    // Use user_has_schedule (whether user created any schedule)
-                    // NOT has_schedule (whether today has tasks)
-                    self.hasSchedule = entry.user_has_schedule ?? entry.has_schedule
-                case .failure:
-                    self.hasSchedule = false
                 }
             }
         }

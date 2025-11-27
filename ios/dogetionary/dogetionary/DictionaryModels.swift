@@ -765,6 +765,29 @@ struct TestSettingsUpdateRequest: Codable {
         self.ielts_target_days = ieltsTargetDays
         self.tianz_target_days = tianzTargetDays
     }
+
+    /// Custom encoding to ensure test_type field is always included (even when nil)
+    /// This is required for the backend to distinguish between V3 and legacy API formats
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(user_id, forKey: .user_id)
+
+        // V3 API fields - always encode test_type if it's not nil OR if target_days is set
+        // This ensures the backend recognizes it as V3 API format
+        if test_type != nil || target_days != nil {
+            try container.encode(test_type, forKey: .test_type)  // Explicitly encode nil as null
+            try container.encodeIfPresent(target_days, forKey: .target_days)
+        }
+
+        // Legacy API fields - only encode if they're not nil
+        try container.encodeIfPresent(toefl_enabled, forKey: .toefl_enabled)
+        try container.encodeIfPresent(ielts_enabled, forKey: .ielts_enabled)
+        try container.encodeIfPresent(tianz_enabled, forKey: .tianz_enabled)
+        try container.encodeIfPresent(toefl_target_days, forKey: .toefl_target_days)
+        try container.encodeIfPresent(ielts_target_days, forKey: .ielts_target_days)
+        try container.encodeIfPresent(tianz_target_days, forKey: .tianz_target_days)
+    }
 }
 
 struct TestSettingsUpdateResponse: Codable {

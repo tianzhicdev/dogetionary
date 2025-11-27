@@ -49,7 +49,7 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 // Progress indicator
                 HStack(spacing: 8) {
-                    ForEach(0..<totalPages) { index in
+                    ForEach(0..<totalPages, id: \.self) { index in
                         Capsule()
                             .fill(index <= displayPageIndex ? Color.blue : Color.gray.opacity(0.3))
                             .frame(height: 4)

@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.schedule_service import initiate_schedule, refresh_schedule, get_user_timezone, get_today_in_timezone, get_words_reviewed_on_date
 from utils.database import get_db_connection
 from handlers.admin import get_next_review_date_new
+from handlers.test_vocabulary import TEST_TYPE_MAPPING
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +94,10 @@ def create_schedule():
         if not all([user_id, test_type, target_end_date]):
             return jsonify({"error": "user_id, test_type, and target_end_date are required"}), 400
 
-        if test_type not in ['TOEFL', 'IELTS', 'TIANZ', 'BOTH']:
-            return jsonify({"error": "test_type must be 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'"}), 400
+        # Accept all test types from TEST_TYPE_MAPPING plus 'BOTH' for legacy support
+        valid_test_types = list(TEST_TYPE_MAPPING.keys()) + ['BOTH']
+        if test_type not in valid_test_types:
+            return jsonify({"error": f"Invalid test_type. Must be one of: {', '.join(valid_test_types)}"}), 400
 
         # Parse date
         try:
@@ -844,7 +847,7 @@ def refresh_schedule_handler():
         return jsonify({"error": "Failed to refresh schedule"}), 500
 
 
-def get_test_progress():
+def get_test_progress(): # chen vetted
     """
     GET /v3/schedule/test-progress?user_id=XXX
     Get user's test preparation progress.
@@ -868,9 +871,12 @@ def get_test_progress():
         cur = conn.cursor()
 
         try:
-            # Check if user has test prep enabled
+            # Check if user has test prep enabled (V3 format with 7 levels)
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled
+                SELECT
+                    toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
+                    ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
+                    tianz_enabled
                 FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
@@ -880,10 +886,43 @@ def get_test_progress():
             if not prefs:
                 return jsonify({"error": "User not found"}), 404
 
-            toefl_enabled = prefs['toefl_enabled']
-            ielts_enabled = prefs['ielts_enabled']
+            # Check which specific test level is enabled (should only be one)
+            # Determine the enabled level and its corresponding vocab column
+            enabled_level = None
+            vocab_column = None
+            test_type = None
 
-            if not toefl_enabled and not ielts_enabled:
+            if prefs['toefl_beginner_enabled']:
+                enabled_level = 'TOEFL_BEGINNER'
+                vocab_column = 'is_toefl_beginner'
+                test_type = 'TOEFL BEGINNER'
+            elif prefs['toefl_intermediate_enabled']:
+                enabled_level = 'TOEFL_INTERMEDIATE'
+                vocab_column = 'is_toefl_intermediate'
+                test_type = 'TOEFL INTERMEDIATE'
+            elif prefs['toefl_advanced_enabled']:
+                enabled_level = 'TOEFL_ADVANCED'
+                vocab_column = 'is_toefl_advanced'
+                test_type = 'TOEFL ADVANCED'
+            elif prefs['ielts_beginner_enabled']:
+                enabled_level = 'IELTS_BEGINNER'
+                vocab_column = 'is_ielts_beginner'
+                test_type = 'IELTS'
+            elif prefs['ielts_intermediate_enabled']:
+                enabled_level = 'IELTS_INTERMEDIATE'
+                vocab_column = 'is_ielts_intermediate'
+                test_type = 'IELTS INTERMEDIATE'
+            elif prefs['ielts_advanced_enabled']:
+                enabled_level = 'IELTS_ADVANCED'
+                vocab_column = 'is_ielts_advanced'
+                test_type = 'IELTS ADVANCED'
+            elif prefs['tianz_enabled']:
+                enabled_level = 'TIANZ'
+                vocab_column = 'is_tianz'
+                test_type = 'TIANZ'
+
+            # If no test level is enabled, return empty progress
+            if not enabled_level:
                 return jsonify({
                     "has_schedule": False,
                     "test_type": None,
@@ -893,65 +932,24 @@ def get_test_progress():
                     "streak_days": 0
                 }), 200
 
-            # Determine test type
-            if toefl_enabled and ielts_enabled:
-                test_type = "BOTH"
-            elif toefl_enabled:
-                test_type = "TOEFL"
-            else:
-                test_type = "IELTS"
-
-            # Get total words in enabled test(s)
-            if test_type == "BOTH":
-                cur.execute("""
-                    SELECT COUNT(DISTINCT word) as total
-                    FROM test_vocabularies
-                    WHERE language = 'en' AND (is_toefl = TRUE OR is_ielts = TRUE)
-                """)
-            elif test_type == "TOEFL":
-                cur.execute("""
-                    SELECT COUNT(DISTINCT word) as total
-                    FROM test_vocabularies
-                    WHERE language = 'en' AND is_toefl = TRUE
-                """)
-            else:  # IELTS
-                cur.execute("""
-                    SELECT COUNT(DISTINCT word) as total
-                    FROM test_vocabularies
-                    WHERE language = 'en' AND is_ielts = TRUE
-                """)
+            # Get total words in enabled test level using the specific vocab column
+            cur.execute(f"""
+                SELECT COUNT(DISTINCT word) as total
+                FROM test_vocabularies
+                WHERE {vocab_column} = TRUE
+            """)
 
             total_result = cur.fetchone()
             total_words = total_result['total'] if total_result else 0
 
-            # Get count of saved words that are in the enabled test(s)
-            if test_type == "BOTH":
-                cur.execute("""
-                    SELECT COUNT(DISTINCT sw.word) as saved
-                    FROM saved_words sw
-                    INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
-                    WHERE sw.user_id = %s
-                        AND sw.learning_language = 'en'
-                        AND (tv.is_toefl = TRUE OR tv.is_ielts = TRUE)
-                """, (user_id,))
-            elif test_type == "TOEFL":
-                cur.execute("""
-                    SELECT COUNT(DISTINCT sw.word) as saved
-                    FROM saved_words sw
-                    INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
-                    WHERE sw.user_id = %s
-                        AND sw.learning_language = 'en'
-                        AND tv.is_toefl = TRUE
-                """, (user_id,))
-            else:  # IELTS
-                cur.execute("""
-                    SELECT COUNT(DISTINCT sw.word) as saved
-                    FROM saved_words sw
-                    INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
-                    WHERE sw.user_id = %s
-                        AND sw.learning_language = 'en'
-                        AND tv.is_ielts = TRUE
-                """, (user_id,))
+            # Get count of saved words that are in the enabled test level
+            cur.execute(f"""
+                SELECT COUNT(DISTINCT sw.word) as saved
+                FROM saved_words sw
+                INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
+                WHERE sw.user_id = %s
+                    AND tv.{vocab_column} = TRUE
+            """, (user_id,))
 
             saved_result = cur.fetchone()
             saved_words = saved_result['saved'] if saved_result else 0

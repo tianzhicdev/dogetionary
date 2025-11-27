@@ -26,6 +26,7 @@ from static.privacy import PRIVACY_POLICY
 from static.support import SUPPORT_HTML
 from utils.database import validate_language, get_db_connection
 from services.user_service import generate_user_profile
+from handlers.test_vocabulary import TEST_TYPE_MAPPING, ALL_TEST_ENABLE_COLUMNS
 
 # Get logger
 import logging
@@ -107,8 +108,9 @@ def handle_user_preferences(user_id):
                 return jsonify({"error": "Learning language and native language cannot be the same"}), 400
 
             # Validate test prep values if provided
-            if test_prep and test_prep not in ['TOEFL', 'IELTS', 'TIANZ']:
-                return jsonify({"error": "test_prep must be 'TOEFL', 'IELTS', or 'TIANZ'"}), 400
+            valid_test_types = list(TEST_TYPE_MAPPING.keys())
+            if test_prep and test_prep not in valid_test_types:
+                return jsonify({"error": f"Invalid test_prep. Must be one of: {', '.join(valid_test_types)}, or null"}), 400
 
             # Validate study duration if provided (10-100 days)
             if study_duration_days and (study_duration_days < 10 or study_duration_days > 100):
@@ -117,37 +119,47 @@ def handle_user_preferences(user_id):
             conn = get_db_connection()
             cur = conn.cursor()
 
-            # Determine test settings based on test_prep selection
-            toefl_enabled = (test_prep == 'TOEFL')
-            ielts_enabled = (test_prep == 'IELTS')
-            tianz_enabled = (test_prep == 'TIANZ')
-            # Always preserve the study_duration_days if provided, even when test prep is disabled
-            # This ensures the "complete in" setting is always synced with what was selected in onboarding
-            toefl_target_days = study_duration_days if study_duration_days else 30
-            ielts_target_days = study_duration_days if study_duration_days else 30
-            tianz_target_days = study_duration_days if study_duration_days else 30
+            # Determine test settings based on test_prep selection using new level-based format
+            target_days = study_duration_days if study_duration_days else 30
 
-            cur.execute("""
-                INSERT INTO user_preferences (
-                    user_id, learning_language, native_language, user_name, user_motto,
-                    toefl_enabled, ielts_enabled, tianz_enabled, toefl_target_days, ielts_target_days, tianz_target_days
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            # Build the column values for all test enable columns
+            test_settings = {}
+            if test_prep:
+                enabled_col, target_days_col, _ = TEST_TYPE_MAPPING[test_prep]
+                # Enable only the selected test, disable all others
+                for col in ALL_TEST_ENABLE_COLUMNS:
+                    test_settings[col] = (col == enabled_col)
+                test_settings[target_days_col] = target_days
+            else:
+                # Disable all tests
+                for col in ALL_TEST_ENABLE_COLUMNS:
+                    test_settings[col] = False
+
+            # Build the INSERT statement with all test columns
+            insert_cols = ['user_id', 'learning_language', 'native_language', 'user_name', 'user_motto'] + list(test_settings.keys())
+            insert_values = [user_id, learning_lang, native_lang, user_name, user_motto] + list(test_settings.values())
+            placeholders = ', '.join(['%s'] * len(insert_values))
+
+            # Build the ON CONFLICT UPDATE clause
+            update_clauses = [
+                'learning_language = EXCLUDED.learning_language',
+                'native_language = EXCLUDED.native_language',
+                'user_name = EXCLUDED.user_name',
+                'user_motto = EXCLUDED.user_motto'
+            ]
+            # Add update clauses for all test settings columns
+            for col in test_settings.keys():
+                update_clauses.append(f'{col} = EXCLUDED.{col}')
+            update_clauses.append('updated_at = CURRENT_TIMESTAMP')
+
+            # Execute the query
+            query = f"""
+                INSERT INTO user_preferences ({', '.join(insert_cols)})
+                VALUES ({placeholders})
                 ON CONFLICT (user_id)
-                DO UPDATE SET
-                    learning_language = EXCLUDED.learning_language,
-                    native_language = EXCLUDED.native_language,
-                    user_name = EXCLUDED.user_name,
-                    user_motto = EXCLUDED.user_motto,
-                    toefl_enabled = EXCLUDED.toefl_enabled,
-                    ielts_enabled = EXCLUDED.ielts_enabled,
-                    tianz_enabled = EXCLUDED.tianz_enabled,
-                    toefl_target_days = EXCLUDED.toefl_target_days,
-                    ielts_target_days = EXCLUDED.ielts_target_days,
-                    tianz_target_days = EXCLUDED.tianz_target_days,
-                    updated_at = CURRENT_TIMESTAMP
-            """, (user_id, learning_lang, native_lang, user_name, user_motto,
-                  toefl_enabled, ielts_enabled, tianz_enabled, toefl_target_days, ielts_target_days, tianz_target_days))
+                DO UPDATE SET {', '.join(update_clauses)}
+            """
+            cur.execute(query, insert_values)
             conn.commit()
             conn.close()
 

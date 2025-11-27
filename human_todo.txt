@@ -158,11 +158,6 @@ let's discuss first: how do we ensure order and dedupe? (if we have 3 in the in 
 a. schedule should be made deterministically with deterministic order b.in practice mode, practicable words are basically words scheduled for today and words that are not due but not have been reviewed in the past 24h, we should call it "not-due-yet" words;
 b. to keep the logic simple, v3/next-review-words-batch should be today's words from schedule + "not-due-yet" words;
 
-
--- done --
-
-
-
 2. animation for badge
 
 in leaderboard mode, we should use score instead of practice count; let's create a new endpoint for this so older version of the app can still work;
@@ -171,20 +166,78 @@ in leaderboard mode, we should use score instead of practice count; let's create
 2.1 in the saved words list view, we should 1. make the list more compact, we should try to fix the word itself and the review counts on the same row, only overflow to the second row if the word is too long;
 2.the 7 blocks bar is kind ugly, can we user something better to indicate the progress?
 
+7. reminder time set
+we now always remind users at 11:59am;
+we should let user choose in the setting -- display the timezone but do not let users change it; timezone should be from the system reading;
+
+4. demo test
+we want to use 20 words or so and call it demo test for testing purposesl it should be the same as toefl or ielts but just called demo with 20 words, some of the them overlap with toefl or ielts;
+
+
+bugs:
+1.lsit view I/T icon;
 
 4. some questions pronunciations are erroneous, we need a reporting/fixing mechanism;
-
- 
 5. review word count should include new words.  
+
+5. slider for days selection
+
+2. force an upgrade;
+
+
+1. debug mode
+let's add a debug mode where uses can enable it; currently the debug mode is using '#if DEBUG' macro, we should change it to use this configurable value;
+4. settings only show tests that are avaialble for the learning lang;
+8. operation monitoring
+2. errors must be logged in a separate file and easily; this log must be easily visible - design a way to read the logs easily with current setup using docker 
+3. graph count and perf of every v3 call using promeseus; especially LLM calls -- how to setup promeseus and instrument the code easily?
+
+
+10. tooltip for known words
+dont practice this word in practice mode
+
+3. toefl ielts words
+we have 
+resources/ielts-4323-annotated.csv
+and 
+resources/toefl-4889-annotated.csv
+
+each word has a test and a level
+
+now we have all tests to be toefl and ielts 
+in the database we have is_toefl and is_ielts
+we should change it to 
+is_toefl_beginner
+is_toefl_intermidiate
+is_toefl (the same as is_toefl_advanced)
+same goes to ielts
+
+changes should be reflected in onboarding journey, scheduling and settings too;
+let's investigate what changes need to be made, including ios/backend and db
+
+scripts/import_test_vocabularies.py
+
+
+-- done --
+
+
+9. badge for finishing
+we need a badge/award for when users finish their test -- when all the words from the test vocab are saved words; 
+it should look and feel the same from the frontend perspective as other badges;
+write some review data so i can just practice a few words to see the award being acheived;
 
 
 6. changing schedule affect streak
-
-3. toefl ielts words
-
-7. reminder time set
+when user change the number of days for a test to change to another test, we should remind the user that if he change the test, he loses streaks
 
 
+producitonize:
+
+forced upgrade
+grafana -- finetune, perhaps expose to the internet
+1. run the fixer
+2. deploy with backward compatibility
+3. test a few days
 
 
 

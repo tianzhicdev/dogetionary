@@ -250,6 +250,17 @@ class UserManager: ObservableObject {
         self.userName = UserDefaults.standard.string(forKey: userNameKey) ?? ""
         self.userMotto = UserDefaults.standard.string(forKey: userMottoKey) ?? ""
 
+        // Load reminder time with default of 9:00 AM (must be initialized first)
+        if let savedReminderTime = UserDefaults.standard.object(forKey: reminderTimeKey) as? Date {
+            self.reminderTime = savedReminderTime
+        } else {
+            // Default to 9:00 AM today
+            var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+            components.hour = 9
+            components.minute = 0
+            self.reminderTime = Calendar.current.date(from: components) ?? Date()
+        }
+
         // Load V3 API test preparation settings
         if let savedTestType = UserDefaults.standard.string(forKey: testTypeKey) {
             self.activeTestType = TestType(rawValue: savedTestType)
@@ -271,17 +282,6 @@ class UserManager: ObservableObject {
         self.ieltsTargetDays = savedIeltsTargetDays > 0 ? savedIeltsTargetDays : 30
         let savedTianzTargetDays = UserDefaults.standard.integer(forKey: tianzTargetDaysKey)
         self.tianzTargetDays = savedTianzTargetDays > 0 ? savedTianzTargetDays : 30
-
-        // Load reminder time with default of 9:00 AM
-        if let savedReminderTime = UserDefaults.standard.object(forKey: reminderTimeKey) as? Date {
-            self.reminderTime = savedReminderTime
-        } else {
-            // Default to 9:00 AM today
-            var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-            components.hour = 9
-            components.minute = 0
-            self.reminderTime = Calendar.current.date(from: components) ?? Date()
-        }
 
         // If no V3 settings but have legacy settings, migrate from legacy
         if self.activeTestType == nil && (self.toeflEnabled || self.ieltsEnabled || self.tianzEnabled) {
