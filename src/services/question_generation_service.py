@@ -204,9 +204,13 @@ def shuffle_question_options(question_data: Dict) -> Dict:
     correct_id = question_data['correct_answer']
 
     # Check if options are dicts or strings
-    if not options or not isinstance(options[0], dict):
-        # Options are strings or empty - can't shuffle with ID tracking
-        logger.warning(f"Options are not dicts (type: {type(options[0]) if options else 'empty'}), skipping shuffle")
+    if not options:
+        logger.warning("Options list is empty, skipping shuffle")
+        return question_data
+
+    # Check if ALL options are dicts (not just the first one)
+    if not all(isinstance(opt, dict) for opt in options):
+        logger.warning(f"Not all options are dicts (types: {[type(opt).__name__ for opt in options]}), skipping shuffle")
         return question_data
 
     # Find the correct answer text

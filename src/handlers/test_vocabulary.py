@@ -67,6 +67,8 @@ def update_test_settings():
             return jsonify({"error": "User ID is required"}), 400
 
         # Check for new API format (test_type parameter)
+        # Note: test_type can be null/None to disable all tests
+        has_test_type_param = 'test_type' in data
         test_type = data.get('test_type')
         target_days = data.get('target_days', 30)
 
@@ -79,7 +81,7 @@ def update_test_settings():
             if not cur.fetchone():
                 return jsonify({"error": "User not found"}), 404
 
-            if test_type is not None:
+            if has_test_type_param:
                 # New API format: use test_type string
                 if test_type and test_type not in TEST_TYPE_MAPPING:
                     return jsonify({"error": f"Invalid test_type. Must be one of: {', '.join(TEST_TYPE_MAPPING.keys())}, or null"}), 400

@@ -210,4 +210,5 @@ extension Notification.Name {
     static let wordUnsaved = Notification.Name("wordUnsaved")
     static let refreshSavedWords = Notification.Name("refreshSavedWords")
     static let performSearchFromOnboarding = Notification.Name("performSearchFromOnboarding")
+    static let testSettingsChanged = Notification.Name("testSettingsChanged")
 }

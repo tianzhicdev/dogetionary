@@ -13,10 +13,13 @@ struct ReviewView: View {
     // Queue manager for instant question loading
     @StateObject private var queueManager = QuestionQueueManager.shared
 
-    // Current question from queue
-    @State private var currentQuestion: BatchReviewQuestion?
     @State private var errorMessage: String?
     @State private var reviewStartTime: Date?
+
+    // Current question is now computed directly from queue - no caching
+    private var currentQuestion: BatchReviewQuestion? {
+        return queueManager.currentQuestion()
+    }
 
     // Practice status
     @State private var practiceStatus: PracticeStatusResponse?
@@ -139,11 +142,9 @@ struct ReviewView: View {
         .refreshable {
             await refreshPracticeStatus()
         }
-        // Watch for queue updates when current question is nil
-        .onChange(of: queueManager.queueCount) { _, newCount in
-            if currentQuestion == nil && newCount > 0 {
-                loadNextQuestionFromQueue()
-            }
+        // Trigger queue refill when needed (UI updates automatically via computed property)
+        .onChange(of: queueManager.queueCount) { _, _ in
+            queueManager.refillIfNeeded()
         }
     }
 
@@ -189,17 +190,13 @@ struct ReviewView: View {
                     self.isLoadingStatus = false
 
                     // If there's practice available, ensure the queue is loading
-                    if status.has_practice {
+                    if status.has_practice || self.queueManager.hasQuestions {
                         // If queue is empty and not currently fetching, trigger a fetch
                         if !self.queueManager.hasQuestions && !self.queueManager.isFetching {
                             self.queueManager.forceRefresh()
                         }
-                        // Try to load from queue (might be populated already)
-                        self.loadNextQuestionFromQueue()
-                    } else if self.queueManager.hasQuestions {
-                        // No scheduled practice but queue has questions (e.g., extra practice)
-                        self.loadNextQuestionFromQueue()
                     }
+                    // currentQuestion now updates automatically via computed property
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     self.isLoadingStatus = false
@@ -226,29 +223,19 @@ struct ReviewView: View {
         }
     }
 
-    private func loadNextQuestionFromQueue() {
-        // Peek at the current question (don't remove until submitted)
-        if let nextQuestion = queueManager.currentQuestion() {
-            currentQuestion = nextQuestion
-            reviewStartTime = Date()
-        } else if queueManager.hasMore {
-            // Queue empty but more available - trigger fetch if not already fetching
-            currentQuestion = nil
-            if !queueManager.isFetching {
-                queueManager.refillIfNeeded()
-            }
-        } else {
-            // No more questions
-            currentQuestion = nil
-            refreshStatusAfterCompletion()
-        }
-    }
-
     private func advanceToNextQuestion() {
         // Remove the current question from queue (after submit)
         _ = queueManager.popQuestion()
-        // Load the next one
-        loadNextQuestionFromQueue()
+
+        // Reset review start time for next question
+        reviewStartTime = Date()
+
+        // Trigger refill if needed (currentQuestion updates automatically via computed property)
+        if !queueManager.hasQuestions && !queueManager.hasMore {
+            refreshStatusAfterCompletion()
+        } else {
+            queueManager.refillIfNeeded()
+        }
     }
 
     private func refreshStatusAfterCompletion() {

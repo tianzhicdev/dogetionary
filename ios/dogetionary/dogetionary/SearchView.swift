@@ -9,6 +9,10 @@ import SwiftUI
 import StoreKit
 
 struct SearchView: View {
+    var selectedTab: Binding<Int>?
+    var backgroundTaskManager: BackgroundTaskManager?
+    var showProgressBar: Bool = true  // Default to true for backward compatibility
+
     @State private var searchText = ""
     @State private var definitions: [Definition] = []
     @State private var isLoading = false
@@ -35,7 +39,26 @@ struct SearchView: View {
     }
 
     var body: some View {
-        ZStack {
+        VStack(spacing: 0) {
+            // Show progress bar at top if user has schedule (only if showProgressBar is true)
+            if showProgressBar, let progress = testProgress, progress.has_schedule {
+                TestProgressBar(
+                    progress: progress.progress,
+                    totalWords: progress.total_words,
+                    savedWords: progress.saved_words,
+                    testType: progress.test_type ?? "Test",
+                    streakDays: progress.streak_days,
+                    achievementProgress: achievementProgress,
+                    isExpanded: $isProgressBarExpanded
+                )
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+            }
+            Spacer()
+
+            // Main content
+            ZStack {
                 if isSearchActive {
                     // Active search layout - search bar at top
                     VStack(spacing: 20) {
@@ -70,37 +93,73 @@ struct SearchView: View {
                         Spacer()
                     }
                 } else {
-                    // Landing page layout - centered search bar
-                    ZStack {
-                        // Show progress bar at top if user has schedule
-                        if let progress = testProgress, progress.has_schedule {
-                            VStack {
-                                TestProgressBar(
-                                    progress: progress.progress,
-                                    totalWords: progress.total_words,
-                                    savedWords: progress.saved_words,
-                                    testType: progress.test_type ?? "Test",
-                                    streakDays: progress.streak_days,
-                                    achievementProgress: achievementProgress,
-                                    isExpanded: $isProgressBarExpanded
-                                )
-                                .padding(.horizontal)
-                                .padding(.top, 16)
+                    // Landing page layout - centered search bar (hidden when progress bar is expanded)
+                    if !isProgressBarExpanded {
+                        VStack(spacing: 16) {
+                            searchBarView()
 
-                                Spacer()
+                            // Practice button below search bar
+                            if let manager = backgroundTaskManager,
+                               let tabBinding = selectedTab,
+                               manager.practiceCount > 0,
+                               !isSearchActive {
+                                Button(action: {
+                                    tabBinding.wrappedValue = 2  // Navigate to Practice tab
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "brain.head.profile")
+                                            .font(.title2)
+                                            .foregroundStyle(
+                                                LinearGradient(
+                                                    colors: [.white, .white.opacity(0.9)],
+                                                    startPoint: .top,
+                                                    endPoint: .bottom
+                                                )
+                                            )
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Ready to Practice")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                            Text("\(manager.practiceCount) word\(manager.practiceCount == 1 ? "" : "s") waiting")
+                                                .font(.subheadline)
+                                                .opacity(0.9)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "arrow.right.circle.fill")
+                                            .font(.title2)
+                                            .foregroundStyle(.white.opacity(0.8))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [
+                                                Color(red: 0.3, green: 0.4, blue: 0.95),
+                                                Color(red: 0.6, green: 0.3, blue: 0.9)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .cornerRadius(16)
+                                    .shadow(color: Color.purple.opacity(0.3), radius: 12, x: 0, y: 6)
+                                }
+                                .transition(.scale.combined(with: .opacity))
                             }
                         }
-
-                        // Centered search bar (hidden when progress bar is expanded)
-                        if !isProgressBarExpanded {
-                            searchBarView()
-                                .padding(.horizontal, 24)
-                                .transition(.opacity)
-                        }
+                        .padding(.horizontal, 24)
+                        .transition(.opacity)
                     }
                 }
             }
-            .contentShape(Rectangle())
+            
+            Spacer()
+        }
+        .contentShape(Rectangle())
         .onTapGesture {
             // Dismiss keyboard when tapping outside text field
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -137,13 +196,24 @@ struct SearchView: View {
             }
         }
         .onAppear {
-            loadTestProgress()
-            loadAchievementProgress()
+            if showProgressBar {
+                loadTestProgress()
+                loadAchievementProgress()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { _ in
             // Refresh progress when a word is saved
-            loadTestProgress()
-            loadAchievementProgress()
+            if showProgressBar {
+                loadTestProgress()
+                loadAchievementProgress()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .testSettingsChanged)) { _ in
+            // Refresh progress when test settings change
+            if showProgressBar {
+                loadTestProgress()
+                loadAchievementProgress()
+            }
         }
     }
     
@@ -153,10 +223,11 @@ struct SearchView: View {
             HStack {
                 TextField("Enter a word", text: $searchText)
                     .font(.title2)
+                    .foregroundColor(.primary)
                     .onSubmit {
                         searchWord()
                     }
-                
+
                 if !searchText.isEmpty {
                     Button(action: {
                         searchText = ""
@@ -164,27 +235,69 @@ struct SearchView: View {
                         errorMessage = nil
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.purple.opacity(0.6))
                             .font(.title3)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-            .cornerRadius(8)
-            
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.96, blue: 1.0),
+                        Color(red: 0.98, green: 0.95, blue: 1.0)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.blue.opacity(0.3),
+                                Color.purple.opacity(0.3)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+            )
+            .shadow(color: Color.purple.opacity(0.1), radius: 8, x: 0, y: 4)
+
             Button(action: {
                 searchWord()
             }) {
                 Image(systemName: "magnifyingglass")
                     .font(.title2)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .white.opacity(0.9)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 50, height: 50)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.4, green: 0.5, blue: 1.0),
+                                Color(red: 0.6, green: 0.4, blue: 0.9)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .cornerRadius(12)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
             }
             .disabled(searchText.isEmpty || isLoading)
-            .buttonStyle(.borderedProminent)
-            .frame(height: 36) // Match text field height
         }
     }
     
