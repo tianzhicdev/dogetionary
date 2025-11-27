@@ -377,66 +377,9 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
-    /// Mark a word as known (or learning)
-    /// Known words are excluded from reviews and schedules
-    func markWordAsKnown(wordID: Int, isKnown: Bool, completion: @escaping (Result<Bool, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/words/\(wordID)/mark-known") else {
-            logger.error("Invalid URL for mark-known endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Marking word ID: \(wordID) as \(isKnown ? "known" : "learning") for user: \(userID)")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let requestBody: [String: Any] = [
-            "user_id": userID,
-            "is_known": isKnown
-        ]
-
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-        } catch {
-            logger.error("Failed to encode mark-known request: \(error.localizedDescription)")
-            completion(.failure(DictionaryError.decodingError(error)))
-            return
-        }
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Network error marking word as known: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for mark-known")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            self.logger.info("Mark-known response status code: \(httpResponse.statusCode)")
-
-            if httpResponse.statusCode == 200 {
-                self.logger.info("Successfully marked word ID: \(wordID) as \(isKnown ? "known" : "learning")")
-                completion(.success(true))
-            } else if httpResponse.statusCode == 404 {
-                self.logger.error("Word not found: \(wordID)")
-                completion(.failure(DictionaryError.notFound))
-            } else {
-                self.logger.error("Server error marking word as known: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-            }
-        }.resume()
-    }
-
     /// Toggle whether a word is excluded from practice by word string
     /// Excluded words will not appear in practice sessions
-    func toggleExcludeFromPractice(word: String, excluded: Bool, completion: @escaping (Result<ToggleExcludeResponse, Error>) -> Void) {
+    func toggleExcludeFromPractice(word: String, excluded: Bool, learningLanguage: String? = nil, nativeLanguage: String? = nil, completion: @escaping (Result<ToggleExcludeResponse, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()
         guard let url = URL(string: "\(baseURL)/v3/words/toggle-exclude") else {
             logger.error("Invalid URL for toggle-exclude endpoint")
@@ -450,11 +393,19 @@ class DictionaryService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let requestBody: [String: Any] = [
+        var requestBody: [String: Any] = [
             "user_id": userID,
             "word": word,
             "excluded": excluded
         ]
+
+        // Include language parameters if provided
+        if let learningLang = learningLanguage {
+            requestBody["learning_language"] = learningLang
+        }
+        if let nativeLang = nativeLanguage {
+            requestBody["native_language"] = nativeLang
+        }
 
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
@@ -566,58 +517,6 @@ class DictionaryService: ObservableObject {
     
     func getDueWords(completion: @escaping (Result<[SavedWord], Error>) -> Void) {
         getSavedWords(dueOnly: true, completion: completion)
-    }
-    
-    func getNextDueWords(limit: Int = 10, completion: @escaping (Result<[SavedWord], Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/saved_words/next_due?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)&limit=\(limit)") else {
-            logger.error("Invalid URL for next due words endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("Fetching next due words for user: \(userID), limit: \(limit)")
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Network error fetching next due words: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for next due words")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            self.logger.info("Next due words response status code: \(httpResponse.statusCode)")
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error fetching next due words: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                self.logger.error("No data received for next due words")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let nextDueWordsResponse = try JSONDecoder().decode(NextDueWordsResponse.self, from: data)
-                self.logger.info("Successfully fetched \(nextDueWordsResponse.saved_words.count) next due words")
-                completion(.success(nextDueWordsResponse.saved_words))
-            } catch {
-                self.logger.error("Failed to decode next due words response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
     }
     
     /// Submit a review using composite key (word + learning_language + native_language)
@@ -798,7 +697,7 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
+    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, timezone: String? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
         guard let encodedUserID = userID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let url = URL(string: "\(baseURL)/v3/users/\(encodedUserID)/preferences") else {
             logger.error("Invalid URL for user preferences POST endpoint")
@@ -822,7 +721,11 @@ class DictionaryService: ObservableObject {
         if let studyDurationDays = studyDurationDays {
             requestBody["study_duration_days"] = studyDurationDays
         }
-        
+
+        if let timezone = timezone {
+            requestBody["timezone"] = timezone
+        }
+
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             logger.error("Failed to serialize user preferences request")
             completion(.failure(DictionaryError.invalidURL))
@@ -874,251 +777,6 @@ class DictionaryService: ObservableObject {
     }
 
     /// Sync device timezone to backend
-    func syncTimezone(completion: ((Result<Void, Error>) -> Void)? = nil) {
-        let userID = UserManager.shared.getUserID()
-        let timezone = TimeZone.current.identifier
-
-        guard let url = URL(string: "\(baseURL)/v3/user/timezone") else {
-            logger.error("Invalid URL for timezone sync endpoint")
-            completion?(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Syncing timezone for user: \(userID), timezone: \(timezone)")
-
-        let requestBody: [String: Any] = [
-            "user_id": userID,
-            "timezone": timezone
-        ]
-
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
-            logger.error("Failed to serialize timezone request")
-            completion?(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = jsonData
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Network error syncing timezone: \(error.localizedDescription)")
-                completion?(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for timezone sync")
-                completion?(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            if httpResponse.statusCode == 200 {
-                self.logger.info("Successfully synced timezone: \(timezone)")
-                completion?(.success(()))
-            } else {
-                self.logger.error("Server error syncing timezone: \(httpResponse.statusCode)")
-                completion?(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-            }
-        }.resume()
-    }
-
-    func getNextReviewWord(completion: @escaping (Result<[ReviewWord], Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/review_next?user_id=\(userID)") else {
-            logger.error("Invalid URL for next review word endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Fetching next review word for user: \(userID)")
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            // Log request details
-            self.logger.info("REQUEST: GET \(url.absoluteString)")
-
-            if let error = error {
-                self.logger.error("Network error getting next review word: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type getting next review word")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            // Log response status and headers
-            self.logger.info("RESPONSE STATUS: \(httpResponse.statusCode)")
-            self.logger.info("RESPONSE HEADERS: \(httpResponse.allHeaderFields)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("HTTP error getting next review word: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received getting next review word")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            // Log raw response data for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                self.logger.info("RAW RESPONSE: \(responseString)")
-            } else {
-                self.logger.error("Could not convert response data to string")
-            }
-
-            do {
-                let response = try JSONDecoder().decode(ReviewWordsResponse.self, from: data)
-                self.logger.info("Successfully decoded next review word response - count: \(response.count), words: \(response.saved_words.count)")
-
-                completion(.success(response.saved_words))
-            } catch {
-                self.logger.error("Failed to decode next review word response: \(error.localizedDescription)")
-                if let decodingError = error as? DecodingError {
-                    self.logger.error("Detailed decoding error: \(decodingError)")
-                }
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
-    /// Get next review word with scheduled new words integration
-    /// This endpoint prioritizes scheduled new words from today's study schedule
-    /// Returns the full response including new_words_remaining_today count
-    func getNextReviewWordWithScheduledNewWords(completion: @escaping (Result<ReviewWordsResponse, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/next-review-word-with-scheduled-new-words?user_id=\(userID)") else {
-            logger.error("Invalid URL for next review word with scheduled new words endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Fetching next review word with scheduled new words for user: \(userID)")
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            // Log request details
-            self.logger.info("REQUEST: GET \(url.absoluteString)")
-
-            if let error = error {
-                self.logger.error("Network error getting next review word: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type getting next review word")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            // Log response status and headers
-            self.logger.info("RESPONSE STATUS: \(httpResponse.statusCode)")
-            self.logger.info("RESPONSE HEADERS: \(httpResponse.allHeaderFields)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("HTTP error getting next review word: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received getting next review word")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            // Log raw response data for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                self.logger.info("RAW RESPONSE: \(responseString)")
-            } else {
-                self.logger.error("Could not convert response data to string")
-            }
-
-            do {
-                let response = try JSONDecoder().decode(ReviewWordsResponse.self, from: data)
-                self.logger.info("Successfully decoded next review word response - count: \(response.count), words: \(response.saved_words.count), new words remaining: \(response.new_words_remaining_today ?? 0)")
-
-                completion(.success(response))
-            } catch {
-                self.logger.error("Failed to decode next review word response: \(error.localizedDescription)")
-                if let decodingError = error as? DecodingError {
-                    self.logger.error("Detailed decoding error: \(decodingError)")
-                }
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
-    /// Get next review word with enhanced question types (multiple choice, fill-in-blank, etc.)
-    /// This endpoint provides diverse question types for more engaging review experience
-    func getNextReviewWordEnhanced(completion: @escaping (Result<EnhancedReviewResponse, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/review_next_enhanced?user_id=\(userID)") else {
-            logger.error("Invalid URL for enhanced review endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Fetching enhanced review word for user: \(userID)")
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            self.logger.info("REQUEST: GET \(url.absoluteString)")
-
-            if let error = error {
-                self.logger.error("Network error getting enhanced review: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type getting enhanced review")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            self.logger.info("RESPONSE STATUS: \(httpResponse.statusCode)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("HTTP error getting enhanced review: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received getting enhanced review")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            if let responseString = String(data: data, encoding: .utf8) {
-                self.logger.info("RAW RESPONSE: \(responseString)")
-            }
-
-            do {
-                let reviewResponse = try JSONDecoder().decode(EnhancedReviewResponse.self, from: data)
-                if let questionType = reviewResponse.question?.question_type {
-                    self.logger.info("Successfully decoded enhanced review response - question type: \(questionType)")
-                } else {
-                    self.logger.info("Successfully decoded enhanced review response - no words available")
-                }
-                completion(.success(reviewResponse))
-            } catch {
-                self.logger.error("Failed to decode enhanced review response: \(error.localizedDescription)")
-                if let decodingError = error as? DecodingError {
-                    self.logger.error("Detailed decoding error: \(decodingError)")
-                }
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
     /// Fetch batch of review questions for performance optimization
     /// - Parameters:
     ///   - count: Number of questions to fetch
@@ -1226,191 +884,6 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
     
-    func getReviewStatistics(completion: @escaping (Result<ReviewStatsData, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-
-        guard let url = URL(string: "\(baseURL)/v3/review_statistics?user_id=\(userID)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("🔍 Fetching review statistics for user \(userID)")
-        
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                self.logger.error("❌ Review statistics request failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("❌ Review statistics request failed with status: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let stats = try JSONDecoder().decode(ReviewStatsData.self, from: data)
-                self.logger.info("✅ Successfully fetched review statistics")
-                completion(.success(stats))
-            } catch {
-                self.logger.error("Failed to decode review statistics: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-    
-    func getWeeklyReviewCounts(completion: @escaping (Result<[DailyReviewCount], Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-
-        guard let url = URL(string: "\(baseURL)/v3/weekly_review_counts?user_id=\(userID)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("🔍 Fetching weekly review counts for user \(userID)")
-        
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                self.logger.error("❌ Weekly review counts request failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("❌ Weekly review counts request failed with status: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let response = try JSONDecoder().decode(WeeklyReviewResponse.self, from: data)
-                self.logger.info("✅ Successfully fetched weekly review counts")
-                completion(.success(response.daily_counts))
-            } catch {
-                self.logger.error("Failed to decode weekly review counts: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
-    func getProgressFunnelData(completion: @escaping (Result<ProgressFunnelData, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/progress_funnel?user_id=\(userID)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("🔍 Fetching progress funnel data for user \(userID)")
-        
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                self.logger.error("❌ Progress funnel request failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("❌ Progress funnel request failed with status: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let progressData = try JSONDecoder().decode(ProgressFunnelData.self, from: data)
-                self.logger.info("✅ Successfully fetched progress funnel data")
-                completion(.success(progressData))
-            } catch {
-                self.logger.error("Failed to decode progress funnel response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-    
-    func getReviewActivity(from startDate: Date, to endDate: Date, completion: @escaping (Result<[String], Error>) -> Void) {
-        let formatter = ISO8601DateFormatter()
-        let startDateString = formatter.string(from: startDate)
-        let endDateString = formatter.string(from: endDate)
-        let userID = UserManager.shared.getUserID()
-        
-        guard let url = URL(string: "\(baseURL)/v3/review_activity?user_id=\(userID)&start_date=\(startDateString)&end_date=\(endDateString)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-        
-        logger.info("🔍 Fetching review activity from \(startDateString) to \(endDateString) for user \(userID)")
-        
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                self.logger.error("❌ Review activity request failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("❌ Review activity request failed with status: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-            
-            do {
-                let reviewActivityResponse = try JSONDecoder().decode(ReviewActivityResponse.self, from: data)
-                self.logger.info("✅ Successfully fetched \(reviewActivityResponse.review_dates.count) review dates")
-                completion(.success(reviewActivityResponse.review_dates))
-            } catch {
-                self.logger.error("Failed to decode review activity response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
     
     func getLeaderboard(completion: @escaping (Result<[LeaderboardEntry], Error>) -> Void) {
         // Use score-based endpoint which ranks by score instead of review count
@@ -1727,75 +1200,10 @@ class DictionaryService: ObservableObject {
 
     // MARK: - Test Preparation Methods
 
-    func getTestSettings(userID: String, completion: @escaping (Result<TestSettingsResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings?user_id=\(userID)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        performNetworkRequest(url: url, responseType: TestSettingsResponse.self, completion: completion)
-    }
-
     /// Update test settings using V3 API format with test_type
     @available(*, deprecated, message: "Use updateUserPreferences instead - this endpoint will be removed")
-    func updateTestSettings(userID: String, testType: TestType?, targetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        let requestBody = TestSettingsUpdateRequest(userID: userID, testType: testType, targetDays: targetDays)
-
-        guard let body = try? JSONEncoder().encode(requestBody) else {
-            logger.error("Failed to encode test settings update request")
-            completion(.failure(DictionaryError.decodingError(NSError(domain: "EncodingError", code: 0))))
-            return
-        }
-
-        logger.info("Updating test settings - testType: \(testType?.rawValue ?? "nil"), targetDays: \(targetDays ?? 0)")
-
-        performNetworkRequest(
-            url: url,
-            method: "PUT",
-            body: body,
-            responseType: TestSettingsUpdateResponse.self,
-            completion: completion
-        )
-    }
-
     /// Legacy method: Update test settings using old API format (for backward compatibility)
     @available(*, deprecated, message: "Use updateTestSettings(userID:testType:targetDays:completion:) instead")
-    func updateTestSettingsLegacy(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, tianzEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, tianzTargetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        let requestBody = TestSettingsUpdateRequest(
-            userID: userID,
-            toeflEnabled: toeflEnabled,
-            ieltsEnabled: ieltsEnabled,
-            tianzEnabled: tianzEnabled,
-            toeflTargetDays: toeflTargetDays,
-            ieltsTargetDays: ieltsTargetDays,
-            tianzTargetDays: tianzTargetDays
-        )
-
-        guard let body = try? JSONEncoder().encode(requestBody) else {
-            logger.error("Failed to encode test settings update request")
-            completion(.failure(DictionaryError.decodingError(NSError(domain: "EncodingError", code: 0))))
-            return
-        }
-
-        performNetworkRequest(
-            url: url,
-            method: "PUT",
-            body: body,
-            responseType: TestSettingsUpdateResponse.self,
-            completion: completion
-        )
-    }
-
     func getTestVocabularyStats(language: String = "en", completion: @escaping (Result<TestVocabularyStatsResponse, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/v3/api/test-prep/stats?language=\(language)") else {
             completion(.failure(DictionaryError.invalidURL))
@@ -1925,146 +1333,6 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
-    func reviewNewWord(word: String, response: Bool, completion: @escaping (Result<ReviewNewWordResponse, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        let learningLang = UserManager.shared.learningLanguage
-        let nativeLang = UserManager.shared.nativeLanguage
-
-        guard let url = URL(string: "\(baseURL)/v3/review_new_word") else {
-            logger.error("Invalid URL for review new word endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Reviewing new word: \(word), response: \(response)")
-
-        let requestBody: [String: Any] = [
-            "user_id": userID,
-            "word": word,
-            "response": response,
-            "learning_language": learningLang,
-            "native_language": nativeLang
-        ]
-
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
-            logger.error("Failed to encode review new word request")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = jsonData
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                self.logger.error("Network error reviewing new word: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for review new word")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            self.logger.info("Review new word response status: \(httpResponse.statusCode)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error reviewing new word: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received for review new word")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            do {
-                let reviewResponse = try JSONDecoder().decode(ReviewNewWordResponse.self, from: data)
-                self.logger.info("Successfully reviewed new word: \(word)")
-                completion(.success(reviewResponse))
-            } catch {
-                self.logger.error("Failed to decode review new word response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
-    func updateTimezone(timezone: String, completion: @escaping (Result<UpdateTimezoneResponse, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/user/timezone") else {
-            logger.error("Invalid URL for update timezone endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Updating timezone to: \(timezone)")
-
-        let requestBody: [String: Any] = [
-            "user_id": userID,
-            "timezone": timezone
-        ]
-
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
-            logger.error("Failed to encode update timezone request")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = jsonData
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                self.logger.error("Network error updating timezone: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for update timezone")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            self.logger.info("Update timezone response status: \(httpResponse.statusCode)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error updating timezone: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received for update timezone")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            do {
-                let timezoneResponse = try JSONDecoder().decode(UpdateTimezoneResponse.self, from: data)
-                self.logger.info("Successfully updated timezone to: \(timezoneResponse.timezone)")
-                completion(.success(timezoneResponse))
-            } catch {
-                self.logger.error("Failed to decode update timezone response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
     // MARK: - Test Progress
 
     func getTestProgress(completion: @escaping (Result<TestProgressResponse, Error>) -> Void) {
@@ -2147,10 +1415,6 @@ struct ReviewActivityResponse: Codable {
     let review_dates: [String]
     let start_date: String
     let end_date: String
-}
-
-struct WeeklyReviewResponse: Codable {
-    let daily_counts: [DailyReviewCount]
 }
 
 enum DictionaryError: LocalizedError {

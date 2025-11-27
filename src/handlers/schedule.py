@@ -579,6 +579,9 @@ def get_schedule_range():
 
 def update_timezone():
     """
+    DEPRECATED: Use POST /v3/users/{user_id}/preferences with timezone parameter instead.
+    This endpoint will be removed in a future version.
+
     PUT /v3/user/timezone
     Update user's timezone setting.
 

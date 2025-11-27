@@ -309,6 +309,9 @@ class UserManager: ObservableObject {
         // Use targetDays as the source
         let studyDurationDays: Int? = self.targetDays > 0 ? self.targetDays : nil
 
+        // Auto-include device timezone
+        let timezone = TimeZone.current.identifier
+
         DictionaryService.shared.updateUserPreferences(
             userID: self.userID,
             learningLanguage: self.learningLanguage,
@@ -320,7 +323,7 @@ class UserManager: ObservableObject {
         ) { result in
             switch result {
             case .success(_):
-                self.logger.info("Successfully synced preferences to server - Test: \(testPrep ?? "none"), Days: \(studyDurationDays ?? 0)")
+                self.logger.info("Successfully synced preferences to server - Test: \(testPrep ?? "none"), Days: \(studyDurationDays ?? 0), Timezone: \(timezone)")
             case .failure(let error):
                 self.logger.error("Failed to sync preferences to server: \(error.localizedDescription)")
             }
@@ -342,12 +345,13 @@ class UserManager: ObservableObject {
     func syncTestSettingsFromServer() {
         logger.info("Syncing test settings from server for user: \(self.userID)")
 
-        DictionaryService.shared.getTestSettings(userID: self.userID) { result in
+        DictionaryService.shared.getUserPreferences(userID: self.userID) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let response):
-                    let serverTestType = response.settings.activeTestType
-                    let serverTargetDays = response.settings.effectiveTargetDays
+                case .success(let preferences):
+                    // Convert test_prep string to TestType
+                    let serverTestType: TestType? = preferences.test_prep.flatMap { TestType(rawValue: $0) }
+                    let serverTargetDays = preferences.study_duration_days ?? 30
 
                     self.logger.info("Successfully fetched test settings from server: testType=\(serverTestType?.rawValue ?? "nil"), targetDays=\(serverTargetDays)")
 

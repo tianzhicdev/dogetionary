@@ -439,10 +439,12 @@ struct UserPreferences: Codable {
     let native_language: String
     let user_name: String?
     let user_motto: String?
+    let test_prep: String?
+    let study_duration_days: Int?
     let updated: Bool?
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, learning_language, native_language, user_name, user_motto, updated
+        case user_id, learning_language, native_language, user_name, user_motto, test_prep, study_duration_days, updated
     }
 }
 
@@ -929,16 +931,6 @@ struct ReviewNewWordResponse: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case success, word_id, next_review_date
-    }
-}
-
-/// Response when updating timezone
-struct UpdateTimezoneResponse: Codable {
-    let success: Bool
-    let timezone: String
-
-    private enum CodingKeys: String, CodingKey {
-        case success, timezone
     }
 }
 
