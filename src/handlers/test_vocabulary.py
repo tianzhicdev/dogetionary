@@ -40,8 +40,30 @@ ALL_TEST_ENABLE_COLUMNS = [
     'tianz_enabled'
 ]
 
+
+def get_active_test_type(prefs: dict) -> str:
+    """
+    Determine the active test type from user preferences.
+
+    Args:
+        prefs: Dictionary of user preferences (from database row)
+
+    Returns:
+        Active test type string (e.g., 'TOEFL_BEGINNER') or None
+    """
+    for test_type, (enabled_col, _, _) in TEST_TYPE_MAPPING.items():
+        if test_type in ['TOEFL', 'IELTS']:  # Skip legacy mappings
+            continue
+        if prefs.get(enabled_col):
+            return test_type
+    return None
+
+
 def update_test_settings():
     """
+    DEPRECATED: Use POST /v3/users/{user_id}/preferences instead.
+    This endpoint will be removed in a future version.
+
     Update user's test preparation settings using level-based test types.
 
     New API format:

@@ -20,6 +20,7 @@ CREATE TABLE user_preferences (
     toefl_target_days INTEGER DEFAULT 30,
     ielts_target_days INTEGER DEFAULT 30,
     tianz_target_days INTEGER DEFAULT 30,
+    target_end_date DATE,  -- Target date for completing test preparation
     -- Notification settings
     push_notifications_enabled BOOLEAN DEFAULT TRUE,
     email_notifications_enabled BOOLEAN DEFAULT FALSE,

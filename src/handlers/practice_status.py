@@ -57,7 +57,7 @@ def get_practice_status():
         user_tz = get_user_timezone(user_id)
         today = get_today_in_timezone(user_tz)
 
-        # Get counts from today's schedule, excluding words already reviewed today
+        # Get counts from today's schedule (calculated on-the-fly), excluding words already reviewed today
         new_words_count = 0
         test_practice_count = 0
         non_test_practice_count = 0
@@ -73,29 +73,61 @@ def get_practice_status():
             """, (user_id, user_tz, today))
             reviewed_today = {row['word'] for row in reviewed_today_row} if reviewed_today_row else set()
 
-            # Get today's schedule with actual word lists
-            schedule_row = db_fetch_one("""
+            # Get user preferences to determine test type and target_end_date
+            prefs = db_fetch_one("""
                 SELECT
-                    dse.new_words,
-                    dse.test_practice_words,
-                    dse.non_test_practice_words
-                FROM daily_schedule_entries dse
-                JOIN study_schedules ss ON dse.schedule_id = ss.id
-                WHERE ss.user_id = %s AND dse.scheduled_date = %s
-            """, (user_id, today))
+                    toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
+                    ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
+                    tianz_enabled, target_end_date
+                FROM user_preferences
+                WHERE user_id = %s
+            """, (user_id,))
 
-            if schedule_row:
-                # Count words not yet reviewed today
-                new_words = schedule_row['new_words'] or []
-                test_words = schedule_row['test_practice_words'] or []
-                non_test_words = schedule_row['non_test_practice_words'] or []
+            if not prefs:
+                # No preferences, skip schedule calculation
+                pass
+            else:
+                from handlers.test_vocabulary import get_active_test_type
+                test_type = get_active_test_type(prefs)
+                target_end_date = prefs.get('target_end_date')
 
-                new_words_count = len([w for w in new_words if w not in reviewed_today])
-                test_practice_count = len([w for w in test_words if w not in reviewed_today])
-                non_test_practice_count = len([w for w in non_test_words if w not in reviewed_today])
+                logger.info(f"Practice status check: user_id={user_id}, test_type={test_type}, target_end_date={target_end_date}, today={today}")
+
+                # If user has test prep enabled, calculate schedule on-the-fly
+                if test_type and target_end_date and target_end_date > today:
+                    from services.schedule_service import fetch_schedule_data, calc_schedule, get_schedule
+
+                    # Fetch all data needed for calculation
+                    schedule_data = fetch_schedule_data(user_id, test_type, user_tz, today)
+
+                    # Calculate the full schedule
+                    schedule_result = calc_schedule(
+                        today=today,
+                        target_end_date=target_end_date,
+                        all_test_words=schedule_data['all_test_words'],
+                        saved_words_with_reviews=schedule_data['saved_words_with_reviews'],
+                        words_saved_today=schedule_data['words_saved_today'],
+                        words_reviewed_today=schedule_data['words_reviewed_today'],
+                        get_schedule_fn=get_schedule,
+                        all_saved_words=schedule_data['all_saved_words']
+                    )
+
+                    # Extract today's entry from calculated schedule
+                    today_key = today.isoformat()
+                    today_entry = schedule_result['daily_schedules'].get(today_key)
+
+                    if today_entry:
+                        # Count words not yet reviewed today
+                        new_words = today_entry['new_words'] or []
+                        test_words = [w.get('word') for w in (today_entry['test_practice'] or [])]
+                        non_test_words = [w.get('word') for w in (today_entry['non_test_practice'] or [])]
+
+                        new_words_count = len([w for w in new_words if w not in reviewed_today])
+                        test_practice_count = len([w for w in test_words if w not in reviewed_today])
+                        non_test_practice_count = len([w for w in non_test_words if w not in reviewed_today])
         except Exception as e:
-            # Schedule tables may not exist yet, default to 0
-            logger.debug(f"Could not query schedule tables: {e}")
+            # If schedule calculation fails, default to 0
+            logger.debug(f"Could not calculate schedule: {e}")
 
         # Get not-due-yet count (reviewed before, last review > 24h ago, not due yet)
         not_due_yet_row = db_fetch_one("""

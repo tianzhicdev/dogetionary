@@ -20,6 +20,83 @@ from utils.database import get_db_connection
 import pytz
 from datetime import date
 from typing import Dict, Set, Callable, List as ListType
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def fetch_schedule_data(user_id: str, test_type: str, user_tz: str, today: date) -> Dict:
+    """
+    Fetch all data needed for calc_schedule() from database.
+
+    This is a helper function that extracts the data-fetching logic
+    from initiate_schedule() so it can be reused by on-the-fly schedule APIs.
+
+    Args:
+        user_id: UUID of the user
+        test_type: Test type (from user preferences)
+        user_tz: User's timezone string
+        today: Today's date in user's timezone
+
+    Returns:
+        Dict with all data needed for calc_schedule():
+        {
+            'all_test_words': Set[str],
+            'saved_words_with_reviews': Dict[str, Dict],
+            'words_saved_today': Set[str],
+            'words_reviewed_today': Set[str],
+            'all_saved_words': Set[str]
+        }
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Get all test vocabulary words
+        all_test_words = get_test_vocabulary_words(test_type)
+
+        # Get ALL user's saved words for practice scheduling
+        saved_words_map = get_user_saved_words(
+            user_id,
+            exclude_date=None,
+            timezone=user_tz,
+            exclude_only_test_words=False,
+            test_type=test_type
+        )
+
+        # Also fetch ALL saved words (including known ones) for new_words_pool exclusion
+        cur.execute("""
+            SELECT word FROM saved_words
+            WHERE user_id = %s AND learning_language = 'en'
+        """, (user_id,))
+        all_saved_words = {row['word'] for row in cur.fetchall()}
+
+        # Build saved_words_with_reviews
+        saved_words_with_reviews = {}
+        for word, info in saved_words_map.items():
+            reviews = get_word_review_history(info['id'], exclude_date=None, timezone=user_tz)
+            saved_words_with_reviews[word] = {
+                'id': info['id'],
+                'created_at': info['created_at'],
+                'reviews': reviews,
+                'is_known': info['is_known']
+            }
+
+        # Get words saved/reviewed today
+        words_saved_today = get_words_saved_on_date(user_id, today, user_tz)
+        words_reviewed_today = get_words_reviewed_on_date(user_id, today, user_tz)
+
+        return {
+            'all_test_words': all_test_words,
+            'saved_words_with_reviews': saved_words_with_reviews,
+            'words_saved_today': words_saved_today,
+            'words_reviewed_today': words_reviewed_today,
+            'all_saved_words': all_saved_words
+        }
+
+    finally:
+        cur.close()
+        conn.close()
 
 
 
@@ -164,7 +241,7 @@ def calc_schedule(
 
     # Calculate new words pool (test words NOT yet saved, including known words)
     # Use all_saved_words to exclude BOTH unknown AND known saved words
-    new_words_pool = sorted(all_test_words - all_saved_words + (words_saved_today.intersection(all_test_words)))
+    new_words_pool = sorted(all_test_words - all_saved_words | (words_saved_today.intersection(all_test_words)))
 
     # Get words done today (saved OR reviewed) - these should be excluded from tomorrow onwards
     words_done_today = (words_saved_today | words_reviewed_today) & all_test_words  # Only test words

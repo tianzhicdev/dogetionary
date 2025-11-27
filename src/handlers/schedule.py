@@ -59,76 +59,17 @@ def filter_known_words_from_practice(practice_words, user_id, conn):
     return [pw for pw in practice_words if pw.get('word_id') not in known_ids]
 
 
-def create_schedule():
-    """
-    POST /v3/schedule/create
-    Create a new study schedule for test preparation.
-
-    Request body:
-        {
-            "user_id": "uuid",
-            "test_type": "TOEFL|IELTS|TIANZ|BOTH",
-            "target_end_date": "YYYY-MM-DD"
-        }
-
-    Response:
-        {
-            "success": true,
-            "schedule": {
-                "schedule_id": 123,
-                "days_remaining": 60,
-                "total_new_words": 3500,
-                "daily_new_words": 59,
-                "test_practice_words_count": 150,
-                "non_test_practice_words_count": 50
-            }
-        }
-    """
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        test_type = data.get('test_type')
-        target_end_date = data.get('target_end_date')
-
-        # Validation
-        if not all([user_id, test_type, target_end_date]):
-            return jsonify({"error": "user_id, test_type, and target_end_date are required"}), 400
-
-        # Accept all test types from TEST_TYPE_MAPPING plus 'BOTH' for legacy support
-        valid_test_types = list(TEST_TYPE_MAPPING.keys()) + ['BOTH']
-        if test_type not in valid_test_types:
-            return jsonify({"error": f"Invalid test_type. Must be one of: {', '.join(valid_test_types)}"}), 400
-
-        # Parse date
-        try:
-            target_date = date.fromisoformat(target_end_date)
-        except ValueError:
-            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
-
-        # Create schedule
-        result = initiate_schedule(user_id, test_type, target_date)
-
-        return jsonify({
-            "success": True,
-            "schedule": result
-        }), 200
-
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error creating schedule: {e}")
-        return jsonify({"error": "Internal server error"}), 500
-
-
 def get_today_schedule():
     """
     GET /v3/schedule/today?user_id=XXX
     Get today's schedule for user in their timezone.
 
+    NOW CALCULATES SCHEDULE ON-THE-FLY from user preferences instead of reading from database.
+
     Response:
         {
             "date": "2025-11-10",
-            "user_has_schedule": true,  // Whether user has created any schedule (determines tab visibility)
+            "user_has_schedule": true,  // Whether user has test prep enabled with target_end_date
             "has_schedule": true,  // Whether today has tasks scheduled
             "new_words": ["abandon", "abbreviate", ...],
             "test_practice_words": [
@@ -149,7 +90,7 @@ def get_today_schedule():
         }
 
     NOTE: Two separate flags for clarity:
-    - user_has_schedule: True if user has ever created a schedule (used for UI tab visibility)
+    - user_has_schedule: True if user has test prep enabled with target_end_date set
     - has_schedule: True if today specifically has tasks (used for displaying today's content)
     """
     try:
@@ -166,56 +107,94 @@ def get_today_schedule():
         cur = conn.cursor()
 
         try:
-            # Check if user has test prep enabled (TOEFL, IELTS, or TIANZ) and get user_name
+            # Get user preferences including test settings and target_end_date
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled, tianz_enabled, user_name FROM user_preferences
+                SELECT
+                    toefl_enabled, ielts_enabled, tianz_enabled,
+                    toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
+                    ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
+                    user_name, target_end_date
+                FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
 
             prefs = cur.fetchone()
-            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'] or prefs['tianz_enabled'])
-            user_name = prefs['user_name'] if prefs and prefs.get('user_name') else None
 
-            # Check if user has any schedule created at all and get test_type
-            cur.execute("""
-                SELECT id, test_type FROM study_schedules
-                WHERE user_id = %s
-                LIMIT 1
-            """, (user_id,))
+            if not prefs:
+                return jsonify({
+                    "date": today.isoformat(),
+                    "user_has_schedule": False,
+                    "has_schedule": False,
+                    "test_type": None,
+                    "user_name": None,
+                    "message": "User preferences not found."
+                }), 200
 
-            schedule_info = cur.fetchone()
-            has_schedule_entry = schedule_info is not None
-            test_type = schedule_info['test_type'] if schedule_info else None
+            # Check if any test prep is enabled
+            test_prep_enabled = (
+                prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('tianz_enabled') or
+                prefs.get('toefl_beginner_enabled') or prefs.get('toefl_intermediate_enabled') or prefs.get('toefl_advanced_enabled') or
+                prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled')
+            )
 
-            # Only show schedule if test prep is enabled AND schedule exists
-            user_has_schedule = test_prep_enabled and has_schedule_entry
+            target_end_date = prefs.get('target_end_date')
+            user_name = prefs.get('user_name')
+
+            # Determine test_type from enabled flags
+            from handlers.test_vocabulary import get_active_test_type
+            test_type = get_active_test_type(prefs)
+
+            # User has schedule if test prep is enabled AND target_end_date is set
+            user_has_schedule = test_prep_enabled and target_end_date is not None
 
             if not user_has_schedule:
                 return jsonify({
                     "date": today.isoformat(),
-                    "user_has_schedule": False,  # No schedule exists at all
-                    "has_schedule": False,  # No schedule for today
+                    "user_has_schedule": False,
+                    "has_schedule": False,
                     "test_type": test_type,
                     "user_name": user_name,
-                    "message": "No schedule found. Create a schedule first."
+                    "message": "No schedule configured. Set target_end_date in preferences."
                 }), 200
 
-            # Get today's schedule entry
-            cur.execute("""
-                SELECT dse.new_words, dse.test_practice_words, dse.non_test_practice_words
-                FROM daily_schedule_entries dse
-                JOIN study_schedules ss ON dse.schedule_id = ss.id
-                WHERE ss.user_id = %s AND dse.scheduled_date = %s
-            """, (user_id, today))
-
-            result = cur.fetchone()
-
-            # User has a schedule, but no entry for today
-            if not result:
+            # Validate target_end_date is in the future
+            if target_end_date <= today:
                 return jsonify({
                     "date": today.isoformat(),
-                    "user_has_schedule": True,  # User has created a schedule
-                    "has_schedule": False,  # But nothing scheduled for today
+                    "user_has_schedule": False,
+                    "has_schedule": False,
+                    "test_type": test_type,
+                    "user_name": user_name,
+                    "message": "Target end date has passed. Please update your preferences."
+                }), 200
+
+            # Calculate schedule on-the-fly
+            from services.schedule_service import fetch_schedule_data, calc_schedule, get_schedule
+
+            # Fetch all data needed for calculation
+            schedule_data = fetch_schedule_data(user_id, test_type, user_tz, today)
+
+            # Calculate the full schedule
+            schedule_result = calc_schedule(
+                today=today,
+                target_end_date=target_end_date,
+                all_test_words=schedule_data['all_test_words'],
+                saved_words_with_reviews=schedule_data['saved_words_with_reviews'],
+                words_saved_today=schedule_data['words_saved_today'],
+                words_reviewed_today=schedule_data['words_reviewed_today'],
+                get_schedule_fn=get_schedule,
+                all_saved_words=schedule_data['all_saved_words']
+            )
+
+            # Extract today's entry from calculated schedule
+            today_key = today.isoformat()
+            today_entry = schedule_result['daily_schedules'].get(today_key)
+
+            if not today_entry:
+                return jsonify({
+                    "date": today.isoformat(),
+                    "user_has_schedule": True,
+                    "has_schedule": False,
                     "test_type": test_type,
                     "user_name": user_name,
                     "new_words": [],
@@ -233,9 +212,9 @@ def get_today_schedule():
             # Get words already reviewed today (to mark as completed)
             reviewed_today = get_words_reviewed_on_date(user_id, today, user_tz)
 
-            new_words = result['new_words'] or []
-            test_practice = result['test_practice_words'] or []
-            non_test_practice = result['non_test_practice_words'] or []
+            new_words = today_entry['new_words'] or []
+            test_practice = today_entry['test_practice'] or []
+            non_test_practice = today_entry['non_test_practice'] or []
 
             # Filter out known words from practice lists
             test_practice = filter_known_words_from_practice(test_practice, user_id, conn)
@@ -383,6 +362,8 @@ def get_schedule_range():
     GET /v3/schedule/range?user_id=XXX&days=7&only_new_words=true
     Get schedule for multiple days (default 7 days from today).
 
+    NOW CALCULATES SCHEDULE ON-THE-FLY from user preferences instead of reading from database.
+
     Query Parameters:
         - user_id: UUID of the user
         - days: Number of days to fetch (default 7, max 30)
@@ -422,58 +403,98 @@ def get_schedule_range():
         cur = conn.cursor()
 
         try:
-            # Check if user has test prep enabled (TOEFL, IELTS, or TIANZ) and get user_name
+            # Get user preferences including test settings and target_end_date
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled, tianz_enabled, user_name FROM user_preferences
+                SELECT
+                    toefl_enabled, ielts_enabled, tianz_enabled,
+                    toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
+                    ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
+                    user_name, target_end_date
+                FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
 
             prefs = cur.fetchone()
-            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'] or prefs['tianz_enabled'])
-            user_name = prefs['user_name'] if prefs and prefs.get('user_name') else None
 
-            # Get test_type from schedule
-            cur.execute("""
-                SELECT test_type FROM study_schedules
-                WHERE user_id = %s
-                LIMIT 1
-            """, (user_id,))
+            if not prefs:
+                return jsonify({
+                    "schedules": [],
+                    "test_type": None,
+                    "user_name": None
+                }), 200
 
-            schedule_info = cur.fetchone()
-            test_type = schedule_info['test_type'] if schedule_info else None
+            # Check if any test prep is enabled
+            test_prep_enabled = (
+                prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('tianz_enabled') or
+                prefs.get('toefl_beginner_enabled') or prefs.get('toefl_intermediate_enabled') or prefs.get('toefl_advanced_enabled') or
+                prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled')
+            )
 
-            # If test prep is disabled, return empty schedules
-            if not test_prep_enabled:
+            target_end_date = prefs.get('target_end_date')
+            user_name = prefs.get('user_name')
+
+            # Determine test_type from enabled flags
+            from handlers.test_vocabulary import get_active_test_type
+            test_type = get_active_test_type(prefs)
+
+            logger.info(f"Schedule range check: user_id={user_id}, test_prep_enabled={test_prep_enabled}, target_end_date={target_end_date}, test_type={test_type}")
+
+            # If test prep is disabled or no target_end_date, return empty schedules
+            if not test_prep_enabled or not target_end_date:
                 return jsonify({
                     "schedules": [],
                     "test_type": test_type,
                     "user_name": user_name
                 }), 200
 
-            # Get schedule for the next N days
-            cur.execute("""
-                SELECT dse.scheduled_date, dse.new_words, dse.test_practice_words, dse.non_test_practice_words
-                FROM daily_schedule_entries dse
-                JOIN study_schedules ss ON dse.schedule_id = ss.id
-                WHERE ss.user_id = %s
-                  AND dse.scheduled_date >= %s
-                  AND dse.scheduled_date < %s + INTERVAL '%s days'
-                ORDER BY dse.scheduled_date ASC
-            """, (user_id, today, today, days))
+            # Validate target_end_date is in the future
+            if target_end_date <= today:
+                return jsonify({
+                    "schedules": [],
+                    "test_type": test_type,
+                    "user_name": user_name
+                }), 200
 
-            results = cur.fetchall()
+            # Calculate schedule on-the-fly
+            from services.schedule_service import fetch_schedule_data, calc_schedule, get_schedule
+
+            # Fetch all data needed for calculation
+            schedule_data = fetch_schedule_data(user_id, test_type, user_tz, today)
+
+            # Calculate the full schedule
+            schedule_result = calc_schedule(
+                today=today,
+                target_end_date=target_end_date,
+                all_test_words=schedule_data['all_test_words'],
+                saved_words_with_reviews=schedule_data['saved_words_with_reviews'],
+                words_saved_today=schedule_data['words_saved_today'],
+                words_reviewed_today=schedule_data['words_reviewed_today'],
+                get_schedule_fn=get_schedule,
+                all_saved_words=schedule_data['all_saved_words']
+            )
 
             # Get words reviewed today (for marking completed on today's entry)
             reviewed_today = get_words_reviewed_on_date(user_id, today, user_tz)
 
+            # Process calculated schedule for requested date range
             schedules = []
-            for row in results:
-                scheduled_date = row['scheduled_date']
-                is_today = (scheduled_date == today)
+            from datetime import timedelta
 
-                new_words = row['new_words'] or []
-                test_practice = row['test_practice_words'] or []
-                non_test_practice = row['non_test_practice_words'] or []
+            for day_offset in range(days):
+                current_date = today + timedelta(days=day_offset)
+                current_date_key = current_date.isoformat()
+                is_today = (current_date == today)
+
+                # Get entry for this date from calculated schedule
+                day_entry = schedule_result['daily_schedules'].get(current_date_key)
+
+                if not day_entry:
+                    # No schedule for this date
+                    continue
+
+                new_words = day_entry['new_words'] or []
+                test_practice = day_entry['test_practice'] or []
+                non_test_practice = day_entry['non_test_practice'] or []
 
                 # Filter out known words from practice lists
                 test_practice = filter_known_words_from_practice(test_practice, user_id, conn)
@@ -507,7 +528,7 @@ def get_schedule_range():
 
                 # Build schedule entry
                 schedule_entry = {
-                    "date": scheduled_date.isoformat(),
+                    "date": current_date.isoformat(),
                     "has_schedule": True,
                     "test_type": test_type,
                     "new_words": new_words_remaining,
@@ -777,74 +798,6 @@ def get_next_review_word_with_scheduled_new_words():
     except Exception as e:
         logger.error(f"Error getting next review word with scheduled new words: {str(e)}")
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
-
-
-def refresh_schedule_handler():
-    """
-    POST /v3/schedule/refresh
-    Refresh/regenerate the schedule based on current user progress.
-
-    This endpoint regenerates the study schedule from today forward,
-    taking into account the user's current progress and retention rates.
-
-    Query params:
-        - user_id: UUID of the user
-
-    Response:
-        {
-            "success": true,
-            "message": "Schedule refreshed successfully",
-            "schedule": {
-                "schedule_id": 123,
-                "days_remaining": 45,
-                "total_new_words": 2500,
-                "daily_new_words": 56,
-                "test_practice_words_count": 120,
-                "non_test_practice_words_count": 80
-            }
-        }
-    """
-    try:
-        user_id = request.args.get('user_id')
-
-        if not user_id:
-            return jsonify({"error": "user_id is required"}), 400
-
-        # Check if user has test prep enabled
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        try:
-            cur.execute("""
-                SELECT toefl_enabled, ielts_enabled FROM user_preferences
-                WHERE user_id = %s
-            """, (user_id,))
-
-            prefs = cur.fetchone()
-            test_prep_enabled = prefs and (prefs['toefl_enabled'] or prefs['ielts_enabled'])
-
-            if not test_prep_enabled:
-                return jsonify({"error": "Test preparation is not enabled"}), 400
-        finally:
-            cur.close()
-            conn.close()
-
-        # Call the refresh_schedule service function
-        result = refresh_schedule(user_id)
-
-        return jsonify({
-            "success": True,
-            "message": "Schedule refreshed successfully",
-            "schedule": result
-        }), 200
-
-    except ValueError as e:
-        # User-facing errors (no schedule found, invalid date, etc.)
-        logger.warning(f"Schedule refresh validation error for user {user_id}: {str(e)}")
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error refreshing schedule for user {user_id}: {str(e)}")
-        return jsonify({"error": "Failed to refresh schedule"}), 500
 
 
 def get_test_progress(): # chen vetted

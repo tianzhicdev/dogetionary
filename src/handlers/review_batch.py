@@ -104,23 +104,58 @@ def get_review_words_batch():
             # Add reviewed words to exclusion set
             exclude_words = exclude_words | reviewed_today
 
-            # Get today's schedule entry
-            cur.execute("""
-                SELECT dse.id as entry_id, dse.new_words, dse.test_practice_words, dse.non_test_practice_words, dse.schedule_id
-                FROM daily_schedule_entries dse
-                JOIN study_schedules ss ON dse.schedule_id = ss.id
-                WHERE ss.user_id = %s AND dse.scheduled_date = %s
-            """, (user_id, today))
+            # Calculate today's schedule on-the-fly
+            today_entry = None
+            try:
+                # Get user preferences to determine test type and target_end_date
+                cur.execute("""
+                    SELECT
+                        toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
+                        ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
+                        tianz_enabled, target_end_date
+                    FROM user_preferences
+                    WHERE user_id = %s
+                """, (user_id,))
+                prefs = cur.fetchone()
 
-            schedule_entry = cur.fetchone()
+                if prefs:
+                    from handlers.test_vocabulary import get_active_test_type
+                    test_type = get_active_test_type(prefs)
+                    target_end_date = prefs.get('target_end_date')
+
+                    # If user has test prep enabled, calculate schedule
+                    if test_type and target_end_date and target_end_date > today:
+                        from services.schedule_service import fetch_schedule_data, calc_schedule, get_schedule
+
+                        # Fetch all data needed for calculation
+                        schedule_data = fetch_schedule_data(user_id, test_type, user_tz, today)
+
+                        # Calculate the full schedule
+                        schedule_result = calc_schedule(
+                            today=today,
+                            target_end_date=target_end_date,
+                            all_test_words=schedule_data['all_test_words'],
+                            saved_words_with_reviews=schedule_data['saved_words_with_reviews'],
+                            words_saved_today=schedule_data['words_saved_today'],
+                            words_reviewed_today=schedule_data['words_reviewed_today'],
+                            get_schedule_fn=get_schedule,
+                            all_saved_words=schedule_data['all_saved_words']
+                        )
+
+                        # Extract today's entry from calculated schedule
+                        today_key = today.isoformat()
+                        today_entry = schedule_result['daily_schedules'].get(today_key)
+            except Exception as e:
+                logger.warning(f"Could not calculate schedule: {e}")
+                today_entry = None
 
             # ============================================================
             # PRIORITY 1: New words from today's schedule
             # ============================================================
             new_words_list = []
-            if schedule_entry and schedule_entry['new_words']:
+            if today_entry and today_entry.get('new_words'):
                 all_excluded = exclude_words | words_fetched
-                available = [w for w in schedule_entry['new_words'] if w not in all_excluded]
+                available = [w for w in today_entry['new_words'] if w not in all_excluded]
                 # Sort alphabetically
                 available = sorted(available, key=lambda w: w.lower())
 
@@ -136,17 +171,14 @@ def get_review_words_batch():
                     })
                     words_fetched.add(word)
 
-                # NOTE: Do NOT remove words from schedule here!
-                # Words are removed from schedule only when submit_review is called.
-                # This prevents word loss if app crashes, refreshes, or user doesn't complete practice.
-
             # ============================================================
             # PRIORITY 2: Test practice words from today's schedule
             # ============================================================
             test_practice_list = []
-            if len(words_fetched) < count and schedule_entry and schedule_entry['test_practice_words']:
+            if len(words_fetched) < count and today_entry and today_entry.get('test_practice'):
                 all_excluded = exclude_words | words_fetched
-                available = [w for w in schedule_entry['test_practice_words'] if w not in all_excluded]
+                # Extract word strings from practice dicts
+                available = [w.get('word') for w in today_entry['test_practice'] if w.get('word') not in all_excluded]
                 # Sort alphabetically
                 available = sorted(available, key=lambda w: w.lower())
 
@@ -168,16 +200,14 @@ def get_review_words_batch():
                     })
                     words_fetched.add(word)
 
-                # NOTE: Do NOT remove words from schedule here!
-                # Words are removed from schedule only when submit_review is called.
-
             # ============================================================
             # PRIORITY 3: Non-test practice words from today's schedule
             # ============================================================
             non_test_practice_list = []
-            if len(words_fetched) < count and schedule_entry and schedule_entry['non_test_practice_words']:
+            if len(words_fetched) < count and today_entry and today_entry.get('non_test_practice'):
                 all_excluded = exclude_words | words_fetched
-                available = [w for w in schedule_entry['non_test_practice_words'] if w not in all_excluded]
+                # Extract word strings from practice dicts
+                available = [w.get('word') for w in today_entry['non_test_practice'] if w.get('word') not in all_excluded]
                 # Sort alphabetically
                 available = sorted(available, key=lambda w: w.lower())
 
@@ -198,9 +228,6 @@ def get_review_words_batch():
                         'source_type': 'non_test_practice'
                     })
                     words_fetched.add(word)
-
-                # NOTE: Do NOT remove words from schedule here!
-                # Words are removed from schedule only when submit_review is called.
 
             # ============================================================
             # PRIORITY 4: Not-due-yet words (reviewed before, last review > 24h ago, not due)
@@ -257,23 +284,20 @@ def get_review_words_batch():
             # ============================================================
             all_word_rows = new_words_list + test_practice_list + non_test_practice_list + not_due_yet_list
 
-            # Calculate total available BEFORE generating questions
-            # (since we already removed fetched words from schedule, add them back to the count)
+            # Calculate total available
             total_available = len(all_word_rows)  # Start with words we're returning
 
-            # Count remaining schedule words (after removal)
-            if schedule_entry:
-                cur.execute("""
-                    SELECT
-                        COALESCE(jsonb_array_length(new_words), 0) as new_count,
-                        COALESCE(jsonb_array_length(test_practice_words), 0) as test_count,
-                        COALESCE(jsonb_array_length(non_test_practice_words), 0) as non_test_count
-                    FROM daily_schedule_entries
-                    WHERE id = %s
-                """, (schedule_entry['entry_id'],))
-                counts = cur.fetchone()
-                if counts:
-                    total_available += counts['new_count'] + counts['test_count'] + counts['non_test_count']
+            # Count remaining schedule words (excluding words we already fetched)
+            if today_entry:
+                all_excluded = exclude_words | words_fetched
+                # Count remaining new words
+                remaining_new = [w for w in (today_entry.get('new_words') or []) if w not in all_excluded]
+                # Count remaining test practice
+                remaining_test = [w for w in (today_entry.get('test_practice') or []) if w.get('word') not in all_excluded]
+                # Count remaining non-test practice
+                remaining_non_test = [w for w in (today_entry.get('non_test_practice') or []) if w.get('word') not in all_excluded]
+
+                total_available += len(remaining_new) + len(remaining_test) + len(remaining_non_test)
 
             # Count not-due-yet words (excluding ones we already fetched)
             all_excluded = exclude_words | words_fetched
