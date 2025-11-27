@@ -10,9 +10,9 @@ import StoreKit
 
 struct SearchView: View {
     var selectedTab: Binding<Int>?
-    var backgroundTaskManager: BackgroundTaskManager?
     var showProgressBar: Bool = true  // Default to true for backward compatibility
 
+    @ObservedObject private var userManager = UserManager.shared
     @State private var searchText = ""
     @State private var definitions: [Definition] = []
     @State private var isLoading = false
@@ -99,9 +99,8 @@ struct SearchView: View {
                             searchBarView()
 
                             // Practice button below search bar
-                            if let manager = backgroundTaskManager,
-                               let tabBinding = selectedTab,
-                               manager.practiceCount > 0,
+                            if let tabBinding = selectedTab,
+                               userManager.practiceCount > 0,
                                !isSearchActive {
                                 Button(action: {
                                     tabBinding.wrappedValue = 2  // Navigate to Practice tab
@@ -121,7 +120,7 @@ struct SearchView: View {
                                             Text("Ready to Practice")
                                                 .font(.headline)
                                                 .fontWeight(.semibold)
-                                            Text("\(manager.practiceCount) word\(manager.practiceCount == 1 ? "" : "s") waiting")
+                                            Text("\(userManager.practiceCount) word\(userManager.practiceCount == 1 ? "" : "s") waiting")
                                                 .font(.subheadline)
                                                 .opacity(0.9)
                                         }

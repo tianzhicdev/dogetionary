@@ -11,10 +11,10 @@ struct ContentView: View {
     @StateObject private var userManager = UserManager.shared
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var questionQueue = QuestionQueueManager.shared
-    @StateObject private var backgroundTaskManager = BackgroundTaskManager.shared
     @StateObject private var appVersionManager = AppVersionManager.shared
     @State private var selectedTab = 0
     @State private var showOnboarding = false
+    @Environment(\.scenePhase) var scenePhase
 
     var body: some View {
         // Show force upgrade view if required
@@ -29,7 +29,7 @@ struct ContentView: View {
             AppBanner()
 
             TabView(selection: $selectedTab) {
-            DictionaryTabView(selectedTab: $selectedTab, backgroundTaskManager: backgroundTaskManager)
+            DictionaryTabView(selectedTab: $selectedTab)
                 .tabItem {
                     Image(systemName: "magnifyingglass")
                     Text("Dictionary")
@@ -49,7 +49,7 @@ struct ContentView: View {
                     Text("Practice")
                 }
                 .tag(2)
-                .badge(backgroundTaskManager.practiceCount)
+                .badge(userManager.practiceCount)
 
             LeaderboardView()
                 .tabItem {
@@ -97,15 +97,17 @@ struct ContentView: View {
                 }
             }
 
-            // Note: Practice badge count is automatically updated via @Published practiceCount
-            // Synced at: app start (startForegroundTimer), after onboarding, after each review
+            // Refresh practice status on app startup
+            Task {
+                await userManager.refreshPracticeStatus()
+            }
         }
         .onChange(of: userManager.hasCompletedOnboarding) { _, completed in
             if completed {
                 showOnboarding = false
-                // Sync practice counts after onboarding (schedule may have been created)
+                // Refresh practice status after onboarding (schedule may have been created)
                 Task {
-                    await BackgroundTaskManager.shared.fetchAndUpdatePracticeCounts()
+                    await userManager.refreshPracticeStatus()
                 }
             }
         }
@@ -125,6 +127,14 @@ struct ContentView: View {
             }
             AnalyticsManager.shared.track(action: action)
         }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            // Refresh practice status when app becomes active
+            if newPhase == .active {
+                Task {
+                    await userManager.refreshPracticeStatus()
+                }
+            }
+        }
         } // end else (not requiring upgrade)
     }
 }
@@ -132,7 +142,6 @@ struct ContentView: View {
 // Dictionary tab with toggle for Search and Words
 struct DictionaryTabView: View {
     @Binding var selectedTab: Int
-    @ObservedObject var backgroundTaskManager: BackgroundTaskManager
     @State private var selectedView = 0  // 0 = Search, 1 = Words
     @State private var savedWords: [SavedWord] = []
     @State private var isLoading = false
@@ -153,7 +162,7 @@ struct DictionaryTabView: View {
 
             // Content below
             if selectedView == 0 {
-                SearchView(selectedTab: $selectedTab, backgroundTaskManager: backgroundTaskManager, showProgressBar: true)
+                SearchView(selectedTab: $selectedTab, showProgressBar: true)
             } else {
                 NavigationView {
                     SavedWordsListView(
