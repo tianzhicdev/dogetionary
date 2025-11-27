@@ -7,6 +7,7 @@
 
 import Foundation
 import os.log
+import UIKit
 
 class UserManager: ObservableObject {
     static let shared = UserManager()
@@ -29,10 +30,15 @@ class UserManager: ObservableObject {
     private let tianzTargetDaysKey = "DogetionaryTianzTargetDays"
     private let hasCompletedOnboardingKey = "DogetionaryHasCompletedOnboarding"
     private let reminderTimeKey = "DogetionaryReminderTime"
+    // Practice status cache key
+    private let cachedPracticeCountKey = "DogetionaryCachedPracticeCount"
 
     internal var isSyncingFromServer = false
 
     @Published var hasCompletedOnboarding: Bool
+
+    // Practice status caching (replaces BackgroundTaskManager)
+    @Published var practiceCount: Int = 0
     
     @Published var userID: String
     @Published var learningLanguage: String {
@@ -292,7 +298,10 @@ class UserManager: ObservableObject {
         // Re-enable property synchronization after initialization
         isSyncingFromServer = false
 
-        logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage), Onboarding: \(self.hasCompletedOnboarding)")
+        // Load cached practice count
+        self.practiceCount = UserDefaults.standard.integer(forKey: cachedPracticeCountKey)
+
+        logger.info("Loaded preferences - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage), Onboarding: \(self.hasCompletedOnboarding), Practice Count: \(self.practiceCount)")
     }
     
     func getUserID() -> String {
@@ -335,6 +344,11 @@ class UserManager: ObservableObject {
 
         // Use the unified preferences API instead of separate test settings endpoint
         syncPreferencesToServer()
+
+        // Refresh practice status when test settings change (affects schedule)
+        Task {
+            await self.refreshPracticeStatus()
+        }
 
         // Notify SavedWordsView to refresh schedule status
         DispatchQueue.main.async {
@@ -437,5 +451,40 @@ class UserManager: ObservableObject {
         hasCompletedOnboarding = false
         UserDefaults.standard.set(false, forKey: hasCompletedOnboardingKey)
         logger.info("Reset onboarding status")
+    }
+
+    // MARK: - Practice Status Management
+
+    /// Refresh practice status from server and update badge
+    @MainActor
+    func refreshPracticeStatus() async {
+        logger.info("Refreshing practice status")
+
+        await withCheckedContinuation { continuation in
+            DictionaryService.shared.getPracticeStatus { result in
+                switch result {
+                case .success(let status):
+                    let totalCount = status.new_words_count + status.test_practice_count + status.non_test_practice_count + status.not_due_yet_count
+                    self.logger.info("Practice status refreshed - Total count: \(totalCount)")
+
+                    DispatchQueue.main.async {
+                        self.practiceCount = totalCount
+                        UserDefaults.standard.set(totalCount, forKey: self.cachedPracticeCountKey)
+                        self.updateAppBadge(totalCount)
+                    }
+                case .failure(let error):
+                    self.logger.error("Failed to refresh practice status: \(error.localizedDescription)")
+                }
+                continuation.resume()
+            }
+        }
+    }
+
+    /// Update app icon badge with practice count
+    private func updateAppBadge(_ count: Int) {
+        DispatchQueue.main.async {
+            UIApplication.shared.applicationIconBadgeNumber = count
+            self.logger.info("Updated app badge to: \(count)")
+        }
     }
 }

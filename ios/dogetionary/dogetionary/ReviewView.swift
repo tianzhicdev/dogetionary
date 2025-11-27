@@ -138,6 +138,11 @@ struct ReviewView: View {
         }
         .onAppear {
             loadPracticeStatus()
+
+            // Refresh practice status when Practice tab appears
+            Task {
+                await UserManager.shared.refreshPracticeStatus()
+            }
         }
         .refreshable {
             await refreshPracticeStatus()
@@ -284,7 +289,11 @@ struct ReviewView: View {
                     // Advance to next question (removes current from queue)
                     self.advanceToNextQuestion()
                     self.refreshStatusAfterCompletion()
-                    BackgroundTaskManager.shared.updatePracticeCountsAfterReview()
+
+                    // Refresh practice status after review submission
+                    Task {
+                        await UserManager.shared.refreshPracticeStatus()
+                    }
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }

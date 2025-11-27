@@ -7,7 +7,6 @@
 
 import SwiftUI
 import UserNotifications
-import BackgroundTasks
 
 @main
 struct dogetionaryApp: App {
@@ -19,9 +18,6 @@ struct dogetionaryApp: App {
 
         // Set up notification center delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
-
-        // Register background tasks
-        BackgroundTaskManager.shared.registerBackgroundTasks()
 
         // Initialize analytics with new session
         AnalyticsManager.shared.newSession()
@@ -40,9 +36,6 @@ struct dogetionaryApp: App {
         .onChange(of: scenePhase) { oldPhase, newPhase in
             switch newPhase {
             case .active:
-                // Start foreground timer when app becomes active
-                BackgroundTaskManager.shared.startForegroundTimer()
-
                 // Generate new session when app becomes active from background
                 if oldPhase == .background || oldPhase == .inactive {
                     AnalyticsManager.shared.newSession()
@@ -52,9 +45,6 @@ struct dogetionaryApp: App {
 
                 AnalyticsManager.shared.track(action: .appForeground)
             case .background:
-                // Schedule background refresh when entering background
-                BackgroundTaskManager.shared.scheduleAppRefresh()
-                BackgroundTaskManager.shared.stopForegroundTimer()
                 AnalyticsManager.shared.track(action: .appBackground)
             case .inactive:
                 break
