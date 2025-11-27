@@ -22,6 +22,55 @@ from datetime import date
 from typing import Dict, Set, Callable, List as ListType
 
 
+
+def calc_schedule_v2(    today: date,
+    target_end_date: date,
+    all_test_words: Set[str],
+    saved_words_with_reviews: Dict[str, Dict],  # word -> {id, created_at, reviews: List[{reviewed_at, response}], is_known: bool}
+) -> Dict:
+    
+    schedule = {}
+    days_remaining = (target_end_date - today).days
+
+    #     first we calc today's words
+    # -- new words: first x of (test-words - words-saved-before-today)
+
+    words_saved_before_today = set() # get it from saved_words_with_reviews
+
+
+
+
+    new_words_pool = sorted(all_test_words - saved_words_with_reviews.keys())
+    daily_new_words = max(1, (len(new_words_pool) + days_remaining - 1) // days_remaining)
+
+    today_new_words = sorted(all_test_words - words_saved_before_today)[:daily_new_words]
+
+
+    # then we calc tmr and further
+    # -- first x of (words - today's new words - all-saved-words-including-today's)
+
+    new_words_for_tmr_and_beyond = sorted(all_test_words - today_new_words - saved_words_with_reviews.keys())
+
+
+
+    # -- practice words: (words saved/reviewed including today) 
+
+    # -- words saved/reviewed including today + today's new words
+
+
+
+
+    return {
+        'daily_schedules': schedule,
+        'metadata': {
+            'days_remaining': days_remaining,
+            'total_new_words': len(new_words_pool),
+            'daily_new_words': daily_new_words,
+            'test_practice_words_count': len(test_practice_words),
+            'non_test_practice_words_count': len(non_test_practice_words)
+        }
+    }
+
 def calc_schedule(
     today: date,
     target_end_date: date,
@@ -32,7 +81,20 @@ def calc_schedule(
     get_schedule_fn: Callable,  # Function(past_schedule, created_at) -> future_reviews
     all_saved_words: Set[str] = None,  # ALL saved words including known ones
 ) -> Dict:
+    
+
+
     """
+
+    first we calc today's words
+    -- new words: first x of (test-words - words-saved-before-today)
+    -- practice words: (words saved/reviewed including today) 
+
+    then we calc tmr and further
+
+    -- first x of (words - today's new words - all-saved-words-including-today's)
+    -- words saved/reviewed including today + today's new words
+
     Pure function to calculate study schedule distribution.
 
     This function has NO side effects and does NOT access the database.
@@ -102,7 +164,7 @@ def calc_schedule(
 
     # Calculate new words pool (test words NOT yet saved, including known words)
     # Use all_saved_words to exclude BOTH unknown AND known saved words
-    new_words_pool = sorted(all_test_words - all_saved_words)
+    new_words_pool = sorted(all_test_words - all_saved_words + (words_saved_today.intersection(all_test_words)))
 
     # Get words done today (saved OR reviewed) - these should be excluded from tomorrow onwards
     words_done_today = (words_saved_today | words_reviewed_today) & all_test_words  # Only test words
