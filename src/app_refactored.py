@@ -32,7 +32,7 @@ app.after_request(track_metrics_end)
 
 from handlers.actions import save_word, delete_saved_word, delete_saved_word_v2, submit_feedback, submit_review, get_next_review_word
 from handlers.users import handle_user_preferences, get_supported_languages
-from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard
+from handlers.reads import get_due_counts, get_review_progress_stats, get_review_stats, get_forgetting_curve, get_leaderboard
 from handlers.admin import test_review_intervals, fix_next_review_dates, privacy_agreement, support_page, health_check
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
@@ -55,10 +55,6 @@ app.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forgetti
 app.route('/words/<int:word_id>/details', methods=['GET'])(get_word_details) # might be able to simplify but ok
 app.route('/audio/<path:text>/<language>')(get_audio) # ok
 app.route('/languages', methods=['GET'])(get_supported_languages) # ok
-app.route('/review_statistics', methods=['GET'])(get_review_statistics) # ok
-app.route('/weekly_review_counts', methods=['GET'])(get_weekly_review_counts) # ok
-app.route('/progress_funnel', methods=['GET'])(get_progress_funnel) # ok
-app.route('/review_activity', methods=['GET'])(get_review_activity) # ok
 app.route('/leaderboard', methods=['GET'])(get_leaderboard) # ok
 app.route('/get-illustration', methods=['GET', 'POST'])(get_illustration) # merged: cache-first illustration endpoint
 app.route('/generate-illustration', methods=['POST'])(get_illustration) # backward compatibility for old iOS versions

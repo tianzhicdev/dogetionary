@@ -244,7 +244,12 @@ struct DictionaryTabView: View {
     @MainActor
     private func toggleKnownStatus(_ word: SavedWord) async {
         let newKnownStatus = !word.is_known
-        DictionaryService.shared.markWordAsKnown(wordID: word.id, isKnown: newKnownStatus) { result in
+        DictionaryService.shared.toggleExcludeFromPractice(
+            word: word.word,
+            excluded: newKnownStatus,
+            learningLanguage: word.learning_language,
+            nativeLanguage: word.native_language
+        ) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:

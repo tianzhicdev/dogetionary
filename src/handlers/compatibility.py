@@ -54,38 +54,3 @@ def get_illustration_legacy():
     logger.info("Legacy get illustration endpoint called")
     # The current get_illustration handles both GET and POST
     return get_illustration()
-
-def saved_words_next_due():
-    """
-    Implementation for /saved_words/next_due endpoint
-    This endpoint was expected by iOS but never existed - implement basic functionality
-    """
-    logger.info("Saved words next due endpoint called")
-    try:
-        user_id = request.args.get('user_id')
-        limit = request.args.get('limit', '10')
-
-        if not user_id:
-            return jsonify({"error": "user_id parameter is required"}), 400
-
-        try:
-            limit = int(limit)
-        except ValueError:
-            limit = 10
-
-        # Use the existing v2 review endpoint logic but format for saved_words
-        # This provides compatible functionality for the iOS app expectation
-
-        # For now, return empty result gracefully
-        # iOS app seems to handle this endpoint not existing gracefully anyway
-        return jsonify({
-            "user_id": user_id,
-            "saved_words": [],
-            "count": 0,
-            "next_due": [],
-            "message": "No words due for review"
-        })
-
-    except Exception as e:
-        logger.error(f"Error in saved words next due: {str(e)}")
-        return jsonify({"error": "Failed to get next due words"}), 500

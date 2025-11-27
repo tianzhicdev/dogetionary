@@ -104,7 +104,7 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
         print(f"Error getting user preferences: {str(e)}")
         return 'en', 'zh', 'LearningExplorer', 'Every word is a new adventure!'
 
-def toggle_word_exclusion(user_id: str, word: str, excluded: bool) -> dict:
+def toggle_word_exclusion(user_id: str, word: str, excluded: bool, learning_language: str = None, native_language: str = None) -> dict:
     """
     Toggle whether a word is excluded from practice (marks as known/unknown).
     If word is not yet saved, it will be automatically saved first.
@@ -113,6 +113,8 @@ def toggle_word_exclusion(user_id: str, word: str, excluded: bool) -> dict:
         user_id: UUID of the user
         word: The word to toggle
         excluded: True to exclude from practice, False to include
+        learning_language: Optional - the word's learning language (if not provided, uses user preferences)
+        native_language: Optional - the word's native language (if not provided, uses user preferences)
 
     Returns:
         dict with success status, word info, and message
@@ -121,36 +123,47 @@ def toggle_word_exclusion(user_id: str, word: str, excluded: bool) -> dict:
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Check if word exists in saved_words for this user
-        cur.execute("""
-            SELECT id, word, is_known
-            FROM saved_words
-            WHERE user_id = %s AND word = %s
-        """, (user_id, word.lower()))
+        # If languages provided, use them to find the specific word
+        # Otherwise, fall back to user preferences (for backward compatibility)
+        if learning_language and native_language:
+            # Check if word exists with specific languages
+            cur.execute("""
+                SELECT id, word, is_known, learning_language, native_language
+                FROM saved_words
+                WHERE user_id = %s AND word = %s AND learning_language = %s AND native_language = %s
+            """, (user_id, word.lower(), learning_language, native_language))
+        else:
+            # Backward compatibility: find any matching word for this user
+            cur.execute("""
+                SELECT id, word, is_known, learning_language, native_language
+                FROM saved_words
+                WHERE user_id = %s AND word = %s
+            """, (user_id, word.lower()))
 
         result = cur.fetchone()
 
         if not result:
-            # Word not saved yet - save it first, then mark as excluded
-            # Get user's language preferences
-            cur.execute("""
-                SELECT learning_language, native_language
-                FROM user_preferences
-                WHERE user_id = %s
-            """, (user_id,))
+            # Word not saved yet - need languages to save it
+            if not learning_language or not native_language:
+                # Fall back to user preferences
+                cur.execute("""
+                    SELECT learning_language, native_language
+                    FROM user_preferences
+                    WHERE user_id = %s
+                """, (user_id,))
 
-            prefs = cur.fetchone()
-            if not prefs:
-                cur.close()
-                conn.close()
-                return {
-                    "success": False,
-                    "error": "User preferences not found",
-                    "message": "Unable to save word - user preferences not configured"
-                }
+                prefs = cur.fetchone()
+                if not prefs:
+                    cur.close()
+                    conn.close()
+                    return {
+                        "success": False,
+                        "error": "User preferences not found",
+                        "message": "Unable to save word - language parameters required or user preferences not configured"
+                    }
 
-            learning_language = prefs['learning_language']
-            native_language = prefs['native_language']
+                learning_language = prefs['learning_language']
+                native_language = prefs['native_language']
 
             # Save the word
             cur.execute("""

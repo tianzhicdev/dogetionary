@@ -27,8 +27,8 @@ struct dogetionaryApp: App {
         AnalyticsManager.shared.newSession()
         AnalyticsManager.shared.track(action: .appLaunch)
 
-        // Sync device timezone to backend
-        DictionaryService.shared.syncTimezone()
+        // Timezone is now synced automatically via UserManager.syncPreferencesToServer()
+        // No need for separate syncTimezone() call
 
         // Clear and refresh question queue on app launch
         QuestionQueueManager.shared.forceRefresh()

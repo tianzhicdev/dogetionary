@@ -19,7 +19,6 @@ struct SettingsView: View {
     @State private var showFeedbackAlert = false
     @State private var feedbackAlertMessage = ""
     @ObservedObject private var userManager = UserManager.shared
-    @State private var testProgress: TestProgressData?
     @State private var vocabularyStats: TestVocabularyStatistics?
     @State private var isLoadingTestStats = false
     @State private var developerModeEnabled = DebugConfig.isDeveloperModeEnabled
@@ -497,18 +496,6 @@ struct SettingsView: View {
                 .tint(.blue)
             }
         }
-
-        if let progress = testProgress?.tianz, userManager.tianzEnabled {
-            HStack {
-                Text("Progress:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
-                    .font(.caption)
-                    .foregroundColor(.blue)
-            }
-        }
     }
 
     @ViewBuilder
@@ -569,22 +556,6 @@ struct SettingsView: View {
                             }
                             .pickerStyle(.menu)
                             .tint(.blue)
-                        }
-                    }
-                }
-
-                // Progress (only show if test selected)
-                if let testType = userManager.activeTestType,
-                   let progress = testProgress?.progress(for: testType) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Progress:")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
-                                .font(.caption)
-                                .foregroundColor(.blue)
                         }
                     }
                 }
@@ -662,18 +633,6 @@ struct SettingsView: View {
                 .tint(.blue)
             }
         }
-
-        if let progress = testProgress?.toefl, userManager.toeflEnabled {
-            HStack {
-                Text("Progress:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
-                    .font(.caption)
-                    .foregroundColor(.blue)
-            }
-        }
     }
 
     @ViewBuilder
@@ -711,18 +670,6 @@ struct SettingsView: View {
                 }
                 .pickerStyle(MenuPickerStyle())
                 .tint(.blue)
-            }
-        }
-
-        if let progress = testProgress?.ielts, userManager.ieltsEnabled {
-            HStack {
-                Text("Progress:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("\(progress.saved)/\(progress.total) words (\(String(format: "%.1f", progress.percentage))%)")
-                    .font(.caption)
-                    .foregroundColor(.blue)
             }
         }
     }
@@ -771,47 +718,11 @@ struct SettingsView: View {
     }
 
     private func buildDailyWordsText() -> String {
-        var parts: [String] = []
-
-        if userManager.toeflEnabled, let progress = testProgress?.toefl, let stats = vocabularyStats {
-            let remaining = max(0, stats.toefl_words - progress.saved)
-            let dailyWords = max(1, Int(ceil(Double(remaining) / Double(userManager.toeflTargetDays))))
-            parts.append("TOEFL: ~\(dailyWords)/day")
-        }
-
-        if userManager.ieltsEnabled, let progress = testProgress?.ielts, let stats = vocabularyStats {
-            let remaining = max(0, stats.ielts_words - progress.saved)
-            let dailyWords = max(1, Int(ceil(Double(remaining) / Double(userManager.ieltsTargetDays))))
-            parts.append("IELTS: ~\(dailyWords)/day")
-        }
-
-        if userManager.tianzEnabled, let progress = testProgress?.tianz, let stats = vocabularyStats {
-            let remaining = max(0, (stats.tianz_words ?? 0) - progress.saved)
-            let dailyWords = max(1, Int(ceil(Double(remaining) / Double(userManager.tianzTargetDays))))
-            parts.append("Tianz: ~\(dailyWords)/day")
-        }
-
-        if parts.isEmpty {
-            return "Test vocabulary words are automatically added to your review list daily based on your target completion timeline"
-        } else {
-            return parts.joined(separator: ", ") + " words are automatically added daily to meet your target timeline"
-        }
+        return "Test vocabulary words are automatically added to your review list daily based on your target completion timeline"
     }
 
     private func loadTestStatistics() {
         isLoadingTestStats = true
-
-        // Load test settings and progress
-        DictionaryService.shared.getTestSettings(userID: userManager.userID) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    self.testProgress = response.progress
-                case .failure(let error):
-                    print("Failed to load test settings: \(error.localizedDescription)")
-                }
-            }
-        }
 
         // Load vocabulary statistics
         DictionaryService.shared.getTestVocabularyStats() { result in

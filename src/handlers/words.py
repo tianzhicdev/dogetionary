@@ -1406,6 +1406,8 @@ def toggle_exclude_from_practice():
         user_id = data.get('user_id')
         word = data.get('word')
         excluded = data.get('excluded')
+        learning_language = data.get('learning_language')  # Optional
+        native_language = data.get('native_language')  # Optional
 
         if not user_id or not word or excluded is None:
             return jsonify({
@@ -1424,8 +1426,8 @@ def toggle_exclude_from_practice():
         if not isinstance(excluded, bool):
             return jsonify({"error": "excluded must be a boolean"}), 400
 
-        # Call service function
-        result = toggle_word_exclusion(user_id, word, excluded)
+        # Call service function with optional language parameters
+        result = toggle_word_exclusion(user_id, word, excluded, learning_language, native_language)
 
         if not result.get('success'):
             error_msg = result.get('message', 'Unknown error')

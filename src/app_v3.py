@@ -5,20 +5,19 @@
 from flask import Blueprint
 from handlers.actions import save_word, delete_saved_word_v2, submit_feedback, submit_review
 from handlers.users import handle_user_preferences, get_supported_languages
-from handlers.reads import get_due_counts, get_review_progress_stats, get_forgetting_curve, get_review_statistics, get_weekly_review_counts, get_progress_funnel, get_review_activity, get_leaderboard, get_leaderboard_v2, get_combined_metrics
+from handlers.reads import get_due_counts, get_review_progress_stats, get_forgetting_curve, get_leaderboard, get_leaderboard_v2, get_combined_metrics
 from handlers.admin import test_review_intervals, fix_next_review_dates, privacy_agreement, support_page, health_check
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
 from handlers.words import get_next_review_word_v2, get_saved_words, get_word_definition_v3, get_word_details, get_audio, get_illustration, generate_word_definition, get_all_words_for_language_pair, toggle_exclude_from_practice
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
-from handlers.test_vocabulary import update_test_settings, get_test_settings, add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count, get_test_config
-from handlers.schedule import get_today_schedule, get_schedule_range, review_new_word, update_timezone, get_next_review_word_with_scheduled_new_words, get_test_progress
+from handlers.test_vocabulary import add_daily_test_words, get_test_vocabulary_stats, manual_daily_job, get_test_vocabulary_count, get_test_config
+from handlers.schedule import get_today_schedule, get_schedule_range, get_next_review_word_with_scheduled_new_words, get_test_progress
 from handlers.enhanced_review import get_next_review_enhanced
 from handlers.review_batch import get_review_words_batch
 from handlers.streaks import get_streak_days
 from handlers.achievements import get_achievement_progress
-from handlers.known_words import mark_word_known
 from handlers.practice_status import get_practice_status
 from handlers.app_version import check_app_version
 
@@ -57,10 +56,6 @@ v3_api.route('/users/<user_id>/preferences', methods=['GET', 'POST'])(handle_use
 v3_api.route('/languages', methods=['GET'])(get_supported_languages)
 
 # Analytics and Statistics (V3)
-v3_api.route('/review_statistics', methods=['GET'])(get_review_statistics)
-v3_api.route('/weekly_review_counts', methods=['GET'])(get_weekly_review_counts)
-v3_api.route('/progress_funnel', methods=['GET'])(get_progress_funnel)
-v3_api.route('/review_activity', methods=['GET'])(get_review_activity)
 v3_api.route('/leaderboard', methods=['GET'])(get_leaderboard)
 v3_api.route('/leaderboard-score', methods=['GET'])(get_leaderboard_v2)
 v3_api.route('/combined_metrics', methods=['GET'])(get_combined_metrics)
@@ -80,8 +75,6 @@ v3_api.route('/api/words/generate', methods=['POST'])(generate_word_definition)
 v3_api.route('/words/toggle-exclude', methods=['POST'])(toggle_exclude_from_practice)
 
 # Test Vocabulary (V3)
-v3_api.route('/api/test-prep/settings', methods=['PUT'])(update_test_settings)
-v3_api.route('/api/test-prep/settings', methods=['GET'])(get_test_settings)
 v3_api.route('/api/test-prep/add-words', methods=['POST'])(add_daily_test_words)
 v3_api.route('/api/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
 v3_api.route('/api/test-prep/config', methods=['GET'])(get_test_config)  # Language -> tests mapping
@@ -92,8 +85,6 @@ v3_api.route('/api/test-vocabulary-count', methods=['GET'])(get_test_vocabulary_
 v3_api.route('/schedule/today', methods=['GET'])(get_today_schedule)
 v3_api.route('/schedule/range', methods=['GET'])(get_schedule_range)
 v3_api.route('/schedule/test-progress', methods=['GET'])(get_test_progress)
-v3_api.route('/review_new_word', methods=['POST'])(review_new_word)
-v3_api.route('/user/timezone', methods=['PUT'])(update_timezone)
 
 # Administrative (V3)
 v3_api.route('/test-review-intervals', methods=['GET'])(test_review_intervals)
@@ -112,9 +103,6 @@ v3_api.route('/get-streak-days', methods=['GET'])(get_streak_days)
 
 # Achievements (V3)
 v3_api.route('/achievements/progress', methods=['GET'])(get_achievement_progress)
-
-# Known Words (V3)
-v3_api.route('/words/<word_id>/mark-known', methods=['POST'])(mark_word_known)
 
 # Practice Status (V3)
 v3_api.route('/practice-status', methods=['GET'])(get_practice_status)

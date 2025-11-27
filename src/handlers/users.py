@@ -33,28 +33,50 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
+def get_user_preferences(user_id: str) -> dict:
+    """Get full user preferences including test prep settings"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
         cur.execute("""
-            SELECT learning_language, native_language, user_name, user_motto 
-            FROM user_preferences 
+            SELECT learning_language, native_language, user_name, user_motto,
+                   toefl_enabled, ielts_enabled, tianz_enabled,
+                   toefl_target_days, ielts_target_days, tianz_target_days
+            FROM user_preferences
             WHERE user_id = %s
         """, (user_id,))
-        
+
         result = cur.fetchone()
         cur.close()
         conn.close()
-        
+
         if result:
-            return (result['learning_language'], result['native_language'], 
-                   result['user_name'] or '', result['user_motto'] or '')
+            # Determine active test type from enabled flags (V3 API format)
+            test_prep = None
+            target_days = 30
+            if result['toefl_enabled']:
+                test_prep = 'TOEFL_ADVANCED'  # Default to advanced level
+                target_days = result['toefl_target_days'] or 30
+            elif result['ielts_enabled']:
+                test_prep = 'IELTS_ADVANCED'  # Default to advanced level
+                target_days = result['ielts_target_days'] or 30
+            elif result['tianz_enabled']:
+                test_prep = 'TIANZ'
+                target_days = result['tianz_target_days'] or 30
+
+            return {
+                'learning_language': result['learning_language'],
+                'native_language': result['native_language'],
+                'user_name': result['user_name'] or '',
+                'user_motto': result['user_motto'] or '',
+                'test_prep': test_prep,
+                'study_duration_days': target_days
+            }
         else:
             # Generate AI profile for new user
             username, motto = generate_user_profile()
-            
+
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
@@ -64,11 +86,25 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
             """, (user_id, username, motto))
             conn.commit()
             conn.close()
-            return 'en', 'zh', username, motto
-            
+            return {
+                'learning_language': 'en',
+                'native_language': 'zh',
+                'user_name': username,
+                'user_motto': motto,
+                'test_prep': None,
+                'study_duration_days': 30
+            }
+
     except Exception as e:
         logger.error(f"Error getting user preferences: {str(e)}")
-        return 'en', 'zh', 'LearningExplorer', 'Every word is a new adventure!'
+        return {
+            'learning_language': 'en',
+            'native_language': 'zh',
+            'user_name': 'LearningExplorer',
+            'user_motto': 'Every word is a new adventure!',
+            'test_prep': None,
+            'study_duration_days': 30
+        }
 
 
 
@@ -76,13 +112,15 @@ def handle_user_preferences(user_id):
     """Get or update user language preferences"""
     try:
         if request.method == 'GET':
-            learning_lang, native_lang, user_name, user_motto = get_user_preferences(user_id)
+            prefs = get_user_preferences(user_id)
             return jsonify({
                 "user_id": user_id,
-                "learning_language": learning_lang,
-                "native_language": native_lang,
-                "user_name": user_name,
-                "user_motto": user_motto
+                "learning_language": prefs['learning_language'],
+                "native_language": prefs['native_language'],
+                "user_name": prefs['user_name'],
+                "user_motto": prefs['user_motto'],
+                "test_prep": prefs['test_prep'],
+                "study_duration_days": prefs['study_duration_days']
             })
         
         elif request.method == 'POST':
@@ -93,6 +131,7 @@ def handle_user_preferences(user_id):
             user_motto = data.get('user_motto', '')
             test_prep = data.get('test_prep')  # "TOEFL", "IELTS", or null
             study_duration_days = data.get('study_duration_days')  # 30, 40, 50, 60, 70
+            timezone = data.get('timezone')  # Optional: IANA timezone string (e.g., "America/New_York")
             target_end_date = data.get('target_end_date')  # "YYYY-MM-DD" format or null
 
             if not learning_lang or not native_lang:
@@ -134,6 +173,14 @@ def handle_user_preferences(user_id):
                 except ValueError:
                     return jsonify({"error": "target_end_date must be in YYYY-MM-DD format"}), 400
 
+            # Validate timezone if provided
+            if timezone:
+                import pytz
+                try:
+                    pytz.timezone(timezone)
+                except pytz.exceptions.UnknownTimeZoneError:
+                    return jsonify({"error": "Invalid timezone. Use IANA timezone format (e.g., 'America/New_York')"}), 400
+
             conn = get_db_connection()
             cur = conn.cursor()
 
@@ -153,7 +200,7 @@ def handle_user_preferences(user_id):
                 for col in ALL_TEST_ENABLE_COLUMNS:
                     test_settings[col] = False
 
-            # Build the INSERT statement with all test columns and target_end_date
+            # Build the INSERT statement with all test columns, target_end_date, and timezone
             insert_cols = ['user_id', 'learning_language', 'native_language', 'user_name', 'user_motto'] + list(test_settings.keys())
             insert_values = [user_id, learning_lang, native_lang, user_name, user_motto] + list(test_settings.values())
 
@@ -161,6 +208,11 @@ def handle_user_preferences(user_id):
             if parsed_target_end_date is not None:
                 insert_cols.append('target_end_date')
                 insert_values.append(parsed_target_end_date)
+
+            # Add timezone if provided
+            if timezone:
+                insert_cols.append('timezone')
+                insert_values.append(timezone)
 
             placeholders = ', '.join(['%s'] * len(insert_values))
 
@@ -177,6 +229,9 @@ def handle_user_preferences(user_id):
             # Add target_end_date update if provided
             if parsed_target_end_date is not None:
                 update_clauses.append('target_end_date = EXCLUDED.target_end_date')
+            # Add timezone update if provided
+            if timezone:
+                update_clauses.append('timezone = EXCLUDED.timezone')
             update_clauses.append('updated_at = CURRENT_TIMESTAMP')
 
             # Execute the query
