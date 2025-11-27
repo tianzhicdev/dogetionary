@@ -46,108 +46,139 @@ struct OnboardingView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Progress indicator
-                HStack(spacing: 8) {
-                    ForEach(0..<totalPages, id: \.self) { index in
-                        Capsule()
-                            .fill(index <= displayPageIndex ? Color.blue : Color.gray.opacity(0.3))
-                            .frame(height: 4)
+            ZStack {
+                // Gradient background
+                pageGradient
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    // Progress indicator
+                    HStack(spacing: 8) {
+                        ForEach(0..<totalPages, id: \.self) { index in
+                            Capsule()
+                                .fill(index <= displayPageIndex ?
+                                    LinearGradient(colors: [Color.purple, Color.blue],
+                                                 startPoint: .leading, endPoint: .trailing) :
+                                    LinearGradient(colors: [Color.gray.opacity(0.3)],
+                                                 startPoint: .leading, endPoint: .trailing))
+                                .frame(height: 4)
+                        }
                     }
-                }
-                .padding(.horizontal, 40)
-                .padding(.top, 20)
-                .padding(.bottom, 30)
+                    .padding(.horizontal, 40)
+                    .padding(.top, 20)
+                    .padding(.bottom, 30)
 
-                // Page content
-                TabView(selection: $currentPage) {
-                    // Page 0: Learning Language
-                    languageSelectionPage(
-                        title: "What language are you learning?",
-                        description: "Choose the language you want to learn and improve",
-                        selectedLanguage: $selectedLearningLanguage,
-                        excludeLanguage: selectedNativeLanguage
-                    )
-                    .tag(0)
+                    // Page content
+                    TabView(selection: $currentPage) {
+                        // Page 0: Learning Language
+                        languageSelectionPage(
+                            title: "What language are you learning?",
+                            description: "Choose the language you want to learn and improve",
+                            emoji: "🌍",
+                            selectedLanguage: $selectedLearningLanguage,
+                            excludeLanguage: selectedNativeLanguage,
+                            gradientColors: [Color.blue, Color.cyan]
+                        )
+                        .tag(0)
 
-                    // Page 1: Native Language
-                    languageSelectionPage(
-                        title: "What is your native language?",
-                        description: "Choose your native language for translations",
-                        selectedLanguage: $selectedNativeLanguage,
-                        excludeLanguage: selectedLearningLanguage
-                    )
-                    .tag(1)
+                        // Page 1: Native Language
+                        languageSelectionPage(
+                            title: "What is your native language?",
+                            description: "Choose your native language for translations",
+                            emoji: "🏠",
+                            selectedLanguage: $selectedNativeLanguage,
+                            excludeLanguage: selectedLearningLanguage,
+                            gradientColors: [Color.green, Color.mint]
+                        )
+                        .tag(1)
 
-                    // Page 2: Test Prep (only shown if learning English)
-                    if selectedLearningLanguage == "en" {
-                        testPrepPage
-                            .tag(2)
+                        // Page 2: Test Prep (only shown if learning English)
+                        if selectedLearningLanguage == "en" {
+                            testPrepPage
+                                .tag(2)
+                        }
+
+                        // Page 3: Study Duration (only shown if TOEFL or IELTS selected)
+                        if showDurationPage {
+                            studyDurationPage
+                                .tag(3)
+                        }
+
+                        // Username Page
+                        usernamePage
+                            .tag(usernamePageIndex)
+
+                        // Schedule Preview Page (only if test prep enabled)
+                        if showDurationPage {
+                            schedulePreviewPage
+                                .tag(schedulePageIndex)
+                        }
+
+                        // Search Word Page
+                        searchWordPage
+                            .tag(searchPageIndex)
                     }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .animation(.easeInOut, value: currentPage)
 
-                    // Page 3: Study Duration (only shown if TOEFL or IELTS selected)
-                    if showDurationPage {
-                        studyDurationPage
-                            .tag(3)
-                    }
-
-                    // Username Page
-                    usernamePage
-                        .tag(usernamePageIndex)
-
-                    // Schedule Preview Page (only if test prep enabled)
-                    if showDurationPage {
-                        schedulePreviewPage
-                            .tag(schedulePageIndex)
-                    }
-
-                    // Search Word Page
-                    searchWordPage
-                        .tag(searchPageIndex)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut, value: currentPage)
-
-                // Navigation buttons
-                HStack(spacing: 16) {
-                    if currentPage > 0 {
-                        Button(action: {
-                            withAnimation {
-                                currentPage -= 1
-                            }
-                        }) {
-                            Text("Back")
+                    // Navigation buttons
+                    HStack(spacing: 16) {
+                        if currentPage > 0 {
+                            Button(action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    currentPage -= 1
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.left")
+                                    Text("Back")
+                                }
                                 .font(.headline)
-                                .foregroundColor(.blue)
+                                .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(12)
-                        }
-                    }
-
-                    Button(action: {
-                        handleNextButton()
-                    }) {
-                        HStack {
-                            if isSubmitting || isSearching {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
+                                .background(
+                                    LinearGradient(colors: [Color.gray.opacity(0.6), Color.gray.opacity(0.4)],
+                                                 startPoint: .leading, endPoint: .trailing)
+                                )
+                                .cornerRadius(16)
+                                .shadow(color: Color.black.opacity(0.1), radius: 5, y: 3)
                             }
-                            Text(buttonTitle)
-                                .font(.headline)
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(canProceed ? Color.blue : Color.gray)
-                        .cornerRadius(12)
+
+                        Button(action: {
+                            handleNextButton()
+                        }) {
+                            HStack {
+                                if isSubmitting || isSearching {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                }
+                                Text(buttonTitle)
+                                    .font(.headline)
+                                if currentPage < totalPages - 1 && !isSubmitting && !isSearching {
+                                    Image(systemName: "arrow.right")
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                canProceed ?
+                                    LinearGradient(colors: buttonGradientColors,
+                                                 startPoint: .leading, endPoint: .trailing) :
+                                    LinearGradient(colors: [Color.gray],
+                                                 startPoint: .leading, endPoint: .trailing)
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: canProceed ? Color.purple.opacity(0.3) : Color.clear, radius: 10, y: 5)
+                        }
+                        .disabled(!canProceed || isSubmitting || isSearching)
                     }
-                    .disabled(!canProceed || isSubmitting || isSearching)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 30)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 30)
             }
             .navigationBarTitleDisplayMode(.inline)
             .alert("Error", isPresented: $showError) {
@@ -164,19 +195,67 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - Gradient Backgrounds
+
+    private var pageGradient: LinearGradient {
+        let colors: [Color]
+        switch currentPage {
+        case 0:
+            colors = [Color.blue.opacity(0.3), Color.cyan.opacity(0.2), Color.white]
+        case 1:
+            colors = [Color.green.opacity(0.3), Color.mint.opacity(0.2), Color.white]
+        case 2:
+            colors = [Color.purple.opacity(0.3), Color.pink.opacity(0.2), Color.white]
+        case 3:
+            colors = [Color.orange.opacity(0.3), Color.yellow.opacity(0.2), Color.white]
+        case usernamePageIndex:
+            colors = [Color.indigo.opacity(0.3), Color.purple.opacity(0.2), Color.white]
+        case schedulePageIndex:
+            colors = [Color.pink.opacity(0.3), Color.red.opacity(0.2), Color.white]
+        case searchPageIndex:
+            colors = [Color.teal.opacity(0.3), Color.blue.opacity(0.2), Color.white]
+        default:
+            colors = [Color.blue.opacity(0.3), Color.white]
+        }
+        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    private var buttonGradientColors: [Color] {
+        switch currentPage {
+        case 0: return [Color.blue, Color.cyan]
+        case 1: return [Color.green, Color.mint]
+        case 2: return [Color.purple, Color.pink]
+        case 3: return [Color.orange, Color.yellow]
+        case usernamePageIndex: return [Color.indigo, Color.purple]
+        case schedulePageIndex: return [Color.pink, Color.red]
+        case searchPageIndex: return [Color.teal, Color.blue]
+        default: return [Color.blue, Color.purple]
+        }
+    }
+
     // MARK: - Language Selection Page
 
     private func languageSelectionPage(
         title: String,
         description: String,
+        emoji: String,
         selectedLanguage: Binding<String>,
-        excludeLanguage: String
+        excludeLanguage: String,
+        gradientColors: [Color]
     ) -> some View {
         VStack(spacing: 40) {
-            VStack(spacing: 12) {
+            VStack(spacing: 20) {
+                Text(emoji)
+                    .font(.system(size: 80))
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, y: 5)
+
                 Text(title)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        LinearGradient(colors: gradientColors,
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
 
                 Text(description)
                     .font(.body)
@@ -201,7 +280,14 @@ struct OnboardingView: View {
                 }
             }
             .pickerStyle(MenuPickerStyle())
-            .tint(.blue)
+            .tint(gradientColors[0])
+            .padding(.horizontal, 24)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(gradientColors[0].opacity(0.1))
+                    .shadow(color: gradientColors[0].opacity(0.2), radius: 10, y: 5)
+            )
             .padding(.horizontal, 24)
 
             Spacer()
@@ -212,10 +298,18 @@ struct OnboardingView: View {
 
     private var usernamePage: some View {
         VStack(spacing: 24) {
-            VStack(spacing: 12) {
+            VStack(spacing: 20) {
+                Text("🌟")
+                    .font(.system(size: 80))
+                    .shadow(color: Color.yellow.opacity(0.3), radius: 10, y: 5)
+
                 Text("Give yourself a cool name")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.indigo, Color.purple],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
 
                 Text("This name will be displayed on the leaderboard")
                     .font(.body)
@@ -228,9 +322,22 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                TextField("Enter your name", text: $userName)
+                TextField("", text: $userName, prompt: Text("Enter your name").foregroundColor(.gray))
                     .font(.title3)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white)
+                            .shadow(color: Color.indigo.opacity(0.2), radius: 10, y: 5)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                LinearGradient(colors: [Color.indigo, Color.purple],
+                                             startPoint: .leading, endPoint: .trailing),
+                                lineWidth: 2
+                            )
+                    )
                     .padding(.horizontal, 24)
                     .autocapitalization(.words)
                     .disableAutocorrection(false)
@@ -248,10 +355,18 @@ struct OnboardingView: View {
 
     private var testPrepPage: some View {
         VStack(spacing: 24) {
-            VStack(spacing: 12) {
+            VStack(spacing: 20) {
+                Text("📚")
+                    .font(.system(size: 80))
+                    .shadow(color: Color.purple.opacity(0.3), radius: 10, y: 5)
+
                 Text("Are you studying for a test?")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.purple, Color.pink],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
 
                 Text("Choose your test level")
                     .font(.body)
@@ -264,35 +379,40 @@ struct OnboardingView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     // TOEFL options
-                    testPrepButton(title: "TOEFL Beginner", subtitle: "Foundation vocabulary", testType: .toeflBeginner)
-                    testPrepButton(title: "TOEFL Intermediate", subtitle: "Includes beginner words", testType: .toeflIntermediate)
-                    testPrepButton(title: "TOEFL Advanced", subtitle: "Complete TOEFL vocabulary", testType: .toeflAdvanced)
+                    testPrepButton(title: "TOEFL Beginner", subtitle: "Foundation vocabulary", emoji: "🌱", testType: .toeflBeginner, colors: [Color.green, Color.mint])
+                    testPrepButton(title: "TOEFL Intermediate", subtitle: "Includes beginner words", emoji: "🌿", testType: .toeflIntermediate, colors: [Color.teal, Color.cyan])
+                    testPrepButton(title: "TOEFL Advanced", subtitle: "Complete TOEFL vocabulary", emoji: "🌳", testType: .toeflAdvanced, colors: [Color.blue, Color.purple])
 
                     Divider().padding(.vertical, 8)
 
                     // IELTS options
-                    testPrepButton(title: "IELTS Beginner", subtitle: "Foundation vocabulary", testType: .ieltsBeginner)
-                    testPrepButton(title: "IELTS Intermediate", subtitle: "Includes beginner words", testType: .ieltsIntermediate)
-                    testPrepButton(title: "IELTS Advanced", subtitle: "Complete IELTS vocabulary", testType: .ieltsAdvanced)
+                    testPrepButton(title: "IELTS Beginner", subtitle: "Foundation vocabulary", emoji: "🎯", testType: .ieltsBeginner, colors: [Color.orange, Color.yellow])
+                    testPrepButton(title: "IELTS Intermediate", subtitle: "Includes beginner words", emoji: "🎪", testType: .ieltsIntermediate, colors: [Color.pink, Color.red])
+                    testPrepButton(title: "IELTS Advanced", subtitle: "Complete IELTS vocabulary", emoji: "🏆", testType: .ieltsAdvanced, colors: [Color.purple, Color.indigo])
 
                     Divider().padding(.vertical, 8)
 
                     // TIANZ option
-                    testPrepButton(title: "Tianz Test", subtitle: "Specialized vocabulary", testType: .tianz)
+                    testPrepButton(title: "Tianz Test", subtitle: "Specialized vocabulary", emoji: "⭐", testType: .tianz, colors: [Color.indigo, Color.purple])
 
                     // Neither option
-                    testPrepButton(title: "None", subtitle: "Skip test preparation", testType: nil)
+                    testPrepButton(title: "None", subtitle: "Skip test preparation", emoji: "🎨", testType: nil, colors: [Color.gray, Color.gray.opacity(0.6)])
                 }
                 .padding(.horizontal, 24)
             }
         }
     }
 
-    private func testPrepButton(title: String, subtitle: String, testType: TestType?) -> some View {
+    private func testPrepButton(title: String, subtitle: String, emoji: String, testType: TestType?, colors: [Color]) -> some View {
         Button(action: {
-            selectedTestType = testType
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTestType = testType
+            }
         }) {
-            HStack {
+            HStack(spacing: 16) {
+                Text(emoji)
+                    .font(.system(size: 32))
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
@@ -304,17 +424,30 @@ struct OnboardingView: View {
                 Spacer()
                 if selectedTestType == testType {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.blue)
-                        .font(.title3)
+                        .foregroundStyle(
+                            LinearGradient(colors: colors,
+                                         startPoint: .leading, endPoint: .trailing)
+                        )
+                        .font(.title2)
                 }
             }
             .padding()
-            .background(selectedTestType == testType ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(selectedTestType == testType ? Color.blue : Color.clear, lineWidth: 2)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(selectedTestType == testType ? colors[0].opacity(0.15) : Color.white)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        selectedTestType == testType ?
+                            LinearGradient(colors: colors,
+                                         startPoint: .leading, endPoint: .trailing) :
+                            LinearGradient(colors: [Color.gray.opacity(0.2)],
+                                         startPoint: .leading, endPoint: .trailing),
+                        lineWidth: selectedTestType == testType ? 3 : 1
+                    )
+            )
+            .shadow(color: selectedTestType == testType ? colors[0].opacity(0.3) : Color.clear, radius: 10, y: 5)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -323,10 +456,18 @@ struct OnboardingView: View {
 
     private var studyDurationPage: some View {
         VStack(spacing: 24) {
-            VStack(spacing: 12) {
+            VStack(spacing: 20) {
+                Text("⏰")
+                    .font(.system(size: 80))
+                    .shadow(color: Color.orange.opacity(0.3), radius: 10, y: 5)
+
                 Text("How long do you want to study?")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.orange, Color.yellow],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
 
                 Text("Set your study timeline for \(selectedTestType?.displayName ?? "")")
                     .font(.body)
@@ -341,13 +482,18 @@ struct OnboardingView: View {
             if isLoadingVocabulary {
                 ProgressView()
                     .scaleEffect(1.5)
+                    .tint(Color.orange)
             } else {
                 VStack(spacing: 32) {
                     // Duration display
                     VStack(spacing: 8) {
                         Text("\(Int(selectedStudyDuration))")
-                            .font(.system(size: 72, weight: .bold))
-                            .foregroundColor(.blue)
+                            .font(.system(size: 80, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(colors: [Color.orange, Color.yellow],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .shadow(color: Color.orange.opacity(0.3), radius: 10, y: 5)
                         Text("days")
                             .font(.title2)
                             .foregroundColor(.secondary)
@@ -356,7 +502,7 @@ struct OnboardingView: View {
                     // Slider
                     VStack(spacing: 8) {
                         Slider(value: $selectedStudyDuration, in: 10...100, step: 5)
-                            .tint(.blue)
+                            .tint(Color.orange)
 
                         HStack {
                             Text("10 days")
@@ -373,17 +519,31 @@ struct OnboardingView: View {
                     // Words per day calculation
                     if vocabularyCount > 0 {
                         let wordsPerDay = max(1, vocabularyCount / Int(selectedStudyDuration))
-                        VStack(spacing: 4) {
-                            Text("~\(wordsPerDay) new words per day")
-                                .font(.headline)
-                                .foregroundColor(.primary)
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("📝")
+                                    .font(.title)
+                                Text("~\(wordsPerDay) new words per day")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                            }
                             Text("\(vocabularyCount) total \(selectedTestType?.displayName ?? "") words")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                         .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(colors: [Color.orange.opacity(0.2), Color.yellow.opacity(0.1)],
+                                                 startPoint: .leading, endPoint: .trailing)
+                                )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.orange.opacity(0.3), lineWidth: 2)
+                        )
+                        .shadow(color: Color.orange.opacity(0.2), radius: 10, y: 5)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -413,10 +573,18 @@ struct OnboardingView: View {
 
     private var searchWordPage: some View {
         VStack(spacing: 24) {
-            VStack(spacing: 12) {
+            VStack(spacing: 20) {
+                Text("🔍")
+                    .font(.system(size: 80))
+                    .shadow(color: Color.teal.opacity(0.3), radius: 10, y: 5)
+
                 Text("Search a word")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.teal, Color.blue],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
 
                 Text("Try searching for your first word to get started")
                     .font(.body)
@@ -429,9 +597,22 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                TextField("", text: $searchWord)
+                TextField("", text: $searchWord, prompt: Text("e.g. unforgettable").foregroundColor(.gray))
                     .font(.title3)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white)
+                            .shadow(color: Color.teal.opacity(0.2), radius: 10, y: 5)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                LinearGradient(colors: [Color.teal, Color.blue],
+                                             startPoint: .leading, endPoint: .trailing),
+                                lineWidth: 2
+                            )
+                    )
                     .padding(.horizontal, 24)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
@@ -540,7 +721,7 @@ struct OnboardingView: View {
 
     private func handleNextButton() {
         if currentPage < usernamePageIndex {
-            withAnimation {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentPage += 1
             }
         } else if currentPage == usernamePageIndex {
@@ -548,7 +729,7 @@ struct OnboardingView: View {
             submitOnboarding()
         } else if currentPage == schedulePageIndex && showDurationPage {
             // Schedule preview page - just advance to search
-            withAnimation {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentPage = searchPageIndex
             }
         } else if currentPage == searchPageIndex {
@@ -603,7 +784,7 @@ struct OnboardingView: View {
                     AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
 
                     // Move to next page (schedule preview if test enabled, otherwise search)
-                    withAnimation {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         if self.showDurationPage {
                             currentPage = schedulePageIndex
                         } else {
