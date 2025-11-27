@@ -93,6 +93,7 @@ def handle_user_preferences(user_id):
             user_motto = data.get('user_motto', '')
             test_prep = data.get('test_prep')  # "TOEFL", "IELTS", or null
             study_duration_days = data.get('study_duration_days')  # 30, 40, 50, 60, 70
+            target_end_date = data.get('target_end_date')  # "YYYY-MM-DD" format or null
 
             if not learning_lang or not native_lang:
                 return jsonify({"error": "Both learning_language and native_language are required"}), 400
@@ -113,8 +114,25 @@ def handle_user_preferences(user_id):
                 return jsonify({"error": f"Invalid test_prep. Must be one of: {', '.join(valid_test_types)}, or null"}), 400
 
             # Validate study duration if provided (10-100 days)
-            if study_duration_days and (study_duration_days < 10 or study_duration_days > 100):
-                return jsonify({"error": "study_duration_days must be between 10 and 100"}), 400
+            if test_prep and not study_duration_days:
+                return jsonify({"error": "study_duration_days must be set when test_prep is provided"}), 400
+
+            # Calculate target_end_date from study_duration_days if provided, otherwise use explicit target_end_date
+            from datetime import datetime, date, timedelta
+            parsed_target_end_date = None
+
+            if study_duration_days:
+                # Auto-calculate target_end_date from study_duration_days
+                parsed_target_end_date = date.today() + timedelta(days=study_duration_days)
+            elif target_end_date:
+                # Use explicitly provided target_end_date
+                try:
+                    parsed_target_end_date = datetime.strptime(target_end_date, '%Y-%m-%d').date()
+                    # Validate it's in the future
+                    if parsed_target_end_date <= date.today():
+                        return jsonify({"error": "target_end_date must be in the future"}), 400
+                except ValueError:
+                    return jsonify({"error": "target_end_date must be in YYYY-MM-DD format"}), 400
 
             conn = get_db_connection()
             cur = conn.cursor()
@@ -135,9 +153,15 @@ def handle_user_preferences(user_id):
                 for col in ALL_TEST_ENABLE_COLUMNS:
                     test_settings[col] = False
 
-            # Build the INSERT statement with all test columns
+            # Build the INSERT statement with all test columns and target_end_date
             insert_cols = ['user_id', 'learning_language', 'native_language', 'user_name', 'user_motto'] + list(test_settings.keys())
             insert_values = [user_id, learning_lang, native_lang, user_name, user_motto] + list(test_settings.values())
+
+            # Add target_end_date if provided
+            if parsed_target_end_date is not None:
+                insert_cols.append('target_end_date')
+                insert_values.append(parsed_target_end_date)
+
             placeholders = ', '.join(['%s'] * len(insert_values))
 
             # Build the ON CONFLICT UPDATE clause
@@ -150,6 +174,9 @@ def handle_user_preferences(user_id):
             # Add update clauses for all test settings columns
             for col in test_settings.keys():
                 update_clauses.append(f'{col} = EXCLUDED.{col}')
+            # Add target_end_date update if provided
+            if parsed_target_end_date is not None:
+                update_clauses.append('target_end_date = EXCLUDED.target_end_date')
             update_clauses.append('updated_at = CURRENT_TIMESTAMP')
 
             # Execute the query
@@ -163,7 +190,7 @@ def handle_user_preferences(user_id):
             conn.commit()
             conn.close()
 
-            return jsonify({
+            response_data = {
                 "user_id": user_id,
                 "learning_language": learning_lang,
                 "native_language": native_lang,
@@ -172,7 +199,10 @@ def handle_user_preferences(user_id):
                 "test_prep": test_prep,
                 "study_duration_days": study_duration_days,
                 "updated": True
-            })
+            }
+            if target_end_date:
+                response_data["target_end_date"] = target_end_date
+            return jsonify(response_data)
     
     except Exception as e:
         logger.error(f"Error handling user preferences: {str(e)}")

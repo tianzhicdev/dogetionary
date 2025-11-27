@@ -1737,6 +1737,7 @@ class DictionaryService: ObservableObject {
     }
 
     /// Update test settings using V3 API format with test_type
+    @available(*, deprecated, message: "Use updateUserPreferences instead - this endpoint will be removed")
     func updateTestSettings(userID: String, testType: TestType?, targetDays: Int?, completion: @escaping (Result<TestSettingsUpdateResponse, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/v3/api/test-prep/settings") else {
             completion(.failure(DictionaryError.invalidURL))
@@ -1805,126 +1806,6 @@ class DictionaryService: ObservableObject {
     }
 
     // MARK: - Schedule Methods
-
-    func createSchedule(testType: String, targetEndDate: String, completion: @escaping (Result<CreateScheduleResponse, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/schedule/create") else {
-            logger.error("Invalid URL for create schedule endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Creating schedule - User: \(userID), Test: \(testType), End Date: \(targetEndDate)")
-
-        let requestBody: [String: Any] = [
-            "user_id": userID,
-            "test_type": testType,
-            "target_end_date": targetEndDate
-        ]
-
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
-            logger.error("Failed to encode create schedule request")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = jsonData
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                self.logger.error("Network error creating schedule: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response type for create schedule")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            self.logger.info("Create schedule response status: \(httpResponse.statusCode)")
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error creating schedule: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received for create schedule")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            do {
-                let scheduleResponse = try JSONDecoder().decode(CreateScheduleResponse.self, from: data)
-                self.logger.info("Successfully created schedule with ID: \(scheduleResponse.schedule.schedule_id)")
-                completion(.success(scheduleResponse))
-            } catch {
-                self.logger.error("Failed to decode create schedule response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
-
-    func refreshSchedule(completion: @escaping (Result<CreateScheduleResponse, Error>) -> Void) {
-        let userID = UserManager.shared.getUserID()
-        guard let url = URL(string: "\(baseURL)/v3/schedule/refresh?user_id=\(userID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userID)") else {
-            logger.error("Invalid URL for refresh schedule endpoint")
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        logger.info("Refreshing schedule for user: \(userID)")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                self.logger.error("Network error refreshing schedule: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                self.logger.error("Invalid response for refresh schedule")
-                completion(.failure(DictionaryError.invalidResponse))
-                return
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                self.logger.error("Server error refreshing schedule: \(httpResponse.statusCode)")
-                completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                self.logger.error("No data received for refresh schedule")
-                completion(.failure(DictionaryError.noData))
-                return
-            }
-
-            do {
-                let scheduleResponse = try JSONDecoder().decode(CreateScheduleResponse.self, from: data)
-                self.logger.info("Successfully refreshed schedule with ID: \(scheduleResponse.schedule.schedule_id)")
-                completion(.success(scheduleResponse))
-            } catch {
-                self.logger.error("Failed to decode refresh schedule response: \(error.localizedDescription)")
-                completion(.failure(DictionaryError.decodingError(error)))
-            }
-        }.resume()
-    }
 
     func getTodaySchedule(completion: @escaping (Result<DailyScheduleEntry, Error>) -> Void) {
         let userID = UserManager.shared.getUserID()

@@ -591,11 +591,6 @@ struct OnboardingView: View {
 
                     userManager.isSyncingFromServer = false
 
-                    // Create schedule if test type was selected
-                    if let testType = selectedTestType {
-                        createSchedule(testType: testType.rawValue, targetDays: duration)
-                    }
-
                     // Track analytics
                     var metadata: [String: Any] = [
                         "learning_language": selectedLearningLanguage,
@@ -709,35 +704,6 @@ struct OnboardingView: View {
 
         // Keep 30 days as default
         selectedStudyDuration = 30
-    }
-
-    private func createSchedule(testType: String, targetDays: Int) {
-        print("📅 Creating schedule for \(testType) with \(targetDays) target days")
-
-        // Calculate target end date
-        let calendar = Calendar.current
-        guard let targetEndDate = calendar.date(byAdding: .day, value: targetDays, to: Date()) else {
-            print("❌ Failed to calculate target end date")
-            return
-        }
-
-        // Format as YYYY-MM-DD string (backend expects this format)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let targetEndDateString = formatter.string(from: targetEndDate)
-
-        print("📅 Calling createSchedule API - testType: \(testType), targetEndDate: \(targetEndDateString)")
-
-        DictionaryService.shared.createSchedule(testType: testType, targetEndDate: targetEndDateString) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    print("✅ Successfully created schedule: \(response.schedule.schedule_id)")
-                case .failure(let error):
-                    print("❌ Failed to create schedule: \(error.localizedDescription)")
-                }
-            }
-        }
     }
 
 }

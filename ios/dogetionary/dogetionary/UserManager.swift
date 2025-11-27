@@ -80,10 +80,6 @@ class UserManager: ObservableObject {
             }
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
-                // Create schedule when test type changes
-                if let testType = activeTestType, oldValue != activeTestType {
-                    createScheduleForTestType(testType.rawValue, targetDays: targetDays)
-                }
                 // Sync legacy properties for backward compatibility
                 updateLegacyPropertiesFromActive()
             }
@@ -96,10 +92,6 @@ class UserManager: ObservableObject {
             UserDefaults.standard.set(targetDays, forKey: targetDaysKey)
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
-                // Recreate schedule if test is enabled and days changed
-                if let testType = activeTestType, oldValue != targetDays {
-                    createScheduleForTestType(testType.rawValue, targetDays: targetDays)
-                }
                 // Sync legacy properties for backward compatibility
                 updateLegacyPropertiesFromActive()
             }
@@ -310,22 +302,12 @@ class UserManager: ObservableObject {
     private func syncPreferencesToServer() {
         logger.info("Syncing preferences to server - Learning: \(self.learningLanguage), Native: \(self.nativeLanguage)")
 
-        // Convert UserManager's test prep properties to API format
-        let testPrep: String? = {
-            if self.toeflEnabled {
-                return "TOEFL"
-            } else if self.ieltsEnabled {
-                return "IELTS"
-            } else if self.tianzEnabled {
-                return "TIANZ"
-            } else {
-                return nil
-            }
-        }()
+        // Use activeTestType for level-based test prep (TOEFL_BEGINNER, IELTS_INTERMEDIATE, etc.)
+        let testPrep: String? = self.activeTestType?.rawValue
 
         // Always send study duration days to keep settings in sync, even when test prep is disabled
-        // Use toeflTargetDays as the source since both should be kept in sync
-        let studyDurationDays: Int? = self.toeflTargetDays
+        // Use targetDays as the source
+        let studyDurationDays: Int? = self.targetDays > 0 ? self.targetDays : nil
 
         DictionaryService.shared.updateUserPreferences(
             userID: self.userID,
@@ -338,7 +320,7 @@ class UserManager: ObservableObject {
         ) { result in
             switch result {
             case .success(_):
-                self.logger.info("Successfully synced preferences to server")
+                self.logger.info("Successfully synced preferences to server - Test: \(testPrep ?? "none"), Days: \(studyDurationDays ?? 0)")
             case .failure(let error):
                 self.logger.error("Failed to sync preferences to server: \(error.localizedDescription)")
             }
@@ -348,22 +330,12 @@ class UserManager: ObservableObject {
     private func syncTestSettingsToServer() {
         logger.info("Syncing test settings to server - Test Type: \(self.activeTestType?.rawValue ?? "nil"), Target Days: \(self.targetDays)")
 
-        // Use V3 API format
-        DictionaryService.shared.updateTestSettings(
-            userID: self.userID,
-            testType: self.activeTestType,
-            targetDays: self.targetDays
-        ) { result in
-            switch result {
-            case .success(_):
-                self.logger.info("Successfully synced test settings to server")
-                // Notify SavedWordsView to refresh schedule status
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .refreshSavedWords, object: nil)
-                }
-            case .failure(let error):
-                self.logger.error("Failed to sync test settings to server: \(error.localizedDescription)")
-            }
+        // Use the unified preferences API instead of separate test settings endpoint
+        syncPreferencesToServer()
+
+        // Notify SavedWordsView to refresh schedule status
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .refreshSavedWords, object: nil)
         }
     }
 
@@ -433,37 +405,6 @@ class UserManager: ObservableObject {
                     }
                 case .failure(let error):
                     self.logger.error("Failed to fetch preferences from server: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Schedule Management
-
-    private func createScheduleForTestType(_ testType: String, targetDays: Int) {
-        logger.info("Creating schedule for \(testType) with \(targetDays) target days")
-
-        // Calculate target end date
-        let calendar = Calendar.current
-        guard let targetEndDate = calendar.date(byAdding: .day, value: targetDays, to: Date()) else {
-            logger.error("Failed to calculate target end date")
-            return
-        }
-
-        // Format as YYYY-MM-DD string (backend expects this format)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let targetEndDateString = formatter.string(from: targetEndDate)
-
-        logger.info("Calling createSchedule API - testType: \(testType), targetEndDate: \(targetEndDateString)")
-
-        DictionaryService.shared.createSchedule(testType: testType, targetEndDate: targetEndDateString) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    self.logger.info("Successfully created schedule: \(response.schedule.schedule_id)")
-                case .failure(let error):
-                    self.logger.error("Failed to create schedule: \(error.localizedDescription)")
                 }
             }
         }

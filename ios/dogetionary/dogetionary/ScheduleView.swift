@@ -115,100 +115,37 @@ struct ScheduleView: View {
     private func handleTestTypeChange(from oldValue: TestType?, to newValue: TestType?) async {
         guard !isCreatingSchedule else { return }
 
-        // If changed to None or from one test to another, update backend and recreate schedule
         isCreatingSchedule = true
 
-        // Step 1: Update test settings in backend (this ensures only one test is enabled)
-        await updateTestSettingsInBackend(testType: newValue, targetDays: userManager.targetDays)
+        // UserManager's activeTestType didSet will automatically sync to server
+        // No need to call updateTestSettingsInBackend - it's already handled!
 
-        // Step 2: Create new schedule if test type is selected
-        if let testType = newValue {
-            // Create schedule with selected test type
-            await createSchedule(testType: testType.rawValue, targetDays: userManager.targetDays)
-        }
-        // Note: If newValue is nil, updateTestSettings already deleted the schedule in backend
+        // Wait briefly for sync to complete
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
 
-        // Step 3: Reload schedule to reflect changes
+        // Reload schedule to reflect changes (schedule is calculated on-the-fly from preferences)
         await loadScheduleRangeAsync()
         isCreatingSchedule = false
 
-        // Step 4: Notify other views that test settings changed
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .testSettingsChanged, object: nil)
-        }
+        // Note: testSettingsChanged notification is already posted by UserManager.syncTestSettingsToServer()
     }
 
     private func handleTargetDaysChange() async {
-        guard !isCreatingSchedule, let testType = userManager.activeTestType else { return }
+        guard !isCreatingSchedule, let _ = userManager.activeTestType else { return }
 
         isCreatingSchedule = true
 
-        // Step 1: Update test settings in backend
-        await updateTestSettingsInBackend(testType: testType, targetDays: userManager.targetDays)
+        // UserManager's targetDays didSet will automatically sync to server
+        // No need to call updateTestSettingsInBackend - it's already handled!
 
-        // Step 2: Recreate schedule with new target days
-        await createSchedule(testType: testType.rawValue, targetDays: userManager.targetDays)
+        // Wait briefly for sync to complete
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
 
-        // Step 3: Reload schedule
+        // Reload schedule (schedule is calculated on-the-fly from preferences)
         await loadScheduleRangeAsync()
         isCreatingSchedule = false
 
-        // Step 4: Notify other views that test settings changed
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .testSettingsChanged, object: nil)
-        }
-    }
-
-    private func createSchedule(testType: String, targetDays: Int) async {
-        await withCheckedContinuation { continuation in
-            let calendar = Calendar.current
-            guard let targetDate = calendar.date(byAdding: .day, value: targetDays, to: Date()) else {
-                print("❌ Failed to calculate target end date")
-                continuation.resume()
-                return
-            }
-
-            // Format as YYYY-MM-DD string (backend expects this format)
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            let targetEndDateString = formatter.string(from: targetDate)
-
-            DictionaryService.shared.createSchedule(testType: testType, targetEndDate: targetEndDateString) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        print("✅ Schedule created successfully")
-                    case .failure(let error):
-                        print("⚠️ Failed to create schedule: \(error.localizedDescription)")
-                    }
-                    continuation.resume()
-                }
-            }
-        }
-    }
-
-    private func updateTestSettingsInBackend(testType: TestType?, targetDays: Int) async {
-        await withCheckedContinuation { continuation in
-            let userID = UserManager.shared.getUserID()
-
-            print("📝 Updating test settings - testType: \(testType?.rawValue ?? "nil"), targetDays: \(targetDays)")
-
-            DictionaryService.shared.updateTestSettings(
-                userID: userID,
-                testType: testType,
-                targetDays: targetDays
-            ) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        print("✅ Test settings updated successfully")
-                    case .failure(let error):
-                        print("⚠️ Failed to update test settings: \(error.localizedDescription)")
-                    }
-                    continuation.resume()
-                }
-            }
-        }
+        // Note: testSettingsChanged notification is already posted by UserManager.syncTestSettingsToServer()
     }
 
     private func loadScheduleRangeAsync() async {
@@ -216,21 +153,6 @@ struct ScheduleView: View {
 
         isLoading = true
         errorMessage = nil
-
-        // Refresh schedule
-        await withCheckedContinuation { continuation in
-            DictionaryService.shared.refreshSchedule { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        print("✅ Schedule refreshed successfully")
-                    case .failure(let error):
-                        print("⚠️ Failed to refresh schedule: \(error.localizedDescription)")
-                    }
-                    continuation.resume()
-                }
-            }
-        }
 
         // Check if user has any schedule
         await withCheckedContinuation { continuation in
