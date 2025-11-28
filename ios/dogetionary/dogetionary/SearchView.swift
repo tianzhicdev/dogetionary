@@ -44,13 +44,13 @@ struct SearchView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Show progress bar at top if user has schedule (only if showProgressBar is true)
-            if showProgressBar, let progress = testProgress, progress.has_schedule {
+            // Show progress bar at top if user has schedule OR has achievement progress (for score mode)
+            if showProgressBar, let progress = testProgress, (progress.has_schedule || achievementProgress != nil) {
                 TestProgressBar(
                     progress: progress.progress,
                     totalWords: progress.total_words,
                     savedWords: progress.saved_words,
-                    testType: progress.test_type ?? "Test",
+                    testType: progress.test_type ?? "NONE",
                     streakDays: progress.streak_days,
                     achievementProgress: achievementProgress,
                     testVocabularyAwards: testVocabularyAwards,
