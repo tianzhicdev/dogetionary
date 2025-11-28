@@ -31,6 +31,10 @@ struct SearchView: View {
     @State private var achievementProgress: AchievementProgressResponse?
     @State private var isLoadingAchievements = false
 
+    // Test vocabulary awards state
+    @State private var testVocabularyAwards: TestVocabularyAwardsResponse?
+    @State private var isLoadingTestVocabAwards = false
+
     // Progress bar expansion state
     @State private var isProgressBarExpanded = false
 
@@ -49,6 +53,7 @@ struct SearchView: View {
                     testType: progress.test_type ?? "Test",
                     streakDays: progress.streak_days,
                     achievementProgress: achievementProgress,
+                    testVocabularyAwards: testVocabularyAwards,
                     isExpanded: $isProgressBarExpanded
                 )
                 .padding(.horizontal)
@@ -198,6 +203,7 @@ struct SearchView: View {
             if showProgressBar {
                 loadTestProgress()
                 loadAchievementProgress()
+                loadTestVocabularyAward()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { _ in
@@ -205,6 +211,7 @@ struct SearchView: View {
             if showProgressBar {
                 loadTestProgress()
                 loadAchievementProgress()
+                loadTestVocabularyAward()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .testSettingsChanged)) { _ in
@@ -212,6 +219,7 @@ struct SearchView: View {
             if showProgressBar {
                 loadTestProgress()
                 loadAchievementProgress()
+                loadTestVocabularyAward()
             }
         }
     }
@@ -524,6 +532,25 @@ struct SearchView: View {
                 case .failure(let error):
                     print("Failed to load achievement progress: \(error.localizedDescription)")
                     // Silently fail - achievements simply won't show
+                }
+            }
+        }
+    }
+
+    private func loadTestVocabularyAward() {
+        guard !isLoadingTestVocabAwards else { return }
+
+        isLoadingTestVocabAwards = true
+        DictionaryService.shared.getTestVocabularyAwards { result in
+            DispatchQueue.main.async {
+                self.isLoadingTestVocabAwards = false
+
+                switch result {
+                case .success(let awards):
+                    self.testVocabularyAwards = awards
+                case .failure(let error):
+                    print("Failed to load test vocabulary awards: \(error.localizedDescription)")
+                    // Silently fail - awards simply won't show
                 }
             }
         }

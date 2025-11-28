@@ -15,7 +15,7 @@ from handlers.test_vocabulary import get_test_vocabulary_count
 from handlers.schedule import get_today_schedule, get_schedule_range, get_test_progress
 from handlers.review_batch import get_review_words_batch
 from handlers.streaks import get_streak_days
-from handlers.achievements import get_achievement_progress
+from handlers.achievements import get_achievement_progress, get_test_vocabulary_awards
 from handlers.practice_status import get_practice_status
 from handlers.app_version import check_app_version
 
@@ -82,6 +82,7 @@ v3_api.route('/get-streak-days', methods=['GET'])(get_streak_days)
 
 # Achievements (V3)
 v3_api.route('/achievements/progress', methods=['GET'])(get_achievement_progress)
+v3_api.route('/achievements/test-vocabulary-awards', methods=['GET'])(get_test_vocabulary_awards)
 
 # Practice Status (V3)
 v3_api.route('/practice-status', methods=['GET'])(get_practice_status)

@@ -572,6 +572,55 @@ class TestRunner:
             self.log(f"✗ Review complete logic test failed with error: {e}")
             self.failed += 1
 
+    def test_test_vocabulary_awards_endpoint(self):
+        """Test the test vocabulary awards endpoint"""
+        self.log("Testing /v3/achievements/test-vocabulary-awards endpoint...")
+
+        try:
+            # Test with test user
+            response = requests.get(
+                f"{BASE_URL}/v3/achievements/test-vocabulary-awards",
+                params={"user_id": self.test_user_id}
+            )
+            self.assert_status_code(response, 200, "/v3/achievements/test-vocabulary-awards")
+
+            data = response.json()
+            self.assert_json_contains(data, "user_id", "Response contains user_id")
+
+            # If user has test type selected, check award data
+            if data.get("test_type"):
+                self.assert_json_contains(data, "total_words", "Response contains total_words")
+                self.assert_json_contains(data, "completed_words", "Response contains completed_words")
+                self.assert_json_contains(data, "progress_percentage", "Response contains progress_percentage")
+                self.assert_json_contains(data, "unlocked", "Response contains unlocked status")
+                self.assert_json_contains(data, "award", "Response contains award metadata")
+
+                award = data.get("award", {})
+                self.assert_json_contains(award, "title", "Award contains title")
+                self.assert_json_contains(award, "symbol", "Award contains symbol")
+                self.assert_json_contains(award, "tier", "Award contains tier")
+
+                self.log(f"✓ Award data: {data.get('completed_words')}/{data.get('total_words')} ({data.get('progress_percentage')}%) - Unlocked: {data.get('unlocked')}")
+                self.passed += 1
+            else:
+                self.log("✓ No test type selected (expected for new user)")
+                self.passed += 1
+
+            # Test missing user_id
+            response = requests.get(f"{BASE_URL}/v3/achievements/test-vocabulary-awards")
+            self.assert_status_code(response, 400, "/v3/achievements/test-vocabulary-awards without user_id")
+
+            # Test invalid user_id format
+            response = requests.get(
+                f"{BASE_URL}/v3/achievements/test-vocabulary-awards",
+                params={"user_id": "invalid-uuid"}
+            )
+            self.assert_status_code(response, 400, "/v3/achievements/test-vocabulary-awards with invalid user_id")
+
+        except Exception as e:
+            self.log(f"✗ /v3/achievements/test-vocabulary-awards endpoint failed with error: {e}")
+            self.failed += 1
+
     def test_app_version_endpoint(self):
         """Test the app version check endpoint"""
         self.log("Testing /v3/app-version endpoint...")
@@ -647,6 +696,7 @@ class TestRunner:
         self.test_combined_metrics_endpoint()
         self.test_next_review_word_with_scheduled_new_words()
         self.test_review_complete_logic()
+        self.test_test_vocabulary_awards_endpoint()
         self.test_app_version_endpoint()
 
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")

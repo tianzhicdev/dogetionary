@@ -14,9 +14,21 @@ struct TestProgressBar: View {
     let testType: String
     let streakDays: Int  // Streak days
     let achievementProgress: AchievementProgressResponse?  // Optional achievements
+    let testVocabularyAwards: TestVocabularyAwardsResponse?  // Optional test vocabulary awards
     @Binding var isExpanded: Bool  // Binding to track expansion state
 
     @State private var animatedProgress: Double = 0.0
+
+    // Badge metadata - map test names to user-friendly titles and SF Symbols
+    private let badgeMetadata: [String: (title: String, symbol: String)] = [
+        "TOEFL_BEGINNER": ("TOEFL Beginner", "graduationcap.fill"),
+        "TOEFL_INTERMEDIATE": ("TOEFL Intermediate", "graduationcap.circle.fill"),
+        "TOEFL_ADVANCED": ("TOEFL Advanced", "brain.head.profile"),
+        "IELTS_BEGINNER": ("IELTS Beginner", "graduationcap.fill"),
+        "IELTS_INTERMEDIATE": ("IELTS Intermediate", "graduationcap.circle.fill"),
+        "IELTS_ADVANCED": ("IELTS Advanced", "brain.head.profile"),
+        "TIANZ": ("Tianz", "star.circle.fill")
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -166,50 +178,83 @@ struct TestProgressBar: View {
                         Spacer()
                     }
 
-                    // Achievements section
+                    // Achievements section - combines score-based and test-completion badges
                     if let achievements = achievementProgress {
-                        Divider()
-                            .padding(.vertical, 4)
+                        // Filter for only unlocked achievements
+                        let unlockedAchievements = achievements.achievements.filter { $0.unlocked }
 
-                        VStack(spacing: 12) {
-                            HStack {
-                                Text("Achievements")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                if let current = achievements.current_achievement {
-                                    Image(systemName: current.symbol)
-                                        .font(.system(size: 16))
-                                        .foregroundColor(colorForAchievementTier(current.tier))
-                                    Text("\(achievements.score) pts")
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.primary)
-                                }
-                            }
+                        // Get earned test completion badges
+                        let earnedTestBadges = testVocabularyAwards?.filter { $0.value.isEarned }.sorted(by: { $0.key < $1.key }) ?? []
 
-                            // Badge grid (4 columns for compact display)
-                            LazyVGrid(columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible()),
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ], spacing: 12) {
-                                ForEach(achievements.achievements) { achievement in
-                                    VStack(spacing: 4) {
-                                        Image(systemName: achievement.symbol)
-                                            .font(.system(size: 20))
-                                            .foregroundColor(achievement.unlocked ? colorForAchievementTier(achievement.tier) : Color.gray.opacity(0.3))
+                        // Only show section if there are any badges to display
+                        if !unlockedAchievements.isEmpty || !earnedTestBadges.isEmpty {
+                            Divider()
+                                .padding(.vertical, 4)
 
-                                        Text("\(achievement.milestone)")
-                                            .font(.system(size: 9, weight: .medium))
-                                            .foregroundColor(achievement.unlocked ? .primary : .secondary.opacity(0.5))
+                            VStack(spacing: 12) {
+                                HStack {
+                                    Text("Achievements")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    if let current = achievements.current_achievement {
+                                        Image(systemName: current.symbol)
+                                            .font(.system(size: 16))
+                                            .foregroundColor(colorForAchievementTier(current.tier))
+                                        Text("\(achievements.score) pts")
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.primary)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(achievement.unlocked ? colorForAchievementTier(achievement.tier).opacity(0.08) : Color.gray.opacity(0.05))
-                                    )
+                                }
+
+                                // Combined badge grid (4 columns for compact display)
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible())
+                                ], spacing: 12) {
+                                    // Score-based achievements
+                                    ForEach(unlockedAchievements) { achievement in
+                                        VStack(spacing: 4) {
+                                            Image(systemName: achievement.symbol)
+                                                .font(.system(size: 20))
+                                                .foregroundColor(colorForAchievementTier(achievement.tier))
+
+                                            Text("\(achievement.milestone)")
+                                                .font(.system(size: 9, weight: .medium))
+                                                .foregroundColor(.primary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(colorForAchievementTier(achievement.tier).opacity(0.08))
+                                        )
+                                    }
+
+                                    // Test completion badges
+                                    ForEach(earnedTestBadges, id: \.key) { testName, progress in
+                                        if let metadata = badgeMetadata[testName] {
+                                            VStack(spacing: 4) {
+                                                Image(systemName: metadata.symbol)
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(.green)
+
+                                                Text(metadata.title)
+                                                    .font(.system(size: 9, weight: .medium))
+                                                    .foregroundColor(.primary)
+                                                    .multilineTextAlignment(.center)
+                                                    .lineLimit(2)
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .fill(Color.green.opacity(0.08))
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -344,6 +389,7 @@ struct TestProgressBar_Previews: PreviewProvider {
                     testType: "TOEFL",
                     streakDays: 5,
                     achievementProgress: nil,
+                    testVocabularyAwards: nil,
                     isExpanded: $isExpanded1
                 )
 
@@ -354,6 +400,7 @@ struct TestProgressBar_Previews: PreviewProvider {
                     testType: "IELTS",
                     streakDays: 12,
                     achievementProgress: nil,
+                    testVocabularyAwards: nil,
                     isExpanded: $isExpanded2
                 )
 
@@ -364,6 +411,7 @@ struct TestProgressBar_Previews: PreviewProvider {
                     testType: "BOTH",
                     streakDays: 0,
                     achievementProgress: nil,
+                    testVocabularyAwards: nil,
                     isExpanded: $isExpanded3
                 )
             }

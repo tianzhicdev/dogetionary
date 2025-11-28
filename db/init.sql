@@ -1,4 +1,4 @@
--- Dogetionary Database Schema v6 - Complete Schema with All Migrations
+-- Dogetionary Database Schema v7 - Complete Schema with All Migrations
 -- All tables and indexes merged from migrations (including vocabulary levels)
 
 -- ============================================================

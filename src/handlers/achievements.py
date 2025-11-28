@@ -53,7 +53,6 @@ ACHIEVEMENTS = [
     {"milestone": 20000, "title": "Vocabulary God", "symbol": "crown.fill", "tier": "expert", "is_award": True},
 ]
 
-
 def get_achievement_progress():
     """
     GET /v3/achievements/progress?user_id=XXX
@@ -122,4 +121,82 @@ def get_achievement_progress():
 
     except Exception as e:
         logger.error(f"Error in get_achievement_progress: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+def get_test_vocabulary_awards():
+    """
+    GET /v3/achievements/test-vocabulary-awards?user_id=XXX
+    Get test vocabulary completion progress for ALL tests.
+
+    Returns progress for all test types regardless of which test the user has enabled.
+    This allows displaying past badges even if user switched tests.
+
+    Response:
+        {
+            "TOEFL_BEGINNER": {
+                "saved_test_words": 750,
+                "total_test_words": 796
+            },
+            "TOEFL_INTERMEDIATE": {
+                "saved_test_words": 1200,
+                "total_test_words": 1995
+            },
+            ...
+        }
+    """
+    try:
+        user_id = request.args.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+
+        # Validate UUID
+        try:
+            uuid.UUID(user_id)
+        except ValueError:
+            return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
+
+        # Define all test types and their vocabulary columns
+        test_types = {
+            'TOEFL_BEGINNER': 'is_toefl_beginner',
+            'TOEFL_INTERMEDIATE': 'is_toefl_intermediate',
+            'TOEFL_ADVANCED': 'is_toefl_advanced',
+            'IELTS_BEGINNER': 'is_ielts_beginner',
+            'IELTS_INTERMEDIATE': 'is_ielts_intermediate',
+            'IELTS_ADVANCED': 'is_ielts_advanced',
+            'TIANZ': 'is_tianz'
+        }
+
+        result = {}
+
+        for test_name, vocab_column in test_types.items():
+            # Count total words in test vocabulary
+            total_words_result = db_fetch_one(f"""
+                SELECT COUNT(*) as total
+                FROM test_vocabularies
+                WHERE {vocab_column} = TRUE AND language = 'en'
+            """)
+            total_words = total_words_result['total'] if total_words_result else 0
+
+            # Count saved words (completed by user)
+            saved_words_result = db_fetch_one(f"""
+                SELECT COUNT(DISTINCT sw.word) as saved
+                FROM saved_words sw
+                INNER JOIN test_vocabularies tv ON
+                    LOWER(sw.word) = LOWER(tv.word) AND
+                    sw.learning_language = tv.language
+                WHERE sw.user_id = %s AND tv.{vocab_column} = TRUE
+            """, (user_id,))
+            saved_words = saved_words_result['saved'] if saved_words_result else 0
+
+            result[test_name] = {
+                "saved_test_words": saved_words,
+                "total_test_words": total_words
+            }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"Error in get_test_vocabulary_awards: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
