@@ -18,15 +18,6 @@ struct AIIllustrationView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-//            HStack {
-//                Image(systemName: "photo.artframe")
-//                    .foregroundColor(.blue)
-//                Text("AI Illustration")
-//                    .font(.headline)
-//                    .foregroundColor(.blue)
-//                Spacer()
-//            }
-//            
             if let illustration = illustration {
                 // Show generated illustration - image only
                 VStack(spacing: 8) {

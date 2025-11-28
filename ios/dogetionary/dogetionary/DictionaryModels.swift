@@ -1161,3 +1161,55 @@ struct AppVersionResponse: Codable {
         case status, min_version, latest_version, upgrade_url, message
     }
 }
+
+// MARK: - Vocabulary Count Models
+
+/// Study plan suggestion with days and words per day
+struct StudyPlan: Codable {
+    let days: Int
+    let words_per_day: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case days, words_per_day
+    }
+}
+
+/// Vocabulary count info for a single test type
+struct VocabularyCountInfo: Codable {
+    let total_words: Int
+    let study_plans: [StudyPlan]
+
+    private enum CodingKeys: String, CodingKey {
+        case total_words, study_plans
+    }
+}
+
+/// Response from /v3/api/test-vocabulary-count endpoint
+struct VocabularyCountResponse: Codable {
+    // Backward compatible top-level fields (for single test query)
+    let total_words: Int?
+    let study_plans: [StudyPlan]?
+
+    // New format (supports multiple tests)
+    let counts: [String: VocabularyCountInfo]
+
+    private enum CodingKeys: String, CodingKey {
+        case total_words, study_plans, counts
+    }
+
+    /// Get count for a specific test type
+    func count(for testType: TestType) -> VocabularyCountInfo? {
+        return counts[testType.rawValue]
+    }
+
+    /// Get all counts as dictionary with TestType keys
+    func allCounts() -> [TestType: VocabularyCountInfo] {
+        var result: [TestType: VocabularyCountInfo] = [:]
+        for (key, value) in counts {
+            if let testType = TestType(rawValue: key) {
+                result[testType] = value
+            }
+        }
+        return result
+    }
+}

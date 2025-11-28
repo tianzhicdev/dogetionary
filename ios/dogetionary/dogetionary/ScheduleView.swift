@@ -499,7 +499,7 @@ struct DayCard: View {
         if testType == "BOTH" {
             return "Test"
         }
-        return testType
+        return testType.replacingOccurrences(of: "_", with: " ")
     }
 
     var body: some View {
@@ -546,26 +546,6 @@ struct DayCard: View {
                                 .padding(.vertical, 3)
                                 .background(Color(red: 0.5, green: 0.45, blue: 1.0))
                                 .cornerRadius(4)
-                        }
-                    }
-
-                    HStack(spacing: 8) {
-                        let newTotal = (entry.new_words?.count ?? 0) + (entry.new_words_completed?.count ?? 0)
-                        let newCompleted = entry.new_words_completed?.count ?? 0
-                        if newTotal > 0 {
-                            TaskBadge(count: newTotal, completed: newCompleted, label: "New", color: Color(red: 1.0, green: 0.6, blue: 0.4))
-                        }
-
-                        let testTotal = (entry.test_practice_words?.count ?? 0) + (entry.test_practice_words_completed?.count ?? 0)
-                        let testCompleted = entry.test_practice_words_completed?.count ?? 0
-                        if testTotal > 0 {
-                            TaskBadge(count: testTotal, completed: testCompleted, label: testLabel, color: Color(red: 0.4, green: 0.8, blue: 0.6))
-                        }
-
-                        let practiceTotal = (entry.non_test_practice_words?.count ?? 0) + (entry.non_test_practice_words_completed?.count ?? 0)
-                        let practiceCompleted = entry.non_test_practice_words_completed?.count ?? 0
-                        if practiceTotal > 0 {
-                            TaskBadge(count: practiceTotal, completed: practiceCompleted, label: "Custom", color: Color(red: 0.5, green: 0.7, blue: 1.0))
                         }
                     }
                 }

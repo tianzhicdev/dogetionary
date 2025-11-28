@@ -18,12 +18,31 @@ struct MultipleChoiceQuestionView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // Question Text
+            // Question Text with gradient
             Text(question.question_text)
                 .font(.title2)
-                .fontWeight(.semibold)
+                .fontWeight(.bold)
                 .multilineTextAlignment(.center)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color(red: 0.3, green: 0.4, blue: 0.95), Color(red: 0.6, green: 0.3, blue: 0.9)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
                 .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.06)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .shadow(color: Color.blue.opacity(0.15), radius: 8, y: 4)
 
             // Options
             VStack(spacing: 12) {
@@ -35,8 +54,10 @@ struct MultipleChoiceQuestionView: View {
                         correctAnswer: question.correct_answer,
                         showFeedback: showFeedback,
                         onTap: {
-                            selectedAnswer = option.id
-                            showFeedback = true
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedAnswer = option.id
+                                showFeedback = true
+                            }
 
                             // Delay before calling onAnswer to show feedback and correct answer
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -67,52 +88,116 @@ struct MultipleChoiceOptionButton: View {
         showFeedback && !isSelected && isCorrect
     }
 
-    var backgroundColor: Color {
+    var backgroundGradient: LinearGradient {
         if showFeedback && isSelected {
-            return isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)
+            if isCorrect {
+                // Vibrant green gradient for correct
+                return LinearGradient(
+                    colors: [Color(red: 0.3, green: 0.85, blue: 0.5), Color(red: 0.2, green: 0.75, blue: 0.6)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            } else {
+                // Vibrant red-orange gradient for incorrect
+                return LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.45, blue: 0.4), Color(red: 1.0, green: 0.6, blue: 0.35)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         } else if shouldShowAsCorrect {
-            return Color.green.opacity(0.15)
+            // Subtle green gradient for unselected correct answer
+            return LinearGradient(
+                colors: [Color(red: 0.7, green: 0.95, blue: 0.75), Color(red: 0.6, green: 0.9, blue: 0.8)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         } else if isSelected {
-            return Color.blue.opacity(0.1)
+            // Vibrant blue-cyan gradient for selected
+            return LinearGradient(
+                colors: [Color(red: 0.4, green: 0.7, blue: 1.0), Color(red: 0.3, green: 0.85, blue: 0.95)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         } else {
-            return Color.gray.opacity(0.1)
+            // Subtle purple-blue gradient for default
+            return LinearGradient(
+                colors: [Color(red: 0.92, green: 0.93, blue: 0.98), Color(red: 0.90, green: 0.92, blue: 0.96)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
 
-    var borderColor: Color {
+    var borderGradient: LinearGradient? {
         if showFeedback && isSelected {
-            return isCorrect ? Color.green : Color.red
+            if isCorrect {
+                return LinearGradient(
+                    colors: [Color(red: 0.2, green: 0.8, blue: 0.4), Color(red: 0.3, green: 0.9, blue: 0.5)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            } else {
+                return LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.3, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.2)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         } else if shouldShowAsCorrect {
-            return Color.green
+            return LinearGradient(
+                colors: [Color(red: 0.4, green: 0.85, blue: 0.5), Color(red: 0.5, green: 0.9, blue: 0.6)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         } else if isSelected {
-            return Color.blue
-        } else {
-            return Color.clear
+            return LinearGradient(
+                colors: [Color(red: 0.3, green: 0.6, blue: 1.0), Color(red: 0.4, green: 0.8, blue: 0.95)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
+        return nil
+    }
+
+    var shadowColor: Color {
+        if showFeedback && isSelected {
+            return isCorrect ? Color.green.opacity(0.4) : Color.red.opacity(0.4)
+        } else if shouldShowAsCorrect {
+            return Color.green.opacity(0.3)
+        } else if isSelected {
+            return Color.blue.opacity(0.3)
+        }
+        return Color.clear
     }
 
     var body: some View {
         Button(action: onTap) {
             HStack {
-                // Option ID (A, B, C, D)
+                // Option ID (A, B, C, D) with gradient circle
                 Text(option.id)
                     .font(.headline)
-                    .foregroundColor(
-                        showFeedback && isSelected ? (isCorrect ? .green : .red) :
-                        shouldShowAsCorrect ? .green : .blue
-                    )
-                    .frame(width: 30, height: 30)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
                     .background(
                         Circle()
                             .fill(
-                                showFeedback && isSelected ? (isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)) :
-                                shouldShowAsCorrect ? Color.green.opacity(0.2) : Color.blue.opacity(0.1)
+                                showFeedback && isSelected ?
+                                    (isCorrect ?
+                                        LinearGradient(colors: [Color(red: 0.3, green: 0.85, blue: 0.5), Color(red: 0.2, green: 0.75, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing) :
+                                        LinearGradient(colors: [Color(red: 1.0, green: 0.4, blue: 0.4), Color(red: 1.0, green: 0.5, blue: 0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)) :
+                                shouldShowAsCorrect ?
+                                    LinearGradient(colors: [Color(red: 0.4, green: 0.85, blue: 0.5), Color(red: 0.3, green: 0.75, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing) :
+                                    LinearGradient(colors: [Color(red: 0.4, green: 0.6, blue: 0.95), Color(red: 0.5, green: 0.4, blue: 0.9)], startPoint: .topLeading, endPoint: .bottomTrailing)
                             )
+                            .shadow(color: shadowColor, radius: 6, y: 3)
                     )
 
                 // Option Text
                 Text(option.text)
                     .font(.body)
+                    .fontWeight(.medium)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -120,17 +205,24 @@ struct MultipleChoiceOptionButton: View {
                 // Check mark for selected or correct answer
                 if showFeedback && (isSelected || shouldShowAsCorrect) {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(isCorrect ? .green : .red)
+                        .foregroundColor(.white)
                         .font(.title3)
+                        .shadow(color: Color.black.opacity(0.3), radius: 2, y: 1)
                 }
             }
             .padding()
-            .background(backgroundColor)
-            .cornerRadius(12)
+            .background(backgroundGradient)
+            .cornerRadius(16)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        borderGradient != nil ?
+                            AnyShapeStyle(borderGradient!) :
+                            AnyShapeStyle(Color.clear),
+                        lineWidth: 3
+                    )
             )
+            .shadow(color: shadowColor, radius: 10, y: 5)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -147,31 +239,59 @@ struct FillInBlankQuestionView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // Question Text
+            // Question Text with gradient
             Text(question.question_text)
                 .font(.title3)
-                .fontWeight(.semibold)
+                .fontWeight(.bold)
                 .multilineTextAlignment(.center)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color(red: 0.3, green: 0.4, blue: 0.95), Color(red: 0.6, green: 0.3, blue: 0.9)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
                 .padding(.horizontal)
 
-            // Sentence with blank
+            // Sentence with blank - enhanced with colorful gradient background
             if let sentence = question.sentence {
                 Text(sentence)
                     .font(.title2)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color(red: 0.2, green: 0.3, blue: 0.8), Color(red: 0.4, green: 0.5, blue: 0.95)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     .padding()
-                    .background(Color.blue.opacity(0.05))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-            }
-
-            // Translation (if available)
-            if let translation = question.sentence_translation {
-                Text(translation)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.85, green: 0.9, blue: 1.0),
+                                        Color(red: 0.9, green: 0.85, blue: 0.98)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .shadow(color: Color.blue.opacity(0.2), radius: 8, y: 4)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2
+                            )
+                    )
                     .padding(.horizontal)
             }
 
@@ -185,8 +305,10 @@ struct FillInBlankQuestionView: View {
                         correctAnswer: question.correct_answer,
                         showFeedback: showFeedback,
                         onTap: {
-                            selectedAnswer = option.id
-                            showFeedback = true
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedAnswer = option.id
+                                showFeedback = true
+                            }
 
                             // Delay before calling onAnswer to show feedback and correct answer
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -217,28 +339,87 @@ struct FillInBlankOptionButton: View {
         showFeedback && !isSelected && isCorrect
     }
 
-    var backgroundColor: Color {
+    var backgroundGradient: LinearGradient {
         if showFeedback && isSelected {
-            return isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)
+            if isCorrect {
+                // Vibrant green gradient for correct
+                return LinearGradient(
+                    colors: [Color(red: 0.3, green: 0.85, blue: 0.5), Color(red: 0.2, green: 0.75, blue: 0.6)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            } else {
+                // Vibrant red-orange gradient for incorrect
+                return LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.45, blue: 0.4), Color(red: 1.0, green: 0.6, blue: 0.35)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         } else if shouldShowAsCorrect {
-            return Color.green.opacity(0.15)
+            // Subtle green gradient for unselected correct answer
+            return LinearGradient(
+                colors: [Color(red: 0.7, green: 0.95, blue: 0.75), Color(red: 0.6, green: 0.9, blue: 0.8)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         } else if isSelected {
-            return Color.blue.opacity(0.1)
+            // Vibrant blue-cyan gradient for selected
+            return LinearGradient(
+                colors: [Color(red: 0.4, green: 0.7, blue: 1.0), Color(red: 0.3, green: 0.85, blue: 0.95)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         } else {
-            return Color.gray.opacity(0.1)
+            // Subtle purple-blue gradient for default
+            return LinearGradient(
+                colors: [Color(red: 0.92, green: 0.93, blue: 0.98), Color(red: 0.90, green: 0.92, blue: 0.96)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
 
-    var borderColor: Color {
+    var borderGradient: LinearGradient? {
         if showFeedback && isSelected {
-            return isCorrect ? Color.green : Color.red
+            if isCorrect {
+                return LinearGradient(
+                    colors: [Color(red: 0.2, green: 0.8, blue: 0.4), Color(red: 0.3, green: 0.9, blue: 0.5)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            } else {
+                return LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.3, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.2)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         } else if shouldShowAsCorrect {
-            return Color.green
+            return LinearGradient(
+                colors: [Color(red: 0.4, green: 0.85, blue: 0.5), Color(red: 0.5, green: 0.9, blue: 0.6)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         } else if isSelected {
-            return Color.blue
-        } else {
-            return Color.clear
+            return LinearGradient(
+                colors: [Color(red: 0.3, green: 0.6, blue: 1.0), Color(red: 0.4, green: 0.8, blue: 0.95)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
+        return nil
+    }
+
+    var shadowColor: Color {
+        if showFeedback && isSelected {
+            return isCorrect ? Color.green.opacity(0.4) : Color.red.opacity(0.4)
+        } else if shouldShowAsCorrect {
+            return Color.green.opacity(0.3)
+        } else if isSelected {
+            return Color.blue.opacity(0.3)
+        }
+        return Color.clear
     }
 
     var body: some View {
@@ -247,26 +428,31 @@ struct FillInBlankOptionButton: View {
                 // Option Text (word)
                 Text(option.text)
                     .font(.headline)
-                    .foregroundColor(
-                        showFeedback && isSelected ? (isCorrect ? .green : .red) :
-                        shouldShowAsCorrect ? .green : .primary
-                    )
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
                     .frame(maxWidth: .infinity)
 
                 // Check mark for selected or correct answer
                 if showFeedback && (isSelected || shouldShowAsCorrect) {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(isCorrect ? .green : .red)
+                        .foregroundColor(.white)
                         .font(.title3)
+                        .shadow(color: Color.black.opacity(0.3), radius: 2, y: 1)
                 }
             }
             .padding()
-            .background(backgroundColor)
-            .cornerRadius(12)
+            .background(backgroundGradient)
+            .cornerRadius(16)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        borderGradient != nil ?
+                            AnyShapeStyle(borderGradient!) :
+                            AnyShapeStyle(Color.clear),
+                        lineWidth: 3
+                    )
             )
+            .shadow(color: shadowColor, radius: 10, y: 5)
         }
         .buttonStyle(PlainButtonStyle())
     }
