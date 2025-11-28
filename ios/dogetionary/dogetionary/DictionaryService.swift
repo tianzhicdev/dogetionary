@@ -1374,6 +1374,18 @@ class DictionaryService: ObservableObject {
         performNetworkRequest(url: url, responseType: AchievementProgressResponse.self, completion: completion)
     }
 
+    func getTestVocabularyAwards(completion: @escaping (Result<TestVocabularyAwardsResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/achievements/test-vocabulary-awards?user_id=\(userID)") else {
+            logger.error("Invalid URL for test-vocabulary-awards endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        logger.info("Fetching test vocabulary awards for user: \(userID)")
+        performNetworkRequest(url: url, responseType: TestVocabularyAwardsResponse.self, completion: completion)
+    }
+
     // MARK: - Practice Status
 
     func getPracticeStatus(completion: @escaping (Result<PracticeStatusResponse, Error>) -> Void) {

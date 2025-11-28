@@ -1125,6 +1125,20 @@ struct AchievementInfo: Codable {
     }
 }
 
+/// Test vocabulary progress for a single test
+struct TestVocabularyProgress: Codable {
+    let saved_test_words: Int
+    let total_test_words: Int
+
+    // Computed property to check if badge is earned
+    var isEarned: Bool {
+        return saved_test_words >= total_test_words && total_test_words > 0
+    }
+}
+
+/// Test vocabulary awards response - dictionary of test name to progress
+typealias TestVocabularyAwardsResponse = [String: TestVocabularyProgress]
+
 /// Practice status response for the Practice tab
 struct PracticeStatusResponse: Codable {
     let user_id: String
