@@ -112,16 +112,25 @@ struct LeaderboardRowView: View {
                 HStack(spacing: 4) {
                     Text(entry.user_name)
                         .font(.system(size: 15, weight: isCurrentUser ? .semibold : .medium))
-                        .foregroundColor(isCurrentUser ? AppTheme.primaryBlue : .primary)
+                        .foregroundStyle(
+                            isCurrentUser ?
+                            LinearGradient(colors: [Color.blue, Color.purple],
+                                         startPoint: .leading, endPoint: .trailing) :
+                            LinearGradient(colors: [Color.primary, Color.primary],
+                                         startPoint: .leading, endPoint: .trailing)
+                        )
                         .lineLimit(1)
 
                     if isCurrentUser {
                         Text("You")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 5)
+                            .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(AppTheme.primaryBlue)
+                            .background(
+                                LinearGradient(colors: [Color.blue, Color.purple],
+                                             startPoint: .leading, endPoint: .trailing)
+                            )
                             .cornerRadius(4)
                     }
                 }
@@ -140,37 +149,79 @@ struct LeaderboardRowView: View {
             HStack(spacing: 4) {
                 Image(systemName: "star.fill")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 1.0, green: 0.75, blue: 0.3))
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.yellow, Color.orange],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
                 Text("\(entry.score ?? entry.total_reviews)")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(isCurrentUser ? AppTheme.primaryBlue : .primary)
+                    .foregroundStyle(
+                        isCurrentUser ?
+                        LinearGradient(colors: [Color.blue, Color.purple],
+                                     startPoint: .leading, endPoint: .trailing) :
+                        LinearGradient(colors: [Color.primary, Color.primary],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            isCurrentUser ?
-            AppTheme.primaryBlue.opacity(0.08) :
-            Color.white
+            Group {
+                if isCurrentUser {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(
+                                    LinearGradient(colors: [Color.blue, Color.purple],
+                                                 startPoint: .leading, endPoint: .trailing),
+                                    lineWidth: 2
+                                )
+                        )
+                        .shadow(color: Color.blue.opacity(0.2), radius: 8, y: 4)
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
+                }
+            }
         )
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
     }
 }
 
 struct RankBadgeView: View {
     let rank: Int
 
-    private var badgeColor: Color {
+    private var badgeGradient: LinearGradient {
         switch rank {
         case 1:
-            return Color(red: 1.0, green: 0.84, blue: 0.3)
+            // Gold gradient
+            return LinearGradient(
+                colors: [Color(red: 1.0, green: 0.88, blue: 0.4), Color(red: 1.0, green: 0.75, blue: 0.2)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         case 2:
-            return Color(red: 0.75, green: 0.75, blue: 0.78)
+            // Silver gradient
+            return LinearGradient(
+                colors: [Color(red: 0.85, green: 0.85, blue: 0.88), Color(red: 0.65, green: 0.65, blue: 0.70)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         case 3:
-            return Color(red: 0.8, green: 0.55, blue: 0.35)
+            // Bronze gradient
+            return LinearGradient(
+                colors: [Color(red: 0.9, green: 0.65, blue: 0.45), Color(red: 0.7, green: 0.45, blue: 0.25)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         default:
-            return Color(red: 0.92, green: 0.93, blue: 0.95)
+            return LinearGradient(
+                colors: [Color(red: 0.92, green: 0.93, blue: 0.95), Color(red: 0.85, green: 0.86, blue: 0.88)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
 
@@ -190,8 +241,9 @@ struct RankBadgeView: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(badgeColor)
+                .fill(badgeGradient)
                 .frame(width: 30, height: 30)
+                .shadow(color: rank <= 3 ? Color.black.opacity(0.15) : Color.clear, radius: 3, y: 2)
 
             if rank <= 3 {
                 Image(systemName: "crown.fill")
