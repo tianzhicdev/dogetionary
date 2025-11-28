@@ -34,11 +34,11 @@ struct TestProgressBar: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with test type badge and details toggle
             HStack {
-                // Test type badge
+                // Progress mode badge
                 HStack(spacing: 4) {
-                    Image(systemName: "target")
+                    Image(systemName: badgeIcon)
                         .font(.system(size: 12, weight: .semibold))
-                    Text(testType)
+                    Text(badgeText)
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -52,7 +52,7 @@ struct TestProgressBar: View {
                 Spacer()
 
                 // Progress percentage
-                Text("\(Int(progress * 100))%")
+                Text("\(Int(displayProgress * 100))%")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.primary)
 
@@ -118,7 +118,7 @@ struct TestProgressBar: View {
                 // Progress text overlay
                 HStack {
                     Spacer()
-                    Text("\(savedWords) / \(totalWords)")
+                    Text("\(displayCurrent) / \(displayTotal)")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(animatedProgress > 0.5 ? .white : .primary)
                         .padding(.trailing, 8)
@@ -135,9 +135,16 @@ struct TestProgressBar: View {
                             Text("Remaining")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text("\(totalWords - savedWords)")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.orange)
+                            HStack(spacing: 2) {
+                                Text("\(displayRemaining)")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.orange)
+                                if !isTestMode {
+                                    Text("pts")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
 
                         Spacer()
@@ -159,23 +166,20 @@ struct TestProgressBar: View {
                         Spacer()
 
                         VStack(alignment: .trailing, spacing: 4) {
-                            Text("Completed")
+                            Text(isTestMode ? "Completed" : "Score")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text("\(savedWords)")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.green)
+                            HStack(spacing: 2) {
+                                Text("\(displayCurrent)")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.green)
+                                if !isTestMode {
+                                    Text("pts")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
-                    }
-
-                    // Motivational message
-                    HStack {
-                        Image(systemName: motivationalIcon)
-                            .foregroundColor(motivationalColor)
-                        Text(motivationalMessage)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
                     }
 
                     // Achievements section - combines score-based and test-completion badges
@@ -272,10 +276,10 @@ struct TestProgressBar: View {
         )
         .onAppear {
             withAnimation(.easeOut(duration: 1.0)) {
-                animatedProgress = progress
+                animatedProgress = displayProgress
             }
         }
-        .onChange(of: progress) { oldValue, newValue in
+        .onChange(of: displayProgress) { oldValue, newValue in
             withAnimation(.easeOut(duration: 0.5)) {
                 animatedProgress = newValue
             }
@@ -285,17 +289,22 @@ struct TestProgressBar: View {
     // MARK: - Computed Properties
 
     private var gradientColors: [Color] {
-        switch testType {
-        case "TOEFL":
-            return [Color.blue, Color.cyan]
-        case "IELTS":
-            return [Color.purple, Color.pink]
-        case "TIANZ":
-            return [Color.orange, Color.yellow]
-        case "BOTH":
-            return [Color.blue, Color.purple, Color.pink]
-        default:
-            return [Color.green, Color.blue]
+        if isTestMode {
+            switch testType {
+            case "TOEFL":
+                return [Color.blue, Color.cyan]
+            case "IELTS":
+                return [Color.purple, Color.pink]
+            case "TIANZ":
+                return [Color.orange, Color.yellow]
+            case "BOTH":
+                return [Color.blue, Color.purple, Color.pink]
+            default:
+                return [Color.green, Color.blue]
+            }
+        } else {
+            // Score mode gradient
+            return [Color.purple, Color.orange]
         }
     }
 
@@ -307,56 +316,41 @@ struct TestProgressBar: View {
         )
     }
 
-    private var motivationalMessage: String {
-        let percentage = progress * 100
-        switch percentage {
-        case 0..<10:
-            return "Every journey begins with a single step!"
-        case 10..<25:
-            return "Great start! Keep the momentum going."
-        case 25..<50:
-            return "You're making solid progress!"
-        case 50..<75:
-            return "More than halfway there! You've got this!"
-        case 75..<90:
-            return "Almost there! The finish line is in sight."
-        case 90..<100:
-            return "Final sprint! You're so close!"
-        default:
-            return "Congratulations! You've mastered all words!"
+    // MARK: - Progress Mode
+
+    private var isTestMode: Bool {
+        testType != "NONE" && totalWords > 0
+    }
+
+    private var displayProgress: Double {
+        if isTestMode {
+            return progress
+        } else if let next = achievementProgress?.next_milestone,
+                  let score = achievementProgress?.score {
+            return Double(score) / Double(next)
+        } else {
+            return 1.0  // all achievements unlocked
         }
     }
 
-    private var motivationalIcon: String {
-        let percentage = progress * 100
-        switch percentage {
-        case 0..<25:
-            return "flag.fill"
-        case 25..<50:
-            return "flame.fill"
-        case 50..<75:
-            return "bolt.fill"
-        case 75..<100:
-            return "star.fill"
-        default:
-            return "trophy.fill"
-        }
+    private var displayTotal: Int {
+        isTestMode ? totalWords : (achievementProgress?.next_milestone ?? 0)
     }
 
-    private var motivationalColor: Color {
-        let percentage = progress * 100
-        switch percentage {
-        case 0..<25:
-            return .blue
-        case 25..<50:
-            return .orange
-        case 50..<75:
-            return .purple
-        case 75..<100:
-            return .yellow
-        default:
-            return .green
-        }
+    private var displayCurrent: Int {
+        isTestMode ? savedWords : (achievementProgress?.score ?? 0)
+    }
+
+    private var displayRemaining: Int {
+        displayTotal - displayCurrent
+    }
+
+    private var badgeIcon: String {
+        isTestMode ? "target" : "trophy.fill"
+    }
+
+    private var badgeText: String {
+        isTestMode ? testType : "Score Progress"
     }
 
     private func colorForAchievementTier(_ tier: AchievementTier) -> Color {
