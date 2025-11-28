@@ -1,5 +1,5 @@
--- Dogetionary Database Schema v5 - Complete Schema with All Migrations
--- All tables and indexes merged from migrations
+-- Dogetionary Database Schema v6 - Complete Schema with All Migrations
+-- All tables and indexes merged from migrations (including vocabulary levels)
 
 -- ============================================================
 -- CORE TABLES
@@ -12,7 +12,7 @@ CREATE TABLE user_preferences (
     native_language VARCHAR(10) DEFAULT 'zh',
     user_name VARCHAR(255),
     user_motto TEXT,
-    -- Test preparation settings
+    -- Test preparation settings (legacy - for backward compatibility)
     toefl_enabled BOOLEAN DEFAULT FALSE,
     ielts_enabled BOOLEAN DEFAULT FALSE,
     tianz_enabled BOOLEAN DEFAULT FALSE,
@@ -21,6 +21,19 @@ CREATE TABLE user_preferences (
     ielts_target_days INTEGER DEFAULT 30,
     tianz_target_days INTEGER DEFAULT 30,
     target_end_date DATE,  -- Target date for completing test preparation
+    -- Test preparation with vocabulary levels (from migration 007)
+    toefl_beginner_enabled BOOLEAN DEFAULT FALSE,
+    toefl_intermediate_enabled BOOLEAN DEFAULT FALSE,
+    toefl_advanced_enabled BOOLEAN DEFAULT FALSE,
+    ielts_beginner_enabled BOOLEAN DEFAULT FALSE,
+    ielts_intermediate_enabled BOOLEAN DEFAULT FALSE,
+    ielts_advanced_enabled BOOLEAN DEFAULT FALSE,
+    toefl_beginner_target_days INTEGER DEFAULT 30,
+    toefl_intermediate_target_days INTEGER DEFAULT 30,
+    toefl_advanced_target_days INTEGER DEFAULT 30,
+    ielts_beginner_target_days INTEGER DEFAULT 30,
+    ielts_intermediate_target_days INTEGER DEFAULT 30,
+    ielts_advanced_target_days INTEGER DEFAULT 30,
     -- Notification settings
     push_notifications_enabled BOOLEAN DEFAULT TRUE,
     email_notifications_enabled BOOLEAN DEFAULT FALSE,
@@ -30,7 +43,13 @@ CREATE TABLE user_preferences (
     -- Timezone (from add_schedule_tables migration)
     timezone VARCHAR(50) DEFAULT 'UTC',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Constraint: only one test level can be enabled at a time
+    CONSTRAINT check_single_test_level CHECK (
+        (toefl_beginner_enabled::int + toefl_intermediate_enabled::int + toefl_advanced_enabled::int +
+         ielts_beginner_enabled::int + ielts_intermediate_enabled::int + ielts_advanced_enabled::int +
+         tianz_enabled::int) <= 1
+    )
 );
 
 -- Simple Audio Table (text + language -> audio bytes)
@@ -115,7 +134,13 @@ COMMENT ON COLUMN reviews.question_type IS 'Type of question shown during review
 CREATE TABLE study_schedules (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES user_preferences(user_id) ON DELETE CASCADE,
-    test_type VARCHAR(20) NOT NULL CHECK (test_type IN ('TOEFL', 'IELTS', 'BOTH', 'TIANZ')),
+    test_type VARCHAR(20) NOT NULL CHECK (test_type IN (
+        'TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED',
+        'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED',
+        'TIANZ',
+        -- Legacy values for backward compatibility
+        'TOEFL', 'IELTS', 'BOTH'
+    )),
     target_end_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -167,13 +192,21 @@ CREATE TABLE user_feedback (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Test vocabulary table to store TOEFL/IELTS/TIANZ words
+-- Test vocabulary table to store TOEFL/IELTS/TIANZ words with granular levels
 CREATE TABLE test_vocabularies (
     word VARCHAR(100) NOT NULL,
     language VARCHAR(10) NOT NULL DEFAULT 'en',
+    -- Legacy columns (kept for backward compatibility)
     is_toefl BOOLEAN DEFAULT FALSE,
     is_ielts BOOLEAN DEFAULT FALSE,
     is_tianz BOOLEAN DEFAULT FALSE,
+    -- Granular level columns (from migration 007) - cumulative
+    is_toefl_beginner BOOLEAN DEFAULT FALSE,
+    is_toefl_intermediate BOOLEAN DEFAULT FALSE,
+    is_toefl_advanced BOOLEAN DEFAULT FALSE,
+    is_ielts_beginner BOOLEAN DEFAULT FALSE,
+    is_ielts_intermediate BOOLEAN DEFAULT FALSE,
+    is_ielts_advanced BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (word, language)
 );
@@ -275,10 +308,18 @@ CREATE INDEX idx_illustrations_word_lang ON illustrations(word, language);
 CREATE INDEX idx_user_feedback_user_id ON user_feedback(user_id);
 CREATE INDEX idx_user_feedback_created_at ON user_feedback(created_at);
 
--- Test vocabularies indexes
+-- Test vocabularies indexes (legacy)
 CREATE INDEX idx_test_vocab_toefl ON test_vocabularies(is_toefl) WHERE is_toefl = TRUE;
 CREATE INDEX idx_test_vocab_ielts ON test_vocabularies(is_ielts) WHERE is_ielts = TRUE;
 CREATE INDEX idx_test_vocab_tianz ON test_vocabularies(is_tianz) WHERE is_tianz = TRUE;
+
+-- Test vocabularies level indexes (from migration 007)
+CREATE INDEX idx_test_vocab_toefl_beginner ON test_vocabularies(word) WHERE is_toefl_beginner = TRUE;
+CREATE INDEX idx_test_vocab_toefl_intermediate ON test_vocabularies(word) WHERE is_toefl_intermediate = TRUE;
+CREATE INDEX idx_test_vocab_toefl_advanced ON test_vocabularies(word) WHERE is_toefl_advanced = TRUE;
+CREATE INDEX idx_test_vocab_ielts_beginner ON test_vocabularies(word) WHERE is_ielts_beginner = TRUE;
+CREATE INDEX idx_test_vocab_ielts_intermediate ON test_vocabularies(word) WHERE is_ielts_intermediate = TRUE;
+CREATE INDEX idx_test_vocab_ielts_advanced ON test_vocabularies(word) WHERE is_ielts_advanced = TRUE;
 
 -- User actions indexes
 CREATE INDEX idx_user_actions_user_id ON user_actions(user_id);

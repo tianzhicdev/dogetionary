@@ -138,7 +138,16 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var profileSection: some View {
-        Section(header: Text("Profile")) {
+        Section(header:
+            HStack {
+                Text("Profile")
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.purple, Color.pink],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
+                    .fontWeight(.semibold)
+            }
+        ) {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Name")
@@ -171,7 +180,16 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var languagePreferencesSection: some View {
-        Section(header: Text("Language Preferences")) {
+        Section(header:
+            HStack {
+                Text("Language Preferences")
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.blue, Color.cyan],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
+                    .fontWeight(.semibold)
+            }
+        ) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Spacer()
@@ -225,7 +243,16 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var notificationsSection: some View {
-        Section(header: Text("Notifications")) {
+        Section(header:
+            HStack {
+                Text("Notifications")
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.orange, Color.pink],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
+                    .fontWeight(.semibold)
+            }
+        ) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Daily Reminder")
@@ -259,7 +286,16 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var feedbackSection: some View {
-        Section(header: Text("Feedback")) {
+        Section(header:
+            HStack {
+                Text("Feedback")
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.green, Color.mint],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
+                    .fontWeight(.semibold)
+            }
+        ) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Help us improve Unforgettable Dictionary")
                     .font(.caption)
@@ -376,7 +412,16 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var developerOptionsSection: some View {
-        Section(header: Text("Developer Options")) {
+        Section(header:
+            HStack {
+                Text("Developer Options")
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.red, Color.orange],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
+                    .fontWeight(.semibold)
+            }
+        ) {
             Toggle("Developer Mode", isOn: $developerModeEnabled)
                 .onChange(of: developerModeEnabled) { _, newValue in
                     DebugConfig.isDeveloperModeEnabled = newValue
@@ -500,7 +545,16 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var testPreparationSection: some View {
-        Section(header: Text("Test Preparation")) {
+        Section(header:
+            HStack {
+                Text("Test Preparation")
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.purple, Color.indigo],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
+                    .fontWeight(.semibold)
+            }
+        ) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Choose your test level for daily vocabulary practice")
                     .font(.caption)
@@ -537,9 +591,31 @@ struct SettingsView: View {
                     }
 
                     if let testType = userManager.activeTestType {
-                        Text(testTypeDescription(testType))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 8) {
+                            Text(testTypeEmoji(testType))
+                                .font(.caption)
+                            Text(testTypeDescription(testType))
+                                .font(.caption2)
+                                .foregroundStyle(
+                                    testTypeGradient(testType)
+                                )
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(
+                                    testTypeGradient(testType).opacity(0.1)
+                                )
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(
+                                    testTypeGradient(testType),
+                                    lineWidth: 1
+                                )
+                        )
                     }
                 }
 
@@ -593,6 +669,51 @@ struct SettingsView: View {
             return "Complete IELTS vocabulary (~4,323 words, all levels)"
         case .tianz:
             return "Specialized Tianz test vocabulary"
+        }
+    }
+
+    private func testTypeEmoji(_ testType: TestType) -> String {
+        switch testType {
+        case .toeflBeginner:
+            return "🌱"
+        case .toeflIntermediate:
+            return "🌿"
+        case .toeflAdvanced:
+            return "🌳"
+        case .ieltsBeginner:
+            return "🎯"
+        case .ieltsIntermediate:
+            return "🎪"
+        case .ieltsAdvanced:
+            return "🏆"
+        case .tianz:
+            return "⭐"
+        }
+    }
+
+    private func testTypeGradient(_ testType: TestType) -> LinearGradient {
+        switch testType {
+        case .toeflBeginner:
+            return LinearGradient(colors: [Color.green, Color.mint],
+                                startPoint: .leading, endPoint: .trailing)
+        case .toeflIntermediate:
+            return LinearGradient(colors: [Color.teal, Color.cyan],
+                                startPoint: .leading, endPoint: .trailing)
+        case .toeflAdvanced:
+            return LinearGradient(colors: [Color.blue, Color.purple],
+                                startPoint: .leading, endPoint: .trailing)
+        case .ieltsBeginner:
+            return LinearGradient(colors: [Color.orange, Color.yellow],
+                                startPoint: .leading, endPoint: .trailing)
+        case .ieltsIntermediate:
+            return LinearGradient(colors: [Color.pink, Color.red],
+                                startPoint: .leading, endPoint: .trailing)
+        case .ieltsAdvanced:
+            return LinearGradient(colors: [Color.purple, Color.indigo],
+                                startPoint: .leading, endPoint: .trailing)
+        case .tianz:
+            return LinearGradient(colors: [Color.indigo, Color.purple],
+                                startPoint: .leading, endPoint: .trailing)
         }
     }
 
