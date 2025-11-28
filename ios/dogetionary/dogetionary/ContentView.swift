@@ -152,13 +152,12 @@ struct DictionaryTabView: View {
             // Toggle at the very top
             Picker("View", selection: $selectedView) {
                 Text("Search").tag(0)
-                Text("Words").tag(1)
+                Text("Saved").tag(1)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color(UIColor.systemBackground))
-//            Spacer()
 
             // Content below
             if selectedView == 0 {

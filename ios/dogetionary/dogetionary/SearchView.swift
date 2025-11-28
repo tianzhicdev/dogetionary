@@ -158,7 +158,7 @@ struct SearchView: View {
             
             Spacer()
         }
-        .contentShape(Rectangle())
+//        .contentShape(Rectangle())
         .onTapGesture {
             // Dismiss keyboard when tapping outside text field
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -220,7 +220,7 @@ struct SearchView: View {
     private func searchBarView() -> some View {
         HStack(spacing: 12) {
             HStack {
-                TextField("Enter a word", text: $searchText)
+                TextField("Enter a word or phrase", text: $searchText)
                     .font(.title2)
                     .foregroundColor(.primary)
                     .onSubmit {

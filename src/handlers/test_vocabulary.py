@@ -711,3 +711,105 @@ def get_test_config():
     except Exception as e:
         logger.error(f"Error getting test config: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+
+def get_test_vocabulary_count():
+    """
+    Get vocabulary counts for one or more test types.
+
+    Supports flexible querying:
+    - Single test: ?test_type=TOEFL_BEGINNER
+    - Multiple tests: ?test_type=TOEFL_BEGINNER&test_type=IELTS_ADVANCED
+    - All tests: ?test_type=ALL
+
+    Returns:
+        JSON with counts dict containing total_words and study_plans for each test type
+
+    Example response for single test:
+    {
+        "total_words": 1247,  // Backward compatible
+        "study_plans": [...],  // Backward compatible
+        "counts": {
+            "TOEFL_BEGINNER": {
+                "total_words": 1247,
+                "study_plans": [
+                    {"days": 10, "words_per_day": 125},
+                    {"days": 30, "words_per_day": 42},
+                    {"days": 60, "words_per_day": 21},
+                    {"days": 90, "words_per_day": 14}
+                ]
+            }
+        }
+    }
+    """
+    try:
+        # Support both repeated params and comma-separated
+        test_types = request.args.getlist('test_type')
+        if len(test_types) == 1 and ',' in test_types[0]:
+            test_types = [t.strip() for t in test_types[0].split(',')]
+
+        # Support "ALL" shorthand
+        if 'ALL' in test_types or not test_types:
+            test_types = [
+                'TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED',
+                'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED',
+                'TIANZ'
+            ]
+
+        # Validate all test types
+        for test_type in test_types:
+            if test_type not in TEST_TYPE_MAPPING:
+                logger.error(f"Invalid test type requested: {test_type}")
+                return jsonify({"error": f"Invalid test type: {test_type}"}), 400
+
+        conn = get_db_connection()
+
+        # Build single efficient query using COUNT FILTER
+        filter_clauses = []
+        for test_type in test_types:
+            _, _, vocab_column = TEST_TYPE_MAPPING[test_type]
+            # Use lowercase alias for consistency
+            filter_clauses.append(
+                f"COUNT(*) FILTER (WHERE {vocab_column} = TRUE) as \"{test_type.lower()}\""
+            )
+
+        query = f"SELECT {', '.join(filter_clauses)} FROM test_vocabularies"
+        logger.info(f"Fetching vocabulary counts for test types: {test_types}")
+
+        with db_cursor(conn) as cur:
+            cur.execute(query)
+            result = cur.fetchone()
+
+        conn.close()
+
+        # Build response
+        counts = {}
+        for test_type in test_types:
+            total_words = result[test_type.lower()]
+
+            # Generate study plans (10, 30, 60, 90 days)
+            study_plans = [
+                {"days": 10, "words_per_day": max(1, total_words // 10)},
+                {"days": 30, "words_per_day": max(1, total_words // 30)},
+                {"days": 60, "words_per_day": max(1, total_words // 60)},
+                {"days": 90, "words_per_day": max(1, total_words // 90)}
+            ]
+
+            counts[test_type] = {
+                "total_words": total_words,
+                "study_plans": study_plans
+            }
+
+        # For backward compatibility: if single test requested, include top-level fields
+        response = {"counts": counts}
+        if len(test_types) == 1:
+            single_type = test_types[0]
+            response["total_words"] = counts[single_type]["total_words"]
+            response["study_plans"] = counts[single_type]["study_plans"]
+
+        logger.info(f"Successfully fetched vocabulary counts for {len(test_types)} test types")
+        return jsonify(response), 200
+
+    except Exception as e:
+        logger.error(f"Error getting test vocabulary count: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error"}), 500

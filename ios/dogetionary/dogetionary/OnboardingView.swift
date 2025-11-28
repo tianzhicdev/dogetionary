@@ -19,6 +19,7 @@ struct OnboardingView: View {
     @State private var vocabularyCount: Int = 0
     @State private var studyPlans: [(days: Int, wordsPerDay: Int)] = []
     @State private var isLoadingVocabulary = false
+    @State private var vocabularyCounts: [TestType: VocabularyCountInfo] = [:]  // All test type counts
     @State private var userName: String = {
         let names = [
             "Vocabulary Ninja",
@@ -401,6 +402,10 @@ struct OnboardingView: View {
                 .padding(.horizontal, 24)
             }
         }
+        .onAppear {
+            // Fetch all vocabulary counts when page appears
+            fetchAllVocabularyCounts()
+        }
     }
 
     private func testPrepButton(title: String, subtitle: String, emoji: String, testType: TestType?, colors: [Color]) -> some View {
@@ -422,6 +427,38 @@ struct OnboardingView: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
+
+                // Word count badge
+                if let testType = testType, let count = vocabularyCounts[testType] {
+                    Text(formatWordCount(count.total_words))
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(
+                            LinearGradient(colors: colors,
+                                         startPoint: .leading, endPoint: .trailing)
+                        )
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [colors[0].opacity(0.15), colors[1].opacity(0.15)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(
+                                    LinearGradient(colors: colors,
+                                                 startPoint: .leading, endPoint: .trailing),
+                                    lineWidth: 1
+                                )
+                        )
+                }
+
                 if selectedTestType == testType {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(
@@ -885,6 +922,55 @@ struct OnboardingView: View {
 
         // Keep 30 days as default
         selectedStudyDuration = 30
+    }
+
+    private func fetchAllVocabularyCounts() {
+        let baseURL = Configuration.effectiveBaseURL
+        // Fetch all test types using "ALL" shorthand
+        guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=ALL") else {
+            print("Invalid URL for fetching all vocabulary counts")
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error fetching all vocabulary counts: \(error)")
+                return
+            }
+
+            guard let data = data else {
+                print("No data received for vocabulary counts")
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(VocabularyCountResponse.self, from: data)
+
+                DispatchQueue.main.async {
+                    // Store all counts in the dictionary
+                    self.vocabularyCounts = response.allCounts()
+                    print("Fetched vocabulary counts for \(self.vocabularyCounts.count) test types")
+                }
+            } catch {
+                print("Error decoding vocabulary counts: \(error)")
+            }
+        }.resume()
+    }
+
+    /// Format word count for display (e.g., "1,247 words" or "3.5K words")
+    private func formatWordCount(_ count: Int) -> String {
+        if count >= 10000 {
+            let k = Double(count) / 1000.0
+            return String(format: "%.1fK words", k)
+        } else if count >= 1000 {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
+            return "\(formatted) words"
+        } else {
+            return "\(count) words"
+        }
     }
 
 }

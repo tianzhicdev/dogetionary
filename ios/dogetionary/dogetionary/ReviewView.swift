@@ -336,6 +336,7 @@ struct QuestionCardView: View {
     @State private var isExcluded = false
     @State private var showToast = false
     @State private var toastMessage = ""
+    @State private var swipeHintScale: CGFloat = 1.0
 
     private let swipeThreshold: CGFloat = 100
 
@@ -417,15 +418,9 @@ struct QuestionCardView: View {
                         }
                         .padding(.horizontal)
 
-                        // Swipe hint
-                        HStack {
-                            Image(systemName: "arrow.left")
-                            Text("Swipe left for next question")
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.vertical, 20)
-                        .opacity(showSwipeHint ? 1 : 0)
+                        // Prominent swipe indicator on the right side
+                        Spacer()
+                            .frame(height: 20)
                     }
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
@@ -465,8 +460,92 @@ struct QuestionCardView: View {
                 withAnimation(.easeIn) {
                     showSwipeHint = true
                 }
+            } else {
+                // Reset scale when hiding
+                swipeHintScale = 1.0
             }
         }
+        .overlay(
+            // Prominent swipe indicator on the right edge
+            Group {
+                if isAnswered && showSwipeHint {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.purple],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+
+                            Text("Swipe")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.purple],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.purple],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.blue.opacity(0.12),
+                                            Color.purple.opacity(0.12)
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: -4, y: 0)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [Color.blue.opacity(0.4), Color.purple.opacity(0.4)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    ),
+                                    lineWidth: 2
+                                )
+                        )
+                    }
+                    .padding(.trailing, 8)
+                    .scaleEffect(swipeHintScale)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .onAppear {
+                        // Start pulsing animation
+                        withAnimation(
+                            Animation.easeInOut(duration: 1.0)
+                                .repeatForever(autoreverses: true)
+                        ) {
+                            swipeHintScale = 1.1
+                        }
+                    }
+                }
+            }
+        )
         .overlay(
             Group {
                 if showToast {

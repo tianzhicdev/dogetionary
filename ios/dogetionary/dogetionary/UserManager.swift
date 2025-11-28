@@ -352,7 +352,7 @@ class UserManager: ObservableObject {
 
         // Notify SavedWordsView to refresh schedule status
         DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .refreshSavedWords, object: nil)
+            NotificationCenter.default.post(name: .testSettingsChanged, object: nil)
         }
     }
 
