@@ -1,0 +1,80 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape all logs from the app log files
+  - job_name: dogetionary_app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: dogetionary
+          app: flask
+          log_type: all
+          __path__: /logs/app.log*
+    pipeline_stages:
+      # Multiline aggregation - combine lines until we see a new timestamp
+      - multiline:
+          # First line of a log entry starts with YYYY-MM-DD timestamp
+          firstline: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+          max_wait_time: 3s
+      # Extract timestamp and log level
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (?P<logger>\S+) - (?P<level>\w+) - (?P<message>.*)'
+      # Parse timestamp
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05,000'
+      # Add level as label
+      - labels:
+          level:
+
+  # Scrape error logs separately for easier filtering
+  - job_name: dogetionary_errors
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: dogetionary
+          app: flask
+          log_type: error
+          __path__: /logs/error.log*
+    pipeline_stages:
+      # Multiline aggregation for error logs
+      - multiline:
+          firstline: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+          max_wait_time: 3s
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (?P<logger>\S+) - (?P<level>\w+) - (?P<message>.*)'
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05,000'
+      - labels:
+          level:
+
+  # Scrape nginx access logs
+  - job_name: nginx_access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          log_type: access
+          __path__: /var/log/nginx/access.log
+
+  # Scrape nginx error logs
+  - job_name: nginx_error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          log_type: error
+          __path__: /var/log/nginx/error.log
