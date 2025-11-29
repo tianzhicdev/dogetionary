@@ -8,7 +8,7 @@ The `init.sql` file contains the complete, up-to-date database schema. All migra
 
 ## Schema Version
 
-Current version: **v6**
+Current version: **v7**
 
 Includes:
 - Core tables (user_preferences, audio, definitions, saved_words, reviews)
@@ -17,6 +17,10 @@ Includes:
 - Test vocabularies table with granular level support (beginner, intermediate, advanced)
 - API usage logs
 - All indexes and constraints
+
+**v7 Changes:**
+- Streaks tied to `user_id` instead of `schedule_id` for persistence across schedule changes
+- Users maintain streak history when switching test types or updating study plans
 
 ## Fresh Database Setup
 

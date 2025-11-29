@@ -160,13 +160,13 @@ CREATE TABLE daily_schedule_entries (
     UNIQUE(schedule_id, scheduled_date)
 );
 
--- Streak days table (tracks daily completion streaks per schedule)
+-- Streak days table (tracks daily completion streaks per user)
 CREATE TABLE streak_days (
     id SERIAL PRIMARY KEY,
-    schedule_id INTEGER NOT NULL REFERENCES study_schedules(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES user_preferences(user_id) ON DELETE CASCADE,
     streak_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(schedule_id, streak_date)
+    UNIQUE(user_id, streak_date)
 );
 
 -- ============================================================
@@ -299,7 +299,7 @@ CREATE INDEX idx_study_schedules_user ON study_schedules(user_id);
 CREATE INDEX idx_study_schedules_end_date ON study_schedules(target_end_date);
 CREATE INDEX idx_daily_entries_schedule ON daily_schedule_entries(schedule_id, scheduled_date);
 CREATE INDEX idx_daily_entries_date ON daily_schedule_entries(scheduled_date DESC);
-CREATE INDEX idx_streak_days_schedule_date ON streak_days(schedule_id, streak_date DESC);
+CREATE INDEX idx_streak_days_user_date ON streak_days(user_id, streak_date DESC);
 
 -- Illustrations indexes
 CREATE INDEX idx_illustrations_word_lang ON illustrations(word, language);
