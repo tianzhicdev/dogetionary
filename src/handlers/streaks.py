@@ -22,28 +22,10 @@ from services.schedule_service import get_user_timezone, get_today_in_timezone
 logger = logging.getLogger(__name__)
 
 
-def get_user_schedule_id(user_id: str) -> int:
-    """
-    Get the schedule_id for a user.
-
-    Args:
-        user_id: UUID of the user
-
-    Returns:
-        schedule_id if user has a schedule, None otherwise
-    """
-    result = db_fetch_one("""
-        SELECT id FROM study_schedules
-        WHERE user_id = %s
-    """, (user_id,))
-
-    return result['id'] if result else None
-
-
 def create_streak_date(user_id: str) -> bool:
     """
     Create a streak date record for today (idempotent).
-    Only works if user has an active schedule.
+    Works for all users, regardless of schedule status.
 
     Args:
         user_id: UUID of the user
@@ -52,22 +34,16 @@ def create_streak_date(user_id: str) -> bool:
         True if record was created/already exists, False on error
     """
     try:
-        # Get user's schedule
-        schedule_id = get_user_schedule_id(user_id)
-        if not schedule_id:
-            logger.info(f"User {user_id} has no schedule, skipping streak creation")
-            return False
-
         # Get user's timezone
         user_tz = get_user_timezone(user_id)
         today = get_today_in_timezone(user_tz)
 
         # Insert today's date (idempotent due to UNIQUE constraint)
         db_execute("""
-            INSERT INTO streak_days (schedule_id, streak_date)
+            INSERT INTO streak_days (user_id, streak_date)
             VALUES (%s, %s)
-            ON CONFLICT (schedule_id, streak_date) DO NOTHING
-        """, (schedule_id, today), commit=True)
+            ON CONFLICT (user_id, streak_date) DO NOTHING
+        """, (user_id, today), commit=True)
 
         return True
     except Exception as e:
@@ -78,11 +54,11 @@ def create_streak_date(user_id: str) -> bool:
 def calculate_streak_days(user_id: str) -> int:
     """
     Calculate the current streak count for a user.
-    Only works if user has an active schedule.
+    Works for all users, regardless of schedule status.
 
     Algorithm:
     - Get today's date in user's timezone
-    - Fetch all streak dates for user's schedule (sorted DESC)
+    - Fetch all streak dates for user (sorted DESC)
     - Count consecutive dates backwards from today
     - If today has a record, include it
     - If yesterday has no record, streak resets
@@ -94,22 +70,17 @@ def calculate_streak_days(user_id: str) -> int:
         Number of consecutive streak days
     """
     try:
-        # Get user's schedule
-        schedule_id = get_user_schedule_id(user_id)
-        if not schedule_id:
-            return 0
-
         # Get user's timezone
         user_tz = get_user_timezone(user_id)
         today = get_today_in_timezone(user_tz)
 
-        # Get all streak dates for user's schedule (sorted DESC)
+        # Get all streak dates for user (sorted DESC)
         streak_dates = db_fetch_all("""
             SELECT streak_date
             FROM streak_days
-            WHERE schedule_id = %s
+            WHERE user_id = %s
             ORDER BY streak_date DESC
-        """, (schedule_id,))
+        """, (user_id,))
 
         if not streak_dates:
             return 0
