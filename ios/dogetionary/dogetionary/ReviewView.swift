@@ -34,6 +34,10 @@ struct ReviewView: View {
     @State private var showBadgeCelebration = false
     @State private var earnedBadge: NewBadge?
 
+    // Mini curve animation
+    @State private var showMiniCurve = false
+    @State private var curveIsCorrect: Bool = false
+
     // Card swipe state
     @State private var cardOffset: CGFloat = 0
     @State private var cardOpacity: Double = 1
@@ -57,7 +61,12 @@ struct ReviewView: View {
                     practiceStatus: practiceStatus,
                     score: currentScore,
                     scoreAnimationScale: scoreAnimationScale,
-                    scoreAnimationColor: scoreAnimationColor
+                    scoreAnimationColor: scoreAnimationColor,
+                    showMiniCurve: showMiniCurve,
+                    curveIsCorrect: curveIsCorrect,
+                    onCurveDismiss: {
+                        showMiniCurve = false
+                    }
                 )
                 .padding(.horizontal)
                 .padding(.vertical, 12)
@@ -84,6 +93,11 @@ struct ReviewView: View {
                             nativeLanguage: question.native_language,
                             isAnswered: $isAnswered,
                             wasCorrect: $wasCorrect,
+                            onImmediateFeedback: { isCorrect in
+                                // Show mini curve animation immediately
+                                curveIsCorrect = isCorrect
+                                showMiniCurve = true
+                            },
                             onAnswer: handleAnswer,
                             onSwipeComplete: handleSwipeComplete
                         )
@@ -328,6 +342,7 @@ struct QuestionCardView: View {
     let nativeLanguage: String
     @Binding var isAnswered: Bool
     @Binding var wasCorrect: Bool?
+    let onImmediateFeedback: ((Bool) -> Void)?
     let onAnswer: (Bool, String) -> Void
     let onSwipeComplete: () -> Void
 
@@ -386,6 +401,10 @@ struct QuestionCardView: View {
                 // Question section
                 EnhancedQuestionView(
                     question: question,
+                    onImmediateFeedback: { isCorrect in
+                        guard !isAnswered else { return }
+                        onImmediateFeedback?(isCorrect)
+                    },
                     onAnswer: { isCorrect in
                         guard !isAnswered else { return }
                         onAnswer(isCorrect, question.question_type)
@@ -611,6 +630,9 @@ struct PracticeStatusBar: View {
     let score: Int
     let scoreAnimationScale: CGFloat
     let scoreAnimationColor: Color
+    let showMiniCurve: Bool
+    let curveIsCorrect: Bool
+    let onCurveDismiss: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -652,6 +674,15 @@ struct PracticeStatusBar: View {
                     label: "extra",
                     color: .purple
                 )
+            }
+
+            // Mini curve animation (appears after answering)
+            if showMiniCurve {
+                MiniCurveAnimationView(
+                    isCorrect: curveIsCorrect,
+                    onDismiss: onCurveDismiss
+                )
+                .transition(.scale.combined(with: .opacity))
             }
 
             Spacer()
