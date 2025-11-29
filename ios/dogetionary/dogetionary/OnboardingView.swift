@@ -115,6 +115,10 @@ struct OnboardingView: View {
                                 .tag(schedulePageIndex)
                         }
 
+                        // Declaration Page
+                        declarationPage
+                            .tag(declarationPageIndex)
+
                         // Search Word Page
                         searchWordPage
                             .tag(searchPageIndex)
@@ -213,6 +217,8 @@ struct OnboardingView: View {
             colors = [Color.indigo.opacity(0.3), Color.purple.opacity(0.2), Color.white]
         case schedulePageIndex:
             colors = [Color.pink.opacity(0.3), Color.red.opacity(0.2), Color.white]
+        case declarationPageIndex:
+            colors = [Color.purple.opacity(0.3), Color.blue.opacity(0.2), Color.white]
         case searchPageIndex:
             colors = [Color.teal.opacity(0.3), Color.blue.opacity(0.2), Color.white]
         default:
@@ -229,6 +235,7 @@ struct OnboardingView: View {
         case 3: return [Color.orange, Color.yellow]
         case usernamePageIndex: return [Color.indigo, Color.purple]
         case schedulePageIndex: return [Color.pink, Color.red]
+        case declarationPageIndex: return [Color.purple, Color.blue]
         case searchPageIndex: return [Color.teal, Color.blue]
         default: return [Color.blue, Color.purple]
         }
@@ -606,6 +613,85 @@ struct OnboardingView: View {
         ScheduleView(embedded: true)
     }
 
+    // MARK: - Declaration Page
+
+    private var declarationPage: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 20) {
+                Text("🧠")
+                    .font(.system(size: 80))
+                    .shadow(color: Color.purple.opacity(0.3), radius: 10, y: 5)
+
+                Text("How Fledge Works")
+                    .font(.system(size: 32, weight: .bold))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color.purple, Color.blue],
+                                     startPoint: .leading, endPoint: .trailing)
+                    )
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 40)
+
+            Spacer()
+
+            VStack(alignment: .leading, spacing: 24) {
+                Text("Building vocabulary the old way is wasteful—you forget, re-learn, forget again.")
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Fledge fixes this. It tracks every word you study, calculates when you're about to forget, and prompts you at exactly the right moment.")
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("⚡")
+                            .font(.title)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("SuperMemo Spaced Repetition")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("Up to 20x more efficient learning")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("⏱")
+                            .font(.title)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Save Your Time")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("80+ hours back for every 1,000 words")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(colors: [Color.purple.opacity(0.1), Color.blue.opacity(0.05)],
+                                         startPoint: .leading, endPoint: .trailing)
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.purple.opacity(0.2), lineWidth: 2)
+                )
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+        }
+    }
+
     // MARK: - Search Word Page
 
     private var searchWordPage: some View {
@@ -663,12 +749,12 @@ struct OnboardingView: View {
 
     private var totalPages: Int {
         if selectedLearningLanguage == "en" {
-            // With test: Learning, Native, TestPrep, Duration, Username, Schedule, Search = 7 pages
-            // Without test: Learning, Native, TestPrep, Username, Search = 5 pages
-            return showDurationPage ? 7 : 5
+            // With test: Learning, Native, TestPrep, Duration, Username, Schedule, Declaration, Search = 8 pages
+            // Without test: Learning, Native, TestPrep, Username, Declaration, Search = 6 pages
+            return showDurationPage ? 8 : 6
         }
-        // Non-English: Learning, Native, Username, Search = 4 pages
-        return 4
+        // Non-English: Learning, Native, Username, Declaration, Search = 5 pages
+        return 5
     }
 
     private var showDurationPage: Bool {
@@ -687,13 +773,22 @@ struct OnboardingView: View {
         return 5
     }
 
-    private var searchPageIndex: Int {
+    private var declarationPageIndex: Int {
         if selectedLearningLanguage == "en" {
             // With test: page 6 (after schedule preview at page 5)
             // Without test: page 4 (after username at page 3)
             return showDurationPage ? 6 : 4
         }
         return 3
+    }
+
+    private var searchPageIndex: Int {
+        if selectedLearningLanguage == "en" {
+            // With test: page 7 (after declaration at page 6)
+            // Without test: page 5 (after declaration at page 4)
+            return showDurationPage ? 7 : 5
+        }
+        return 4
     }
 
     private var displayPageIndex: Int {
@@ -714,7 +809,7 @@ struct OnboardingView: View {
                 return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
         case 3:
-            // Study duration (if test) or Username (if no test) or Search (non-English)
+            // Study duration (if test) or Username (if no test) or Declaration (non-English)
             if selectedLearningLanguage == "en" {
                 if showDurationPage {
                     return true // Slider always has a value
@@ -722,23 +817,34 @@ struct OnboardingView: View {
                     return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
                 }
             } else {
-                return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
+                return true // Declaration page - always can proceed
             }
         case 4:
-            // Username (if test) or Search (if no test) - English only
-            if showDurationPage {
-                return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
+            // Username (if test) or Declaration (if no test) or Search (non-English) - English only
+            if selectedLearningLanguage == "en" {
+                if showDurationPage {
+                    return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
+                } else {
+                    return true // Declaration page - always can proceed
+                }
             } else {
                 return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
             }
         case 5:
-            // Schedule preview page (English with test) - always allow proceeding
+            // Schedule preview page (English with test) or Search (if no test)
             if showDurationPage {
                 return true // Schedule preview - always can proceed
             } else {
                 return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
             }
         case 6:
+            // Declaration page (English with test) or beyond
+            if showDurationPage {
+                return true // Declaration page - always can proceed
+            } else {
+                return false
+            }
+        case 7:
             // Search page (English with test)
             return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         default:
@@ -765,7 +871,12 @@ struct OnboardingView: View {
             // Submit onboarding data first
             submitOnboarding()
         } else if currentPage == schedulePageIndex && showDurationPage {
-            // Schedule preview page - just advance to search
+            // Schedule preview page - just advance to declaration
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                currentPage = declarationPageIndex
+            }
+        } else if currentPage == declarationPageIndex {
+            // Declaration page - just advance to search
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentPage = searchPageIndex
             }
