@@ -43,12 +43,17 @@ storage_config:
 compactor:
   working_directory: /loki/boltdb-shipper-compactor
   compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
 
 limits_config:
   reject_old_samples: true
   reject_old_samples_max_age: 168h
   max_cache_freshness_per_query: 10m
   split_queries_by_interval: 15m
+  retention_period: 168h  # 7 days
 
 ruler:
   alertmanager_url: http://localhost:9093

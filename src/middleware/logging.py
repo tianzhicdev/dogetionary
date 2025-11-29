@@ -35,8 +35,8 @@ def setup_logging(app):
         # Add rotating file handler for ALL logs (INFO+)
         file_handler = RotatingFileHandler(
             f'{logs_dir}/app.log',
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5
+            maxBytes=100*1024*1024,  # 100MB per file
+            backupCount=50  # 50 backups × 100MB = 5GB total
         )
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -45,8 +45,8 @@ def setup_logging(app):
         # Add separate rotating file handler for ERRORS ONLY
         error_handler = RotatingFileHandler(
             f'{logs_dir}/error.log',
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=10  # Keep more error logs
+            maxBytes=50*1024*1024,  # 50MB per file
+            backupCount=20  # 20 backups × 50MB = 1GB total
         )
         error_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
         error_handler.setFormatter(logging.Formatter(
