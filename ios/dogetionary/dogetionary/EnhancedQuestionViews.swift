@@ -245,18 +245,18 @@ struct FillInBlankQuestionView: View {
     var body: some View {
         VStack(spacing: 24) {
             // Question Text with gradient
-            Text(question.question_text)
-                .font(.title3)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color(red: 0.3, green: 0.4, blue: 0.95), Color(red: 0.6, green: 0.3, blue: 0.9)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .padding(.horizontal)
+//            Text(question.question_text)
+//                .font(.title3)
+//                .fontWeight(.bold)
+//                .multilineTextAlignment(.center)
+//                .foregroundStyle(
+//                    LinearGradient(
+//                        colors: [Color(red: 0.3, green: 0.4, blue: 0.95), Color(red: 0.6, green: 0.3, blue: 0.9)],
+//                        startPoint: .leading,
+//                        endPoint: .trailing
+//                    )
+//                )
+//                .padding(.horizontal)
 
             // Sentence with blank - enhanced with colorful gradient background
             if let sentence = question.sentence {
