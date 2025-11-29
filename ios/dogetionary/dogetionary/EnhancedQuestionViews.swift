@@ -11,6 +11,7 @@ import SwiftUI
 
 struct MultipleChoiceQuestionView: View {
     let question: ReviewQuestion
+    let onImmediateFeedback: ((String) -> Void)?
     let onAnswer: (String) -> Void
 
     @State private var selectedAnswer: String? = nil
@@ -58,6 +59,9 @@ struct MultipleChoiceQuestionView: View {
                                 selectedAnswer = option.id
                                 showFeedback = true
                             }
+
+                            // Call immediate feedback callback right away
+                            onImmediateFeedback?(option.id)
 
                             // Delay before calling onAnswer to show feedback and correct answer
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -232,6 +236,7 @@ struct MultipleChoiceOptionButton: View {
 
 struct FillInBlankQuestionView: View {
     let question: ReviewQuestion
+    let onImmediateFeedback: ((String) -> Void)?
     let onAnswer: (String) -> Void
 
     @State private var selectedAnswer: String? = nil
@@ -309,6 +314,9 @@ struct FillInBlankQuestionView: View {
                                 selectedAnswer = option.id
                                 showFeedback = true
                             }
+
+                            // Call immediate feedback callback right away
+                            onImmediateFeedback?(option.id)
 
                             // Delay before calling onAnswer to show feedback and correct answer
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -462,22 +470,37 @@ struct FillInBlankOptionButton: View {
 
 struct EnhancedQuestionView: View {
     let question: ReviewQuestion
+    let onImmediateFeedback: ((Bool) -> Void)?
     let onAnswer: (Bool) -> Void
 
     var body: some View {
         VStack {
             switch question.question_type {
             case "mc_definition", "mc_word":
-                MultipleChoiceQuestionView(question: question) { selectedAnswer in
-                    let isCorrect = selectedAnswer == question.correct_answer
-                    onAnswer(isCorrect)
-                }
+                MultipleChoiceQuestionView(
+                    question: question,
+                    onImmediateFeedback: { selectedAnswer in
+                        let isCorrect = selectedAnswer == question.correct_answer
+                        onImmediateFeedback?(isCorrect)
+                    },
+                    onAnswer: { selectedAnswer in
+                        let isCorrect = selectedAnswer == question.correct_answer
+                        onAnswer(isCorrect)
+                    }
+                )
 
             case "fill_blank":
-                FillInBlankQuestionView(question: question) { selectedAnswer in
-                    let isCorrect = selectedAnswer == question.correct_answer
-                    onAnswer(isCorrect)
-                }
+                FillInBlankQuestionView(
+                    question: question,
+                    onImmediateFeedback: { selectedAnswer in
+                        let isCorrect = selectedAnswer == question.correct_answer
+                        onImmediateFeedback?(isCorrect)
+                    },
+                    onAnswer: { selectedAnswer in
+                        let isCorrect = selectedAnswer == question.correct_answer
+                        onAnswer(isCorrect)
+                    }
+                )
 
             default:
                 // Recognition type removed - will be handled by definition view
