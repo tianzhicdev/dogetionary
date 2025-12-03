@@ -363,6 +363,13 @@ struct EnhancedQuestionView: View {
                     }
                 )
 
+            case "pronounce_sentence":
+                PronounceSentenceQuestionView(
+                    question: question,
+                    onImmediateFeedback: onImmediateFeedback,
+                    onAnswer: onAnswer
+                )
+
             default:
                 // Recognition type removed - will be handled by definition view
                 Text("Loading...")

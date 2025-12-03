@@ -99,7 +99,7 @@ CREATE TABLE reviews (
     user_id UUID NOT NULL,
     word_id INTEGER NOT NULL REFERENCES saved_words(id) ON DELETE CASCADE,
     response BOOLEAN NOT NULL,
-    question_type VARCHAR(50) DEFAULT 'recognition',  -- From migration 004
+    question_type VARCHAR(50) DEFAULT 'recognition',  -- Types: 'recognition', 'mc_definition', 'mc_word', 'fill_blank', 'pronounce_sentence'
     reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     next_review_date TIMESTAMP
 );
