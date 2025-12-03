@@ -142,3 +142,310 @@ EVAL_CRITERIA: |
   5. logs/ is added to .gitignore
   6. Logs are accessible from host system
   7. No logging-related errors occur
+
+# =====================================================================
+# BACKEND REFACTORING TASKS
+# Based on comprehensive codebase analysis (15,565 LOC)
+# See REFACTORING_BACKLOG.md for detailed planning
+# =====================================================================
+
+[TASK_4_COMPLETED]
+DESCRIPTION: Spaced Repetition Logic Consolidation (CRITICAL)
+STATUS: ✅ COMPLETED 2025-12-02
+RESULT: |
+  - Moved all spaced repetition functions to services/spaced_repetition_service.py
+  - Deleted 195 lines of duplicate code
+  - Updated 5 import statements across codebase
+  - All 49 integration tests passing
+  - Files modified: 6
+
+[TASK_5]
+IMPLEMENT_INSTRUCTION: |
+  Standardize database connection usage across the codebase.
+
+  PROBLEM:
+  - 48 direct psycopg2.connect() calls vs 21 using get_db_connection()
+  - Inconsistent connection pool usage risks connection leaks
+  - No centralized connection management
+
+  GOALS:
+  - Replace all direct psycopg2.connect() with get_db_connection()
+  - Verify connection pool configuration in utils/database.py
+  - Add connection pool monitoring
+  - Document connection management best practices
+
+  FILES TO UPDATE (48 locations across 12 files):
+  - handlers/words.py: 15 direct calls
+  - handlers/admin.py: 12 direct calls
+  - handlers/actions.py: 8 direct calls
+  - handlers/reads.py: 7 direct calls
+  - services/schedule_service.py: 6 direct calls
+  - [7 other files with scattered calls]
+
+  REQUIREMENTS:
+  - Search for all "psycopg2.connect(" or "= psycopg2.connect"
+  - Replace with "get_db_connection()"
+  - Ensure proper import: "from utils.database import get_db_connection"
+  - Maintain transaction semantics (commit/rollback behavior)
+  - Keep existing error handling patterns
+
+TEST_INSTRUCTION: |
+  Verify database connection standardization:
+
+  1. Code verification:
+     - grep -r "psycopg2.connect" src/ should return 0 results (except in utils/database.py)
+     - All handlers use get_db_connection()
+
+  2. Integration tests:
+     - python scripts/integration_test.py should pass all tests
+     - No connection pool errors in logs
+
+  3. Load testing:
+     - Simulate 50 concurrent requests to /word endpoint
+     - Monitor connection pool usage
+     - Verify no connection leaks (pg_stat_activity)
+
+  4. Health check:
+     - curl http://localhost:5000/health should succeed
+     - No database connection warnings
+
+  SPECIFIC TESTS:
+  - docker-compose up -d
+  - python scripts/integration_test.py
+  - curl http://localhost:5000/health
+  - Check logs for connection pool warnings
+
+EVAL_CRITERIA: |
+  Return TRUE only if ALL of the following are met:
+  1. All 48 direct psycopg2.connect() calls replaced
+  2. Only utils/database.py creates raw connections
+  3. All imports use get_db_connection()
+  4. Integration tests pass (49/49)
+  5. No connection leaks under load
+  6. Connection pool metrics are healthy
+  7. No functionality is broken
+
+[TASK_6]
+IMPLEMENT_INSTRUCTION: |
+  Split handlers/words.py monolith into focused, single-responsibility modules.
+
+  PROBLEM:
+  - handlers/words.py is 1,444 lines with 6 distinct concerns
+  - Violates Single Responsibility Principle
+  - Difficult to test and maintain
+  - High risk for merge conflicts
+
+  CURRENT STRUCTURE (approximate):
+  - Word lookup: lines 1-150
+  - Saved words management: lines 151-300
+  - Review submission: lines 301-450
+  - Audio generation: lines 451-800
+  - Definition caching: lines 801-1000
+  - Helper utilities: lines 1001-1444
+
+  NEW STRUCTURE:
+  Create the following files:
+
+  handlers/
+  ├── word_lookup.py (~200 lines)
+  │   └── get_word_definition()
+  │   └── lookup_word_with_cache()
+  ├── saved_words.py (~150 lines)
+  │   └── save_word()
+  │   └── delete_saved_word()
+  │   └── get_saved_words_list()
+  └── review_submission.py (~200 lines)
+      └── submit_review()
+      └── calculate_review_stats()
+
+  services/
+  ├── audio_service.py (~400 lines)
+  │   └── generate_audio()
+  │   └── queue_audio_generation()
+  │   └── get_audio_status()
+  ├── definition_service.py (~300 lines)
+  │   └── get_cached_definition()
+  │   └── save_definition_to_cache()
+  └── openai_service.py (~200 lines)
+      └── call_openai_api()
+      └── parse_openai_response()
+
+  REQUIREMENTS:
+  - Create new files following existing project structure
+  - Move functions to appropriate files
+  - Update ~30 import statements across codebase
+  - Maintain all existing functionality
+  - Keep transaction semantics intact
+  - Update route registrations in app_refactored.py
+
+  MIGRATION STRATEGY:
+  1. Create new files with proper imports
+  2. Copy functions to new locations (don't delete yet)
+  3. Update all imports to use new locations
+  4. Run tests
+  5. Delete old code from words.py
+  6. Run tests again
+
+TEST_INSTRUCTION: |
+  Verify handlers/words.py split:
+
+  1. File structure:
+     - Check that all new files exist
+     - Verify handlers/words.py is <100 lines (route registrations only)
+     - Each new file has <400 lines
+
+  2. Import verification:
+     - grep -r "from handlers.words import" src/ should return 0 results
+     - All imports use new module paths
+
+  3. Integration tests:
+     - python scripts/integration_test.py should pass
+     - Test word lookup: /word?word=hello
+     - Test save: POST /save with word data
+     - Test review: POST /submit_review
+     - Test audio: GET /audio/hello/en
+
+  4. iOS compatibility:
+     - iOS app should compile
+     - Test word lookup from iOS app
+     - Test save word from iOS app
+
+  SPECIFIC TESTS:
+  - docker-compose up -d
+  - python scripts/integration_test.py
+  - curl http://localhost:5000/word?word=hello&user_id=test-uuid
+  - curl -X POST http://localhost:5000/save -d '{"word":"test","user_id":"test-uuid"}'
+
+EVAL_CRITERIA: |
+  Return TRUE only if ALL of the following are met:
+  1. handlers/words.py is <100 lines
+  2. All 6 new files exist and are properly structured
+  3. No file exceeds 400 lines
+  4. All imports updated correctly (~30 locations)
+  5. Integration tests pass (49/49)
+  6. iOS app compiles and functions
+  7. No functionality is broken
+  8. Code is more maintainable and testable
+
+[TASK_7]
+IMPLEMENT_INSTRUCTION: |
+  Consolidate duplicate get_user_preferences implementations.
+
+  PROBLEM:
+  - get_user_preferences() exists in 2 locations:
+    1. services/user_service.py (canonical implementation)
+    2. handlers/words.py (duplicate helper)
+  - Inconsistent behavior and return values
+  - Changes must be made in 2 places
+
+  GOALS:
+  - Keep only services/user_service.py version
+  - Delete duplicate from handlers/words.py
+  - Update all 12 import statements
+
+  LOCATIONS TO UPDATE:
+  - handlers/words.py: Remove function, update import
+  - handlers/actions.py: Update import
+  - handlers/reads.py: Update import
+  - handlers/admin.py: Update import
+  - [8 other files]
+
+  REQUIREMENTS:
+  - Verify both implementations are identical
+  - Update all imports to: "from services.user_service import get_user_preferences"
+  - Delete duplicate from handlers/words.py
+  - Ensure return value format is consistent
+
+TEST_INSTRUCTION: |
+  Verify get_user_preferences consolidation:
+
+  1. Code verification:
+     - grep -r "def get_user_preferences" src/ should return 1 result only
+     - All files import from services/user_service
+
+  2. Integration tests:
+     - python scripts/integration_test.py should pass
+     - Test user preference endpoints
+
+  3. Functionality check:
+     - User preferences are correctly retrieved
+     - Language settings work properly
+
+  SPECIFIC TESTS:
+  - grep -r "def get_user_preferences" src/
+  - python scripts/integration_test.py
+
+EVAL_CRITERIA: |
+  Return TRUE only if ALL of the following are met:
+  1. Only 1 get_user_preferences implementation exists
+  2. All 12 imports updated to use services/user_service
+  3. Integration tests pass
+  4. No functionality is broken
+  5. User preferences work correctly
+
+[TASK_8]
+IMPLEMENT_INSTRUCTION: |
+  Consolidate test vocabulary query logic into centralized service.
+
+  PROBLEM:
+  - Repeated SQL queries for test vocabulary across 8 files
+  - Same logic: "SELECT word FROM test_vocabularies WHERE is_toefl=TRUE..."
+  - Changes require updates in 8 places
+  - No single source of truth
+
+  LOCATIONS (8 occurrences):
+  - handlers/schedule.py: 2 occurrences
+  - handlers/test_vocabulary.py: 3 occurrences
+  - services/schedule_service.py: 2 occurrences
+  - routes/schedule.py: 1 occurrence
+
+  SOLUTION:
+  Create services/test_vocabulary_service.py:
+
+  def get_test_vocabulary_query(test_type: str) -> str:
+      """Returns SQL query for test vocabulary"""
+      # Centralized query logic
+
+  def get_test_vocabulary_words(test_type: str) -> Set[str]:
+      """Returns set of words for test type"""
+      # Executes query and returns results
+
+  REQUIREMENTS:
+  - Create services/test_vocabulary_service.py
+  - Extract common query logic
+  - Replace 8 occurrences with function calls
+  - Support all test types: TOEFL, IELTS, TIANZ, BOTH
+  - Maintain query performance
+
+TEST_INSTRUCTION: |
+  Verify test vocabulary consolidation:
+
+  1. Service creation:
+     - services/test_vocabulary_service.py exists
+     - Contains get_test_vocabulary_words()
+
+  2. Code verification:
+     - grep -r "SELECT.*FROM test_vocabularies" src/ returns only service file
+     - All 8 locations use service function
+
+  3. Integration tests:
+     - python scripts/integration_test.py should pass
+     - Test schedule generation with different test types
+
+  4. Functionality check:
+     - TOEFL vocabulary queries work
+     - IELTS vocabulary queries work
+     - TIANZ vocabulary queries work
+
+  SPECIFIC TESTS:
+  - grep -r "FROM test_vocabularies" src/
+  - python scripts/integration_test.py
+
+EVAL_CRITERIA: |
+  Return TRUE only if ALL of the following are met:
+  1. services/test_vocabulary_service.py created
+  2. All 8 query locations replaced with service calls
+  3. Only service file contains raw SQL queries
+  4. Integration tests pass
+  5. All test types work correctly
+  6. Query performance maintained
