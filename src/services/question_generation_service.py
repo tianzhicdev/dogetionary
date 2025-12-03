@@ -106,6 +106,12 @@ Distractor requirements:
 - Similar length and style to correct answer
 - Avoid negations or "none of the above"
 
+IMPORTANT - Language Simplicity:
+- Use SIMPLE, COMMON vocabulary in all answer options
+- Avoid complex, obscure, or advanced words that learners might not know
+- The focus is testing '{word}' - don't confuse users with difficult words in the options
+- Write at a basic to intermediate English level
+
 Return ONLY valid JSON (no markdown, no explanation):
 {{
   "question_text": "What does '{word}' mean?",
@@ -136,6 +142,12 @@ Requirements:
   - Should be related/similar to {word} (synonyms, near-synonyms, or words in same semantic field)
   - Must be real English words
   - Should be believable distractors
+
+IMPORTANT - Distractor Selection:
+- Choose COMMON, WELL-KNOWN words as distractors
+- Avoid obscure, complex, or advanced vocabulary
+- Users should recognize all the word options, even if they don't know exact meanings
+- Use words at a basic to intermediate level
 
 Return ONLY valid JSON (no markdown):
 {{
@@ -171,6 +183,13 @@ Requirements:
 - Option A: "{word}" (CORRECT)
 - Options B, C, D: Related words that DON'T fit the context
 - Include translation of the sentence to {lang_name}
+
+IMPORTANT - Language Simplicity:
+- Use SIMPLE, COMMON vocabulary in the sentence (except for the target word)
+- Choose WELL-KNOWN, BASIC words as distractors
+- Avoid complex or obscure words that might confuse learners
+- The sentence should be easy to understand except for the blank
+- Write at a basic to intermediate English level
 
 Return ONLY valid JSON:
 {{
