@@ -5,6 +5,7 @@ from handlers.reads import (
     get_due_counts, get_review_stats, get_forgetting_curve,
     get_review_progress_stats
 )
+from handlers.pronunciation import submit_pronunciation_review
 
 reviews_bp = Blueprint('reviews', __name__)
 
@@ -12,6 +13,7 @@ reviews_bp = Blueprint('reviews', __name__)
 reviews_bp.route('/next', methods=['GET'])(get_next_review_word)
 reviews_bp.route('/v2/next', methods=['GET'])(get_next_review_word_v2)
 reviews_bp.route('/submit', methods=['POST'])(submit_review)
+reviews_bp.route('/pronounce', methods=['POST'])(submit_pronunciation_review)
 
 # Review statistics
 reviews_bp.route('/due_counts', methods=['GET'])(get_due_counts)

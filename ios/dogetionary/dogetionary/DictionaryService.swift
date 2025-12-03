@@ -1198,6 +1198,79 @@ class DictionaryService: ObservableObject {
         }.resume()
     }
 
+    /// Submit pronunciation review with evaluation
+    /// Used for pronounce_sentence question type in review flow
+    func submitPronunciationReview(
+        audioData: Data,
+        originalText: String,
+        word: String,
+        evaluationThreshold: Double = 0.7
+    ) async throws -> PronunciationEvaluationResult {
+        let userID = UserManager.shared.getUserID()
+        let learningLanguage = UserDefaults.standard.string(forKey: "learningLanguage") ?? "en"
+        let nativeLanguage = UserDefaults.standard.string(forKey: "nativeLanguage") ?? "en"
+
+        guard let url = URL(string: "\(baseURL)/v3/review/pronounce") else {
+            logger.error("Invalid URL for pronunciation review endpoint")
+            throw DictionaryError.invalidURL
+        }
+
+        logger.info("Submitting pronunciation review for word: '\(word)'")
+
+        let audioBase64 = audioData.base64EncodedString()
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "word": word,
+            "original_text": originalText,
+            "audio_data": audioBase64,
+            "learning_language": learningLanguage,
+            "native_language": nativeLanguage,
+            "evaluation_threshold": evaluationThreshold
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            logger.error("Failed to encode pronunciation review request")
+            throw DictionaryError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = jsonData
+        request.timeoutInterval = 30.0
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            logger.error("Invalid response type for pronunciation review")
+            throw DictionaryError.invalidResponse
+        }
+
+        logger.info("Pronunciation review response status: \(httpResponse.statusCode)")
+
+        guard httpResponse.statusCode == 200 else {
+            logger.error("Server error in pronunciation review: \(httpResponse.statusCode)")
+
+            // Try to extract error message
+            if let responseDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = responseDict["error"] as? String {
+                logger.error("Server error message: \(errorMessage)")
+            }
+
+            throw DictionaryError.serverError(httpResponse.statusCode)
+        }
+
+        // Decode response
+        let decoder = JSONDecoder()
+        let result = try decoder.decode(PronunciationEvaluationResult.self, from: data)
+
+        logger.info("Successfully processed pronunciation review - passed: \(result.passed), score: \(result.similarity_score)")
+
+        return result
+    }
+
     // MARK: - Test Preparation Methods
 
     /// Update test settings using V3 API format with test_type
