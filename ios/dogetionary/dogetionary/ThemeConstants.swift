@@ -17,6 +17,9 @@ struct AppTheme {
     /// Light blue for backgrounds and secondary elements
     static let lightBlue = Color(red: 0.95, green: 0.97, blue: 1.0)
 
+    /// Medium light blue for calendar dates
+    static let mediumLightBlue = Color(red: 0.92, green: 0.95, blue: 1.0)
+
     /// Very light blue for nested backgrounds
     static let veryLightBlue = Color(red: 0.98, green: 0.99, blue: 1.0)
 
@@ -60,6 +63,195 @@ struct AppTheme {
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+
+    // MARK: - Feedback State Gradients
+
+    /// Vibrant green gradient for correct answers
+    static let feedbackCorrectGradient = LinearGradient(
+        colors: [Color(red: 0.3, green: 0.85, blue: 0.5), Color(red: 0.2, green: 0.75, blue: 0.6)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Red-orange gradient for incorrect answers
+    static let feedbackIncorrectGradient = LinearGradient(
+        colors: [Color(red: 1.0, green: 0.45, blue: 0.4), Color(red: 1.0, green: 0.6, blue: 0.35)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Blue-cyan gradient for selected state
+    static let feedbackSelectedGradient = LinearGradient(
+        colors: [Color(red: 0.4, green: 0.7, blue: 1.0), Color(red: 0.3, green: 0.85, blue: 0.95)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Subtle purple-blue gradient for default/unselected state
+    static let feedbackDefaultGradient = LinearGradient(
+        colors: [Color(red: 0.92, green: 0.93, blue: 0.98), Color(red: 0.90, green: 0.92, blue: 0.96)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Subtle green gradient for unselected correct answer
+    static let feedbackUnselectedCorrectGradient = LinearGradient(
+        colors: [Color(red: 0.7, green: 0.95, blue: 0.75), Color(red: 0.6, green: 0.9, blue: 0.8)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Green border gradient for correct answer
+    static let borderCorrectGradient = LinearGradient(
+        colors: [Color(red: 0.2, green: 0.8, blue: 0.4), Color(red: 0.3, green: 0.9, blue: 0.5)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Red border gradient for incorrect answer
+    static let borderIncorrectGradient = LinearGradient(
+        colors: [Color(red: 1.0, green: 0.3, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.2)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Blue border gradient for selected state
+    static let borderSelectedGradient = LinearGradient(
+        colors: [Color(red: 0.3, green: 0.6, blue: 1.0), Color(red: 0.4, green: 0.8, blue: 1.0)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    // MARK: - Test Type Gradients
+
+    /// Gradients for test types
+    static let testTypeGradients: [TestType: LinearGradient] = [
+        .toeflBeginner: LinearGradient(
+            colors: [Color.green, Color.mint],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        .toeflIntermediate: LinearGradient(
+            colors: [Color.teal, Color.cyan],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        .toeflAdvanced: LinearGradient(
+            colors: [Color.blue, Color.purple],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        .ieltsBeginner: LinearGradient(
+            colors: [Color.orange, Color.yellow],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        .ieltsIntermediate: LinearGradient(
+            colors: [Color.pink, Color.red],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        .ieltsAdvanced: LinearGradient(
+            colors: [Color.purple, Color.indigo],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        .tianz: LinearGradient(
+            colors: [Color.indigo, Color.purple],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    ]
+
+    // MARK: - State Colors
+
+    /// Success color (green)
+    static let successColor = Color.green
+
+    /// Error color (red)
+    static let errorColor = Color.red
+
+    /// Warning color (orange)
+    static let warningColor = Color.orange
+
+    /// Info color (blue)
+    static let infoColor = Color.blue
+
+    /// Yellow-green color for progress indicators
+    static let yellowGreen = Color(red: 0.6, green: 0.85, blue: 0.4)
+
+    // MARK: - Medal/Rank Colors
+
+    /// Gold gradient for 1st place
+    static let goldGradient = LinearGradient(
+        colors: [Color(red: 1.0, green: 0.88, blue: 0.4), Color(red: 1.0, green: 0.75, blue: 0.2)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Silver gradient for 2nd place
+    static let silverGradient = LinearGradient(
+        colors: [Color(red: 0.85, green: 0.85, blue: 0.88), Color(red: 0.65, green: 0.65, blue: 0.70)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Bronze gradient for 3rd place
+    static let bronzeGradient = LinearGradient(
+        colors: [Color(red: 0.9, green: 0.65, blue: 0.45), Color(red: 0.7, green: 0.45, blue: 0.25)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Default rank gradient
+    static let defaultRankGradient = LinearGradient(
+        colors: [Color(red: 0.92, green: 0.93, blue: 0.95), Color(red: 0.85, green: 0.86, blue: 0.88)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Gold text color for 1st place
+    static let goldTextColor = Color(red: 0.7, green: 0.5, blue: 0.1)
+
+    /// Silver text color for 2nd place
+    static let silverTextColor = Color(red: 0.4, green: 0.4, blue: 0.45)
+
+    /// Default rank text color
+    static let defaultRankTextColor = Color(red: 0.5, green: 0.5, blue: 0.55)
+
+    // MARK: - Opacity Constants
+
+    /// Subtle opacity (0.05) - for very light shadows
+    static let subtleOpacity: Double = 0.05
+
+    /// Light opacity (0.1) - for light backgrounds
+    static let lightOpacity: Double = 0.1
+
+    /// Medium opacity (0.15) - for medium shadows
+    static let mediumOpacity: Double = 0.15
+
+    /// Medium-high opacity (0.2) - for prominent backgrounds
+    static let mediumHighOpacity: Double = 0.2
+
+    /// Strong opacity (0.3) - for strong shadows
+    static let strongOpacity: Double = 0.3
+
+    /// Very strong opacity (0.4) - for very strong shadows
+    static let veryStrongOpacity: Double = 0.4
+
+    // MARK: - Shadow Colors
+
+    /// Subtle shadow (black with 0.05 opacity)
+    static let subtleShadowColor = Color.black.opacity(subtleOpacity)
+
+    /// Medium shadow (blue with 0.15 opacity)
+    static let mediumShadowColor = Color.blue.opacity(mediumOpacity)
+
+    /// Strong shadow (black with 0.3 opacity)
+    static let strongShadowColor = Color.black.opacity(strongOpacity)
+
+    /// Depth shadow (purple with 0.2 opacity)
+    static let depthShadowColor = Color.purple.opacity(mediumHighOpacity)
 
     // MARK: - Card Styling
 
@@ -171,5 +363,44 @@ struct AppTheme {
                 .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Gradient Helper Functions
+
+    /// Returns appropriate feedback gradient based on answer state
+    static func feedbackGradient(
+        isCorrect: Bool,
+        isSelected: Bool,
+        showFeedback: Bool,
+        shouldShowAsCorrect: Bool = false
+    ) -> LinearGradient {
+        if showFeedback && isSelected {
+            return isCorrect ? feedbackCorrectGradient : feedbackIncorrectGradient
+        } else if shouldShowAsCorrect {
+            return feedbackUnselectedCorrectGradient
+        } else if isSelected {
+            return feedbackSelectedGradient
+        } else {
+            return feedbackDefaultGradient
+        }
+    }
+
+    /// Returns appropriate feedback border gradient based on answer state
+    static func feedbackBorderGradient(
+        isCorrect: Bool,
+        isSelected: Bool,
+        showFeedback: Bool
+    ) -> LinearGradient? {
+        if showFeedback && isSelected {
+            return isCorrect ? borderCorrectGradient : borderIncorrectGradient
+        } else if isSelected {
+            return borderSelectedGradient
+        }
+        return nil
+    }
+
+    /// Returns gradient for a specific test type
+    static func testTypeGradient(_ testType: TestType) -> LinearGradient {
+        return testTypeGradients[testType] ?? primaryGradient
     }
 }

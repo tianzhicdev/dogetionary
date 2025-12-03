@@ -24,12 +24,12 @@ struct MiniCurveAnimationView: View {
             Image(systemName: "brain")
                 .font(.system(size: 12, weight: .medium))
         }
-        .foregroundColor(isCorrect ? .green : .orange)
+        .foregroundColor(isCorrect ? AppTheme.successColor : AppTheme.warningColor)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(
             Capsule()
-                .fill((isCorrect ? Color.green : Color.orange).opacity(0.12))
+                .fill((isCorrect ? AppTheme.successColor : AppTheme.warningColor).opacity(AppTheme.lightOpacity))
         )
         .scaleEffect(scale)
         .opacity(opacity)

@@ -161,12 +161,8 @@ struct SavedWordsListView: View {
     var body: some View {
         ZStack {
             // Soft blue gradient background
-            LinearGradient(
-                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            AppTheme.secondaryGradient
+                .ignoresSafeArea()
 
             Group {
                 if isLoading {
@@ -294,7 +290,7 @@ struct SavedWordRow: View {
                 HStack(spacing: 2) {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(Color(red: 1.0, green: 0.5, blue: 0.5))
+                        .foregroundColor(AppTheme.errorColor)
                     Text("\(savedWord.incorrect_reviews)")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
@@ -303,7 +299,7 @@ struct SavedWordRow: View {
                 HStack(spacing: 2) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(Color(red: 0.4, green: 0.75, blue: 0.5))
+                        .foregroundColor(AppTheme.successColor)
                     Text("\(savedWord.correct_reviews)")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
@@ -345,7 +341,7 @@ struct SavedWordRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(savedWord.is_known ? Color(red: 1.0, green: 0.898, blue: 0.898) : Color.white)
+        .background(savedWord.is_known ? AppTheme.errorColor.opacity(AppTheme.lightOpacity) : Color.white)
         .cornerRadius(10)
         .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
     }
@@ -395,37 +391,29 @@ struct WordProgressBar: View {
     private var progressColor: LinearGradient {
         if progressLevel <= 2 {
             // Red-orange for low progress
-            return LinearGradient(
-                colors: [Color(red: 1.0, green: 0.45, blue: 0.4), Color(red: 1.0, green: 0.55, blue: 0.35)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
+            return AppTheme.feedbackIncorrectGradient
         } else if progressLevel <= 4 {
             // Orange-yellow for medium progress
             return LinearGradient(
-                colors: [Color(red: 1.0, green: 0.7, blue: 0.3), Color(red: 1.0, green: 0.85, blue: 0.35)],
+                colors: [AppTheme.warningColor, Color.yellow],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else if progressLevel <= 6 {
             // Yellow-green for good progress
             return LinearGradient(
-                colors: [Color(red: 0.6, green: 0.85, blue: 0.4), Color(red: 0.45, green: 0.8, blue: 0.5)],
+                colors: [AppTheme.yellowGreen, AppTheme.successColor],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
             // Green-teal for mastered
-            return LinearGradient(
-                colors: [Color(red: 0.3, green: 0.75, blue: 0.55), Color(red: 0.2, green: 0.7, blue: 0.65)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
+            return AppTheme.feedbackCorrectGradient
         }
     }
 
     private var emptyColor: Color {
-        Color(red: 0.92, green: 0.93, blue: 0.95)
+        Color(.systemGray5)
     }
 
     var body: some View {

@@ -35,12 +35,8 @@ struct ScheduleView: View {
     private var scheduleContent: some View {
         ZStack {
             // Simple gradient background
-            LinearGradient(
-                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            AppTheme.backgroundGradient
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Group {
@@ -324,7 +320,7 @@ struct SimpleScheduleListView: View {
                                 .cornerRadius(8)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                        .stroke(AppTheme.infoColor.opacity(AppTheme.mediumHighOpacity), lineWidth: 1)
                                 )
                             }
                             .onChange(of: activeTestType) { oldValue, newValue in
@@ -373,7 +369,7 @@ struct SimpleScheduleListView: View {
                                     .cornerRadius(8)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                                            .stroke(AppTheme.successColor.opacity(AppTheme.mediumHighOpacity), lineWidth: 1)
                                     )
                                 }
                                 .onChange(of: targetDays) { _, _ in
@@ -396,13 +392,13 @@ struct SimpleScheduleListView: View {
                     .padding(16)
                     .background(
                         LinearGradient(
-                            colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
+                            colors: [AppTheme.lightBlue, Color.white],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
                     .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    .shadow(color: AppTheme.subtleShadowColor, radius: 8, x: 0, y: 2)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                 }
@@ -510,22 +506,22 @@ struct DayCard: View {
                 VStack(spacing: 2) {
                     Text(dayOfMonth)
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(isToday ? .white : Color(red: 0.3, green: 0.4, blue: 0.9))
+                        .foregroundColor(isToday ? .white : AppTheme.primaryBlue)
                     Text(monthAbbreviation)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(isToday ? .white.opacity(0.9) : Color(red: 0.3, green: 0.4, blue: 0.9).opacity(0.7))
+                        .foregroundColor(isToday ? .white.opacity(0.9) : AppTheme.primaryBlue.opacity(0.7))
                 }
                 .frame(width: 60, height: 60)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
                         .fill(isToday ?
                               LinearGradient(
-                                colors: [Color(red: 0.4, green: 0.5, blue: 1.0), Color(red: 0.6, green: 0.4, blue: 1.0)],
+                                colors: [AppTheme.infoColor, Color.purple],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                               ) :
                               LinearGradient(
-                                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color(red: 0.92, green: 0.95, blue: 1.0)],
+                                colors: [AppTheme.lightBlue, AppTheme.mediumLightBlue],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                               )
@@ -544,7 +540,7 @@ struct DayCard: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
-                                .background(Color(red: 0.5, green: 0.45, blue: 1.0))
+                                .background(AppTheme.accentPurple)
                                 .cornerRadius(4)
                         }
                     }
@@ -567,8 +563,8 @@ struct DayCard: View {
                         label: "New Words",
                         words: newWords,
                         completedWords: newWordsCompleted,
-                        backgroundColor: Color(red: 1.0, green: 0.95, blue: 0.9),
-                        textColor: Color(red: 0.8, green: 0.4, blue: 0.2)
+                        backgroundColor: AppTheme.newWordBackground,
+                        textColor: AppTheme.newWordTextColor
                     )
                 }
 
@@ -580,8 +576,8 @@ struct DayCard: View {
                         label: "\(testLabel) Practice",
                         words: testWords.map { $0.word },
                         completedWords: testWordsCompleted.map { $0.word },
-                        backgroundColor: Color(red: 0.9, green: 0.98, blue: 0.95),
-                        textColor: Color(red: 0.2, green: 0.6, blue: 0.4)
+                        backgroundColor: AppTheme.testPracticeBackground,
+                        textColor: AppTheme.testPracticeTextColor
                     )
                 }
 
@@ -593,17 +589,17 @@ struct DayCard: View {
                         label: "Custom Practice",
                         words: practiceWords.map { $0.word },
                         completedWords: practiceWordsCompleted.map { $0.word },
-                        backgroundColor: Color(red: 0.95, green: 0.97, blue: 1.0),
-                        textColor: Color(red: 0.3, green: 0.5, blue: 0.9)
+                        backgroundColor: AppTheme.lightBlue,
+                        textColor: AppTheme.customPracticeTextColor
                     )
                 }
             }
             .padding(16)
-            .background(Color(red: 0.98, green: 0.99, blue: 1.0))
+            .background(AppTheme.veryLightBlue)
         }
         .background(Color.white)
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .shadow(color: AppTheme.subtleShadowColor, radius: 8, x: 0, y: 2)
     }
 
     private var dayOfWeek: String {
@@ -743,12 +739,12 @@ struct NoScheduleView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.95, green: 0.97, blue: 1.0))
+                    .fill(AppTheme.lightBlue)
                     .frame(width: 100, height: 100)
 
                 Image(systemName: "calendar.badge.plus")
                     .font(.system(size: 50))
-                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 1.0))
+                    .foregroundColor(AppTheme.infoColor)
             }
 
             Text("No Schedule Yet")
