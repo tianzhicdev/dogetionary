@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.schedule_service import initiate_schedule, refresh_schedule, get_user_timezone, get_today_in_timezone, get_words_reviewed_on_date
 from utils.database import get_db_connection
-from handlers.admin import get_next_review_date_new
+from services.spaced_repetition_service import get_next_review_date_new
 from handlers.test_vocabulary import TEST_TYPE_MAPPING
 
 logger = logging.getLogger(__name__)

@@ -22,7 +22,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.database import validate_language, get_db_connection
-from handlers.admin import get_next_review_date_new, calculate_retention, get_decay_rate
+from services.spaced_repetition_service import get_next_review_date_new, calculate_retention, get_decay_rate
 
 from config.config import *
 
