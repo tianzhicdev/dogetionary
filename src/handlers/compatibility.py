@@ -5,7 +5,7 @@
 from flask import request, jsonify
 import json
 import logging
-from handlers.words import get_word_definition, get_illustration
+from handlers.words import get_word_definition_v4, get_illustration
 from handlers.reads import get_review_progress_stats
 from handlers.words import get_next_review_word_v2
 
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 def get_word_definition_v2():
     """
     Backward compatibility for /v2/word endpoint
-    Redirects to current merged word definition endpoint
+    Redirects to current V4 word definition endpoint
     """
-    logger.info("V2 word endpoint called - redirecting to merged endpoint")
-    return get_word_definition()
+    logger.info("V2 word endpoint called - redirecting to V4 endpoint")
+    return get_word_definition_v4()
 
 def get_review_stats():
     """

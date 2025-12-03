@@ -38,7 +38,7 @@ from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action, get_analytics_data
 from handlers.api_usage_analytics import get_api_usage_analytics
 from handlers.pronunciation import practice_pronunciation, get_pronunciation_history, get_pronunciation_stats
-from handlers.words import get_next_review_word_v2, audio_generation_worker, get_saved_words, get_word_definition, get_word_details, get_audio, get_illustration, generate_word_definition
+from handlers.words import get_next_review_word_v2, audio_generation_worker, get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, generate_word_definition
 from handlers.static_site import get_all_words, get_words_summary, get_featured_words
 
 # Register all routes
@@ -48,7 +48,7 @@ app.route('/v2/unsave', methods=['POST'])(delete_saved_word_v2) # ok
 app.route('/review_next', methods=['GET'])(get_next_review_word) # backward compatibility for old iOS versions
 app.route('/due_counts', methods=['GET'])(get_due_counts) # ok
 app.route('/reviews/submit', methods=['POST'])(submit_review) # returning more than needed but ok
-app.route('/word', methods=['GET'])(get_word_definition)
+app.route('/word', methods=['GET'])(get_word_definition_v4)  # V4 with vocabulary learning features
 app.route('/saved_words', methods=['GET'])(get_saved_words) # returning more than needed but ok
 app.route('/users/<user_id>/preferences', methods=['GET', 'POST'])(handle_user_preferences)  # ok
 app.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forgetting_curve)  # might be able to simplify but ok
