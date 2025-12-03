@@ -140,155 +140,9 @@ def audio_generation_worker():
         except Exception as e:
             logger.error(f"Error in audio generation worker: {str(e)}")
 
-WORD_DEFINITION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "word": {"type": "string"},
-        "phonetic": {"type": "string"},
-        "translations": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Direct translations from learning language to native language"
-        },
-        "definitions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "type": {"type": "string"},
-                    "definition": {"type": "string"},
-                    "definition_native": {"type": "string", "description": "Definition in user's native language"},
-                    "examples": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Example sentences in the learning language"
-                    },
-                    "cultural_notes": {"type": "string", "description": "Optional cultural context"}
-                },
-                "required": ["type", "definition", "definition_native", "examples"]
-            }
-        }
-    },
-    "required": ["word", "phonetic", "translations", "definitions"]
-}
+# Old schemas and helper functions removed - now using centralized services/definition_service.py
 
-# V3 Schema with validation fields - strict structure matching iOS expectations
-WORD_DEFINITION_V3_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "valid_word_score": {
-            "type": "number",
-            "description": "Score between 0 and 1 indicating validity (0.9+ = highly valid)"
-        },
-        "suggestion": {
-            "type": ["string", "null"],
-            "description": "Suggested correction if score < 0.9, otherwise null"
-        },
-        "word": {"type": "string"},
-        "phonetic": {"type": "string"},
-        "translations": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Direct translations from learning language to native language"
-        },
-        "definitions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "part_of_speech": {"type": "string", "description": "Part of speech: noun, verb, adjective, etc"},
-                    "definition": {"type": "string", "description": "Definition in learning language"},
-                    "definition_native": {"type": "string", "description": "Definition in user's native language"},
-                    "examples": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "5-6 example sentences as plain text strings in the learning language"
-                    },
-                    "cultural_notes": {"type": ["string", "null"], "description": "Optional cultural context"}
-                },
-                "required": ["part_of_speech", "definition", "definition_native", "examples", "cultural_notes"],
-                "additionalProperties": False
-            }
-        }
-    },
-    "required": ["valid_word_score", "suggestion", "word", "phonetic", "translations", "definitions"],
-    "additionalProperties": False
-}
-
-CURRENT_SCHEMA_VERSION = 3
-
-
-def build_definition_prompt(word: str, learning_lang: str, native_lang: str) -> str:
-    """Build LLM prompt for bilingual definitions"""
-    lang_names = {
-        'af': 'Afrikaans', 'ar': 'Arabic', 'hy': 'Armenian', 'az': 'Azerbaijani',
-        'be': 'Belarusian', 'bs': 'Bosnian', 'bg': 'Bulgarian', 'ca': 'Catalan',
-        'zh': 'Chinese', 'hr': 'Croatian', 'cs': 'Czech', 'da': 'Danish',
-        'nl': 'Dutch', 'en': 'English', 'et': 'Estonian', 'fi': 'Finnish',
-        'fr': 'French', 'gl': 'Galician', 'de': 'German', 'el': 'Greek',
-        'he': 'Hebrew', 'hi': 'Hindi', 'hu': 'Hungarian', 'is': 'Icelandic',
-        'id': 'Indonesian', 'it': 'Italian', 'ja': 'Japanese', 'kn': 'Kannada',
-        'kk': 'Kazakh', 'ko': 'Korean', 'lv': 'Latvian', 'lt': 'Lithuanian',
-        'mk': 'Macedonian', 'ms': 'Malay', 'mr': 'Marathi', 'mi': 'Maori',
-        'ne': 'Nepali', 'no': 'Norwegian', 'fa': 'Persian', 'pl': 'Polish',
-        'pt': 'Portuguese', 'ro': 'Romanian', 'ru': 'Russian', 'sr': 'Serbian',
-        'sk': 'Slovak', 'sl': 'Slovenian', 'es': 'Spanish', 'sw': 'Swahili',
-        'sv': 'Swedish', 'tl': 'Tagalog', 'ta': 'Tamil', 'th': 'Thai',
-        'tr': 'Turkish', 'uk': 'Ukrainian', 'ur': 'Urdu', 'vi': 'Vietnamese',
-        'cy': 'Welsh'
-    }
-    
-    learning_lang_name = lang_names.get(learning_lang, learning_lang)
-    native_lang_name = lang_names.get(native_lang, native_lang)
-    
-    if learning_lang == native_lang:
-        raise ValueError("Learning language and native language cannot be the same")
-    else:
-        # Different languages - bilingual approach
-        return f"""Define the word '{word}' for a learner studying {learning_lang_name} whose native language is {native_lang_name}. Provide:
-        - A list of direct translations in {native_lang_name} (in 'translations' field)
-        - Phonetic spelling
-        - Detailed definitions with different parts of speech
-        
-        For each definition:
-        - Provide definition in {learning_lang_name} (in 'definition' field)
-        - Provide translation/explanation in {native_lang_name} (in 'definition_native' field)
-        - Include 2-3 example sentences in {learning_lang_name} only (in 'examples' field) - make these examples humorous, related to recent news, or memorable in some way to help with learning
-        - Add cultural context and usage notes
-
-        Examples should always be in {learning_lang_name} since that's what the user is learning."""
-
-
-
-def get_cached_definition(word: str, learning_lang: str, native_lang: str) -> Optional[dict]:
-    """Get cached definition with smart fallback - checks schema version"""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Try exact match first - also check schema version
-        cur.execute("""
-            SELECT definition_data, schema_version FROM definitions
-            WHERE word = %s AND learning_language = %s AND native_language = %s
-        """, (word, learning_lang, native_lang))
-
-        exact_match = cur.fetchone()
-        if exact_match:
-            # Check if schema version is current
-            cached_version = exact_match.get('schema_version', 1)
-            if cached_version < CURRENT_SCHEMA_VERSION:
-                logger.info(f"Cache hit for '{word}' but schema outdated (v{cached_version} < v{CURRENT_SCHEMA_VERSION}), will regenerate")
-                conn.close()
-                return None  # Treat as cache miss
-
-            conn.close()
-            return {'definition_data': exact_match['definition_data'], 'cache_type': 'exact'}
-        conn.close()
-        return None
-
-    except Exception as e:
-        logger.error(f"Error getting cached definition: {str(e)}")
-        return None
+# get_cached_definition removed - caching now handled by centralized services/definition_service.py
 
 def calculate_spaced_repetition(reviews_data, current_review_time=None):
     """
@@ -411,123 +265,23 @@ def queue_missing_audio(word: str, definition_data: dict, learning_lang: str, ex
     return "complete"
 
 
-def get_word_definition():
-    """Get word definition with OpenAI integration"""
-    try:
-        user_id = request.args.get('user_id')
-        word = request.args.get('w')
-        
-        if not word or not user_id:
-            return jsonify({"error": "w and user_id parameters are required"}), 400
-            
-        word_normalized = word.strip().lower()
+# Old get_word_definition() removed - use get_word_definition_v4() instead
 
-        # Get language preferences from URL parameters or fall back to user preferences
-        learning_lang = request.args.get('learning_lang')
-        native_lang = request.args.get('native_lang')
-
-        if not learning_lang or not native_lang:
-            user_learning_lang, user_native_lang, _, _ = get_user_preferences(user_id)
-            learning_lang = learning_lang or user_learning_lang
-            native_lang = native_lang or user_native_lang
-
-        # Try to get cached definition first
-        cached = get_cached_definition(word_normalized, learning_lang, native_lang)
-        
-        if cached:
-            logger.info(f"Using cached definition for '{word_normalized}' ({cached['cache_type']})")
-            definition_data = cached['definition_data']
-        else:
-            # Generate new definition using OpenAI
-            logger.info(f"Generating new definition for '{word_normalized}'")
-            prompt = build_definition_prompt(word_normalized, learning_lang, native_lang)
-            
-            definition_content = llm_completion(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a dictionary expert. Provide comprehensive definitions for words including different parts of speech, phonetic spelling, and example sentences."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                model_name=COMPLETION_MODEL_NAME,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "word_definition",
-                        "strict": True,
-                        "schema": WORD_DEFINITION_SCHEMA
-                    }
-                }
-            )
-
-            if not definition_content:
-                return jsonify({"error": "Failed to generate definition"}), 500
-
-            definition_data = json.loads(definition_content)
-            
-            # Store in cache
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO definitions (word, learning_language, native_language, definition_data, schema_version)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (word, learning_language, native_language)
-                DO UPDATE SET
-                    definition_data = EXCLUDED.definition_data,
-                    schema_version = EXCLUDED.schema_version,
-                    updated_at = CURRENT_TIMESTAMP
-            """, (word_normalized, learning_lang, native_lang, json.dumps(definition_data), CURRENT_SCHEMA_VERSION))
-            conn.commit()
-            conn.close()
-        
-        # Collect audio references
-        audio_refs = collect_audio_references(definition_data, learning_lang)
-        
-        # Add word audio if available  
-        if audio_exists(word_normalized, learning_lang):
-            audio_refs["word_audio"] = True
-        
-        # Queue missing audio generation
-        audio_status = queue_missing_audio(word_normalized, definition_data, learning_lang, audio_refs)
-        
-        # Add validation data - assume high confidence for all definitions
-        # since they've passed generation and caching
-        validation_data = {
-            "confidence": 1.0,
-            "suggested": None
-        }
-
-        return jsonify({
-            "word": word_normalized,
-            "learning_language": learning_lang,
-            "native_language": native_lang,
-            "definition_data": definition_data,
-            "audio_references": audio_refs,
-            "audio_generation_status": audio_status,
-            "validation": validation_data  # NEW: Include validation data (merged from V2)
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting definition for word '{word_normalized}': {str(e)}")
-        return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
-
-
-def get_word_definition_v3():
+def get_word_definition_v4():
     """
-    V3 word definition with validation and suggestion - SINGLE OpenAI call
+    V4 word definition with validation, suggestion, and vocabulary learning enhancements.
+    Uses centralized definition generation service.
 
     Returns:
     - valid_word_score: float between 0 and 1 (0.9+ = highly valid)
     - suggestion: alternative word/phrase if score < 0.9
-    - definition_data: full definition (always provided)
+    - definition_data: full V4 definition with learning features (always provided)
 
     Frontend should prompt user if valid_word_score < 0.9
     """
     try:
+        from services.definition_service import generate_definition_with_llm
+
         user_id = request.args.get('user_id')
         word = request.args.get('w')
 
@@ -545,117 +299,21 @@ def get_word_definition_v3():
             learning_lang = learning_lang or user_learning_lang
             native_lang = native_lang or user_native_lang
 
-        # Check cache first
-        cached = get_cached_definition(word_normalized, learning_lang, native_lang)
+        # Generate or retrieve cached definition using centralized service
+        definition_data = generate_definition_with_llm(
+            word=word_normalized,
+            learning_lang=learning_lang,
+            native_lang=native_lang
+        )
 
-        if cached:
-            logger.info(f"V3: Using cached definition for '{word_normalized}'")
-            definition_data = cached['definition_data']
+        if not definition_data:
+            return jsonify({"error": "Failed to generate definition"}), 500
 
-            # Extract validation data from cached definition
-            valid_word_score = definition_data.get('valid_word_score', 1.0)
-            suggestion = definition_data.get('suggestion')
-        else:
-            # SINGLE OpenAI call with enhanced prompt that includes validation
-            logger.info(f"V3: Generating definition with validation for '{word_normalized}'")
+        # Extract validation data
+        valid_word_score = definition_data.get('valid_word_score', 1.0)
+        suggestion = definition_data.get('suggestion')
 
-            lang_names = {
-                'af': 'Afrikaans', 'ar': 'Arabic', 'hy': 'Armenian', 'az': 'Azerbaijani',
-                'be': 'Belarusian', 'bs': 'Bosnian', 'bg': 'Bulgarian', 'ca': 'Catalan',
-                'zh': 'Chinese', 'hr': 'Croatian', 'cs': 'Czech', 'da': 'Danish',
-                'nl': 'Dutch', 'en': 'English', 'et': 'Estonian', 'fi': 'Finnish',
-                'fr': 'French', 'gl': 'Galician', 'de': 'German', 'el': 'Greek',
-                'he': 'Hebrew', 'hi': 'Hindi', 'hu': 'Hungarian', 'is': 'Icelandic',
-                'id': 'Indonesian', 'it': 'Italian', 'ja': 'Japanese', 'kn': 'Kannada',
-                'kk': 'Kazakh', 'ko': 'Korean', 'lv': 'Latvian', 'lt': 'Lithuanian',
-                'mk': 'Macedonian', 'ms': 'Malay', 'mr': 'Marathi', 'mi': 'Maori',
-                'ne': 'Nepali', 'no': 'Norwegian', 'fa': 'Persian', 'pl': 'Polish',
-                'pt': 'Portuguese', 'pa': 'Punjabi', 'ro': 'Romanian', 'ru': 'Russian',
-                'sr': 'Serbian', 'sk': 'Slovak', 'sl': 'Slovenian', 'es': 'Spanish',
-                'sw': 'Swahili', 'sv': 'Swedish', 'tl': 'Tagalog', 'ta': 'Tamil',
-                'te': 'Telugu', 'th': 'Thai', 'tr': 'Turkish', 'uk': 'Ukrainian',
-                'ur': 'Urdu', 'vi': 'Vietnamese', 'cy': 'Welsh'
-            }
-
-            learning_lang_name = lang_names.get(learning_lang, 'English')
-            native_lang_name = lang_names.get(native_lang, 'Chinese')
-
-            prompt = f"""Provide a comprehensive bilingual dictionary entry for: "{word_normalized}"
-
-IMPORTANT STRUCTURE:
-- valid_word_score: float (0-1)
-- suggestion: string or null
-- word: "{word_normalized}"
-- phonetic: IPA pronunciation
-- translations: array of {native_lang_name} translations
-- definitions: array of objects, each with:
-  - type: part of speech (noun, verb, etc.)
-  - definition: in {learning_lang_name}
-  - definition_native: in {native_lang_name}
-  - examples: array of 5-6 example sentences (strings only, in {learning_lang_name})
-  - cultural_notes: optional cultural context (string or null)
-
-VALIDATION RULES:
-Consider VALID (score 0.9-1.0):
-- Dictionary words, common phrases, internet slang, brand names, abbreviations
-
-Consider INVALID (score < 0.9):
-- Typos (provide suggestion)
-- Misspellings (provide suggestion)
-- Gibberish (score 0.0-0.4, suggestion optional)
-
-CRITICAL: examples must be an array of plain text strings, NOT objects. Each example should be a complete sentence in {learning_lang_name}."""
-
-            response_content = llm_completion(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a bilingual dictionary expert who validates words and provides comprehensive definitions."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                model_name=COMPLETION_MODEL_NAME,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "word_definition_with_validation",
-                        "strict": True,
-                        "schema": WORD_DEFINITION_V3_SCHEMA
-                    }
-                }
-            )
-
-            if not response_content:
-                return jsonify({"error": "Failed to generate definition"}), 500
-
-            result = json.loads(response_content)
-
-            # Store everything in definition_data (including validation fields)
-            definition_data = result
-
-            # Extract for response metadata
-            valid_word_score = definition_data.get('valid_word_score', 1.0)
-            suggestion = definition_data.get('suggestion')
-
-            logger.info(f"V3: Generated definition for '{word_normalized}': score={valid_word_score}, suggestion={suggestion}")
-
-            # Cache the complete definition (including validation data)
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO definitions (word, learning_language, native_language, definition_data, schema_version)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (word, learning_language, native_language)
-                DO UPDATE SET
-                    definition_data = EXCLUDED.definition_data,
-                    schema_version = EXCLUDED.schema_version,
-                    updated_at = CURRENT_TIMESTAMP
-            """, (word_normalized, learning_lang, native_lang, json.dumps(definition_data), CURRENT_SCHEMA_VERSION))
-            conn.commit()
-            conn.close()
+        logger.info(f"V4: Definition for '{word_normalized}': score={valid_word_score}, suggestion={suggestion}")
 
         # Collect audio references
         audio_refs = collect_audio_references(definition_data, learning_lang)
@@ -683,7 +341,7 @@ CRITICAL: examples must be an array of plain text strings, NOT objects. Each exa
         })
 
     except Exception as e:
-        logger.error(f"V3: Error getting definition for word '{word}': {str(e)}")
+        logger.error(f"V4: Error getting definition for word '{word}': {str(e)}")
         return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
 
 
@@ -1154,7 +812,7 @@ def get_word_details(word_id):
 
 
 def generate_word_definition():
-    """Generate and store a word definition using OpenAI API
+    """Generate and store a word definition using V4 schema with centralized service
 
     This endpoint generates word definitions using OpenAI and stores them in the database.
     Perfect for bulk generating definitions for SEO content.
@@ -1166,9 +824,11 @@ def generate_word_definition():
         "native_language": "zh"
     }
 
-    Returns the generated definition data without audio or images.
+    Returns the generated V4 definition data without audio or images.
     """
     try:
+        from services.definition_service import generate_definition_with_llm
+
         # Get JSON data from request
         data = request.get_json()
         if not data:
@@ -1188,68 +848,17 @@ def generate_word_definition():
         if not validate_language(learning_lang) or not validate_language(native_lang):
             return jsonify({"error": "Invalid language code"}), 400
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        # Use centralized service to generate or retrieve definition
+        definition_data = generate_definition_with_llm(
+            word=word,
+            learning_lang=learning_lang,
+            native_lang=native_lang
+        )
 
-        # Check if definition already exists
-        cur.execute("""
-            SELECT definition_data FROM definitions
-            WHERE word = %s AND learning_language = %s AND native_language = %s
-        """, (word, learning_lang, native_lang))
-
-        existing_def = cur.fetchone()
-        if existing_def:
-            cur.close()
-            conn.close()
-            return jsonify({
-                "message": "Definition already exists",
-                "word": word,
-                "learning_language": learning_lang,
-                "native_language": native_lang,
-                "definition_data": existing_def['definition_data']
-            }), 200
-
-        # Generate definition using OpenAI (reuse existing prompt logic)
-        try:
-            prompt = build_definition_prompt(word, learning_lang, native_lang)
-
-            # Call OpenAI API using utility function
-            definition_content = llm_completion(
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that creates dictionary definitions."},
-                    {"role": "user", "content": prompt}
-                ],
-                model_name=COMPLETION_MODEL_NAME,
-                max_tokens=1000
-            )
-
-            if not definition_content:
-                return jsonify({"error": "Failed to generate definition"}), 500
-
-            # Parse the JSON response from OpenAI
-            definition_data = json.loads(definition_content)
-
-            # Ensure the word field matches the input
-            definition_data['word'] = word
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse OpenAI response for word '{word}': {str(e)}")
-            return jsonify({"error": "Failed to parse AI response"}), 500
-        except Exception as e:
-            logger.error(f"OpenAI API error for word '{word}': {str(e)}")
+        if not definition_data:
             return jsonify({"error": "Failed to generate definition"}), 500
 
-        # Insert new definition into database
-        cur.execute("""
-            INSERT INTO definitions (word, learning_language, native_language, definition_data, schema_version, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (word, learning_lang, native_lang, json.dumps(definition_data), CURRENT_SCHEMA_VERSION, datetime.now()))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        logger.info(f"Successfully generated and stored definition for word: {word} ({learning_lang}->{native_lang})")
+        logger.info(f"Successfully generated and stored V4 definition for word: {word} ({learning_lang}->{native_lang})")
 
         return jsonify({
             "message": "Definition generated and stored successfully",

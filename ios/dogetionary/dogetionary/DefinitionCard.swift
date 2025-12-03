@@ -118,6 +118,32 @@ struct DefinitionCard: View {
                     .padding(.bottom, 8)
             }
 
+            // V4: Register + Frequency + Connotation badges
+            HStack(spacing: 8) {
+                if let register = definition.register {
+                    RegisterBadge(register: register)
+                }
+                if let frequency = definition.frequency {
+                    FrequencyBadge(frequency: frequency)
+                }
+                if let connotation = definition.connotation {
+                    ConnotationBadge(connotation: connotation)
+                }
+            }
+            .padding(.bottom, definition.register != nil || definition.frequency != nil || definition.connotation != nil ? 8 : 0)
+
+            // V4: Tags pills
+            if !definition.tags.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(definition.tags, id: \.self) { tag in
+                            TagPill(tag: tag)
+                        }
+                    }
+                }
+                .padding(.bottom, 8)
+            }
+
             // AI Illustration Section
             AIIllustrationView(
                 word: definition.word,
@@ -128,6 +154,50 @@ struct DefinitionCard: View {
                 error: $illustrationError
             )
             .padding(.bottom, 8)
+
+            // V4: Collapsible sections before main definitions
+            if !definition.collocations.isEmpty {
+                CollapsibleSection(title: "Common Collocations", icon: "text.append") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(definition.collocations, id: \.self) { collocation in
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 4))
+                                    .foregroundColor(AppTheme.infoColor)
+                                    .padding(.top, 6)
+                                Text(collocation)
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                    }
+                }
+                .padding(.bottom, 8)
+            }
+
+            if !definition.wordFamily.isEmpty {
+                CollapsibleSection(title: "Word Family", icon: "link") {
+                    VStack(spacing: 6) {
+                        ForEach(definition.wordFamily) { entry in
+                            HStack {
+                                Text(entry.word)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(entry.part_of_speech)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(AppTheme.lightBlue)
+                                    .cornerRadius(4)
+                            }
+                        }
+                    }
+                }
+                .padding(.bottom, 8)
+            }
 
             ForEach(definition.meanings, id: \.partOfSpeech) { meaning in
                 VStack(alignment: .leading, spacing: 4) {
@@ -169,6 +239,57 @@ struct DefinitionCard: View {
                     }
                 }
                 .padding(.vertical, 2)
+            }
+
+            // V4: Synonyms and Antonyms after main definitions
+            if !definition.synonyms.isEmpty || !definition.antonyms.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    if !definition.synonyms.isEmpty {
+                        SynonymAntonymRow(title: "Synonyms", words: definition.synonyms, color: AppTheme.successColor)
+                    }
+                    if !definition.antonyms.isEmpty {
+                        SynonymAntonymRow(title: "Antonyms", words: definition.antonyms, color: AppTheme.errorColor)
+                    }
+                }
+                .padding(.top, 8)
+            }
+
+            // V4: Confusables section
+            if !definition.confusables.isEmpty {
+                InfoSection(title: "Common Confusions", icon: "exclamationmark.triangle", color: AppTheme.warningColor) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(definition.confusables, id: \.self) { confusable in
+                            Text(confusable)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(.top, 8)
+            }
+
+            // V4: Cognates section
+            if let cognates = definition.cognates {
+                InfoSection(title: "Cognates", icon: "globe", color: AppTheme.infoColor) {
+                    Text(cognates)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 8)
+            }
+
+            // V4: Famous Quotes section
+            if !definition.famousQuotes.isEmpty {
+                CollapsibleSection(title: "Famous Quotes", icon: "quote.bubble") {
+                    VStack(spacing: 10) {
+                        ForEach(definition.famousQuotes) { quote in
+                            QuoteCard(quote: quote)
+                        }
+                    }
+                }
+                .padding(.top, 8)
             }
         }
         .padding()

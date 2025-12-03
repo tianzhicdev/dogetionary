@@ -16,10 +16,10 @@ from config.config import COMPLETION_MODEL_NAME
 logger = logging.getLogger(__name__)
 
 # Schema version for definitions
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
-# V3 Schema with validation fields - matches words.py
-WORD_DEFINITION_V3_SCHEMA = {
+# V4 Schema with vocabulary learning enhancements
+WORD_DEFINITION_V4_SCHEMA = {
     "type": "object",
     "properties": {
         "valid_word_score": {
@@ -55,9 +55,97 @@ WORD_DEFINITION_V3_SCHEMA = {
                 "required": ["part_of_speech", "definition", "definition_native", "examples", "cultural_notes"],
                 "additionalProperties": False
             }
+        },
+        "collocations": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Common word combinations (e.g., 'make a decision', 'heavy rain', 'commit a crime')"
+        },
+        "synonyms": {
+            "type": ["array", "null"],
+            "items": {"type": "string"},
+            "description": "Words with similar meaning"
+        },
+        "antonyms": {
+            "type": ["array", "null"],
+            "items": {"type": "string"},
+            "description": "Words with opposite meaning"
+        },
+        "register": {
+            "type": "string",
+            "enum": ["formal", "neutral", "informal", "slang", "literary", "technical"],
+            "description": "Formality level of the word"
+        },
+        "frequency": {
+            "type": "string",
+            "enum": ["very_common", "common", "uncommon", "rare"],
+            "description": "How frequently the word is used"
+        },
+        "connotation": {
+            "type": "string",
+            "enum": ["positive", "negative", "neutral"],
+            "description": "Emotional association of the word"
+        },
+        "word_family": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "word": {"type": "string", "description": "Related word form"},
+                    "part_of_speech": {"type": "string", "description": "Part of speech of this form"}
+                },
+                "required": ["word", "part_of_speech"],
+                "additionalProperties": False
+            },
+            "description": "Related forms of the word (noun, verb, adjective, adverb variants)"
+        },
+        "cognates": {
+            "type": ["string", "null"],
+            "description": "Related words in other languages sharing etymology (null for Chinese learners)"
+        },
+        "confusables": {
+            "type": ["array", "null"],
+            "items": {"type": "string"},
+            "description": "Common mistakes or easily confused words with explanations"
+        },
+        "tags": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Topic/theme categories (e.g., 'business', 'academic', 'emotions', 'travel')"
+        },
+        "famous_quotes": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "quote": {"type": "string", "description": "The sentence or quote"},
+                    "source": {"type": "string", "description": "Attribution - person, book, movie, etc."}
+                },
+                "required": ["quote", "source"],
+                "additionalProperties": False
+            },
+            "description": "Notable quotes or sentences featuring this word"
         }
     },
-    "required": ["valid_word_score", "suggestion", "word", "phonetic", "translations", "definitions"],
+    "required": [
+        "valid_word_score",
+        "suggestion",
+        "word",
+        "phonetic",
+        "translations",
+        "definitions",
+        "collocations",
+        "synonyms",
+        "antonyms",
+        "register",
+        "frequency",
+        "connotation",
+        "word_family",
+        "cognates",
+        "confusables",
+        "tags",
+        "famous_quotes"
+    ],
     "additionalProperties": False
 }
 
@@ -81,20 +169,21 @@ LANG_NAMES = {
 }
 
 
-def build_v3_definition_prompt(word: str, learning_lang: str, native_lang: str) -> str:
+def build_v4_definition_prompt(word: str, learning_lang: str, native_lang: str) -> str:
     """
-    Build V3 prompt for comprehensive bilingual definition with validation.
+    Build V4 prompt for comprehensive bilingual definition with vocabulary learning enhancements.
     This is the shared prompt used across the application.
     """
     learning_lang_name = LANG_NAMES.get(learning_lang, 'English')
     native_lang_name = LANG_NAMES.get(native_lang, 'Chinese')
+    word_normalized = word.strip()
 
-    return f"""Provide a comprehensive bilingual dictionary entry for: "{word}"
+    return f"""Provide a comprehensive bilingual dictionary entry for: "{word_normalized}"
 
 IMPORTANT STRUCTURE:
 - valid_word_score: float (0-1)
 - suggestion: string or null
-- word: "{word}"
+- word: "{word_normalized}"
 - phonetic: IPA pronunciation
 - translations: array of {native_lang_name} translations
 - definitions: array of objects, each with:
@@ -103,6 +192,19 @@ IMPORTANT STRUCTURE:
   - definition_native: in {native_lang_name}
   - examples: array of 5-6 example sentences (strings only, in {learning_lang_name})
   - cultural_notes: optional cultural context (string or null)
+
+VOCABULARY LEARNING FIELDS:
+- collocations: array of common word combinations (e.g., "make a decision", "heavy traffic")
+- synonyms: array of similar words, or null if none
+- antonyms: array of opposite words, or null if none
+- register: one of "formal", "neutral", "informal", "slang", "literary", "technical"
+- frequency: one of "very_common", "common", "uncommon", "rare"
+- connotation: one of "positive", "negative", "neutral"
+- word_family: array of related word forms, each with "word" and "part_of_speech" (e.g., persuade->persuasion->persuasive)
+- cognates: related words in other languages sharing etymology, or null (null for Chinese speakers)
+- confusables: array of strings explaining common mistakes (e.g., "Often confused with 'affect' (verb). 'Effect' is usually a noun meaning result."), or null
+- tags: array of topic categories like "business", "academic", "emotions", "travel", "daily_life"
+- famous_quotes: array of objects with "quote" and "source", or null if no notable quotes exist
 
 VALIDATION RULES:
 Consider VALID (score 0.9-1.0):
@@ -113,13 +215,26 @@ Consider INVALID (score < 0.9):
 - Misspellings (provide suggestion)
 - Gibberish (score 0.0-0.4, suggestion optional)
 
-CRITICAL: examples must be an array of plain text strings, NOT objects. Each example should be a complete sentence in {learning_lang_name}."""
+IMPORTANT - Language Simplicity:
+- Use SIMPLE, COMMON vocabulary in all generated content (except for the target word itself)
+- For collocations: use basic, everyday word combinations
+- For confusables: explain using simple language
+- For synonyms/antonyms: prefer well-known words
+- For examples: use simple sentence structures
+- Write at a basic to intermediate {learning_lang_name} level
+
+CRITICAL:
+- examples must be an array of plain text strings, NOT objects
+- Each example should be a complete sentence in {learning_lang_name}
+- For collocations, provide 3-6 common combinations
+- For word_family, include all common forms (noun, verb, adjective, adverb if they exist)
+- For tags, provide 2-4 relevant categories"""
 
 
 def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str, build_prompt_fn=None) -> Optional[Dict]:
     """
-    Generate a word definition using OpenAI V3 schema and cache it in the database.
-    Uses the same V3 schema and prompt as get_word_definition_v3 for consistency.
+    Generate a word definition using OpenAI V4 schema and cache it in the database.
+    Uses the V4 schema with vocabulary learning enhancements.
 
     Args:
         word: The word to define
@@ -147,18 +262,18 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
             conn.close()
             return existing['definition_data']
 
-        # Generate definition using OpenAI with V3 schema
-        logger.info(f"Generating V3 definition with LLM for '{word}' ({learning_lang} → {native_lang})")
+        # Generate definition using OpenAI with V4 schema
+        logger.info(f"Generating V4 definition with LLM for '{word}' ({learning_lang} → {native_lang})")
 
-        # Use V3 prompt (same as get_word_definition_v3)
-        prompt = build_v3_definition_prompt(word, learning_lang, native_lang)
+        # Use V4 prompt
+        prompt = build_v4_definition_prompt(word, learning_lang, native_lang)
 
-        # Call OpenAI API with V3 schema using utility function
+        # Call OpenAI API with V4 schema using utility function
         definition_content = llm_completion(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a bilingual dictionary expert who validates words and provides comprehensive definitions."
+                    "content": "You are a bilingual dictionary expert who validates words and provides comprehensive vocabulary learning content using simple, accessible language."
                 },
                 {
                     "role": "user",
@@ -169,9 +284,9 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
             response_format={
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "word_definition_with_validation",
+                    "name": "word_definition_v4_with_learning_features",
                     "strict": True,
-                    "schema": WORD_DEFINITION_V3_SCHEMA
+                    "schema": WORD_DEFINITION_V4_SCHEMA
                 }
             }
         )
@@ -199,7 +314,7 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
         cur.close()
         conn.close()
 
-        logger.info(f"Successfully generated and cached V3 definition for '{word}' (score: {definition_data.get('valid_word_score', 'N/A')})")
+        logger.info(f"Successfully generated and cached V4 definition for '{word}' (score: {definition_data.get('valid_word_score', 'N/A')})")
         return definition_data
 
     except json.JSONDecodeError as e:

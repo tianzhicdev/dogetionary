@@ -31,8 +31,44 @@ struct DefinitionData: Codable {
     let valid_word_score: Double?  // V3: Validation score (0-1), optional for backward compatibility
     let suggestion: String?  // V3: Suggested correction if score < 0.9, optional for backward compatibility
 
+    // V4: Vocabulary learning enhancements
+    let collocations: [String]?
+    let synonyms: [String]?
+    let antonyms: [String]?
+    let register: String?  // formal, neutral, informal, slang, literary, technical
+    let frequency: String?  // very_common, common, uncommon, rare
+    let connotation: String?  // positive, negative, neutral
+    let word_family: [WordFamilyEntry]?
+    let cognates: String?
+    let confusables: [String]?
+    let tags: [String]?
+    let famous_quotes: [FamousQuote]?
+
     private enum CodingKeys: String, CodingKey {
         case phonetic, word, translations, definitions, valid_word_score, suggestion
+        case collocations, synonyms, antonyms, register, frequency, connotation, word_family, cognates, confusables, tags, famous_quotes
+    }
+}
+
+// V4: Word family entry for related word forms
+struct WordFamilyEntry: Codable, Identifiable {
+    let id = UUID()
+    let word: String
+    let part_of_speech: String
+
+    private enum CodingKeys: String, CodingKey {
+        case word, part_of_speech
+    }
+}
+
+// V4: Famous quote with attribution
+struct FamousQuote: Codable, Identifiable {
+    let id = UUID()
+    let quote: String
+    let source: String
+
+    private enum CodingKeys: String, CodingKey {
+        case quote, source
     }
 }
 
@@ -118,6 +154,19 @@ struct Definition: Identifiable {
     let validWordScore: Double // V3 validation score (0-1)
     let suggestion: String? // V3 suggested word if score < 0.9
 
+    // V4: Vocabulary learning enhancements
+    let collocations: [String]
+    let synonyms: [String]
+    let antonyms: [String]
+    let register: String?
+    let frequency: String?
+    let connotation: String?
+    let wordFamily: [WordFamilyEntry]
+    let cognates: String?
+    let confusables: [String]
+    let tags: [String]
+    let famousQuotes: [FamousQuote]
+
     init(from response: WordDefinitionResponse) {
         self.id = UUID()
         self.word = response.word
@@ -163,10 +212,23 @@ struct Definition: Identifiable {
         // Store V3 validation data - prefer top-level (v2.7.2 compat), fall back to definition_data
         self.validWordScore = response.valid_word_score ?? response.definition_data.valid_word_score ?? 1.0
         self.suggestion = response.suggestion ?? response.definition_data.suggestion
+
+        // Store V4 vocabulary learning data with safe defaults for backward compatibility
+        self.collocations = response.definition_data.collocations ?? []
+        self.synonyms = response.definition_data.synonyms ?? []
+        self.antonyms = response.definition_data.antonyms ?? []
+        self.register = response.definition_data.register
+        self.frequency = response.definition_data.frequency
+        self.connotation = response.definition_data.connotation
+        self.wordFamily = response.definition_data.word_family ?? []
+        self.cognates = response.definition_data.cognates
+        self.confusables = response.definition_data.confusables ?? []
+        self.tags = response.definition_data.tags ?? []
+        self.famousQuotes = response.definition_data.famous_quotes ?? []
     }
 
     // Custom initializer for updating with audio data
-    init(id: UUID = UUID(), word: String, phonetic: String?, learning_language: String, native_language: String, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:], validWordScore: Double = 1.0, suggestion: String? = nil) {
+    init(id: UUID = UUID(), word: String, phonetic: String?, learning_language: String, native_language: String, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:], validWordScore: Double = 1.0, suggestion: String? = nil, collocations: [String] = [], synonyms: [String] = [], antonyms: [String] = [], register: String? = nil, frequency: String? = nil, connotation: String? = nil, wordFamily: [WordFamilyEntry] = [], cognates: String? = nil, confusables: [String] = [], tags: [String] = [], famousQuotes: [FamousQuote] = []) {
         self.id = id
         self.word = word
         self.phonetic = phonetic
@@ -179,6 +241,17 @@ struct Definition: Identifiable {
         self.exampleAudioAvailability = exampleAudioAvailability
         self.validWordScore = validWordScore
         self.suggestion = suggestion
+        self.collocations = collocations
+        self.synonyms = synonyms
+        self.antonyms = antonyms
+        self.register = register
+        self.frequency = frequency
+        self.connotation = connotation
+        self.wordFamily = wordFamily
+        self.cognates = cognates
+        self.confusables = confusables
+        self.tags = tags
+        self.famousQuotes = famousQuotes
     }
 
     var isValid: Bool {

@@ -10,7 +10,7 @@ from handlers.admin import test_review_intervals, fix_next_review_dates, privacy
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action
 from handlers.pronunciation import practice_pronunciation
-from handlers.words import get_saved_words, get_word_definition_v3, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice
+from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice
 from handlers.test_vocabulary import get_test_vocabulary_count
 from handlers.schedule import get_today_schedule, get_schedule_range, get_test_progress
 from handlers.review_batch import get_review_words_batch
@@ -26,8 +26,8 @@ v3_api = Blueprint('v3_api', __name__, url_prefix='/v3')
 # V3 CORE ENDPOINTS - Latest API versions with all improvements
 # ============================================================================
 
-# Word Management (V3 - with word validation and suggestions)
-v3_api.route('/word', methods=['GET'])(get_word_definition_v3)  # V3 with validation
+# Word Management (V4 - with word validation, suggestions, and vocabulary learning features)
+v3_api.route('/word', methods=['GET'])(get_word_definition_v4)  # V4 with vocabulary learning enhancements
 v3_api.route('/save', methods=['POST'])(save_word)
 v3_api.route('/unsave', methods=['POST'])(delete_saved_word_v2)  # V2 unsave as default
 v3_api.route('/saved_words', methods=['GET'])(get_saved_words)
