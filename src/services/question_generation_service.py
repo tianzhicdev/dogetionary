@@ -24,9 +24,10 @@ LANG_NAMES = {
 
 # Question type weights for random selection
 QUESTION_TYPE_WEIGHTS = {
-    'mc_definition': 0.40,   # Most common - tests comprehension
-    'mc_word': 0.30,         # Tests word recognition from definition
-    'fill_blank': 0.30,      # Tests contextual usage
+    'mc_definition': 0.30,       # Tests comprehension
+    'mc_word': 0.25,             # Tests word recognition from definition
+    'fill_blank': 0.25,          # Tests contextual usage
+    'pronounce_sentence': 0.20,  # Tests pronunciation with sentence context
 }
 
 
@@ -206,6 +207,44 @@ Return ONLY valid JSON:
 }}"""
 
 
+def generate_pronounce_sentence_prompt(word: str, definition_data: Dict, native_lang: str) -> str:
+    """Generate prompt for pronunciation sentence question."""
+    definitions = definition_data.get('definitions', [])
+    examples = []
+    for d in definitions:
+        examples.extend(d.get('examples', []))
+
+    lang_name = LANG_NAMES.get(native_lang, native_lang)
+
+    return f"""Generate a natural sentence containing the word "{word}" for pronunciation practice.
+
+Definition data:
+{json.dumps(definition_data, indent=2)}
+
+Task: Create a sentence that uses "{word}" in context for the learner to pronounce aloud.
+
+Requirements:
+- Sentence should be 8-15 words long
+- Use SIMPLE, COMMON vocabulary (except for the target word "{word}")
+- The sentence should clearly demonstrate the word's meaning through context
+- Natural, conversational tone (could be adapted from examples if suitable)
+- Include translation of the complete sentence to {lang_name}
+- The sentence should sound natural when spoken aloud
+
+IMPORTANT - Language Simplicity:
+- Use basic to intermediate vocabulary in the sentence
+- Avoid complex grammar structures
+- Make sure the sentence flows naturally for speaking practice
+- The goal is pronunciation practice, not vocabulary confusion
+
+Return ONLY valid JSON:
+{{
+  "sentence": "The beauty of cherry blossoms is ephemeral, lasting only a few weeks.",
+  "sentence_translation": "...",
+  "question_text": "Pronounce this sentence:"
+}}"""
+
+
 def shuffle_question_options(question_data: Dict) -> Dict:
     """
     Shuffle the options in a multiple choice question to randomize answer position.
@@ -326,6 +365,8 @@ def generate_question_with_llm(
         prompt = generate_mc_word_prompt(word, definition, native_lang)
     elif question_type == 'fill_blank':
         prompt = generate_fill_blank_prompt(word, definition, native_lang)
+    elif question_type == 'pronounce_sentence':
+        prompt = generate_pronounce_sentence_prompt(word, definition, native_lang)
     else:
         raise ValueError(f"Unknown question type: {question_type}")
 

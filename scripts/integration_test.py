@@ -677,6 +677,72 @@ class TestRunner:
             self.log(f"✗ /v3/app-version endpoint failed with error: {e}")
             self.failed += 1
 
+    def test_pronunciation_review_endpoint(self):
+        """Test the pronunciation review endpoint"""
+        self.log("Testing /v3/review/pronounce endpoint...")
+
+        try:
+            # Test with missing required fields
+            response = requests.post(
+                f"{BASE_URL}/v3/review/pronounce",
+                json={}
+            )
+            self.assert_status_code(response, 400, "/v3/review/pronounce with missing fields")
+
+            # Test with missing user_id
+            response = requests.post(
+                f"{BASE_URL}/v3/review/pronounce",
+                json={
+                    "word": "hello",
+                    "original_text": "Hello, how are you?",
+                    "audio_data": "fake_base64_data",
+                    "learning_language": "en",
+                    "native_language": "zh"
+                }
+            )
+            self.assert_status_code(response, 400, "/v3/review/pronounce without user_id")
+
+            # Test with missing word
+            response = requests.post(
+                f"{BASE_URL}/v3/review/pronounce",
+                json={
+                    "user_id": self.test_user_id,
+                    "original_text": "Hello, how are you?",
+                    "audio_data": "fake_base64_data",
+                    "learning_language": "en",
+                    "native_language": "zh"
+                }
+            )
+            self.assert_status_code(response, 400, "/v3/review/pronounce without word")
+
+            # Test with invalid audio data (should fail at audio processing stage)
+            # We expect this to fail with 500 or 400 since audio data is invalid
+            response = requests.post(
+                f"{BASE_URL}/v3/review/pronounce",
+                json={
+                    "user_id": self.test_user_id,
+                    "word": "hello",
+                    "original_text": "Hello, how are you?",
+                    "audio_data": "invalid_base64",
+                    "learning_language": "en",
+                    "native_language": "zh",
+                    "evaluation_threshold": 0.7
+                }
+            )
+            # Accept either 400 (invalid base64) or 500 (audio processing error)
+            if response.status_code in [400, 500]:
+                self.log(f"✓ /v3/review/pronounce with invalid audio data (status: {response.status_code})")
+                self.passed += 1
+            else:
+                self.log(f"✗ Expected 400 or 500, got {response.status_code}")
+                self.failed += 1
+
+            self.log("Note: Full pronunciation review test requires valid audio data - skipping complete flow test")
+
+        except Exception as e:
+            self.log(f"✗ /v3/review/pronounce endpoint failed with error: {e}")
+            self.failed += 1
+
     def run_all_tests(self):
         """Run all integration tests"""
         self.log("Starting integration tests...")
@@ -698,6 +764,7 @@ class TestRunner:
         self.test_review_complete_logic()
         self.test_test_vocabulary_awards_endpoint()
         self.test_app_version_endpoint()
+        self.test_pronunciation_review_endpoint()
 
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
 
