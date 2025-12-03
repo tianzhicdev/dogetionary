@@ -51,7 +51,7 @@ struct DefinitionCard: View {
                 }) {
                     Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                         .font(.title3)
-                        .foregroundColor(isSaved ? .blue : .secondary)
+                        .foregroundColor(isSaved ? AppTheme.infoColor : .secondary)
                 }
                 .disabled(isSaving || isCheckingStatus)
                 .buttonStyle(PlainButtonStyle())
@@ -70,7 +70,7 @@ struct DefinitionCard: View {
                     } else {
                         Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
                             .font(.title2)
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppTheme.infoColor)
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -91,8 +91,8 @@ struct DefinitionCard: View {
                     .fontWeight(.medium)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.1))
-                    .foregroundColor(.blue)
+                    .background(AppTheme.infoColor.opacity(AppTheme.lightOpacity))
+                    .foregroundColor(AppTheme.infoColor)
                     .cornerRadius(4)
 
                 Image(systemName: "arrow.right")
@@ -104,8 +104,8 @@ struct DefinitionCard: View {
                     .fontWeight(.medium)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.green.opacity(0.1))
-                    .foregroundColor(.green)
+                    .background(AppTheme.successColor.opacity(AppTheme.lightOpacity))
+                    .foregroundColor(AppTheme.successColor)
                     .cornerRadius(4)
             }
             .padding(.bottom, 8)
@@ -133,7 +133,7 @@ struct DefinitionCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(meaning.partOfSpeech)
                         .font(.headline)
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppTheme.infoColor)
 
                     ForEach(Array(meaning.definitions.enumerated()), id: \.offset) { index, def in
                         VStack(alignment: .leading, spacing: 2) {
@@ -152,7 +152,7 @@ struct DefinitionCard: View {
                                     }) {
                                         Image(systemName: "speaker.wave.2")
                                             .font(.title3)
-                                            .foregroundColor(.blue)
+                                            .foregroundColor(AppTheme.infoColor)
                                     }
                                     .buttonStyle(PlainButtonStyle())
 

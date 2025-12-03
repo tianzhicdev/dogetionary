@@ -150,7 +150,7 @@ struct DefinitionTabView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.title)
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppTheme.warningColor)
                         Text("Error loading definitions")
                             .font(.headline)
                         Text(errorMessage)
@@ -187,7 +187,7 @@ struct StatsTabView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.title)
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppTheme.warningColor)
                         Text("Error loading stats")
                             .font(.headline)
                         Text(errorMessage)
@@ -285,7 +285,7 @@ struct ReviewHistorySection: View {
                     // Creation icon
                     Image(systemName: "plus.circle.fill")
                         .font(.title3)
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppTheme.infoColor)
                     
                     // Date and details
                     VStack(alignment: .leading, spacing: 2) {
@@ -293,7 +293,7 @@ struct ReviewHistorySection: View {
                             Text("Created")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(.blue)
+                                .foregroundColor(AppTheme.infoColor)
                             
                             Spacer()
                             
@@ -361,7 +361,7 @@ struct ReviewHistoryRow: View {
             // Success/Failure indicator
             Image(systemName: entry.response ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.title3)
-                .foregroundColor(entry.response ? .green : .red)
+                .foregroundColor(entry.response ? AppTheme.successColor : AppTheme.errorColor)
             
             // Date and details
             VStack(alignment: .leading, spacing: 2) {
@@ -369,7 +369,7 @@ struct ReviewHistoryRow: View {
                     Text(entry.response ? "Correct" : "Incorrect")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(entry.response ? .green : .red)
+                        .foregroundColor(entry.response ? AppTheme.successColor : AppTheme.errorColor)
                     
                     Spacer()
                     
@@ -468,7 +468,7 @@ struct ErrorView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 32))
-                .foregroundColor(.orange)
+                .foregroundColor(AppTheme.warningColor)
             
             Text("Error Loading Details")
                 .font(.headline)
@@ -535,9 +535,9 @@ struct InfoRow: View {
         case .prominent:
             return .primary
         case .success:
-            return .green
+            return AppTheme.successColor
         case .warning:
-            return .orange
+            return AppTheme.warningColor
         }
     }
 }

@@ -30,7 +30,7 @@ struct LeaderboardView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: AppTheme.emptyStateIconSize))
-                                .foregroundColor(.orange)
+                                .foregroundColor(AppTheme.warningColor)
 
                             Text("Error")
                                 .font(.title2)
@@ -114,8 +114,7 @@ struct LeaderboardRowView: View {
                         .font(.system(size: 15, weight: isCurrentUser ? .semibold : .medium))
                         .foregroundStyle(
                             isCurrentUser ?
-                            LinearGradient(colors: [Color.blue, Color.purple],
-                                         startPoint: .leading, endPoint: .trailing) :
+                            AppTheme.primaryGradient :
                             LinearGradient(colors: [Color.primary, Color.primary],
                                          startPoint: .leading, endPoint: .trailing)
                         )
@@ -127,10 +126,7 @@ struct LeaderboardRowView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(
-                                LinearGradient(colors: [Color.blue, Color.purple],
-                                             startPoint: .leading, endPoint: .trailing)
-                            )
+                            .background(AppTheme.primaryGradient)
                             .cornerRadius(4)
                     }
                 }
@@ -150,15 +146,14 @@ struct LeaderboardRowView: View {
                 Image(systemName: "star.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.yellow, Color.orange],
+                        LinearGradient(colors: [Color.yellow, AppTheme.warningColor],
                                      startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                 Text("\(entry.score ?? entry.total_reviews)")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(
                         isCurrentUser ?
-                        LinearGradient(colors: [Color.blue, Color.purple],
-                                     startPoint: .leading, endPoint: .trailing) :
+                        AppTheme.primaryGradient :
                         LinearGradient(colors: [Color.primary, Color.primary],
                                      startPoint: .leading, endPoint: .trailing)
                     )
@@ -173,17 +168,13 @@ struct LeaderboardRowView: View {
                         .fill(Color.white)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(
-                                    LinearGradient(colors: [Color.blue, Color.purple],
-                                                 startPoint: .leading, endPoint: .trailing),
-                                    lineWidth: 2
-                                )
+                                .stroke(AppTheme.primaryGradient, lineWidth: 2)
                         )
-                        .shadow(color: Color.blue.opacity(0.2), radius: 8, y: 4)
+                        .shadow(color: AppTheme.infoColor.opacity(AppTheme.mediumHighOpacity), radius: 8, y: 4)
                 } else {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
+                        .shadow(color: AppTheme.subtleShadowColor, radius: 3, x: 0, y: 1)
                 }
             }
         )
@@ -196,45 +187,26 @@ struct RankBadgeView: View {
     private var badgeGradient: LinearGradient {
         switch rank {
         case 1:
-            // Gold gradient
-            return LinearGradient(
-                colors: [Color(red: 1.0, green: 0.88, blue: 0.4), Color(red: 1.0, green: 0.75, blue: 0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            return AppTheme.goldGradient
         case 2:
-            // Silver gradient
-            return LinearGradient(
-                colors: [Color(red: 0.85, green: 0.85, blue: 0.88), Color(red: 0.65, green: 0.65, blue: 0.70)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            return AppTheme.silverGradient
         case 3:
-            // Bronze gradient
-            return LinearGradient(
-                colors: [Color(red: 0.9, green: 0.65, blue: 0.45), Color(red: 0.7, green: 0.45, blue: 0.25)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            return AppTheme.bronzeGradient
         default:
-            return LinearGradient(
-                colors: [Color(red: 0.92, green: 0.93, blue: 0.95), Color(red: 0.85, green: 0.86, blue: 0.88)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            return AppTheme.defaultRankGradient
         }
     }
 
     private var textColor: Color {
         switch rank {
         case 1:
-            return Color(red: 0.7, green: 0.5, blue: 0.1)
+            return AppTheme.goldTextColor
         case 2:
-            return Color(red: 0.4, green: 0.4, blue: 0.45)
+            return AppTheme.silverTextColor
         case 3:
             return .white
         default:
-            return Color(red: 0.5, green: 0.5, blue: 0.55)
+            return AppTheme.defaultRankTextColor
         }
     }
 
@@ -243,7 +215,7 @@ struct RankBadgeView: View {
             Circle()
                 .fill(badgeGradient)
                 .frame(width: 30, height: 30)
-                .shadow(color: rank <= 3 ? Color.black.opacity(0.15) : Color.clear, radius: 3, y: 2)
+                .shadow(color: rank <= 3 ? Color.black.opacity(AppTheme.mediumOpacity) : Color.clear, radius: 3, y: 2)
 
             if rank <= 3 {
                 Image(systemName: "crown.fill")

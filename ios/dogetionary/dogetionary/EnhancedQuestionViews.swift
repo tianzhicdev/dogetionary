@@ -24,26 +24,20 @@ struct MultipleChoiceQuestionView: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color(red: 0.3, green: 0.4, blue: 0.95), Color(red: 0.6, green: 0.3, blue: 0.9)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .foregroundStyle(AppTheme.primaryGradient)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(
                             LinearGradient(
-                                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.06)],
+                                colors: [AppTheme.infoColor.opacity(AppTheme.subtleOpacity), Color.purple.opacity(0.06)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                 )
-                .shadow(color: Color.blue.opacity(0.15), radius: 8, y: 4)
+                .shadow(color: AppTheme.infoColor.opacity(AppTheme.mediumOpacity), radius: 8, y: 4)
 
             // Options
             VStack(spacing: 12) {
@@ -93,84 +87,29 @@ struct MultipleChoiceOptionButton: View {
     }
 
     var backgroundGradient: LinearGradient {
-        if showFeedback && isSelected {
-            if isCorrect {
-                // Vibrant green gradient for correct
-                return LinearGradient(
-                    colors: [Color(red: 0.3, green: 0.85, blue: 0.5), Color(red: 0.2, green: 0.75, blue: 0.6)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            } else {
-                // Vibrant red-orange gradient for incorrect
-                return LinearGradient(
-                    colors: [Color(red: 1.0, green: 0.45, blue: 0.4), Color(red: 1.0, green: 0.6, blue: 0.35)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-        } else if shouldShowAsCorrect {
-            // Subtle green gradient for unselected correct answer
-            return LinearGradient(
-                colors: [Color(red: 0.7, green: 0.95, blue: 0.75), Color(red: 0.6, green: 0.9, blue: 0.8)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else if isSelected {
-            // Vibrant blue-cyan gradient for selected
-            return LinearGradient(
-                colors: [Color(red: 0.4, green: 0.7, blue: 1.0), Color(red: 0.3, green: 0.85, blue: 0.95)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else {
-            // Subtle purple-blue gradient for default
-            return LinearGradient(
-                colors: [Color(red: 0.92, green: 0.93, blue: 0.98), Color(red: 0.90, green: 0.92, blue: 0.96)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
+        return AppTheme.feedbackGradient(
+            isCorrect: isCorrect,
+            isSelected: isSelected,
+            showFeedback: showFeedback,
+            shouldShowAsCorrect: shouldShowAsCorrect
+        )
     }
 
     var borderGradient: LinearGradient? {
-        if showFeedback && isSelected {
-            if isCorrect {
-                return LinearGradient(
-                    colors: [Color(red: 0.2, green: 0.8, blue: 0.4), Color(red: 0.3, green: 0.9, blue: 0.5)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            } else {
-                return LinearGradient(
-                    colors: [Color(red: 1.0, green: 0.3, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.2)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-        } else if shouldShowAsCorrect {
-            return LinearGradient(
-                colors: [Color(red: 0.4, green: 0.85, blue: 0.5), Color(red: 0.5, green: 0.9, blue: 0.6)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else if isSelected {
-            return LinearGradient(
-                colors: [Color(red: 0.3, green: 0.6, blue: 1.0), Color(red: 0.4, green: 0.8, blue: 0.95)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-        return nil
+        return AppTheme.feedbackBorderGradient(
+            isCorrect: isCorrect,
+            isSelected: isSelected,
+            showFeedback: showFeedback
+        )
     }
 
     var shadowColor: Color {
         if showFeedback && isSelected {
-            return isCorrect ? Color.green.opacity(0.4) : Color.red.opacity(0.4)
+            return isCorrect ? AppTheme.successColor.opacity(AppTheme.veryStrongOpacity) : AppTheme.errorColor.opacity(AppTheme.veryStrongOpacity)
         } else if shouldShowAsCorrect {
-            return Color.green.opacity(0.3)
+            return AppTheme.successColor.opacity(AppTheme.strongOpacity)
         } else if isSelected {
-            return Color.blue.opacity(0.3)
+            return AppTheme.infoColor.opacity(AppTheme.strongOpacity)
         }
         return Color.clear
     }
@@ -186,15 +125,7 @@ struct MultipleChoiceOptionButton: View {
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
-                            .fill(
-                                showFeedback && isSelected ?
-                                    (isCorrect ?
-                                        LinearGradient(colors: [Color(red: 0.3, green: 0.85, blue: 0.5), Color(red: 0.2, green: 0.75, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing) :
-                                        LinearGradient(colors: [Color(red: 1.0, green: 0.4, blue: 0.4), Color(red: 1.0, green: 0.5, blue: 0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)) :
-                                shouldShowAsCorrect ?
-                                    LinearGradient(colors: [Color(red: 0.4, green: 0.85, blue: 0.5), Color(red: 0.3, green: 0.75, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing) :
-                                    LinearGradient(colors: [Color(red: 0.4, green: 0.6, blue: 0.95), Color(red: 0.5, green: 0.4, blue: 0.9)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            )
+                            .fill(backgroundGradient)
                             .shadow(color: shadowColor, radius: 6, y: 3)
                     )
 
@@ -211,7 +142,7 @@ struct MultipleChoiceOptionButton: View {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(.white)
                         .font(.title3)
-                        .shadow(color: Color.black.opacity(0.3), radius: 2, y: 1)
+                        .shadow(color: Color.black.opacity(AppTheme.strongOpacity), radius: 2, y: 1)
                 }
             }
             .padding()
@@ -264,33 +195,18 @@ struct FillInBlankQuestionView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(red: 0.2, green: 0.3, blue: 0.8), Color(red: 0.4, green: 0.5, blue: 0.95)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .foregroundStyle(AppTheme.primaryGradient)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.85, green: 0.9, blue: 1.0),
-                                        Color(red: 0.9, green: 0.85, blue: 0.98)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: Color.blue.opacity(0.2), radius: 8, y: 4)
+                            .fill(AppTheme.secondaryGradient)
+                            .shadow(color: AppTheme.infoColor.opacity(AppTheme.mediumHighOpacity), radius: 8, y: 4)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
                                 LinearGradient(
-                                    colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)],
+                                    colors: [AppTheme.infoColor.opacity(AppTheme.strongOpacity), Color.purple.opacity(AppTheme.strongOpacity)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
@@ -348,84 +264,29 @@ struct FillInBlankOptionButton: View {
     }
 
     var backgroundGradient: LinearGradient {
-        if showFeedback && isSelected {
-            if isCorrect {
-                // Vibrant green gradient for correct
-                return LinearGradient(
-                    colors: [Color(red: 0.3, green: 0.85, blue: 0.5), Color(red: 0.2, green: 0.75, blue: 0.6)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            } else {
-                // Vibrant red-orange gradient for incorrect
-                return LinearGradient(
-                    colors: [Color(red: 1.0, green: 0.45, blue: 0.4), Color(red: 1.0, green: 0.6, blue: 0.35)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-        } else if shouldShowAsCorrect {
-            // Subtle green gradient for unselected correct answer
-            return LinearGradient(
-                colors: [Color(red: 0.7, green: 0.95, blue: 0.75), Color(red: 0.6, green: 0.9, blue: 0.8)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else if isSelected {
-            // Vibrant blue-cyan gradient for selected
-            return LinearGradient(
-                colors: [Color(red: 0.4, green: 0.7, blue: 1.0), Color(red: 0.3, green: 0.85, blue: 0.95)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else {
-            // Subtle purple-blue gradient for default
-            return LinearGradient(
-                colors: [Color(red: 0.92, green: 0.93, blue: 0.98), Color(red: 0.90, green: 0.92, blue: 0.96)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
+        return AppTheme.feedbackGradient(
+            isCorrect: isCorrect,
+            isSelected: isSelected,
+            showFeedback: showFeedback,
+            shouldShowAsCorrect: shouldShowAsCorrect
+        )
     }
 
     var borderGradient: LinearGradient? {
-        if showFeedback && isSelected {
-            if isCorrect {
-                return LinearGradient(
-                    colors: [Color(red: 0.2, green: 0.8, blue: 0.4), Color(red: 0.3, green: 0.9, blue: 0.5)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            } else {
-                return LinearGradient(
-                    colors: [Color(red: 1.0, green: 0.3, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.2)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-        } else if shouldShowAsCorrect {
-            return LinearGradient(
-                colors: [Color(red: 0.4, green: 0.85, blue: 0.5), Color(red: 0.5, green: 0.9, blue: 0.6)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else if isSelected {
-            return LinearGradient(
-                colors: [Color(red: 0.3, green: 0.6, blue: 1.0), Color(red: 0.4, green: 0.8, blue: 0.95)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-        return nil
+        return AppTheme.feedbackBorderGradient(
+            isCorrect: isCorrect,
+            isSelected: isSelected,
+            showFeedback: showFeedback
+        )
     }
 
     var shadowColor: Color {
         if showFeedback && isSelected {
-            return isCorrect ? Color.green.opacity(0.4) : Color.red.opacity(0.4)
+            return isCorrect ? AppTheme.successColor.opacity(AppTheme.veryStrongOpacity) : AppTheme.errorColor.opacity(AppTheme.veryStrongOpacity)
         } else if shouldShowAsCorrect {
-            return Color.green.opacity(0.3)
+            return AppTheme.successColor.opacity(AppTheme.strongOpacity)
         } else if isSelected {
-            return Color.blue.opacity(0.3)
+            return AppTheme.infoColor.opacity(AppTheme.strongOpacity)
         }
         return Color.clear
     }
@@ -445,7 +306,7 @@ struct FillInBlankOptionButton: View {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(.white)
                         .font(.title3)
-                        .shadow(color: Color.black.opacity(0.3), radius: 2, y: 1)
+                        .shadow(color: Color.black.opacity(AppTheme.strongOpacity), radius: 2, y: 1)
                 }
             }
             .padding()

@@ -41,7 +41,7 @@ struct AchievementView: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+                .shadow(color: AppTheme.subtleShadowColor, radius: 10, x: 0, y: 4)
         )
     }
 
@@ -56,7 +56,7 @@ struct AchievementView: View {
             }
 
             // Score count
-            Text("\(progress.score) pts")
+            Text("\(progress.score)")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.primary)
 
@@ -112,7 +112,7 @@ struct AchievementView: View {
                     VStack(spacing: 4) {
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.15))
+                                .fill(Color.gray.opacity(AppTheme.mediumOpacity))
                                 .frame(height: 20)
 
                             GeometryReader { geometry in
@@ -169,26 +169,26 @@ struct AchievementView: View {
     private func colorForTier(_ tier: AchievementTier) -> Color {
         switch tier {
         case .beginner:
-            return .green
+            return AppTheme.successColor
         case .intermediate:
-            return .blue
+            return AppTheme.infoColor
         case .advanced:
-            return .purple
+            return Color.purple
         case .expert:
-            return .orange
+            return AppTheme.warningColor
         }
     }
 
     private func gradientForTier(_ tier: AchievementTier) -> [Color] {
         switch tier {
         case .beginner:
-            return [Color.green, Color.mint]
+            return [AppTheme.successColor, Color.mint]
         case .intermediate:
-            return [Color.blue, Color.cyan]
+            return [AppTheme.infoColor, Color.cyan]
         case .advanced:
             return [Color.purple, Color.pink]
         case .expert:
-            return [Color.orange, Color.yellow]
+            return [AppTheme.warningColor, Color.yellow]
         }
     }
 }
@@ -217,13 +217,13 @@ struct BadgeCell: View {
     private func colorForTier(_ tier: AchievementTier) -> Color {
         switch tier {
         case .beginner:
-            return .green
+            return AppTheme.successColor
         case .intermediate:
-            return .blue
+            return AppTheme.infoColor
         case .advanced:
-            return .purple
+            return Color.purple
         case .expert:
-            return .orange
+            return AppTheme.warningColor
         }
     }
 }

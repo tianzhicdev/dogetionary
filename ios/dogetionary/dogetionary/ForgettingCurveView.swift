@@ -82,7 +82,7 @@ struct ForgettingCurveView: View {
                 } else if let error = errorMessage {
                     Text("Error: \(error)")
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppTheme.errorColor)
                 }
             }
             
@@ -116,7 +116,7 @@ struct ForgettingCurveView: View {
                                 x: .value("Date", date),
                                 y: .value("Retention", 100.0)
                             )
-                            .foregroundStyle(Color.blue)
+                            .foregroundStyle(AppTheme.infoColor)
                             .symbol(.diamond)
                             .symbolSize(120)
                         }
@@ -129,11 +129,11 @@ struct ForgettingCurveView: View {
                                 x: .value("Date", date),
                                 y: .value("Retention", 100.0)
                             )
-                            .foregroundStyle(marker.success == true ? Color.green : Color.red)
+                            .foregroundStyle(marker.success == true ? AppTheme.successColor : AppTheme.errorColor)
                             .symbolSize(100)
                             
                             RuleMark(x: .value("Date", date))
-                                .foregroundStyle(Color.gray.opacity(0.3))
+                                .foregroundStyle(Color.gray.opacity(AppTheme.strongOpacity))
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
                         }
                     }
@@ -145,12 +145,12 @@ struct ForgettingCurveView: View {
                                 x: .value("Date", date),
                                 y: .value("Retention", 100.0)  // Always at 25% as requested
                             )
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(AppTheme.warningColor)
                             .symbol(.diamond)
                             .symbolSize(150)
-                            
+
                             RuleMark(x: .value("Date", date))
-                                .foregroundStyle(Color.orange.opacity(0.5))
+                                .foregroundStyle(AppTheme.warningColor.opacity(0.5))
                                 .lineStyle(StrokeStyle(lineWidth: 2, dash: [8, 4]))
                         }
                     }
@@ -159,11 +159,11 @@ struct ForgettingCurveView: View {
                     
                     // Retention threshold lines
                     RuleMark(y: .value("Good", 80))
-                        .foregroundStyle(Color.green.opacity(0.2))
+                        .foregroundStyle(AppTheme.successColor.opacity(AppTheme.mediumHighOpacity))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    
+
                     RuleMark(y: .value("Warning", 60))
-                        .foregroundStyle(Color.orange.opacity(0.2))
+                        .foregroundStyle(AppTheme.warningColor.opacity(AppTheme.mediumHighOpacity))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 }
                 .frame(height: 200)
@@ -197,10 +197,10 @@ struct ForgettingCurveView: View {
             
             // Legend
             HStack(spacing: 12) {
-                ForgettingCurveLegendItem(color: .blue, shape: .diamond, text: "Created")
-                ForgettingCurveLegendItem(color: .green, text: "Correct")
-                ForgettingCurveLegendItem(color: .red, text: "Incorrect")
-                ForgettingCurveLegendItem(color: .orange, shape: .diamond, text: "Next Review")
+                ForgettingCurveLegendItem(color: AppTheme.infoColor, shape: .diamond, text: "Created")
+                ForgettingCurveLegendItem(color: AppTheme.successColor, text: "Correct")
+                ForgettingCurveLegendItem(color: AppTheme.errorColor, text: "Incorrect")
+                ForgettingCurveLegendItem(color: AppTheme.warningColor, shape: .diamond, text: "Next Review")
             }
             .font(.caption)
             
@@ -418,13 +418,13 @@ struct NextReviewBarView: View {
             
             HStack {
                 Rectangle()
-                    .fill(Color.orange)
+                    .fill(AppTheme.warningColor)
                     .frame(width: 60, height: 8)
                     .cornerRadius(4)
-                
+
                 Text(formatDate(nextReviewDate))
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppTheme.warningColor)
                 
                 Spacer()
                 
@@ -514,7 +514,7 @@ struct FallbackCurveView: View {
                 ForEach(Array(reviewHistory.enumerated()), id: \.0) { index, review in
                     VStack {
                         Rectangle()
-                            .fill(review.response ? Color.green : Color.red)
+                            .fill(review.response ? AppTheme.successColor : AppTheme.errorColor)
                             .frame(width: 20, height: review.response ? 40 : 20)
                         Text("\(index + 1)")
                             .font(.system(size: 9))

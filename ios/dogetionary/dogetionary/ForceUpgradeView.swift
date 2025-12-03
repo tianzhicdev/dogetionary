@@ -15,12 +15,8 @@ struct ForceUpgradeView: View {
     var body: some View {
         ZStack {
             // Background gradient
-            LinearGradient(
-                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            AppTheme.backgroundGradient
+                .ignoresSafeArea()
 
             VStack(spacing: 32) {
                 Spacer()
@@ -30,7 +26,7 @@ struct ForceUpgradeView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 100, height: 100)
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppTheme.infoColor)
 
                 VStack(spacing: 16) {
                     Text("Update Required")
@@ -56,7 +52,7 @@ struct ForceUpgradeView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
+                    .background(AppTheme.infoColor)
                     .cornerRadius(12)
                 }
                 .padding(.horizontal, 32)

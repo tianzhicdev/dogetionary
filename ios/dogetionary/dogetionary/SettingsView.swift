@@ -26,12 +26,8 @@ struct SettingsView: View {
     var body: some View {
         ZStack {
             // Soft blue gradient background
-            LinearGradient(
-                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            AppTheme.secondaryGradient
+                .ignoresSafeArea()
 
             Form {
                 debugUserInfoSection

@@ -48,12 +48,8 @@ struct ReviewView: View {
     var body: some View {
         ZStack {
             // Background
-            LinearGradient(
-                colors: [Color(red: 0.95, green: 0.97, blue: 1.0), Color.white],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            AppTheme.backgroundGradient
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Status bar (fixed at top)
@@ -71,8 +67,8 @@ struct ReviewView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 12)
                 .background(
-                    Color(red: 0.95, green: 0.97, blue: 1.0)
-                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 2)
+                    AppTheme.lightBlue
+                        .shadow(color: AppTheme.subtleShadowColor, radius: 2, x: 0, y: 2)
                 )
 
                 // Main content area (fills remaining space)
@@ -127,7 +123,7 @@ struct ReviewView: View {
 
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppTheme.errorColor)
                         .font(.caption)
                         .padding()
                 }
@@ -317,7 +313,7 @@ struct ReviewView: View {
 
     private func animateScoreChange(points: Int, isCorrect: Bool) {
         currentScore += points
-        scoreAnimationColor = isCorrect ? .green : .orange
+        scoreAnimationColor = isCorrect ? AppTheme.successColor : AppTheme.warningColor
 
         withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
             scoreAnimationScale = 1.3
@@ -429,10 +425,10 @@ struct QuestionCardView: View {
                                 Text(isExcluded ? "Excluded from practice" : "Exclude this word from practice")
                                     .font(.system(size: 15, weight: .medium))
                             }
-                            .foregroundColor(isExcluded ? .white : .red)
+                            .foregroundColor(isExcluded ? .white : AppTheme.errorColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(isExcluded ? Color.gray : Color.red.opacity(0.1))
+                            .background(isExcluded ? Color.gray : AppTheme.errorColor.opacity(AppTheme.lightOpacity))
                             .cornerRadius(10)
                         }
                         .padding(.horizontal)
@@ -449,7 +445,7 @@ struct QuestionCardView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .shadow(color: AppTheme.subtleShadowColor.opacity(2.0), radius: 10, x: 0, y: 5)
         )
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -493,61 +489,27 @@ struct QuestionCardView: View {
                         VStack(spacing: 8) {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.purple],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
+                                .foregroundStyle(AppTheme.primaryGradient)
 
                             Text("Swipe")
                                 .font(.headline)
                                 .fontWeight(.bold)
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.purple],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
+                                .foregroundStyle(AppTheme.primaryGradient)
 
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.purple],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
+                                .foregroundStyle(AppTheme.primaryGradient)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 20)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.blue.opacity(0.12),
-                                            Color.purple.opacity(0.12)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: -4, y: 0)
+                                .fill(AppTheme.infoColor.opacity(AppTheme.lightOpacity))
+                                .shadow(color: AppTheme.strongShadowColor, radius: 8, x: -4, y: 0)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [Color.blue.opacity(0.4), Color.purple.opacity(0.4)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 2
-                                )
+                                .stroke(AppTheme.infoColor.opacity(AppTheme.veryStrongOpacity), lineWidth: 2)
                         )
                     }
                     .padding(.trailing, 8)
@@ -576,7 +538,7 @@ struct QuestionCardView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
-                            .background(Color.black.opacity(0.8))
+                            .background(Color.black.opacity(AppTheme.strongOpacity * 2.67))
                             .cornerRadius(8)
                             .padding(.bottom, 50)
                     }
@@ -642,7 +604,7 @@ struct PracticeStatusBar: View {
                     icon: "star.fill",
                     count: status.new_words_count,
                     label: "new",
-                    color: .blue
+                    color: AppTheme.infoColor
                 )
             }
 
@@ -652,7 +614,7 @@ struct PracticeStatusBar: View {
                     icon: "book.fill",
                     count: status.test_practice_count,
                     label: "test",
-                    color: .orange
+                    color: AppTheme.warningColor
                 )
             }
 
@@ -662,7 +624,7 @@ struct PracticeStatusBar: View {
                     icon: "repeat",
                     count: status.non_test_practice_count,
                     label: "prac",
-                    color: .green
+                    color: AppTheme.successColor
                 )
             }
 
@@ -672,7 +634,7 @@ struct PracticeStatusBar: View {
                     icon: "arrow.counterclockwise",
                     count: status.not_due_yet_count,
                     label: "extra",
-                    color: .purple
+                    color: Color.purple
                 )
             }
 
@@ -707,7 +669,7 @@ struct PracticeStatusBar: View {
             .background(
                 Capsule()
                     .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.08), radius: 3, x: 0, y: 1)
+                    .shadow(color: AppTheme.subtleShadowColor.opacity(1.6), radius: 3, x: 0, y: 1)
             )
         }
     }
@@ -744,7 +706,7 @@ struct NothingToPracticeView: View {
         VStack(spacing: 24) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 72))
-                .foregroundColor(.green)
+                .foregroundColor(AppTheme.successColor)
 
             VStack(spacing: 8) {
                 Text("All Caught Up!")
@@ -865,8 +827,8 @@ struct ReviewSessionView: View {
                             .fontWeight(.medium)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.1))
-                            .foregroundColor(.blue)
+                            .background(AppTheme.infoColor.opacity(AppTheme.lightOpacity))
+                            .foregroundColor(AppTheme.infoColor)
                             .cornerRadius(4)
 
                         Image(systemName: "arrow.right")
@@ -878,8 +840,8 @@ struct ReviewSessionView: View {
                             .fontWeight(.medium)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.green.opacity(0.1))
-                            .foregroundColor(.green)
+                            .background(AppTheme.successColor.opacity(AppTheme.lightOpacity))
+                            .foregroundColor(AppTheme.successColor)
                             .cornerRadius(4)
                     }
 

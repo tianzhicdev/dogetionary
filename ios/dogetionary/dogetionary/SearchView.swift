@@ -139,18 +139,9 @@ struct SearchView: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 16)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [
-                                                Color(red: 0.3, green: 0.4, blue: 0.95),
-                                                Color(red: 0.6, green: 0.3, blue: 0.9)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
+                                    .background(AppTheme.primaryGradient)
                                     .cornerRadius(16)
-                                    .shadow(color: Color.purple.opacity(0.3), radius: 12, x: 0, y: 6)
+                                    .shadow(color: Color.purple.opacity(AppTheme.strongOpacity), radius: 12, x: 0, y: 6)
                                 }
                                 .transition(.scale.combined(with: .opacity))
                             }
@@ -250,24 +241,15 @@ struct SearchView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.95, green: 0.96, blue: 1.0),
-                        Color(red: 0.98, green: 0.95, blue: 1.0)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .background(AppTheme.secondaryGradient)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.blue.opacity(0.3),
-                                Color.purple.opacity(0.3)
+                                AppTheme.infoColor.opacity(AppTheme.strongOpacity),
+                                Color.purple.opacity(AppTheme.strongOpacity)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -275,7 +257,7 @@ struct SearchView: View {
                         lineWidth: 1.5
                     )
             )
-            .shadow(color: Color.purple.opacity(0.1), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.purple.opacity(AppTheme.lightOpacity), radius: 8, x: 0, y: 4)
 
             Button(action: {
                 searchWord()
@@ -293,16 +275,13 @@ struct SearchView: View {
                     .frame(width: 50, height: 50)
                     .background(
                         LinearGradient(
-                            colors: [
-                                Color(red: 0.4, green: 0.5, blue: 1.0),
-                                Color(red: 0.6, green: 0.4, blue: 0.9)
-                            ],
+                            colors: [AppTheme.infoColor, Color.purple],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .cornerRadius(12)
-                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(color: AppTheme.infoColor.opacity(AppTheme.strongOpacity), radius: 8, x: 0, y: 4)
             }
             .disabled(searchText.isEmpty || isLoading)
         }

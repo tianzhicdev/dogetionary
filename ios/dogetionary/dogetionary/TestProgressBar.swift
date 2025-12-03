@@ -72,7 +72,7 @@ struct TestProgressBar: View {
             ZStack(alignment: .leading) {
                 // Background track
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.gray.opacity(0.15))
+                    .fill(Color.gray.opacity(AppTheme.lightOpacity))
                     .frame(height: 20)
 
                 // Animated progress fill with gradient
@@ -138,7 +138,7 @@ struct TestProgressBar: View {
                             HStack(spacing: 2) {
                                 Text("\(displayRemaining)")
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(AppTheme.warningColor)
                                 if !isTestMode {
                                     Text("pts")
                                         .font(.caption)
@@ -155,11 +155,11 @@ struct TestProgressBar: View {
                                 .foregroundColor(.secondary)
                             HStack(spacing: 4) {
                                 Image(systemName: "flame.fill")
-                                    .foregroundColor(streakDays > 0 ? .orange : .gray)
+                                    .foregroundColor(streakDays > 0 ? AppTheme.warningColor : .gray)
                                     .font(.system(size: 14))
                                 Text("\(streakDays)")
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(streakDays > 0 ? .orange : .gray)
+                                    .foregroundColor(streakDays > 0 ? AppTheme.warningColor : .gray)
                             }
                         }
 
@@ -172,7 +172,7 @@ struct TestProgressBar: View {
                             HStack(spacing: 2) {
                                 Text("\(displayCurrent)")
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.successColor)
                                 if !isTestMode {
                                     Text("pts")
                                         .font(.caption)
@@ -233,7 +233,7 @@ struct TestProgressBar: View {
                                         .padding(.vertical, 6)
                                         .background(
                                             RoundedRectangle(cornerRadius: 6)
-                                                .fill(colorForAchievementTier(achievement.tier).opacity(0.08))
+                                                .fill(colorForAchievementTier(achievement.tier).opacity(AppTheme.subtleOpacity))
                                         )
                                     }
 
@@ -243,7 +243,7 @@ struct TestProgressBar: View {
                                             VStack(spacing: 4) {
                                                 Image(systemName: metadata.symbol)
                                                     .font(.system(size: 20))
-                                                    .foregroundColor(.green)
+                                                    .foregroundColor(AppTheme.successColor)
 
                                                 Text(metadata.title)
                                                     .font(.system(size: 9, weight: .medium))
@@ -255,7 +255,7 @@ struct TestProgressBar: View {
                                             .padding(.vertical, 6)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 6)
-                                                    .fill(Color.green.opacity(0.08))
+                                                    .fill(AppTheme.successColor.opacity(AppTheme.subtleOpacity))
                                             )
                                         }
                                     }
@@ -272,7 +272,7 @@ struct TestProgressBar: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+                .shadow(color: AppTheme.subtleShadowColor, radius: 10, x: 0, y: 4)
         )
         .onAppear {
             withAnimation(.easeOut(duration: 1.0)) {
@@ -292,19 +292,19 @@ struct TestProgressBar: View {
         if isTestMode {
             switch testType {
             case "TOEFL":
-                return [Color.blue, Color.cyan]
+                return [AppTheme.infoColor, Color.cyan]
             case "IELTS":
                 return [Color.purple, Color.pink]
             case "TIANZ":
-                return [Color.orange, Color.yellow]
+                return [AppTheme.warningColor, Color.yellow]
             case "BOTH":
-                return [Color.blue, Color.purple, Color.pink]
+                return [AppTheme.infoColor, Color.purple, Color.pink]
             default:
-                return [Color.green, Color.blue]
+                return [AppTheme.successColor, AppTheme.infoColor]
             }
         } else {
             // Score mode gradient
-            return [Color.purple, Color.orange]
+            return [Color.purple, AppTheme.warningColor]
         }
     }
 
@@ -356,13 +356,13 @@ struct TestProgressBar: View {
     private func colorForAchievementTier(_ tier: AchievementTier) -> Color {
         switch tier {
         case .beginner:
-            return .green
+            return AppTheme.successColor
         case .intermediate:
-            return .blue
+            return AppTheme.infoColor
         case .advanced:
-            return .purple
+            return Color.purple
         case .expert:
-            return .orange
+            return AppTheme.warningColor
         }
     }
 }
