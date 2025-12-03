@@ -15,7 +15,7 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from handlers.admin import get_next_review_date_new
+from services.spaced_repetition_service import get_next_review_date_new
 from utils.database import get_db_connection
 import pytz
 from datetime import date

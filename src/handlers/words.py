@@ -290,63 +290,53 @@ def get_cached_definition(word: str, learning_lang: str, native_lang: str) -> Op
         logger.error(f"Error getting cached definition: {str(e)}")
         return None
 
-def calculate_spaced_repetition(reviews_data, current_review_time=None):
-    """
-    DEPRECATED: Simple calculation for backward compatibility - SQL handles the logic now
-    
-    This function is deprecated and should not be used for new code.
-    Use get_next_review_date_new from app.py instead.
-    This function is maintained only for get_word_review_data compatibility.
-    """
-    if not reviews_data:
-        return 0, 1, datetime.now() + timedelta(days=1), None
-    
-    reviews_data.sort(key=lambda r: r['reviewed_at'])
-    review_count = len(reviews_data)
-    last_reviewed_at = reviews_data[-1]['reviewed_at']
-    current_time = current_review_time or datetime.now()
-    
-    # Simple interval calculation for API compatibility
-    # Actual logic is now in SQL
-    consecutive_correct = 0
-    for review in reversed(reviews_data):
-        if review['response']:
-            consecutive_correct += 1
-        else:
-            break
-    
-    if not reviews_data[-1]['response']:
-        interval_days = 1
-    elif consecutive_correct == 1:
-        interval_days = 5  # Updated to match new logic
-    elif consecutive_correct >= 2 and len(reviews_data) >= 2:
-        # Calculate based on time difference like SQL does
-        previous_review_time = reviews_data[-2]['reviewed_at']
-        time_diff_days = (last_reviewed_at - previous_review_time).total_seconds() / 86400
-        interval_days = max(1, int(2.5 * time_diff_days))
-    else:
-        interval_days = 1
-    
-    next_review_date = current_time + timedelta(days=interval_days)
-    return review_count, interval_days, next_review_date, last_reviewed_at
-
 def get_word_review_data(user_id: str, word_id: int):
+    """Get review history data for a specific word using real spaced repetition algorithm"""
+    from services.spaced_repetition_service import get_next_review_date_new
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
+        # Get word creation date
         cur.execute("""
-            SELECT response, reviewed_at FROM reviews 
-            WHERE user_id = %s AND word_id = %s 
+            SELECT created_at FROM saved_words
+            WHERE id = %s AND user_id = %s
+        """, (word_id, user_id))
+
+        word_row = cur.fetchone()
+        if not word_row:
+            cur.close()
+            conn.close()
+            return 0, 1, datetime.now() + timedelta(days=1), None
+
+        created_at = word_row['created_at']
+
+        # Get review history
+        cur.execute("""
+            SELECT response, reviewed_at FROM reviews
+            WHERE user_id = %s AND word_id = %s
             ORDER BY reviewed_at ASC
         """, (user_id, word_id))
-        
+
         reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in cur.fetchall()]
         cur.close()
         conn.close()
-        
-        return calculate_spaced_repetition(reviews)
-        
+
+        # Calculate next review date using the real algorithm
+        next_review_date = get_next_review_date_new(reviews, created_at)
+
+        # Calculate other return values
+        review_count = len(reviews)
+        last_reviewed_at = reviews[-1]['reviewed_at'] if reviews else None
+
+        if last_reviewed_at:
+            interval_days = (next_review_date - last_reviewed_at).days
+        else:
+            interval_days = (next_review_date - created_at).days
+
+        return review_count, interval_days, next_review_date, last_reviewed_at
+
     except Exception as e:
         logger.error(f"Error getting review data: {str(e)}")
         return 0, 1, datetime.now() + timedelta(days=1), None
