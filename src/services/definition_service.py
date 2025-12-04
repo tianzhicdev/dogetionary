@@ -178,7 +178,7 @@ VOCABULARY LEARNING FIELDS:
 - source: optional string in natural language describing the word's origin or etymological root (e.g., "From Latin 'facere' meaning 'to make'", "Borrowed from French in the 18th century"). Only include if interesting or helpful for learning.
 - word_family: array of related word forms, each with "word" and "part_of_speech" (e.g., persuade->persuasion->persuasive)
 - cognates: related words in other languages sharing etymology, or null (null for Chinese speakers)
-- famous_quote: single object with "quote" and "source", or null if no notable quote exists. Include only ONE memorable quote if the word appears in famous literature, movies, speeches, etc.
+- famous_quote: single object with "quote" and "source", or null. STRICT REQUIREMENTS: (1) The quote MUST contain the exact target word "{word_normalized}". (2) Source must be SHORT and simple (e.g., "Einstein", "Shakespeare - Hamlet", "The Great Gatsby"). (3) Must be a REAL, verified, and meaningful quote from famous literature, speeches, movies, or historical figures. If no high-quality quote exists, return null - it is better to have nothing than a low-quality quote.
 
 VALIDATION RULES:
 Consider VALID (score 0.9-1.0):

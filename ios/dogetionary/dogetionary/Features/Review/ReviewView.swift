@@ -218,7 +218,7 @@ struct QuestionCardView: View {
                             .foregroundColor(isExcluded ? .white : AppTheme.errorColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(isExcluded ? Color.gray : AppTheme.errorColor.opacity(AppTheme.lightOpacity))
+                            .background(isExcluded ? AppTheme.mediumGray : AppTheme.errorColor.opacity(AppTheme.lightOpacity))
                             .cornerRadius(10)
                         }
                         .padding(.horizontal)
@@ -324,10 +324,10 @@ struct QuestionCardView: View {
                         Text(toastMessage)
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
-                            .background(Color.black.opacity(AppTheme.strongOpacity * 2.67))
+                            .background(AppTheme.black.opacity(AppTheme.strongOpacity * 2.67))
                             .cornerRadius(8)
                             .padding(.bottom, 50)
                     }
@@ -423,7 +423,7 @@ struct PracticeStatusBar: View {
                     icon: "arrow.counterclockwise",
                     count: status.not_due_yet_count,
                     label: "extra",
-                    color: Color.purple
+                    color: AppTheme.systemPurple
                 )
             }
 
@@ -546,7 +546,7 @@ struct TodayCompleteView: View {
                         Text("Review \(staleWordsCount) stale word\(staleWordsCount == 1 ? "" : "s")")
                     }
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.white)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(AppTheme.primaryBlue)
@@ -659,7 +659,7 @@ struct ReviewSessionView: View {
                                     Text("Pronunciation")
                                         .font(.subheadline)
                                 }
-                                .foregroundColor(.blue)
+                                .foregroundColor(AppTheme.infoColor)
                             }
                             .buttonStyle(PlainButtonStyle())
                             
@@ -686,7 +686,7 @@ struct ReviewSessionView: View {
                                         Text("Example")
                                             .font(.subheadline)
                                     }
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.successColor)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 .disabled(isLoadingExampleAudio)
@@ -761,10 +761,10 @@ struct ReviewSessionView: View {
                                 .font(.title3)
                                 .fontWeight(.medium)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.red)
+                        .background(AppTheme.errorColor)
                         .cornerRadius(12)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -783,10 +783,10 @@ struct ReviewSessionView: View {
                                 .font(.title3)
                                 .fontWeight(.medium)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.green)
+                        .background(AppTheme.successColor)
                         .cornerRadius(12)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -807,10 +807,10 @@ struct ReviewSessionView: View {
                             .font(.title3)
                             .fontWeight(.medium)
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.blue)
+                    .background(AppTheme.systemBlue)
                     .cornerRadius(12)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -1040,17 +1040,17 @@ struct DefinitionSheetView: View {
                     HStack {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.errorColor)
 
                         Text("Incorrect - Study the definition")
                             .font(.title3)
                             .fontWeight(.semibold)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.errorColor)
 
                         Spacer()
                     }
                     .padding()
-                    .background(Color.red.opacity(0.1))
+                    .background(AppTheme.errorColor.opacity(AppTheme.subtleOpacity))
                     .cornerRadius(12)
                     .padding(.horizontal)
 
@@ -1065,7 +1065,7 @@ struct DefinitionSheetView: View {
                                 .font(.headline)
                             Image(systemName: "arrow.right")
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(AppTheme.primaryBlue)
@@ -1095,7 +1095,7 @@ struct BadgeCelebrationView: View {
     var body: some View {
         ZStack {
             // Semi-transparent background
-            Color.black.opacity(0.6)
+            AppTheme.black.opacity(0.6)
                 .ignoresSafeArea()
                 .onTapGesture {
                     dismissWithAnimation()
@@ -1126,7 +1126,7 @@ struct BadgeCelebrationView: View {
                     // Icon
                     Image(systemName: badge.symbol)
                         .font(.system(size: 44, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .rotationEffect(.degrees(iconRotation))
                 }
 
@@ -1134,7 +1134,7 @@ struct BadgeCelebrationView: View {
                 Text("New Badge!")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppTheme.infoColor)
 
                 // Badge name
                 Text(badge.title)
@@ -1145,13 +1145,13 @@ struct BadgeCelebrationView: View {
                 // Milestone
                 Text("\(badge.milestone) points reached")
                     .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(AppTheme.white.opacity(0.8))
 
                 // Dismiss button
                 Button(action: dismissWithAnimation) {
                     Text("Continue")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .frame(width: 150)
                         .padding(.vertical, 12)
                         .background(badgeColor)

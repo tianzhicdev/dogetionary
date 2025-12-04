@@ -52,7 +52,7 @@ struct SearchView: View {
 
                         if let errorMessage = viewModel.errorMessage {
                             Text(errorMessage)
-                                .foregroundColor(.red)
+                                .foregroundColor(AppTheme.errorColor)
                                 .padding()
                         }
 
@@ -157,7 +157,7 @@ struct SearchView: View {
                         viewModel.errorMessage = nil
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.purple.opacity(0.6))
+                            .foregroundColor(AppTheme.systemPurple.opacity(0.6))
                             .font(.title3)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -173,7 +173,7 @@ struct SearchView: View {
                         LinearGradient(
                             colors: [
                                 AppTheme.infoColor.opacity(AppTheme.strongOpacity),
-                                Color.purple.opacity(AppTheme.strongOpacity)
+                                AppTheme.systemPurple.opacity(AppTheme.strongOpacity)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -181,7 +181,7 @@ struct SearchView: View {
                         lineWidth: 1.5
                     )
             )
-            .shadow(color: Color.purple.opacity(AppTheme.lightOpacity), radius: 8, x: 0, y: 4)
+            .shadow(color: AppTheme.systemPurple.opacity(AppTheme.lightOpacity), radius: 8, x: 0, y: 4)
 
             Button(action: {
                 viewModel.searchWord()
@@ -199,7 +199,7 @@ struct SearchView: View {
                     .frame(width: 50, height: 50)
                     .background(
                         LinearGradient(
-                            colors: [AppTheme.infoColor, Color.purple],
+                            colors: [AppTheme.infoColor, AppTheme.systemPurple],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )

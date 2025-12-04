@@ -23,7 +23,7 @@ struct FloatingActionMenu: View {
         ZStack(alignment: .bottomTrailing) {
             // Dimmed overlay when expanded (tap to dismiss)
             if isExpanded {
-                Color.black.opacity(0.3)
+                AppTheme.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
                         closeMenu()
@@ -66,7 +66,7 @@ struct FloatingActionMenu: View {
 
                         Image(systemName: isExpanded ? "xmark" : (showBrainIcon ? "brain.head.profile" : "line.3.horizontal"))
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.white)
                             .frame(width: 56, height: 56)
                             .background(showBrainIcon ? AppTheme.errorColor : AppTheme.primaryBlue)
                             .clipShape(Circle())
@@ -79,7 +79,7 @@ struct FloatingActionMenu: View {
                         if showBrainIcon {
                             Text("\(practiceCount)")
                                 .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundColor(AppTheme.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .frame(minWidth: 20)
@@ -235,14 +235,14 @@ struct FloatingMenuItem: View {
                     // Solid white icon on top
                     Image(systemName: icon)
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .frame(width: 48, height: 48)
 
                     // Badge for practice count
                     if let badge = badge, badge > 0 {
                         Text("\(badge)")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .frame(minWidth: 20)

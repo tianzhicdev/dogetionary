@@ -135,7 +135,7 @@ struct SettingsView: View {
             HStack {
                 Text("Profile")
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.purple, Color.pink],
+                        LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemPink],
                                      startPoint: .leading, endPoint: .trailing)
                     )
                     .fontWeight(.semibold)
@@ -177,7 +177,7 @@ struct SettingsView: View {
             HStack {
                 Text("Language Preferences")
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.blue, Color.cyan],
+                        LinearGradient(colors: [AppTheme.systemBlue, AppTheme.systemCyan],
                                      startPoint: .leading, endPoint: .trailing)
                     )
                     .fontWeight(.semibold)
@@ -227,7 +227,7 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                     Text("Learning \(learningLang.1) → Native \(nativeLang.1)")
                         .font(.footnote)
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppTheme.infoColor)
                 }
                 .padding(.top, 8)
             }
@@ -240,7 +240,7 @@ struct SettingsView: View {
             HStack {
                 Text("Notifications")
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.orange, Color.pink],
+                        LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemPink],
                                      startPoint: .leading, endPoint: .trailing)
                     )
                     .fontWeight(.semibold)
@@ -283,7 +283,7 @@ struct SettingsView: View {
             HStack {
                 Text("Feedback")
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.green, Color.mint],
+                        LinearGradient(colors: [AppTheme.systemGreen, AppTheme.systemMint],
                                      startPoint: .leading, endPoint: .trailing)
                     )
                     .fontWeight(.semibold)
@@ -355,7 +355,7 @@ struct SettingsView: View {
                     Text("Build Configuration:")
                     Spacer()
                     Text("Debug")
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppTheme.warningColor)
                 }
 
                 HStack {
@@ -380,12 +380,12 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(isTestingConnection)
-                .foregroundColor(.blue)
+                .foregroundColor(AppTheme.infoColor)
 
                 if !connectionTestResult.isEmpty {
                     HStack {
                         Image(systemName: connectionTestResult.contains("✅") ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(connectionTestResult.contains("✅") ? .green : .red)
+                            .foregroundColor(connectionTestResult.contains("✅") ? AppTheme.successColor : AppTheme.errorColor)
                         Text(connectionTestResult)
                             .font(.caption)
                     }
@@ -397,7 +397,7 @@ struct SettingsView: View {
                     UserManager.shared.resetOnboarding()
                 }) {
                     Text("Reset Onboarding")
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppTheme.infoColor)
                 }
             }
         }
@@ -409,7 +409,7 @@ struct SettingsView: View {
             HStack {
                 Text("Developer Options")
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.red, Color.orange],
+                        LinearGradient(colors: [AppTheme.systemRed, AppTheme.systemOrange],
                                      startPoint: .leading, endPoint: .trailing)
                     )
                     .fontWeight(.semibold)

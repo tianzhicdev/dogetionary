@@ -17,24 +17,24 @@ struct RegisterBadge: View {
         case "formal":
             return AppTheme.infoColor
         case "neutral":
-            return Color.purple
+            return AppTheme.systemPurple
         case "informal":
             return AppTheme.warningColor
         case "slang":
             return AppTheme.errorColor
         case "literary":
-            return Color.indigo
+            return AppTheme.systemIndigo
         case "technical":
-            return Color.teal
+            return AppTheme.systemTeal
         default:
-            return Color.gray
+            return AppTheme.mediumGray
         }
     }
 
     var body: some View {
         Text(register.capitalized)
             .font(AppTheme.badgeLabelFont)
-            .foregroundColor(.white)
+            .foregroundColor(AppTheme.white)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(color)
@@ -58,7 +58,7 @@ struct FrequencyBadge: View {
         case "rare":
             return AppTheme.errorColor
         default:
-            return Color.gray
+            return AppTheme.mediumGray
         }
     }
 
@@ -105,9 +105,9 @@ struct ConnotationBadge: View {
         case "negative":
             return AppTheme.errorColor
         case "neutral":
-            return Color.gray
+            return AppTheme.mediumGray
         default:
-            return Color.gray
+            return AppTheme.mediumGray
         }
     }
 

@@ -429,6 +429,73 @@ struct CompactIllustrationView: View {
     }
 }
 
+// MARK: - Fullscreen Word Card View
+
+struct FullscreenWordCardView: View {
+    let word: String
+    let phonetic: String?
+    let firstDefinition: String?
+    let illustration: UIImage
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                // Main illustration
+                Image(uiImage: illustration)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxHeight: 400)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(radius: 10)
+
+                // Word card content
+                VStack(spacing: 16) {
+                    // Word and pronunciation
+                    VStack(spacing: 8) {
+                        Text(word)
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+
+                        if let phonetic = phonetic {
+                            Text(phonetic)
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    // First definition
+                    if let firstDefinition = firstDefinition {
+                        Text(firstDefinition)
+                            .font(.title3)
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(nil)
+                            .padding(.horizontal)
+                    }
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(16)
+                .padding(.horizontal)
+
+                Spacer()
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
 #Preview {
     // Preview with sample definition
     let sampleDefinition = Definition(

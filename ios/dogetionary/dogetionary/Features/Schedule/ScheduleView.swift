@@ -51,9 +51,9 @@ struct ScheduleView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: 48))
-                                .foregroundColor(.orange)
+                                .foregroundColor(AppTheme.warningColor)
                             Text(error)
-                                .foregroundColor(.red)
+                                .foregroundColor(AppTheme.errorColor)
                                 .multilineTextAlignment(.center)
                                 .padding()
                         }
@@ -82,7 +82,7 @@ struct ScheduleView: View {
                             VStack(spacing: 16) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 48))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.successColor)
                                 Text("All caught up!")
                                     .font(.title2)
                                     .fontWeight(.semibold)
@@ -219,7 +219,7 @@ struct SimpleScheduleListView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "graduationcap.fill")
                                     .font(.caption)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(AppTheme.infoColor)
                                 Text("Test Level")
                                     .font(.caption)
                                     .fontWeight(.medium)
@@ -316,7 +316,7 @@ struct SimpleScheduleListView: View {
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 10)
-                                .background(Color.white)
+                                .background(AppTheme.white)
                                 .cornerRadius(8)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
@@ -334,7 +334,7 @@ struct SimpleScheduleListView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "calendar")
                                         .font(.caption)
-                                        .foregroundColor(.green)
+                                        .foregroundColor(AppTheme.successColor)
                                     Text("Study Duration")
                                         .font(.caption)
                                         .fontWeight(.medium)
@@ -365,7 +365,7 @@ struct SimpleScheduleListView: View {
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 10)
-                                    .background(Color.white)
+                                    .background(AppTheme.white)
                                     .cornerRadius(8)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
@@ -392,7 +392,7 @@ struct SimpleScheduleListView: View {
                     .padding(16)
                     .background(
                         LinearGradient(
-                            colors: [AppTheme.lightBlue, Color.white],
+                            colors: [AppTheme.lightBlue, AppTheme.white],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -420,7 +420,7 @@ struct SimpleScheduleListView: View {
                         } else if !userHasSchedule {
                             Image(systemName: "calendar.badge.exclamationmark")
                                 .font(.system(size: 48))
-                                .foregroundColor(.orange)
+                                .foregroundColor(AppTheme.warningColor)
                             Text("No schedule created")
                                 .font(.title3)
                                 .fontWeight(.semibold)
@@ -431,7 +431,7 @@ struct SimpleScheduleListView: View {
                         } else {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 48))
-                                .foregroundColor(.green)
+                                .foregroundColor(AppTheme.successColor)
                             Text("All caught up!")
                                 .font(.title3)
                                 .fontWeight(.semibold)
@@ -516,7 +516,7 @@ struct DayCard: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(isToday ?
                               LinearGradient(
-                                colors: [AppTheme.infoColor, Color.purple],
+                                colors: [AppTheme.infoColor, AppTheme.systemPurple],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                               ) :
@@ -537,7 +537,7 @@ struct DayCard: View {
                         if isToday {
                             Text("TODAY")
                                 .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundColor(AppTheme.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
                                 .background(AppTheme.accentPurple)
@@ -549,7 +549,7 @@ struct DayCard: View {
                 Spacer()
             }
             .padding(16)
-            .background(Color.white)
+            .background(AppTheme.white)
 
             Divider()
 
@@ -597,7 +597,7 @@ struct DayCard: View {
             .padding(16)
             .background(AppTheme.veryLightBlue)
         }
-        .background(Color.white)
+        .background(AppTheme.white)
         .cornerRadius(16)
         .shadow(color: AppTheme.subtleShadowColor, radius: 8, x: 0, y: 2)
     }
@@ -652,7 +652,7 @@ struct TaskBadge: View {
                     .font(.system(size: 12, weight: .bold))
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 10))
-                    .foregroundColor(.green)
+                    .foregroundColor(AppTheme.successColor)
             } else {
                 Text("\(count)")
                     .font(.system(size: 12, weight: .bold))
@@ -663,7 +663,7 @@ struct TaskBadge: View {
         .foregroundColor(completed == count && count > 0 ? .green : color)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background((completed == count && count > 0 ? Color.green : color).opacity(0.15))
+        .background((completed == count && count > 0 ? AppTheme.successColor : color).opacity(0.15))
         .cornerRadius(6)
     }
 }
@@ -702,7 +702,7 @@ struct WordSection: View {
                 } else {
                     Text("(\(completedWords.count)/\(totalCount) done)")
                         .font(.system(size: 12))
-                        .foregroundColor(.green)
+                        .foregroundColor(AppTheme.successColor)
                 }
             }
 

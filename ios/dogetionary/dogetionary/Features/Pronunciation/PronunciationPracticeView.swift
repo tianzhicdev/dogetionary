@@ -36,8 +36,8 @@ struct PronunciationPracticeView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color.orange.opacity(0.15))
-            .foregroundColor(.orange)
+            .background(AppTheme.warningColor.opacity(0.15))
+            .foregroundColor(AppTheme.warningColor)
             .cornerRadius(8)
         }
         .buttonStyle(PlainButtonStyle())
@@ -104,11 +104,11 @@ struct PronunciationPracticeSheet: View {
                         VStack {
                             Image(systemName: originalAudioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 50))
-                                .foregroundColor(.blue)
+                                .foregroundColor(AppTheme.infoColor)
 
                             Text(originalAudioPlayer.isPlaying ? "Stop" : "Original")
                                 .font(.caption)
-                                .foregroundColor(.blue)
+                                .foregroundColor(AppTheme.infoColor)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -118,11 +118,11 @@ struct PronunciationPracticeSheet: View {
                         VStack {
                             Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
                                 .font(.system(size: 50))
-                                .foregroundColor(audioRecorder.isRecording ? .red : .orange)
+                                .foregroundColor(audioRecorder.isRecording ? AppTheme.errorColor : AppTheme.warningColor)
 
                             Text(audioRecorder.isRecording ? "Stop" : "Record")
                                 .font(.caption)
-                                .foregroundColor(audioRecorder.isRecording ? .red : .orange)
+                                .foregroundColor(audioRecorder.isRecording ? AppTheme.errorColor : AppTheme.warningColor)
                         }
                     }
                     .disabled(isProcessing)
@@ -134,11 +134,11 @@ struct PronunciationPracticeSheet: View {
                             VStack {
                                 Image(systemName: recordedAudioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
                                     .font(.system(size: 50))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.successColor)
 
                                 Text(recordedAudioPlayer.isPlaying ? "Stop" : "My Audio")
                                     .font(.caption)
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.successColor)
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -150,7 +150,7 @@ struct PronunciationPracticeSheet: View {
                     VStack(spacing: 12) {
                         Text("Recording...")
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.errorColor)
 
                         // Prettier volume bars
                         HStack(spacing: 3) {
