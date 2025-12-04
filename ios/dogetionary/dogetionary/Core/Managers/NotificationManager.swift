@@ -7,12 +7,15 @@
 
 import Foundation
 import UserNotifications
+import os.log
 
 class NotificationManager: NSObject, ObservableObject {
     static let shared = NotificationManager()
 
     @Published var isNotificationEnabled = false
     @Published var hasPermission = false
+
+    private let logger = Logger(subsystem: "com.dogetionary.app", category: "Notifications")
 
     private override init() {
         super.init()
@@ -26,10 +29,10 @@ class NotificationManager: NSObject, ObservableObject {
                 self?.isNotificationEnabled = granted
 
                 if granted {
-                    print("✅ Notification permission granted")
+                    self?.logger.info("Notification permission granted")
                     self?.scheduleDailyNotification()
                 } else {
-                    print("❌ Notification permission denied")
+                    self?.logger.notice("Notification permission denied")
                 }
 
                 completion(granted)
@@ -80,37 +83,37 @@ class NotificationManager: NSObject, ObservableObject {
         )
 
         // Schedule the notification
-        UNUserNotificationCenter.current().add(request) { error in
+        UNUserNotificationCenter.current().add(request) { [weak self] error in
             if let error = error {
-                print("❌ Error scheduling notification: \(error.localizedDescription)")
+                self?.logger.error("Error scheduling notification: \(error.localizedDescription, privacy: .public)")
             } else {
                 let formatter = DateFormatter()
                 formatter.timeStyle = .short
-                print("✅ Daily notification scheduled for \(formatter.string(from: reminderTime))")
+                self?.logger.info("Daily notification scheduled for \(formatter.string(from: reminderTime), privacy: .public)")
 
                 // Immediately check for overdue words to update the notification body
-                self.updateNotificationWithOverdueCount()
+                self?.updateNotificationWithOverdueCount()
             }
         }
     }
 
     func updateNotificationWithOverdueCount() {
         // Fetch overdue count from the API
-        DictionaryService.shared.getDueCounts { result in
+        DictionaryService.shared.getDueCounts { [weak self] result in
             switch result {
             case .success(let counts):
                 if counts.overdue_count > 0 {
-                    self.scheduleNotificationWithContent(overdueCount: counts.overdue_count)
+                    self?.scheduleNotificationWithContent(overdueCount: counts.overdue_count)
                 } else {
                     // Cancel notification if no words are overdue
                     UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["daily-review-reminder"])
-                    print("📝 No overdue words, notification cancelled for today")
+                    self?.logger.info("No overdue words, notification cancelled for today")
                 }
 
             case .failure(let error):
-                print("❌ Failed to fetch overdue count: \(error.localizedDescription)")
+                self?.logger.error("Failed to fetch overdue count: \(error.localizedDescription, privacy: .public)")
                 // Still schedule a generic notification
-                self.scheduleNotificationWithContent(overdueCount: nil)
+                self?.scheduleNotificationWithContent(overdueCount: nil)
             }
         }
     }
@@ -146,11 +149,11 @@ class NotificationManager: NSObject, ObservableObject {
             trigger: trigger
         )
 
-        UNUserNotificationCenter.current().add(request) { error in
+        UNUserNotificationCenter.current().add(request) { [weak self] error in
             if let error = error {
-                print("❌ Error updating notification: \(error.localizedDescription)")
+                self?.logger.error("Error updating notification: \(error.localizedDescription, privacy: .public)")
             } else {
-                print("✅ Notification updated with overdue count: \(overdueCount ?? 0)")
+                self?.logger.info("Notification updated with overdue count: \(overdueCount ?? 0)")
             }
         }
     }
@@ -173,11 +176,11 @@ class NotificationManager: NSObject, ObservableObject {
             trigger: trigger
         )
 
-        UNUserNotificationCenter.current().add(request) { error in
+        UNUserNotificationCenter.current().add(request) { [weak self] error in
             if let error = error {
-                print("❌ Test notification error: \(error.localizedDescription)")
+                self?.logger.error("Test notification error: \(error.localizedDescription, privacy: .public)")
             } else {
-                print("✅ Test notification scheduled")
+                self?.logger.info("Test notification scheduled")
             }
         }
     }

@@ -7,6 +7,9 @@
 
 import SwiftUI
 import Charts
+import os.log
+
+private let logger = Logger(subsystem: "com.dogetionary.app", category: "ForgettingCurve")
 
 // Helper function for parsing dates consistently
 private func parseDateString(_ dateString: String) -> Date? {
@@ -259,17 +262,17 @@ struct ForgettingCurveView: View {
         // Debug: Print review dates
         let reviewDates = reviewHistory.compactMap { parseDateString($0.reviewed_at) }
         if reviewDates.isEmpty {
-            print("DEBUG: No valid review dates found!")
+            logger.debug("No valid review dates found!")
             for review in reviewHistory {
-                print("DEBUG: Raw review date string: '\(review.reviewed_at)'")
-                print("DEBUG: Attempted parse result: \(parseDateString(review.reviewed_at) ?? Date(timeIntervalSince1970: 0))")
+                logger.debug("Raw review date string: '\(review.reviewed_at, privacy: .public)'")
+                logger.debug("Attempted parse result: \(String(describing: parseDateString(review.reviewed_at)), privacy: .private)")
             }
             return 0.0
         }
-        
+
         // Get the first review date to handle pre-learning period
         guard let firstReviewDate = reviewDates.min() else {
-            print("DEBUG: Could not find minimum date")
+            logger.debug("Could not find minimum date")
             return 0.0
         }
         
@@ -296,7 +299,10 @@ struct ForgettingCurveView: View {
         
         // Sort by date and get the most recent review
         relevantReviews.sort { $0.0 < $1.0 }
-        let (lastReviewDate, wasCorrect, _) = relevantReviews.last!
+        guard let lastReview = relevantReviews.last else {
+            return 1.0  // Defensive fallback, though guard above should prevent this
+        }
+        let (lastReviewDate, wasCorrect, _) = lastReview
         
         // Calculate days since last review
         let daysSinceReview = max(0, targetDate.timeIntervalSince(lastReviewDate) / 86400)

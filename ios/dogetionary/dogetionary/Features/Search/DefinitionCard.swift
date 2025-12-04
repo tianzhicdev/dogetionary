@@ -6,8 +6,10 @@
 //
 
 import SwiftUI
+import os.log
 
 struct DefinitionCard: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "DefinitionCard")
     let definition: Definition
     @StateObject private var audioPlayer = AudioPlayer()
     @State private var isSaved = false
@@ -312,7 +314,7 @@ struct DefinitionCard: View {
                     isSaved = true
                     savedWordId = wordId
                 case .failure(let error):
-                    print("Failed to save word: \(error.localizedDescription)")
+                    Self.logger.error("Failed to save word: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
@@ -320,7 +322,7 @@ struct DefinitionCard: View {
 
     private func unsaveWord() {
         guard let wordId = savedWordId else {
-            print("Cannot unsave word: no saved word ID available")
+            Self.logger.warning("Cannot unsave word: no saved word ID available")
             return
         }
 
@@ -339,7 +341,7 @@ struct DefinitionCard: View {
                     // Post notification for SavedWordsView to update
                     NotificationCenter.default.post(name: .wordUnsaved, object: definition.word)
                 case .failure(let error):
-                    print("Failed to unsave word: \(error.localizedDescription)")
+                    Self.logger.error("Failed to unsave word: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
@@ -441,6 +443,8 @@ struct DefinitionCard: View {
 
 // Compact version of AI Illustration for top-right corner
 struct CompactIllustrationView: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "CompactIllustration")
+
     let word: String
     let language: String
     let definition: Definition?
@@ -522,7 +526,7 @@ struct CompactIllustrationView: View {
                     self.error = nil
                 case .failure(let err):
                     self.error = "Failed to generate illustration"
-                    print("Illustration generation error: \(err.localizedDescription)")
+                    Self.logger.error("Illustration generation error: \(err.localizedDescription, privacy: .public)")
                 }
             }
         }

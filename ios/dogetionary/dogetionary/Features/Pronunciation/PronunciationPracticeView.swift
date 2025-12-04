@@ -6,8 +6,10 @@
 //
 
 import SwiftUI
+import os.log
 
 struct PronunciationPracticeView: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "PronunciationPractice")
     let originalText: String
     let source: String
     let wordId: String?
@@ -64,6 +66,8 @@ struct PronunciationPracticeView: View {
 }
 
 struct PronunciationPracticeSheet: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "PronunciationSheet")
+
     let originalText: String
     let source: String
     let wordId: String?
@@ -340,7 +344,7 @@ struct PronunciationPracticeSheet: View {
                     ])
 
                 case .failure(let error):
-                    print("Pronunciation practice failed: \(error)")
+                    Self.logger.error("Pronunciation practice failed: \(error.localizedDescription, privacy: .public)")
 
                     AnalyticsManager.shared.track(action: .pronunciationPractice, metadata: [
                         "action": "failed",

@@ -6,8 +6,10 @@
 //
 
 import SwiftUI
+import os.log
 
 struct SettingsView: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "Settings")
     @AppStorage("forceProduction") private var forceProduction: Bool = false
     @State private var connectionTestResult: String = ""
     @State private var isTestingConnection = false
@@ -432,33 +434,33 @@ struct SettingsView: View {
     // MARK: - Helper Methods
 
     private func submitFeedback() {
-        print("🔍 submitFeedback() called")
-        print("🔍 feedbackText: '\(feedbackText)'")
+        Self.logger.debug("submitFeedback() called")
+        Self.logger.debug("feedbackText: '\(self.feedbackText, privacy: .private)'")
 
         let trimmed = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines)
-        print("🔍 trimmed: '\(trimmed)'")
+        Self.logger.debug("trimmed: '\(trimmed, privacy: .private)'")
 
         guard !trimmed.isEmpty else {
-            print("🔍 trimmed is empty, returning")
+            Self.logger.debug("trimmed is empty, returning")
             return
         }
 
-        print("🔍 Setting isSubmittingFeedback = true")
+        Self.logger.debug("Setting isSubmittingFeedback = true")
         isSubmittingFeedback = true
 
-        print("🔍 Calling DictionaryService.submitFeedback")
+        Self.logger.debug("Calling DictionaryService.submitFeedback")
         DictionaryService.shared.submitFeedback(feedback: trimmed) { result in
             DispatchQueue.main.async {
-                print("🔍 Got result from submitFeedback")
+                Self.logger.debug("Got result from submitFeedback")
                 self.isSubmittingFeedback = false
 
                 switch result {
                 case .success:
-                    print("🔍 SUCCESS!")
+                    Self.logger.info("Feedback submitted successfully")
                     self.feedbackAlertMessage = "Feedback submitted successfully!"
                     self.showFeedbackAlert = true
                 case .failure(let error):
-                    print("🔍 FAILURE: \(error)")
+                    Self.logger.error("Feedback submission failed: \(error.localizedDescription, privacy: .public)")
                     self.feedbackAlertMessage = "Failed to submit feedback: \(error.localizedDescription)"
                     self.showFeedbackAlert = true
                 }

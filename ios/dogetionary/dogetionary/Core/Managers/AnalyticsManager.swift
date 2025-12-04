@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import os.log
 
 class AnalyticsManager: ObservableObject {
     static let shared = AnalyticsManager()
@@ -14,19 +15,20 @@ class AnalyticsManager: ObservableObject {
     private let baseURL: String
     private var sessionId: String
     private let appVersion: String
+    private let logger = Logger(subsystem: "com.dogetionary.app", category: "Analytics")
 
     private init() {
         self.baseURL = Configuration.effectiveBaseURL
         self.sessionId = UUID().uuidString
         self.appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
 
-        print("📊 Analytics initialized with session: \(sessionId.prefix(8))...")
+        logger.info("Analytics initialized with session: \(self.sessionId.prefix(8), privacy: .public)...")
     }
 
     // Generate new session ID (call when app launches)
     func newSession() {
         sessionId = UUID().uuidString
-        print("📊 New analytics session: \(sessionId.prefix(8))...")
+        logger.info("New analytics session: \(self.sessionId.prefix(8), privacy: .public)...")
     }
 
     // Track user action
@@ -47,12 +49,12 @@ class AnalyticsManager: ObservableObject {
             await sendAnalytics(payload: payload)
         }
 
-        print("📊 Tracked: \(action.rawValue) | Session: \(sessionId.prefix(8))... | Metadata: \(metadata)")
+        logger.debug("Tracked: \(action.rawValue, privacy: .public) | Session: \(self.sessionId.prefix(8), privacy: .public)... | Metadata: \(String(describing: metadata), privacy: .private)")
     }
 
     private func sendAnalytics(payload: [String: Any]) async {
         guard let url = URL(string: "\(baseURL)/analytics/track") else {
-            print("❌ Invalid analytics URL")
+            logger.error("Invalid analytics URL")
             return
         }
 
@@ -72,11 +74,11 @@ class AnalyticsManager: ObservableObject {
                 } else if httpResponse.statusCode == 404 {
                     // Analytics endpoint not implemented - fail silently
                 } else {
-                    print("❌ Analytics failed: \(httpResponse.statusCode)")
+                    logger.error("Analytics failed with status code: \(httpResponse.statusCode)")
                 }
             }
         } catch {
-            print("❌ Analytics error: \(error.localizedDescription)")
+            logger.error("Analytics error: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

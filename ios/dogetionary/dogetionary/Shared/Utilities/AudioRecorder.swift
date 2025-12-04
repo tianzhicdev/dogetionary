@@ -121,7 +121,7 @@ class AudioRecorder: NSObject, ObservableObject {
 
     private func getDocumentsDirectory() -> URL {
         let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        return paths[0]
+        return paths.first ?? FileManager.default.temporaryDirectory
     }
 
     private func startVolumeMonitoring() {
