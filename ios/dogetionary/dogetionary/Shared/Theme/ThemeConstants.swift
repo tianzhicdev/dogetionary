@@ -388,9 +388,33 @@ struct AppTheme {
 
     /// Silver text color for 2nd place
     static let silverTextColor = Color(red: 0.4, green: 0.4, blue: 0.45)
+    
+    
+    static let bronzeTextColor = white
 
     /// Default rank text color
     static let defaultRankTextColor = Color(red: 0.5, green: 0.5, blue: 0.55)
+
+    // MARK: - Leaderboard Colors
+
+    struct Leaderboard {
+        /// Text color for user names in leaderboard
+        static let currentUserNameTextColor = Color.primary
+        static let userNameTextColor = Color.primary
+        static let scoreTextColor = Color.primary
+        
+        static let rowBackgroundColor = Color.white
+        
+        
+        struct you {
+            static let foreground = Color.primary
+            static let background = Color.secondary
+        }
+        
+    }
+
+    /// Leaderboard colors namespace
+    static let leaderboard = Leaderboard.self
 
     // MARK: - Opacity Constants
 
@@ -784,5 +808,24 @@ struct AppTheme {
         return testTypeGradients[testType] ?? primaryGradient
     }
     
+    struct smallBadge {
+        static let cornerRadius: CGFloat = 2
+    }
+    
+    struct motto {
+        static let foreground = black
+    }
+    
 
+}
+
+struct ScoreStar: View {
+    var body: some View {
+        Image(systemName: "star.fill")
+            .font(.system(size: 12))
+            .foregroundStyle(
+                LinearGradient(colors: [AppTheme.systemYellow, AppTheme.warningColor],
+                             startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
+    }
 }

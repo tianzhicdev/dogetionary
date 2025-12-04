@@ -115,25 +115,25 @@ struct LeaderboardRowView: View {
                         .font(.system(size: 15, weight: isCurrentUser ? .semibold : .medium))
                         .foregroundColor(
                             isCurrentUser ?
-                            AppTheme.primaryBlue : AppTheme.leaderboard.userNameTextColor
+                            AppTheme.leaderboard.currentUserNameTextColor : AppTheme.leaderboard.userNameTextColor
                         )
                         .lineLimit(1)
 
                     if isCurrentUser {
                         Text("You")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.white)
+                            .foregroundColor(AppTheme.leaderboard.you.foreground)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(AppTheme.primaryGradient)
-                            .cornerRadius(4)
+                            .background(AppTheme.leaderboard.you.background)
+                            .cornerRadius(AppTheme.smallBadge.cornerRadius)
                     }
                 }
 
                 if !entry.user_motto.isEmpty {
                     Text(entry.user_motto)
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.motto.foreground)
                         .lineLimit(1)
                 }
             }
@@ -142,40 +142,21 @@ struct LeaderboardRowView: View {
 
             // Score with icon
             HStack(spacing: 4) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemYellow, AppTheme.warningColor],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                ScoreStar()
+                
                 Text("\(entry.score ?? entry.total_reviews)")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(
-                        isCurrentUser ?
-                        AppTheme.primaryGradient :
-                        LinearGradient(colors: [Color.primary, Color.primary],
-                                     startPoint: .leading, endPoint: .trailing)
+                    .foregroundColor(
+                        AppTheme.leaderboard.scoreTextColor
                     )
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            Group {
-                if isCurrentUser {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(AppTheme.white)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(AppTheme.primaryGradient, lineWidth: 2)
-                        )
-                        .shadow(color: AppTheme.infoColor.opacity(AppTheme.mediumHighOpacity), radius: 8, y: 4)
-                } else {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(AppTheme.white)
-                        .shadow(color: AppTheme.subtleShadowColor, radius: 3, x: 0, y: 1)
-                }
-            }
+            RoundedRectangle(cornerRadius: 10)
+                .fill(AppTheme.leaderboard.rowBackgroundColor)
+                .shadow(color: AppTheme.subtleShadowColor, radius: 3, x: 0, y: 1)
         )
     }
 }
@@ -203,7 +184,7 @@ struct RankBadgeView: View {
         case 2:
             return AppTheme.silverTextColor
         case 3:
-            return .white
+            return AppTheme.silverTextColor
         default:
             return AppTheme.defaultRankTextColor
         }
