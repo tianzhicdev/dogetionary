@@ -22,7 +22,14 @@ struct SettingsView: View {
     @State private var feedbackAlertMessage = ""
     @ObservedObject private var userManager = UserManager.shared
     @State private var developerModeEnabled = DebugConfig.isDeveloperModeEnabled
-    
+
+    // Color Playground state
+    @State private var debugPrimaryColor = AppTheme.getPrimaryColor()
+    @State private var debugAccentColor = AppTheme.getAccentColor()
+    @State private var debugBackgroundColor = AppTheme.getBackgroundColor()
+    @State private var showColorExportSheet = false
+    @State private var exportedColorCode = ""
+
     var body: some View {
         ZStack {
             // Soft blue gradient background
@@ -36,6 +43,7 @@ struct SettingsView: View {
                 notificationsSection
                 feedbackSection
                 debugAPIConfigSection
+                debugColorPlaygroundSection
                 developerOptionsSection
             }
             .onTapGesture {
@@ -398,6 +406,82 @@ struct SettingsView: View {
                 }) {
                     Text("Reset Onboarding")
                         .foregroundColor(.blue)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var debugColorPlaygroundSection: some View {
+        if DebugConfig.showColorPlayground {
+            Section(header: Text("Color Playground")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Experiment with theme colors in real-time. Changes are saved and persist across app restarts.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    // Primary Color Picker
+                    ColorPicker("Primary Color", selection: $debugPrimaryColor)
+                        .onChange(of: debugPrimaryColor) { _, newColor in
+                            AppTheme.setDebugPrimaryColor(newColor)
+                        }
+
+                    // Accent Color Picker
+                    ColorPicker("Accent Color", selection: $debugAccentColor)
+                        .onChange(of: debugAccentColor) { _, newColor in
+                            AppTheme.setDebugAccentColor(newColor)
+                        }
+
+                    // Background Color Picker
+                    ColorPicker("Background Color", selection: $debugBackgroundColor)
+                        .onChange(of: debugBackgroundColor) { _, newColor in
+                            AppTheme.setDebugBackgroundColor(newColor)
+                        }
+                }
+
+                // Reset Button
+                Button(action: {
+                    AppTheme.resetDebugColors()
+                    debugPrimaryColor = AppTheme.getPrimaryColor()
+                    debugAccentColor = AppTheme.getAccentColor()
+                    debugBackgroundColor = AppTheme.getBackgroundColor()
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("Reset to Defaults")
+                    }
+                }
+                .foregroundColor(.orange)
+
+                // Export Button
+                Button(action: {
+                    exportedColorCode = AppTheme.exportDebugColorsAsCode()
+                    showColorExportSheet = true
+                }) {
+                    HStack {
+                        Image(systemName: "doc.on.doc")
+                        Text("Export as Swift Code")
+                    }
+                }
+                .foregroundColor(.blue)
+                .sheet(isPresented: $showColorExportSheet) {
+                    NavigationView {
+                        ScrollView {
+                            Text(exportedColorCode)
+                                .font(.system(.body, design: .monospaced))
+                                .padding()
+                                .textSelection(.enabled)
+                        }
+                        .navigationTitle("Color Code")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Done") {
+                                    showColorExportSheet = false
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

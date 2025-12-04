@@ -24,7 +24,7 @@ struct LeaderboardView: View {
                         VStack(spacing: 16) {
                             ProgressView()
                             Text("Loading leaderboard...")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.systemText)
                         }
                     } else if let errorMessage = errorMessage {
                         VStack(spacing: 16) {
