@@ -44,8 +44,9 @@ struct SearchView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Show progress bar at top if user has schedule OR has achievement progress (for score mode)
-            if showProgressBar, let progress = testProgress, (progress.has_schedule || achievementProgress != nil) {
+            // Show progress bar at top only when NOT showing search results
+            // Hide it when user has searched for a word to save screen space
+            if showProgressBar, !isSearchActive, let progress = testProgress, (progress.has_schedule || achievementProgress != nil) {
                 TestProgressBar(
                     progress: progress.progress,
                     totalWords: progress.total_words,
@@ -102,49 +103,6 @@ struct SearchView: View {
                     if !isProgressBarExpanded {
                         VStack(spacing: 16) {
                             searchBarView()
-
-                            // Practice button below search bar
-                            if let tabBinding = selectedTab,
-                               userManager.practiceCount > 0,
-                               !isSearchActive {
-                                Button(action: {
-                                    tabBinding.wrappedValue = 2  // Navigate to Practice tab
-                                }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "brain.head.profile")
-                                            .font(.title2)
-                                            .foregroundStyle(
-                                                LinearGradient(
-                                                    colors: [.white, .white.opacity(0.9)],
-                                                    startPoint: .top,
-                                                    endPoint: .bottom
-                                                )
-                                            )
-
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Ready to Practice")
-                                                .font(.headline)
-                                                .fontWeight(.semibold)
-                                            Text("\(userManager.practiceCount) word\(userManager.practiceCount == 1 ? "" : "s") waiting")
-                                                .font(.subheadline)
-                                                .opacity(0.9)
-                                        }
-
-                                        Spacer()
-
-                                        Image(systemName: "arrow.right.circle.fill")
-                                            .font(.title2)
-                                            .foregroundStyle(.white.opacity(0.8))
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 16)
-                                    .background(AppTheme.primaryGradient)
-                                    .cornerRadius(16)
-                                    .shadow(color: Color.purple.opacity(AppTheme.strongOpacity), radius: 12, x: 0, y: 6)
-                                }
-                                .transition(.scale.combined(with: .opacity))
-                            }
                         }
                         .padding(.horizontal, 24)
                         .transition(.opacity)

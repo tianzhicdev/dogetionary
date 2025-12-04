@@ -15,7 +15,7 @@ struct OnboardingView: View {
     @State private var selectedLearningLanguage = "en"
     @State private var selectedNativeLanguage = "fr"
     @State private var selectedTestType: TestType? = nil // Level-based test selection
-    @State private var selectedStudyDuration: Double = 30 // 10-100 days via slider
+    @State private var selectedStudyDuration: Double = 30 // 1-365 days via slider
     @State private var vocabularyCount: Int = 0
     @State private var studyPlans: [(days: Int, wordsPerDay: Int)] = []
     @State private var isLoadingVocabulary = false
@@ -545,15 +545,15 @@ struct OnboardingView: View {
 
                     // Slider
                     VStack(spacing: 8) {
-                        Slider(value: $selectedStudyDuration, in: 10...100, step: 5)
+                        Slider(value: $selectedStudyDuration, in: 1...365, step: 1)
                             .tint(Color.orange)
 
                         HStack {
-                            Text("10 days")
+                            Text("1 day")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("100 days")
+                            Text("365 days")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

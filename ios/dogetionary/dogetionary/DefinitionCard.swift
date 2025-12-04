@@ -24,92 +24,84 @@ struct DefinitionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(definition.word)
-                    .font(.title2)
-                    .fontWeight(.bold)
+            // V4: Famous Quote
+            if let quote = definition.famousQuote {
+                QuoteCard(quote: quote)
+                    .padding(.top, 6)
+            }
+            
+            // Header with word, phonetic, and compact illustration in top right
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(definition.word)
+                        .font(.title2)
+                        .fontWeight(.bold)
 
-                if let phonetic = definition.phonetic {
-                    Text(phonetic)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    if let phonetic = definition.phonetic {
+                        Text(phonetic)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack(spacing: 12) {
+                        // Save/Unsave toggle button
+                        Button(action: {
+                            if isSaved {
+                                unsaveWord()
+                            } else {
+                                saveWord()
+                            }
+                        }) {
+                            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                                .font(.title3)
+                                .foregroundColor(isSaved ? AppTheme.infoColor : .secondary)
+                        }
+                        .disabled(isSaving || isCheckingStatus)
+                        .buttonStyle(PlainButtonStyle())
+
+                        // Audio play button
+                        Button(action: {
+                            if audioPlayer.isPlaying {
+                                audioPlayer.stopAudio()
+                            } else {
+                                playWordAudio()
+                            }
+                        }) {
+                            if loadingAudio {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppTheme.infoColor)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .disabled(loadingAudio)
+
+                        // Pronunciation practice button
+                        PronunciationPracticeView(
+                            originalText: definition.word,
+                            source: "word",
+                            wordId: nil
+                        )
+                    }
                 }
 
                 Spacer()
 
-            }
-            HStack(spacing: 12) {
-                // Save/Unsave toggle button
-                Button(action: {
-                    if isSaved {
-                        // Unsave the existing saved word (regardless of its language pair)
-                        unsaveWord()
-                    } else {
-                        // Save with current language settings
-                        saveWord()
-                    }
-                }) {
-                    Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                        .font(.title3)
-                        .foregroundColor(isSaved ? AppTheme.infoColor : .secondary)
-                }
-                .disabled(isSaving || isCheckingStatus)
-                .buttonStyle(PlainButtonStyle())
-
-                // Audio play button - always show
-                Button(action: {
-                    if audioPlayer.isPlaying {
-                        audioPlayer.stopAudio()
-                    } else {
-                        playWordAudio()
-                    }
-                }) {
-                    if loadingAudio {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(AppTheme.infoColor)
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(loadingAudio)
-
-                // Pronunciation practice button
-                PronunciationPracticeView(
-                    originalText: definition.word,
-                    source: "word",
-                    wordId: nil
+                // Compact AI Illustration in top right corner
+                CompactIllustrationView(
+                    word: definition.word,
+                    language: userManager.learningLanguage,
+                    definition: definition,
+                    illustration: $illustration,
+                    isGenerating: $isGeneratingIllustration,
+                    error: $illustrationError
                 )
+                .frame(width: 80, height: 80)
             }
-
-            // Show language pair from definition (always available)
-            HStack(spacing: 4) {
-                Text(definition.learning_language.uppercased())
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppTheme.infoColor.opacity(AppTheme.lightOpacity))
-                    .foregroundColor(AppTheme.infoColor)
-                    .cornerRadius(4)
-
-                Image(systemName: "arrow.right")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                Text(definition.native_language.uppercased())
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppTheme.successColor.opacity(AppTheme.lightOpacity))
-                    .foregroundColor(AppTheme.successColor)
-                    .cornerRadius(4)
-            }
-            .padding(.bottom, 8)
-
+            
             // Show translations if available
             if !definition.translations.isEmpty {
                 Text(definition.translations.joined(separator: " • "))
@@ -117,87 +109,7 @@ struct DefinitionCard: View {
                     .foregroundColor(.primary)
                     .padding(.bottom, 8)
             }
-
-            // V4: Register + Frequency + Connotation badges
-            HStack(spacing: 8) {
-                if let register = definition.register {
-                    RegisterBadge(register: register)
-                }
-                if let frequency = definition.frequency {
-                    FrequencyBadge(frequency: frequency)
-                }
-                if let connotation = definition.connotation {
-                    ConnotationBadge(connotation: connotation)
-                }
-            }
-            .padding(.bottom, definition.register != nil || definition.frequency != nil || definition.connotation != nil ? 8 : 0)
-
-            // V4: Tags pills
-            if !definition.tags.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(definition.tags, id: \.self) { tag in
-                            TagPill(tag: tag)
-                        }
-                    }
-                }
-                .padding(.bottom, 8)
-            }
-
-            // AI Illustration Section
-            AIIllustrationView(
-                word: definition.word,
-                language: userManager.learningLanguage,
-                definition: definition,
-                illustration: $illustration,
-                isGenerating: $isGeneratingIllustration,
-                error: $illustrationError
-            )
-            .padding(.bottom, 8)
-
-            // V4: Collapsible sections before main definitions
-            if !definition.collocations.isEmpty {
-                CollapsibleSection(title: "Common Collocations", icon: "text.append") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(definition.collocations, id: \.self) { collocation in
-                            HStack(alignment: .top, spacing: 6) {
-                                Image(systemName: "circle.fill")
-                                    .font(.system(size: 4))
-                                    .foregroundColor(AppTheme.infoColor)
-                                    .padding(.top, 6)
-                                Text(collocation)
-                                    .font(.subheadline)
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                    }
-                }
-                .padding(.bottom, 8)
-            }
-
-            if !definition.wordFamily.isEmpty {
-                CollapsibleSection(title: "Word Family", icon: "link") {
-                    VStack(spacing: 6) {
-                        ForEach(definition.wordFamily) { entry in
-                            HStack {
-                                Text(entry.word)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text(entry.part_of_speech)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(AppTheme.lightBlue)
-                                    .cornerRadius(4)
-                            }
-                        }
-                    }
-                }
-                .padding(.bottom, 8)
-            }
+            
 
             ForEach(definition.meanings, id: \.partOfSpeech) { meaning in
                 VStack(alignment: .leading, spacing: 4) {
@@ -253,20 +165,104 @@ struct DefinitionCard: View {
                 }
                 .padding(.top, 8)
             }
+            
+            // V4: Comment (usage notes)
+            if let comment = definition.comment {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(AppTheme.infoColor)
+                            .font(.caption)
+                        Text("Usage Notes")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.infoColor)
+                    }
+                    Text(comment)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.bottom, 6)
+            }
 
-            // V4: Confusables section
-            if !definition.confusables.isEmpty {
-                InfoSection(title: "Common Confusions", icon: "exclamationmark.triangle", color: AppTheme.warningColor) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(definition.confusables, id: \.self) { confusable in
-                            Text(confusable)
+            // V4: Source (etymology)
+            if let source = definition.source {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "book.closed")
+                            .foregroundColor(AppTheme.infoColor)
+                            .font(.caption)
+                        Text("Word Origin")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.infoColor)
+                    }
+                    Text(source)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.bottom, 6)
+            }
+
+            // V4: Common Collocations
+            if !definition.collocations.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "text.append")
+                            .foregroundColor(AppTheme.infoColor)
+                            .font(.caption)
+                        Text("Common Collocations")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.infoColor)
+                    }
+                    ForEach(definition.collocations, id: \.self) { collocation in
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 4))
+                                .foregroundColor(AppTheme.infoColor)
+                                .padding(.top, 6)
+                            Text(collocation)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
-                .padding(.top, 8)
+                .padding(.bottom, 6)
+            }
+
+            // V4: Word Family
+            if !definition.wordFamily.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "link")
+                            .foregroundColor(AppTheme.infoColor)
+                            .font(.caption)
+                        Text("Word Family")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.infoColor)
+                    }
+                    ForEach(definition.wordFamily) { entry in
+                        HStack {
+                            Text(entry.word)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(entry.part_of_speech)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(AppTheme.lightBlue)
+                                .cornerRadius(3)
+                        }
+                    }
+                }
+                .padding(.bottom, 6)
             }
 
             // V4: Cognates section
@@ -280,17 +276,6 @@ struct DefinitionCard: View {
                 .padding(.top, 8)
             }
 
-            // V4: Famous Quotes section
-            if !definition.famousQuotes.isEmpty {
-                CollapsibleSection(title: "Famous Quotes", icon: "quote.bubble") {
-                    VStack(spacing: 10) {
-                        ForEach(definition.famousQuotes) { quote in
-                            QuoteCard(quote: quote)
-                        }
-                    }
-                }
-                .padding(.top, 8)
-            }
         }
         .padding()
         .background(Color(.systemGray6))
@@ -449,6 +434,96 @@ struct DefinitionCard: View {
                     self.exampleAudioData[text] = audioData
                 }
                 completion(audioData)
+            }
+        }
+    }
+}
+
+// Compact version of AI Illustration for top-right corner
+struct CompactIllustrationView: View {
+    let word: String
+    let language: String
+    let definition: Definition?
+    @Binding var illustration: IllustrationResponse?
+    @Binding var isGenerating: Bool
+    @Binding var error: String?
+    @State private var showFullscreen = false
+
+    var body: some View {
+        ZStack {
+            if let illustration = illustration {
+                // Show generated illustration
+                if let imageData = Data(base64Encoded: illustration.image_data),
+                   let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .onTapGesture {
+                            showFullscreen = true
+                        }
+                }
+            } else if isGenerating {
+                // Show loading state - invisible, no placeholder
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .opacity(0)  // Hide progress indicator too
+            } else {
+                // No placeholder - completely invisible while loading
+                EmptyView()
+            }
+        }
+        .onAppear {
+            loadExistingIllustration()
+        }
+        .sheet(isPresented: $showFullscreen) {
+            if let illustration = illustration,
+               let imageData = Data(base64Encoded: illustration.image_data),
+               let uiImage = UIImage(data: imageData) {
+                FullscreenWordCardView(
+                    word: word,
+                    phonetic: definition?.phonetic,
+                    firstDefinition: definition?.meanings.first?.definitions.first?.definition,
+                    illustration: uiImage
+                )
+            }
+        }
+    }
+
+    private func loadExistingIllustration() {
+        DictionaryService.shared.getIllustration(word: word, language: language) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let illustrationResponse):
+                    self.illustration = illustrationResponse
+                    self.error = nil
+                case .failure(_):
+                    // Illustration doesn't exist yet, auto-generate it
+                    self.generateIllustration()
+                }
+            }
+        }
+    }
+
+    private func generateIllustration() {
+        guard !isGenerating else { return }
+
+        isGenerating = true
+        error = nil
+
+        DictionaryService.shared.generateIllustration(word: word, language: language) { result in
+            DispatchQueue.main.async {
+                isGenerating = false
+
+                switch result {
+                case .success(let illustrationResponse):
+                    self.illustration = illustrationResponse
+                    self.error = nil
+                case .failure(let err):
+                    self.error = "Failed to generate illustration"
+                    print("Illustration generation error: \(err.localizedDescription)")
+                }
             }
         }
     }

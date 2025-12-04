@@ -71,20 +71,13 @@ WORD_DEFINITION_V4_SCHEMA = {
             "items": {"type": "string"},
             "description": "Words with opposite meaning"
         },
-        "register": {
-            "type": "string",
-            "enum": ["formal", "neutral", "informal", "slang", "literary", "technical"],
-            "description": "Formality level of the word"
+        "comment": {
+            "type": ["string", "null"],
+            "description": "Optional natural language comment that helps the user to understand the word better, such as a trivia, common mistakes when using this word, typical situations when using this word, etc."
         },
-        "frequency": {
-            "type": "string",
-            "enum": ["very_common", "common", "uncommon", "rare"],
-            "description": "How frequently the word is used"
-        },
-        "connotation": {
-            "type": "string",
-            "enum": ["positive", "negative", "neutral"],
-            "description": "Emotional association of the word"
+        "source": {
+            "type": ["string", "null"],
+            "description": "Optional description of where the word is from or its etymological root in natural language"
         },
         "word_family": {
             "type": "array",
@@ -103,28 +96,15 @@ WORD_DEFINITION_V4_SCHEMA = {
             "type": ["string", "null"],
             "description": "Related words in other languages sharing etymology (null for Chinese learners)"
         },
-        "confusables": {
-            "type": ["array", "null"],
-            "items": {"type": "string"},
-            "description": "Common mistakes or easily confused words with explanations"
-        },
-        "tags": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Topic/theme categories (e.g., 'business', 'academic', 'emotions', 'travel')"
-        },
-        "famous_quotes": {
-            "type": ["array", "null"],
-            "items": {
-                "type": "object",
-                "properties": {
-                    "quote": {"type": "string", "description": "The sentence or quote"},
-                    "source": {"type": "string", "description": "Attribution - person, book, movie, etc."}
-                },
-                "required": ["quote", "source"],
-                "additionalProperties": False
+        "famous_quote": {
+            "type": ["object", "null"],
+            "properties": {
+                "quote": {"type": "string", "description": "The sentence or quote"},
+                "source": {"type": "string", "description": "Attribution - person, book, movie, etc."}
             },
-            "description": "Notable quotes or sentences featuring this word"
+            "required": ["quote", "source"],
+            "additionalProperties": False,
+            "description": "One notable quote or sentence featuring this word"
         }
     },
     "required": [
@@ -137,14 +117,11 @@ WORD_DEFINITION_V4_SCHEMA = {
         "collocations",
         "synonyms",
         "antonyms",
-        "register",
-        "frequency",
-        "connotation",
+        "comment",
+        "source",
         "word_family",
         "cognates",
-        "confusables",
-        "tags",
-        "famous_quotes"
+        "famous_quote"
     ],
     "additionalProperties": False
 }
@@ -197,14 +174,11 @@ VOCABULARY LEARNING FIELDS:
 - collocations: array of common word combinations (e.g., "make a decision", "heavy traffic")
 - synonyms: array of similar words, or null if none
 - antonyms: array of opposite words, or null if none
-- register: one of "formal", "neutral", "informal", "slang", "literary", "technical"
-- frequency: one of "very_common", "common", "uncommon", "rare"
-- connotation: one of "positive", "negative", "neutral"
+- comment: optional string in natural language describing usage notes like formality level (formal/informal/slang), frequency (very common/rare), connotation (positive/negative), common confusions with similar words, or other important learning tips. Only include if relevant and important. Use simple, clear language.
+- source: optional string in natural language describing the word's origin or etymological root (e.g., "From Latin 'facere' meaning 'to make'", "Borrowed from French in the 18th century"). Only include if interesting or helpful for learning.
 - word_family: array of related word forms, each with "word" and "part_of_speech" (e.g., persuade->persuasion->persuasive)
 - cognates: related words in other languages sharing etymology, or null (null for Chinese speakers)
-- confusables: array of strings explaining common mistakes (e.g., "Often confused with 'affect' (verb). 'Effect' is usually a noun meaning result."), or null
-- tags: array of topic categories like "business", "academic", "emotions", "travel", "daily_life"
-- famous_quotes: array of objects with "quote" and "source", or null if no notable quotes exist
+- famous_quote: single object with "quote" and "source", or null if no notable quote exists. Include only ONE memorable quote if the word appears in famous literature, movies, speeches, etc.
 
 VALIDATION RULES:
 Consider VALID (score 0.9-1.0):
@@ -228,7 +202,8 @@ CRITICAL:
 - Each example should be a complete sentence in {learning_lang_name}
 - For collocations, provide 3-6 common combinations
 - For word_family, include all common forms (noun, verb, adjective, adverb if they exist)
-- For tags, provide 2-4 relevant categories"""
+- For comment: only include if there are important usage notes worth mentioning (formality, frequency, connotation, common confusions with similar words, or other learning tips). Keep it concise and natural.
+- For source: only include if the etymology is interesting or helpful for remembering the word. Keep it brief and accessible."""
 
 
 def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str, build_prompt_fn=None) -> Optional[Dict]:

@@ -35,18 +35,15 @@ struct DefinitionData: Codable {
     let collocations: [String]?
     let synonyms: [String]?
     let antonyms: [String]?
-    let register: String?  // formal, neutral, informal, slang, literary, technical
-    let frequency: String?  // very_common, common, uncommon, rare
-    let connotation: String?  // positive, negative, neutral
+    let comment: String?  // Optional usage notes (formality, frequency, connotation, confusions, tips)
+    let source: String?  // Optional etymology or word origin
     let word_family: [WordFamilyEntry]?
     let cognates: String?
-    let confusables: [String]?
-    let tags: [String]?
-    let famous_quotes: [FamousQuote]?
+    let famous_quote: FamousQuote?
 
     private enum CodingKeys: String, CodingKey {
         case phonetic, word, translations, definitions, valid_word_score, suggestion
-        case collocations, synonyms, antonyms, register, frequency, connotation, word_family, cognates, confusables, tags, famous_quotes
+        case collocations, synonyms, antonyms, comment, source, word_family, cognates, famous_quote
     }
 }
 
@@ -158,14 +155,11 @@ struct Definition: Identifiable {
     let collocations: [String]
     let synonyms: [String]
     let antonyms: [String]
-    let register: String?
-    let frequency: String?
-    let connotation: String?
+    let comment: String?  // Optional usage notes (formality, frequency, connotation, confusions, tips)
+    let source: String?  // Optional etymology
     let wordFamily: [WordFamilyEntry]
     let cognates: String?
-    let confusables: [String]
-    let tags: [String]
-    let famousQuotes: [FamousQuote]
+    let famousQuote: FamousQuote?
 
     init(from response: WordDefinitionResponse) {
         self.id = UUID()
@@ -217,18 +211,15 @@ struct Definition: Identifiable {
         self.collocations = response.definition_data.collocations ?? []
         self.synonyms = response.definition_data.synonyms ?? []
         self.antonyms = response.definition_data.antonyms ?? []
-        self.register = response.definition_data.register
-        self.frequency = response.definition_data.frequency
-        self.connotation = response.definition_data.connotation
+        self.comment = response.definition_data.comment
+        self.source = response.definition_data.source
         self.wordFamily = response.definition_data.word_family ?? []
         self.cognates = response.definition_data.cognates
-        self.confusables = response.definition_data.confusables ?? []
-        self.tags = response.definition_data.tags ?? []
-        self.famousQuotes = response.definition_data.famous_quotes ?? []
+        self.famousQuote = response.definition_data.famous_quote
     }
 
     // Custom initializer for updating with audio data
-    init(id: UUID = UUID(), word: String, phonetic: String?, learning_language: String, native_language: String, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:], validWordScore: Double = 1.0, suggestion: String? = nil, collocations: [String] = [], synonyms: [String] = [], antonyms: [String] = [], register: String? = nil, frequency: String? = nil, connotation: String? = nil, wordFamily: [WordFamilyEntry] = [], cognates: String? = nil, confusables: [String] = [], tags: [String] = [], famousQuotes: [FamousQuote] = []) {
+    init(id: UUID = UUID(), word: String, phonetic: String?, learning_language: String, native_language: String, translations: [String] = [], meanings: [Meaning], audioData: Data?, hasWordAudio: Bool = false, exampleAudioAvailability: [String: Bool] = [:], validWordScore: Double = 1.0, suggestion: String? = nil, collocations: [String] = [], synonyms: [String] = [], antonyms: [String] = [], comment: String? = nil, source: String? = nil, wordFamily: [WordFamilyEntry] = [], cognates: String? = nil, famousQuote: FamousQuote? = nil) {
         self.id = id
         self.word = word
         self.phonetic = phonetic
@@ -244,14 +235,11 @@ struct Definition: Identifiable {
         self.collocations = collocations
         self.synonyms = synonyms
         self.antonyms = antonyms
-        self.register = register
-        self.frequency = frequency
-        self.connotation = connotation
+        self.comment = comment
+        self.source = source
         self.wordFamily = wordFamily
         self.cognates = cognates
-        self.confusables = confusables
-        self.tags = tags
-        self.famousQuotes = famousQuotes
+        self.famousQuote = famousQuote
     }
 
     var isValid: Bool {
@@ -1127,7 +1115,7 @@ struct BatchReviewQuestion: Codable, Identifiable {
     let learning_language: String
     let native_language: String
     let question: ReviewQuestion
-    let definition: DefinitionData?
+    let definition: WordDefinitionResponse?  // Full definition format (same as search API)
 
     /// Human-readable source type for debug display
     var sourceLabel: String {

@@ -432,6 +432,18 @@ def get_review_words_batch():
                     if 'evaluation_threshold' not in question:
                         question['evaluation_threshold'] = 0.7
 
+                # Return definition in same format as search API
+                # This ensures DefinitionCard receives identical data in both search and practice modes
+                from handlers.words import collect_audio_references, audio_exists
+
+                audio_refs = collect_audio_references(definition_data, word_learning_lang)
+                if audio_exists(word, word_learning_lang):
+                    audio_refs["word_audio"] = True
+
+                # Extract validation data (should always be present in v4 definitions)
+                valid_word_score = definition_data.get('valid_word_score', 1.0)
+                suggestion = definition_data.get('suggestion')
+
                 questions.append({
                     "word": word,
                     "saved_word_id": saved_word_id,  # null for new words, integer for saved words
@@ -440,7 +452,16 @@ def get_review_words_batch():
                     "learning_language": word_learning_lang,
                     "native_language": word_native_lang,
                     "question": question,
-                    "definition": definition_data
+                    "definition": {
+                        "word": word,
+                        "learning_language": word_learning_lang,
+                        "native_language": word_native_lang,
+                        "valid_word_score": valid_word_score,
+                        "suggestion": suggestion,
+                        "definition_data": definition_data,
+                        "audio_references": audio_refs,
+                        "audio_generation_status": "complete"  # Assume complete for cached definitions
+                    }
                 })
 
             return jsonify({
