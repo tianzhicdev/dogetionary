@@ -110,7 +110,7 @@ class SearchViewModel: ObservableObject {
 
                         // Request app rating on first successful word lookup
                         if !self.userManager.hasRequestedAppRating {
-                            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                            try? await Task.sleep(nanoseconds: AppConstants.Delay.appRatingDelay) // 1 second
                             self.requestAppRating()
                         }
                     } else {

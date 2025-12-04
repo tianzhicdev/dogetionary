@@ -125,7 +125,7 @@ class ReviewViewModel: ObservableObject {
 
         // Submit and load next after animation
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+            try? await Task.sleep(nanoseconds: AppConstants.Animation.standardDuration) // 0.3 seconds
 
             if let submission = pendingSubmission {
                 await submitReview(
@@ -252,7 +252,7 @@ class ReviewViewModel: ObservableObject {
         }
 
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+            try? await Task.sleep(nanoseconds: AppConstants.Animation.shortDuration) // 0.2 seconds
 
             withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                 self.scoreAnimationScale = 1.0

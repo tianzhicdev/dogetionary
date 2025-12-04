@@ -117,7 +117,7 @@ struct ScheduleView: View {
         // No need to call updateTestSettingsInBackend - it's already handled!
 
         // Wait briefly for sync to complete
-        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        try? await Task.sleep(nanoseconds: AppConstants.Delay.scheduleRefresh) // 0.5 seconds
 
         // Reload schedule to reflect changes (schedule is calculated on-the-fly from preferences)
         await loadScheduleRangeAsync()
@@ -135,7 +135,7 @@ struct ScheduleView: View {
         // No need to call updateTestSettingsInBackend - it's already handled!
 
         // Wait briefly for sync to complete
-        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        try? await Task.sleep(nanoseconds: AppConstants.Delay.scheduleRefresh) // 0.5 seconds
 
         // Reload schedule (schedule is calculated on-the-fly from preferences)
         await loadScheduleRangeAsync()

@@ -338,7 +338,7 @@ struct PronunciationEvaluationResult: Codable {
             sentence_translation: "樱花的美丽是短暂的，只持续几周。",
             show_definition: nil,
             audio_url: "data:audio/mpeg;base64,",
-            evaluation_threshold: 0.7
+            evaluation_threshold: AppConstants.Validation.pronunciationThreshold
         ),
         onImmediateFeedback: { passed in
             print("Immediate feedback: \(passed)")

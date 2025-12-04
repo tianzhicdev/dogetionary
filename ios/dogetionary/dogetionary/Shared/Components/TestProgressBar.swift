@@ -58,7 +58,7 @@ struct TestProgressBar: View {
 
                 // Expand/collapse button
                 Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(.spring(response: AppConstants.Animation.springResponse, dampingFraction: AppConstants.Animation.springDamping)) {
                         isExpanded.toggle()
                     }
                 }) {
