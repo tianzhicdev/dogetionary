@@ -12,10 +12,6 @@ struct DefinitionCard: View {
     private static let logger = Logger(subsystem: "com.dogetionary.app", category: "DefinitionCard")
     let definition: Definition
     @StateObject private var audioPlayer = AudioPlayer()
-    @State private var isSaved = false
-    @State private var isSaving = false
-    @State private var isCheckingStatus = true
-    @State private var savedWordId: Int?
     @State private var wordAudioData: Data?
     @State private var exampleAudioData: [String: Data] = [:]
     @State private var loadingAudio = false
@@ -46,21 +42,6 @@ struct DefinitionCard: View {
                     }
 
                     HStack(spacing: 12) {
-                        // Save/Unsave toggle button
-                        Button(action: {
-                            if isSaved {
-                                unsaveWord()
-                            } else {
-                                saveWord()
-                            }
-                        }) {
-                            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                                .font(.title3)
-                                .foregroundColor(isSaved ? AppTheme.infoColor : .secondary)
-                        }
-                        .disabled(isSaving || isCheckingStatus)
-                        .buttonStyle(PlainButtonStyle())
-
                         // Audio play button
                         Button(action: {
                             if audioPlayer.isPlaying {
@@ -283,92 +264,7 @@ struct DefinitionCard: View {
         .background(Color(.systemGray6))
         .cornerRadius(12)
         .onAppear {
-            checkIfWordIsSaved()
             loadWordAudioIfNeeded()
-
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { notification in
-            if let autoSavedWord = notification.object as? String,
-               autoSavedWord.lowercased() == definition.word.lowercased() {
-                // Update bookmark state for auto-saved word
-                isSaved = true
-            }
-        }
-    }
-
-    private func saveWord() {
-        isSaving = true
-
-        // Track dictionary save action
-        AnalyticsManager.shared.track(action: .dictionarySave, metadata: [
-            "word": definition.word,
-            "language": UserManager.shared.learningLanguage
-        ])
-
-        DictionaryService.shared.saveWord(definition.word) { result in
-            DispatchQueue.main.async {
-                isSaving = false
-
-                switch result {
-                case .success(let wordId):
-                    isSaved = true
-                    savedWordId = wordId
-                case .failure(let error):
-                    Self.logger.error("Failed to save word: \(error.localizedDescription, privacy: .public)")
-                }
-            }
-        }
-    }
-
-    private func unsaveWord() {
-        guard let wordId = savedWordId else {
-            Self.logger.warning("Cannot unsave word: no saved word ID available")
-            return
-        }
-
-        isSaving = true
-
-        DictionaryService.shared.unsaveWord(wordID: wordId) { result in
-            DispatchQueue.main.async {
-                isSaving = false
-
-                switch result {
-                case .success:
-                    // Word completely removed from saved words
-                    isSaved = false
-                    savedWordId = nil
-
-                    // Post notification for SavedWordsView to update
-                    NotificationCenter.default.post(name: .wordUnsaved, object: definition.word)
-                case .failure(let error):
-                    Self.logger.error("Failed to unsave word: \(error.localizedDescription, privacy: .public)")
-                }
-            }
-        }
-    }
-
-    private func checkIfWordIsSaved() {
-        isCheckingStatus = true
-
-        // Use efficient single-word check endpoint instead of fetching all saved words
-        DictionaryService.shared.isWordSaved(
-            word: definition.word,
-            learningLanguage: definition.learning_language,
-            nativeLanguage: definition.native_language
-        ) { result in
-            DispatchQueue.main.async {
-                isCheckingStatus = false
-
-                switch result {
-                case .success(let (saved, wordId)):
-                    isSaved = saved
-                    savedWordId = wordId
-                case .failure:
-                    // If we can't check, assume not saved
-                    isSaved = false
-                    savedWordId = nil
-                }
-            }
         }
     }
 

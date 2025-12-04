@@ -11,6 +11,7 @@ struct SavedWordsView: View {
     @State private var savedWords: [SavedWord] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationView {
@@ -29,9 +30,11 @@ struct SavedWordsView: View {
                 await loadSavedWords()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .refreshSavedWords)) { _ in
-            Task {
-                await loadSavedWords()
+        .onChange(of: appState.shouldRefreshSavedWords) { _, shouldRefresh in
+            if shouldRefresh {
+                Task {
+                    await loadSavedWords()
+                }
             }
         }
     }
@@ -84,6 +87,9 @@ struct SavedWordsView: View {
                 case .success:
                     // Remove word from local array
                     self.savedWords.removeAll { $0.id == word.id }
+
+                    // Notify other views that word was deleted
+                    AppState.shared.markWordUnsaved(word.word)
 
                     // Track deletion analytics
                     AnalyticsManager.shared.track(action: .savedDeleteWord, metadata: [

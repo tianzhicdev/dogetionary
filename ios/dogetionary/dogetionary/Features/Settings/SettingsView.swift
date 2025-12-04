@@ -345,7 +345,7 @@ struct SettingsView: View {
                 if Configuration.environment == .development {
                     Toggle("Force Production Mode", isOn: $forceProduction)
                         .onChange(of: forceProduction) { _, newValue in
-                            NotificationCenter.default.post(name: .environmentChanged, object: nil)
+                            AppState.shared.notifyEnvironmentChanged()
                         }
                 }
             }
@@ -491,10 +491,6 @@ struct SettingsView: View {
         }
     }
 
-}
-
-extension Notification.Name {
-    static let environmentChanged = Notification.Name("environmentChanged")
 }
 
 #Preview {

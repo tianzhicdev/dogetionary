@@ -963,11 +963,8 @@ struct OnboardingView: View {
             "from_onboarding": true
         ])
 
-        // Post notification to SearchView to perform the search
-        NotificationCenter.default.post(
-            name: .performSearchFromOnboarding,
-            object: trimmedWord
-        )
+        // Trigger search in SearchView via AppState
+        AppState.shared.performSearch(query: trimmedWord)
 
         // Dismiss onboarding - SearchView will handle the actual search
         shouldDismiss = true

@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var questionQueue = QuestionQueueManager.shared
     @StateObject private var appVersionManager = AppVersionManager.shared
+    @State private var appState = AppState.shared
     @State private var selectedView = 0  // 0 = Search (default)
     @State private var isMenuExpanded = false
     @State private var showOnboarding = false
@@ -115,10 +116,13 @@ struct ContentView: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .shouldNavigateToReview)) { _ in
-            // Navigate to Practice view when notification is tapped
-            selectedView = 2
+        .onChange(of: appState.shouldNavigateToReview) { _, shouldNavigate in
+            if shouldNavigate {
+                // Navigate to Practice view when notification is tapped
+                selectedView = 2
+            }
         }
+        .environment(appState)
         .onChange(of: scenePhase) { oldPhase, newPhase in
             // Refresh practice status when app becomes active
             if newPhase == .active {
