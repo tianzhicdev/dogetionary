@@ -11,9 +11,7 @@ import SwiftUI
 struct AppTheme {
     // MARK: - Basic Colors
 
-    
-    
-    
+
     /// Pure white color
     static let white = Color.white
 
@@ -71,6 +69,9 @@ struct AppTheme {
     static let systemRed = Color.red
 
     // MARK: - Colors
+    
+    
+    static let systemText = Color(red: 0.3, green: 0.4, blue: 0.9)
 
     /// Primary blue for accents and highlights
     static let primaryBlue = Color(red: 0.3, green: 0.4, blue: 0.9)
@@ -124,6 +125,114 @@ struct AppTheme {
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+
+    // MARK: - Onboarding Gradients
+
+    /// Onboarding page title/button gradients (one per page)
+    /// These use system color aliases for consistent theming
+    static let onboardingPageGradients: [LinearGradient] = [
+        // Page 0 - Learning Language Selection (Blue/Cyan)
+        LinearGradient(
+            colors: [systemBlue, systemCyan],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        // Page 1 - Native Language Selection (Green/Mint)
+        LinearGradient(
+            colors: [systemGreen, systemMint],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        // Page 2 - Test Preparation (Purple/Pink)
+        LinearGradient(
+            colors: [systemPurple, systemPink],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        // Page 3 - Study Duration (Orange/Yellow)
+        LinearGradient(
+            colors: [systemOrange, systemYellow],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        // Page 4 - Username Entry (Indigo/Purple)
+        LinearGradient(
+            colors: [systemIndigo, systemPurple],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        // Page 5 - Schedule Preview (Pink/Red)
+        LinearGradient(
+            colors: [systemPink, systemRed],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        // Page 6 - Declaration (Purple/Blue)
+        LinearGradient(
+            colors: [systemPurple, systemBlue],
+            startPoint: .leading,
+            endPoint: .trailing
+        ),
+        // Page 7 - Search Word (Teal/Blue)
+        LinearGradient(
+            colors: [systemTeal, systemBlue],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    ]
+
+    /// Onboarding page background gradients (one per page)
+    /// These use system color aliases for consistent theming
+    static let onboardingBackgroundGradients: [LinearGradient] = [
+        // Page 0 - Learning Language (Blue/Cyan background)
+        LinearGradient(
+            colors: [systemBlue.opacity(0.3), systemCyan.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        ),
+        // Page 1 - Native Language (Green/Mint background)
+        LinearGradient(
+            colors: [systemGreen.opacity(0.3), systemMint.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        ),
+        // Page 2 - Test Preparation (Purple/Pink background)
+        LinearGradient(
+            colors: [systemPurple.opacity(0.3), systemPink.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        ),
+        // Page 3 - Study Duration (Orange/Yellow background)
+        LinearGradient(
+            colors: [systemOrange.opacity(0.3), systemYellow.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        ),
+        // Page 4 - Username Entry (Indigo/Purple background)
+        LinearGradient(
+            colors: [systemIndigo.opacity(0.3), systemPurple.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        ),
+        // Page 5 - Schedule Preview (Pink/Red background)
+        LinearGradient(
+            colors: [systemPink.opacity(0.3), systemRed.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        ),
+        // Page 6 - Declaration (Purple/Blue background)
+        LinearGradient(
+            colors: [systemPurple.opacity(0.3), systemBlue.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        ),
+        // Page 7 - Search Word (Teal/Blue background)
+        LinearGradient(
+            colors: [systemTeal.opacity(0.3), systemBlue.opacity(0.2), white],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    ]
 
     // MARK: - Feedback State Gradients
 
@@ -185,40 +294,40 @@ struct AppTheme {
 
     // MARK: - Test Type Gradients
 
-    /// Gradients for test types
+    /// Gradients for test types using system color aliases
     static let testTypeGradients: [TestType: LinearGradient] = [
         .toeflBeginner: LinearGradient(
-            colors: [Color.green, Color.mint],
+            colors: [systemGreen, systemMint],
             startPoint: .leading,
             endPoint: .trailing
         ),
         .toeflIntermediate: LinearGradient(
-            colors: [Color.teal, Color.cyan],
+            colors: [systemTeal, systemCyan],
             startPoint: .leading,
             endPoint: .trailing
         ),
         .toeflAdvanced: LinearGradient(
-            colors: [Color.blue, Color.purple],
+            colors: [systemBlue, systemPurple],
             startPoint: .leading,
             endPoint: .trailing
         ),
         .ieltsBeginner: LinearGradient(
-            colors: [Color.orange, Color.yellow],
+            colors: [systemOrange, systemYellow],
             startPoint: .leading,
             endPoint: .trailing
         ),
         .ieltsIntermediate: LinearGradient(
-            colors: [Color.pink, Color.red],
+            colors: [systemPink, systemRed],
             startPoint: .leading,
             endPoint: .trailing
         ),
         .ieltsAdvanced: LinearGradient(
-            colors: [Color.purple, Color.indigo],
+            colors: [systemPurple, systemIndigo],
             startPoint: .leading,
             endPoint: .trailing
         ),
         .tianz: LinearGradient(
-            colors: [Color.indigo, Color.purple],
+            colors: [systemIndigo, systemPurple],
             startPoint: .leading,
             endPoint: .trailing
         )
@@ -240,6 +349,9 @@ struct AppTheme {
 
     /// Yellow-green color for progress indicators
     static let yellowGreen = Color(red: 0.6, green: 0.85, blue: 0.4)
+
+    // MARK: - Basic Colors (Semantic Wrappers)
+
 
     // MARK: - Medal/Rank Colors
 
@@ -314,10 +426,96 @@ struct AppTheme {
     /// Depth shadow (purple with 0.2 opacity)
     static let depthShadowColor = Color.purple.opacity(mediumHighOpacity)
 
+    // MARK: - Corner Radius Scale
+
+    /// No corner radius (sharp corners)
+    static let cornerRadiusNone: CGFloat = 0
+
+    /// Extra small corner radius (micro elements, decorative accents)
+    static let cornerRadiusXS: CGFloat = 4
+
+    /// Small corner radius (badges, pills, compact elements)
+    static let cornerRadiusS: CGFloat = 8
+
+    /// Medium corner radius (text inputs, secondary cards)
+    static let cornerRadiusM: CGFloat = 12
+
+    /// Base/standard corner radius (primary buttons, cards) - THE DEFAULT
+    static let cornerRadiusBase: CGFloat = 16
+
+    /// Large corner radius (prominent containers)
+    static let cornerRadiusL: CGFloat = 20
+
+    /// Extra large corner radius (circular/pill-shaped elements)
+    static let cornerRadiusXL: CGFloat = 24
+
+    /// Maximum corner radius (perfect circles when width == height)
+    static let cornerRadiusCircle: CGFloat = 50
+
+    // MARK: - Spacing Scale
+
+    /// Extra small spacing (4pt) - tight spacing, micro gaps
+    static let spacingXS: CGFloat = 4
+
+    /// Small spacing (8pt) - compact layouts
+    static let spacingS: CGFloat = 8
+
+    /// Medium spacing (12pt) - comfortable spacing
+    static let spacingM: CGFloat = 12
+
+    /// Base/standard spacing (16pt) - THE DEFAULT
+    static let spacingBase: CGFloat = 16
+
+    /// Large spacing (20pt) - generous spacing
+    static let spacingL: CGFloat = 20
+
+    /// Extra large spacing (24pt) - prominent separation
+    static let spacingXL: CGFloat = 24
+
+    /// Extra extra large spacing (32pt) - major section breaks
+    static let spacingXXL: CGFloat = 32
+
+    // MARK: - Shadow Presets
+
+    /// Subtle shadow - for small elements, minimal elevation
+    static let shadowSubtle = (
+        color: Color.black.opacity(0.05),
+        radius: CGFloat(4),
+        x: CGFloat(0),
+        y: CGFloat(2)
+    )
+
+    /// Medium shadow - for buttons, cards, standard elevation
+    static let shadowMedium = (
+        color: Color.black.opacity(0.1),
+        radius: CGFloat(8),
+        x: CGFloat(0),
+        y: CGFloat(4)
+    )
+
+    /// Strong shadow - for interactive elements, prominent elevation
+    static let shadowStrong = (
+        color: Color.black.opacity(0.2),
+        radius: CGFloat(10),
+        x: CGFloat(0),
+        y: CGFloat(5)
+    )
+
+    // MARK: - Border Width Scale
+
+    /// Thin border (1pt) - subtle outlines
+    static let borderWidthThin: CGFloat = 1
+
+    /// Medium border (2pt) - standard borders
+    static let borderWidthMedium: CGFloat = 2
+
+    /// Thick border (3pt) - prominent outlines, selected states
+    static let borderWidthThick: CGFloat = 3
+
     // MARK: - Card Styling
 
     static let cardBackground = Color.white
-    static let cardCornerRadius: CGFloat = 16
+    static let cardCornerRadius: CGFloat = 16  // Alias for cornerRadiusBase
     static let cardPadding: CGFloat = 16
     static let cardShadowColor = Color.black.opacity(0.05)
     static let cardShadowRadius: CGFloat = 8
@@ -325,14 +523,14 @@ struct AppTheme {
 
     // MARK: - Badge Styling
 
-    static let badgeCornerRadius: CGFloat = 6
+    static let badgeCornerRadius: CGFloat = 6  // Alias for cornerRadiusS - 2
     static let badgeHorizontalPadding: CGFloat = 8
     static let badgeVerticalPadding: CGFloat = 4
     static let badgeOpacity: Double = 0.15
 
     // MARK: - Section Styling
 
-    static let sectionCornerRadius: CGFloat = 10
+    static let sectionCornerRadius: CGFloat = 10  // Custom value between S and M
     static let sectionPadding: CGFloat = 12
     static let sectionSpacing: CGFloat = 12
 
@@ -347,10 +545,131 @@ struct AppTheme {
     static let badgeCountFont = Font.system(size: 12, weight: .bold)
     static let tinyBadgeFont = Font.system(size: 9, weight: .bold)
 
+    // MARK: - Button Styling
+
+    /// Primary button - gradient background, prominent style
+    static let primaryButtonCornerRadius: CGFloat = 16
+    static let primaryButtonPaddingVertical: CGFloat = 16
+    static let primaryButtonPaddingHorizontal: CGFloat = 24
+    static let primaryButtonGradient = primaryGradient
+    static let primaryButtonShadow = shadowStrong
+    static let primaryButtonFont = Font.headline
+
+    /// Secondary button - subtle background, softer style
+    static let secondaryButtonCornerRadius: CGFloat = 16
+    static let secondaryButtonBackground = lightBlue
+    static let secondaryButtonShadow = shadowMedium
+    static let secondaryButtonPaddingVertical: CGFloat = 12
+    static let secondaryButtonPaddingHorizontal: CGFloat = 20
+    static let secondaryButtonFont = Font.body
+
+    /// Icon button (circular, like FAB)
+    static let iconButtonSize: CGFloat = 56
+    static let iconButtonCornerRadius: CGFloat = 28  // Half of size for perfect circle
+    static let iconButtonShadow = shadowMedium
+    static let iconButtonIconSize: CGFloat = 20
+
+    /// Floating menu item styling
+    static let menuItemCornerRadius: CGFloat = 24
+    static let menuItemWidth: CGFloat = 200
+    static let menuItemHeight: CGFloat = 48
+    static let menuItemShadow = shadowSubtle
+    static let menuItemPaddingHorizontal: CGFloat = 16
+    static let menuItemPaddingVertical: CGFloat = 12
+
+    /// Question option button (for review/practice)
+    static let optionButtonCornerRadius: CGFloat = 16
+    static let optionButtonBorderWidth: CGFloat = 3
+    static let optionButtonShadow = shadowStrong
+    static let optionButtonPadding: CGFloat = 16
+
     // MARK: - Empty State Styling
 
     static let emptyStateIconSize: CGFloat = 48
     static let emptyStateCircleSize: CGFloat = 100
+
+    // MARK: - Debug Color Overrides (Developer Mode Only)
+
+    /// Color overrides for live testing (only active when DebugConfig.showColorPlayground = true)
+    /// These are persisted in UserDefaults to survive app restarts during theme experimentation
+    private static let debugPrimaryColorKey = "debugPrimaryColor"
+    private static let debugAccentColorKey = "debugAccentColor"
+    private static let debugBackgroundColorKey = "debugBackgroundColor"
+
+    /// Get primary color with optional debug override
+    static func getPrimaryColor() -> Color {
+        if DebugConfig.showColorPlayground, let colorData = UserDefaults.standard.data(forKey: debugPrimaryColorKey) {
+            if let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: UIColor.self, from: colorData) {
+                return Color(color)
+            }
+        }
+        return primaryBlue
+    }
+
+    /// Get accent color with optional debug override
+    static func getAccentColor() -> Color {
+        if DebugConfig.showColorPlayground, let colorData = UserDefaults.standard.data(forKey: debugAccentColorKey) {
+            if let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: UIColor.self, from: colorData) {
+                return Color(color)
+            }
+        }
+        return accentPurple
+    }
+
+    /// Get background color with optional debug override
+    static func getBackgroundColor() -> Color {
+        if DebugConfig.showColorPlayground, let colorData = UserDefaults.standard.data(forKey: debugBackgroundColorKey) {
+            if let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: UIColor.self, from: colorData) {
+                return Color(color)
+            }
+        }
+        return lightBlue
+    }
+
+    /// Save debug color override
+    static func setDebugPrimaryColor(_ color: Color) {
+        let uiColor = UIColor(color)
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: uiColor, requiringSecureCoding: false) {
+            UserDefaults.standard.set(data, forKey: debugPrimaryColorKey)
+        }
+    }
+
+    /// Save debug accent color override
+    static func setDebugAccentColor(_ color: Color) {
+        let uiColor = UIColor(color)
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: uiColor, requiringSecureCoding: false) {
+            UserDefaults.standard.set(data, forKey: debugAccentColorKey)
+        }
+    }
+
+    /// Save debug background color override
+    static func setDebugBackgroundColor(_ color: Color) {
+        let uiColor = UIColor(color)
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: uiColor, requiringSecureCoding: false) {
+            UserDefaults.standard.set(data, forKey: debugBackgroundColorKey)
+        }
+    }
+
+    /// Reset all debug color overrides to defaults
+    static func resetDebugColors() {
+        UserDefaults.standard.removeObject(forKey: debugPrimaryColorKey)
+        UserDefaults.standard.removeObject(forKey: debugAccentColorKey)
+        UserDefaults.standard.removeObject(forKey: debugBackgroundColorKey)
+    }
+
+    /// Export current color settings as Swift code (for copy-paste into ThemeConstants)
+    static func exportDebugColorsAsCode() -> String {
+        let primary = getPrimaryColor()
+        let accent = getAccentColor()
+        let background = getBackgroundColor()
+
+        return """
+        // Generated from Color Playground
+        static let primaryBlue = Color(red: \(primary), green: \(primary), blue: \(primary))
+        static let accentPurple = Color(red: \(accent), green: \(accent), blue: \(accent))
+        static let lightBlue = Color(red: \(background), green: \(background), blue: \(background))
+        """
+    }
 
     // MARK: - Helper Views
 
@@ -464,62 +783,6 @@ struct AppTheme {
     static func testTypeGradient(_ testType: TestType) -> LinearGradient {
         return testTypeGradients[testType] ?? primaryGradient
     }
+    
 
-    // MARK: - Onboarding Gradients
-
-    /// Gradients for onboarding page backgrounds (8 pages total)
-    static let onboardingBackgroundGradients: [LinearGradient] = [
-        // Page 0: Learning Language (blue-cyan)
-        LinearGradient(colors: [Color.blue.opacity(0.3), Color.cyan.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing),
-        // Page 1: Native Language (green-mint)
-        LinearGradient(colors: [Color.green.opacity(0.3), Color.mint.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing),
-        // Page 2: Test Prep (purple-pink)
-        LinearGradient(colors: [Color.purple.opacity(0.3), Color.pink.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing),
-        // Page 3: Study Duration (orange-yellow)
-        LinearGradient(colors: [Color.orange.opacity(0.3), Color.yellow.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing),
-        // Page 4: Username (indigo-purple)
-        LinearGradient(colors: [Color.indigo.opacity(0.3), Color.purple.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing),
-        // Page 5: Schedule Preview (pink-red)
-        LinearGradient(colors: [Color.pink.opacity(0.3), Color.red.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing),
-        // Page 6: Declaration (purple-blue)
-        LinearGradient(colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing),
-        // Page 7: Search Word (teal-blue)
-        LinearGradient(colors: [Color.teal.opacity(0.3), Color.blue.opacity(0.2), Color.white],
-                      startPoint: .topLeading, endPoint: .bottomTrailing)
-    ]
-
-    /// Gradients for onboarding page elements (buttons, titles, etc.)
-    static let onboardingPageGradients: [LinearGradient] = [
-        // Page 0: Learning Language (blue-cyan)
-        LinearGradient(colors: [Color.blue, Color.cyan],
-                      startPoint: .leading, endPoint: .trailing),
-        // Page 1: Native Language (green-mint)
-        LinearGradient(colors: [Color.green, Color.mint],
-                      startPoint: .leading, endPoint: .trailing),
-        // Page 2: Test Prep (purple-pink)
-        LinearGradient(colors: [Color.purple, Color.pink],
-                      startPoint: .leading, endPoint: .trailing),
-        // Page 3: Study Duration (orange-yellow)
-        LinearGradient(colors: [Color.orange, Color.yellow],
-                      startPoint: .leading, endPoint: .trailing),
-        // Page 4: Username (indigo-purple)
-        LinearGradient(colors: [Color.indigo, Color.purple],
-                      startPoint: .leading, endPoint: .trailing),
-        // Page 5: Schedule Preview (pink-red)
-        LinearGradient(colors: [Color.pink, Color.red],
-                      startPoint: .leading, endPoint: .trailing),
-        // Page 6: Declaration (purple-blue)
-        LinearGradient(colors: [Color.purple, Color.blue],
-                      startPoint: .leading, endPoint: .trailing),
-        // Page 7: Search Word (teal-blue)
-        LinearGradient(colors: [Color.teal, Color.blue],
-                      startPoint: .leading, endPoint: .trailing)
-    ]
 }
