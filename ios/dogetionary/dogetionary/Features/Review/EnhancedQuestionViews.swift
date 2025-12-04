@@ -236,7 +236,6 @@ struct FillInBlankQuestionView: View {
 
                             // Delay before calling onAnswer to show feedback and correct answer
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                                let isCorrect = option.id == question.correct_answer
                                 onAnswer(option.id)
                             }
                         }
