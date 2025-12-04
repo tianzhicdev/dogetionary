@@ -49,8 +49,8 @@ struct FloatingActionMenu: View {
                         .transition(.scale.combined(with: .opacity))
                         .animation(
                             reduceMotion
-                                ? .easeInOut(duration: 0.2)
-                                : .spring(response: 0.3, dampingFraction: 0.7).delay(Double(index) * 0.05),
+                                ? .easeInOut(duration: AppConstants.Animation.easeShortDuration)
+                                : .spring(response: AppConstants.Animation.springResponse, dampingFraction: AppConstants.Animation.springDamping).delay(Double(index) * 0.05),
                             value: isExpanded
                         )
                     }
@@ -157,7 +157,7 @@ struct FloatingActionMenu: View {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
 
-            withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(reduceMotion ? .easeInOut(duration: AppConstants.Animation.easeShortDuration) : .spring(response: AppConstants.Animation.springResponse, dampingFraction: AppConstants.Animation.springDamping)) {
                 isExpanded.toggle()
             }
         }

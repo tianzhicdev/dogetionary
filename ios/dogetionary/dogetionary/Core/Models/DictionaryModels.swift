@@ -243,7 +243,7 @@ struct Definition: Identifiable {
     }
 
     var isValid: Bool {
-        return validWordScore >= 0.9
+        return validWordScore >= AppConstants.Validation.wordValidityThreshold
     }
 }
 
