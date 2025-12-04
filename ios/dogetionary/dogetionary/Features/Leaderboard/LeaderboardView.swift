@@ -24,7 +24,8 @@ struct LeaderboardView: View {
                         VStack(spacing: 16) {
                             ProgressView()
                             Text("Loading leaderboard...")
-                                .foregroundColor(AppTheme.cardBackground)
+                                .foregroundColor(AppTheme.systemText)
+
                         }
                     } else if let errorMessage = errorMessage {
                         VStack(spacing: 16) {
@@ -112,11 +113,9 @@ struct LeaderboardRowView: View {
                 HStack(spacing: 4) {
                     Text(entry.user_name)
                         .font(.system(size: 15, weight: isCurrentUser ? .semibold : .medium))
-                        .foregroundStyle(
+                        .foregroundColor(
                             isCurrentUser ?
-                            AppTheme.primaryGradient :
-                            LinearGradient(colors: [Color.primary, Color.primary],
-                                         startPoint: .leading, endPoint: .trailing)
+                            AppTheme.primaryBlue : AppTheme.leaderboard.userNameTextColor
                         )
                         .lineLimit(1)
 

@@ -68,6 +68,11 @@ class DebugConfig {
         isDeveloperModeEnabled
     }
 
+    /// Show Color Playground in Settings (live theme customization)
+    static var showColorPlayground: Bool {
+        isDeveloperModeEnabled
+    }
+
     // MARK: - Helper Methods
 
     /// Reset all developer mode settings to defaults
