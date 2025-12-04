@@ -49,7 +49,7 @@ struct ForceUpgradeView: View {
                         Text("Update Now")
                     }
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.white)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(AppTheme.infoColor)

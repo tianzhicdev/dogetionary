@@ -9,6 +9,67 @@
 import SwiftUI
 
 struct AppTheme {
+    // MARK: - Basic Colors
+
+    
+    
+    
+    /// Pure white color
+    static let white = Color.white
+
+    /// Pure black color
+    static let black = Color.black
+
+    /// Clear/transparent color
+    static let clear = Color.clear
+
+    /// Light gray (opacity 0.3)
+    static let lightGray = Color.gray.opacity(0.3)
+
+    /// Medium gray (opacity 0.5)
+    static let mediumGray = Color.gray.opacity(0.5)
+
+    /// Dark gray (opacity 0.7)
+    static let darkGray = Color.gray.opacity(0.7)
+
+    /// Disabled gray (opacity 0.6)
+    static let disabledGray = Color.gray.opacity(0.6)
+
+    // MARK: - System Colors
+
+    /// System blue color
+    static let systemBlue = Color.blue
+
+    /// System purple color
+    static let systemPurple = Color.purple
+
+    /// System cyan color
+    static let systemCyan = Color.cyan
+
+    /// System pink color
+    static let systemPink = Color.pink
+
+    /// System indigo color
+    static let systemIndigo = Color.indigo
+
+    /// System teal color
+    static let systemTeal = Color.teal
+
+    /// System mint color
+    static let systemMint = Color.mint
+
+    /// System yellow color
+    static let systemYellow = Color.yellow
+
+    /// System orange color
+    static let systemOrange = Color.orange
+
+    /// System green color
+    static let systemGreen = Color.green
+
+    /// System red color
+    static let systemRed = Color.red
+
     // MARK: - Colors
 
     /// Primary blue for accents and highlights
@@ -403,4 +464,62 @@ struct AppTheme {
     static func testTypeGradient(_ testType: TestType) -> LinearGradient {
         return testTypeGradients[testType] ?? primaryGradient
     }
+
+    // MARK: - Onboarding Gradients
+
+    /// Gradients for onboarding page backgrounds (8 pages total)
+    static let onboardingBackgroundGradients: [LinearGradient] = [
+        // Page 0: Learning Language (blue-cyan)
+        LinearGradient(colors: [Color.blue.opacity(0.3), Color.cyan.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing),
+        // Page 1: Native Language (green-mint)
+        LinearGradient(colors: [Color.green.opacity(0.3), Color.mint.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing),
+        // Page 2: Test Prep (purple-pink)
+        LinearGradient(colors: [Color.purple.opacity(0.3), Color.pink.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing),
+        // Page 3: Study Duration (orange-yellow)
+        LinearGradient(colors: [Color.orange.opacity(0.3), Color.yellow.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing),
+        // Page 4: Username (indigo-purple)
+        LinearGradient(colors: [Color.indigo.opacity(0.3), Color.purple.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing),
+        // Page 5: Schedule Preview (pink-red)
+        LinearGradient(colors: [Color.pink.opacity(0.3), Color.red.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing),
+        // Page 6: Declaration (purple-blue)
+        LinearGradient(colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing),
+        // Page 7: Search Word (teal-blue)
+        LinearGradient(colors: [Color.teal.opacity(0.3), Color.blue.opacity(0.2), Color.white],
+                      startPoint: .topLeading, endPoint: .bottomTrailing)
+    ]
+
+    /// Gradients for onboarding page elements (buttons, titles, etc.)
+    static let onboardingPageGradients: [LinearGradient] = [
+        // Page 0: Learning Language (blue-cyan)
+        LinearGradient(colors: [Color.blue, Color.cyan],
+                      startPoint: .leading, endPoint: .trailing),
+        // Page 1: Native Language (green-mint)
+        LinearGradient(colors: [Color.green, Color.mint],
+                      startPoint: .leading, endPoint: .trailing),
+        // Page 2: Test Prep (purple-pink)
+        LinearGradient(colors: [Color.purple, Color.pink],
+                      startPoint: .leading, endPoint: .trailing),
+        // Page 3: Study Duration (orange-yellow)
+        LinearGradient(colors: [Color.orange, Color.yellow],
+                      startPoint: .leading, endPoint: .trailing),
+        // Page 4: Username (indigo-purple)
+        LinearGradient(colors: [Color.indigo, Color.purple],
+                      startPoint: .leading, endPoint: .trailing),
+        // Page 5: Schedule Preview (pink-red)
+        LinearGradient(colors: [Color.pink, Color.red],
+                      startPoint: .leading, endPoint: .trailing),
+        // Page 6: Declaration (purple-blue)
+        LinearGradient(colors: [Color.purple, Color.blue],
+                      startPoint: .leading, endPoint: .trailing),
+        // Page 7: Search Word (teal-blue)
+        LinearGradient(colors: [Color.teal, Color.blue],
+                      startPoint: .leading, endPoint: .trailing)
+    ]
 }

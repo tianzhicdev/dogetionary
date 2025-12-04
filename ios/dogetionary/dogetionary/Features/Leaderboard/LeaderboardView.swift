@@ -24,7 +24,7 @@ struct LeaderboardView: View {
                         VStack(spacing: 16) {
                             ProgressView()
                             Text("Loading leaderboard...")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.cardBackground)
                         }
                     } else if let errorMessage = errorMessage {
                         VStack(spacing: 16) {
@@ -123,7 +123,7 @@ struct LeaderboardRowView: View {
                     if isCurrentUser {
                         Text("You")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(AppTheme.primaryGradient)
@@ -146,7 +146,7 @@ struct LeaderboardRowView: View {
                 Image(systemName: "star.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.yellow, AppTheme.warningColor],
+                        LinearGradient(colors: [AppTheme.systemYellow, AppTheme.warningColor],
                                      startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                 Text("\(entry.score ?? entry.total_reviews)")
@@ -165,7 +165,7 @@ struct LeaderboardRowView: View {
             Group {
                 if isCurrentUser {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.white)
+                        .fill(AppTheme.white)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(AppTheme.primaryGradient, lineWidth: 2)
@@ -173,7 +173,7 @@ struct LeaderboardRowView: View {
                         .shadow(color: AppTheme.infoColor.opacity(AppTheme.mediumHighOpacity), radius: 8, y: 4)
                 } else {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.white)
+                        .fill(AppTheme.white)
                         .shadow(color: AppTheme.subtleShadowColor, radius: 3, x: 0, y: 1)
                 }
             }
@@ -215,7 +215,7 @@ struct RankBadgeView: View {
             Circle()
                 .fill(badgeGradient)
                 .frame(width: 30, height: 30)
-                .shadow(color: rank <= 3 ? Color.black.opacity(AppTheme.mediumOpacity) : Color.clear, radius: 3, y: 2)
+                .shadow(color: rank <= 3 ? AppTheme.black.opacity(AppTheme.mediumOpacity) : AppTheme.clear, radius: 3, y: 2)
 
             if rank <= 3 {
                 Image(systemName: "crown.fill")

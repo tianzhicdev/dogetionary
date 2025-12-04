@@ -19,7 +19,7 @@ extension View {
     func captureTabFrame(for tag: Int) -> some View {
         self.background(
             GeometryReader { geometry in
-                Color.clear.preference(
+                AppTheme.clear.preference(
                     key: TabBarPreferenceKey.self,
                     value: [tag: geometry.frame(in: .global)]
                 )

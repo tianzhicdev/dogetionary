@@ -31,7 +31,7 @@ struct MultipleChoiceQuestionView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(
                             LinearGradient(
-                                colors: [AppTheme.infoColor.opacity(AppTheme.subtleOpacity), Color.purple.opacity(0.06)],
+                                colors: [AppTheme.infoColor.opacity(AppTheme.subtleOpacity), AppTheme.systemPurple.opacity(0.06)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -111,7 +111,7 @@ struct MultipleChoiceOptionButton: View {
         } else if isSelected {
             return AppTheme.infoColor.opacity(AppTheme.strongOpacity)
         }
-        return Color.clear
+        return AppTheme.clear
     }
 
     var body: some View {
@@ -121,7 +121,7 @@ struct MultipleChoiceOptionButton: View {
                 Text(option.id)
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.white)
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
@@ -140,9 +140,9 @@ struct MultipleChoiceOptionButton: View {
                 // Check mark for selected or correct answer
                 if showFeedback && (isSelected || shouldShowAsCorrect) {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .font(.title3)
-                        .shadow(color: Color.black.opacity(AppTheme.strongOpacity), radius: 2, y: 1)
+                        .shadow(color: AppTheme.black.opacity(AppTheme.strongOpacity), radius: 2, y: 1)
                 }
             }
             .padding()
@@ -153,7 +153,7 @@ struct MultipleChoiceOptionButton: View {
                     .stroke(
                         borderGradient != nil ?
                             AnyShapeStyle(borderGradient!) :
-                            AnyShapeStyle(Color.clear),
+                            AnyShapeStyle(AppTheme.clear),
                         lineWidth: 3
                     )
             )
@@ -206,7 +206,7 @@ struct FillInBlankQuestionView: View {
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
                                 LinearGradient(
-                                    colors: [AppTheme.infoColor.opacity(AppTheme.strongOpacity), Color.purple.opacity(AppTheme.strongOpacity)],
+                                    colors: [AppTheme.infoColor.opacity(AppTheme.strongOpacity), AppTheme.systemPurple.opacity(AppTheme.strongOpacity)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
@@ -288,7 +288,7 @@ struct FillInBlankOptionButton: View {
         } else if isSelected {
             return AppTheme.infoColor.opacity(AppTheme.strongOpacity)
         }
-        return Color.clear
+        return AppTheme.clear
     }
 
     var body: some View {
@@ -304,9 +304,9 @@ struct FillInBlankOptionButton: View {
                 // Check mark for selected or correct answer
                 if showFeedback && (isSelected || shouldShowAsCorrect) {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.white)
                         .font(.title3)
-                        .shadow(color: Color.black.opacity(AppTheme.strongOpacity), radius: 2, y: 1)
+                        .shadow(color: AppTheme.black.opacity(AppTheme.strongOpacity), radius: 2, y: 1)
                 }
             }
             .padding()
@@ -317,7 +317,7 @@ struct FillInBlankOptionButton: View {
                     .stroke(
                         borderGradient != nil ?
                             AnyShapeStyle(borderGradient!) :
-                            AnyShapeStyle(Color.clear),
+                            AnyShapeStyle(AppTheme.clear),
                         lineWidth: 3
                     )
             )

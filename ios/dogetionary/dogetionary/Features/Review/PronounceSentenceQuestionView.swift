@@ -50,11 +50,11 @@ struct PronounceSentenceQuestionView: View {
                     VStack {
                         Image(systemName: referenceAudioPlayer.isPlaying ? "stop.circle.fill" : "speaker.wave.2.circle.fill")
                             .font(.system(size: 50))
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppTheme.infoColor)
 
                         Text(referenceAudioPlayer.isPlaying ? "Stop" : "Listen")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppTheme.infoColor)
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -65,11 +65,11 @@ struct PronounceSentenceQuestionView: View {
                     VStack {
                         Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
                             .font(.system(size: 50))
-                            .foregroundColor(audioRecorder.isRecording ? .red : .orange)
+                            .foregroundColor(audioRecorder.isRecording ? AppTheme.errorColor : AppTheme.warningColor)
 
                         Text(audioRecorder.isRecording ? "Stop" : "Record")
                             .font(.caption)
-                            .foregroundColor(audioRecorder.isRecording ? .red : .orange)
+                            .foregroundColor(audioRecorder.isRecording ? AppTheme.errorColor : AppTheme.warningColor)
                     }
                 }
                 .disabled(isSubmitting || hasAnswered)
@@ -81,11 +81,11 @@ struct PronounceSentenceQuestionView: View {
                         VStack {
                             Image(systemName: recordedAudioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 50))
-                                .foregroundColor(.green)
+                                .foregroundColor(AppTheme.successColor)
 
                             Text(recordedAudioPlayer.isPlaying ? "Stop" : "Replay")
                                 .font(.caption)
-                                .foregroundColor(.green)
+                                .foregroundColor(AppTheme.successColor)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -98,11 +98,11 @@ struct PronounceSentenceQuestionView: View {
                 VStack(spacing: 8) {
                     Text("Recording...")
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppTheme.errorColor)
 
                     // Simple volume meter
                     ProgressView(value: min(Double(audioRecorder.currentVolume), 1.0))
-                        .progressViewStyle(LinearProgressViewStyle(tint: .red))
+                        .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.errorColor))
                         .frame(width: 200)
                 }
             }
@@ -208,7 +208,7 @@ struct PronounceSentenceQuestionView: View {
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(AppTheme.lightGray)
         .cornerRadius(12)
         .padding(.horizontal)
     }

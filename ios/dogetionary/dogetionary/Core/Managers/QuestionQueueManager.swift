@@ -178,7 +178,7 @@ struct QueueDebugOverlay: View {
                 // Header with queue count
                 HStack {
                     Image(systemName: "ladybug.fill")
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppTheme.warningColor)
                     Text("Queue: \(queueManager.queueCount)/\(queueManager.hasMore ? "10+" : "\(queueManager.totalAvailable)")")
                         .font(.caption.monospaced())
                 }
@@ -225,7 +225,7 @@ struct QueueDebugOverlay: View {
 
                     if queueManager.lastError != nil {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.errorColor)
                             .font(.caption2)
                     }
                 }

@@ -194,9 +194,9 @@ struct SavedWordsListView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 48))
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppTheme.warningColor)
                         Text(errorMessage)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.errorColor)
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -218,9 +218,9 @@ struct SavedWordsListView: View {
                             }
                         }
                         .padding(12)
-                        .background(Color.white)
+                        .background(AppTheme.white)
                         .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        .shadow(color: AppTheme.lightGray, radius: 4, x: 0, y: 2)
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
                         .padding(.bottom, 8)
@@ -347,9 +347,9 @@ struct SavedWordRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(savedWord.is_known ? AppTheme.errorColor.opacity(AppTheme.lightOpacity) : Color.white)
+        .background(savedWord.is_known ? AppTheme.errorColor.opacity(AppTheme.lightOpacity) : AppTheme.white)
         .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
+        .shadow(color: AppTheme.lightGray, radius: 3, x: 0, y: 1)
     }
 
     @ViewBuilder
@@ -358,30 +358,30 @@ struct SavedWordRow: View {
             if userManager.toeflEnabled && (savedWord.is_toefl == true) {
                 Text("TOEFL")
                     .font(.system(size: 8, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(Color.blue)
+                    .background(AppTheme.systemBlue)
                     .cornerRadius(4)
             }
 
             if userManager.ieltsEnabled && (savedWord.is_ielts == true) {
                 Text("IELTS")
                     .font(.system(size: 8, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(Color.green)
+                    .background(AppTheme.systemGreen)
                     .cornerRadius(4)
             }
 
             if userManager.tianzEnabled && (savedWord.is_tianz == true) {
                 Text("TIANZ")
                     .font(.system(size: 8, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(Color.orange)
+                    .background(AppTheme.warningColor)
                     .cornerRadius(4)
             }
         }
@@ -401,7 +401,7 @@ struct WordProgressBar: View {
         } else if progressLevel <= 4 {
             // Orange-yellow for medium progress
             return LinearGradient(
-                colors: [AppTheme.warningColor, Color.yellow],
+                colors: [AppTheme.warningColor, AppTheme.systemYellow],
                 startPoint: .leading,
                 endPoint: .trailing
             )

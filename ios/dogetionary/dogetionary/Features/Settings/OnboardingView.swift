@@ -60,9 +60,9 @@ struct OnboardingView: View {
                         ForEach(0..<totalPages, id: \.self) { index in
                             Capsule()
                                 .fill(index <= displayPageIndex ?
-                                    LinearGradient(colors: [Color.purple, Color.blue],
+                                    LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemBlue],
                                                  startPoint: .leading, endPoint: .trailing) :
-                                    LinearGradient(colors: [Color.gray.opacity(0.3)],
+                                    LinearGradient(colors: [AppTheme.lightGray],
                                                  startPoint: .leading, endPoint: .trailing))
                                 .frame(height: 4)
                         }
@@ -80,7 +80,7 @@ struct OnboardingView: View {
                             emoji: "🌍",
                             selectedLanguage: $selectedLearningLanguage,
                             excludeLanguage: selectedNativeLanguage,
-                            gradientColors: [Color.blue, Color.cyan]
+                            gradientColors: [AppTheme.systemBlue, AppTheme.systemCyan]
                         )
                         .tag(0)
 
@@ -91,7 +91,7 @@ struct OnboardingView: View {
                             emoji: "🏠",
                             selectedLanguage: $selectedNativeLanguage,
                             excludeLanguage: selectedLearningLanguage,
-                            gradientColors: [Color.green, Color.mint]
+                            gradientColors: [AppTheme.systemGreen, AppTheme.systemMint]
                         )
                         .tag(1)
 
@@ -141,15 +141,15 @@ struct OnboardingView: View {
                                     Text("Back")
                                 }
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(AppTheme.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
                                 .background(
-                                    LinearGradient(colors: [Color.gray.opacity(0.6), Color.gray.opacity(0.4)],
+                                    LinearGradient(colors: [AppTheme.disabledGray, AppTheme.lightGray.opacity(1.33)],
                                                  startPoint: .leading, endPoint: .trailing)
                                 )
                                 .cornerRadius(16)
-                                .shadow(color: Color.black.opacity(0.1), radius: 5, y: 3)
+                                .shadow(color: AppTheme.black.opacity(0.1), radius: 5, y: 3)
                             }
                         }
 
@@ -159,7 +159,7 @@ struct OnboardingView: View {
                             HStack {
                                 if isSubmitting || isSearching {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.white))
                                         .scaleEffect(0.8)
                                 }
                                 Text(buttonTitle)
@@ -168,18 +168,18 @@ struct OnboardingView: View {
                                     Image(systemName: "arrow.right")
                                 }
                             }
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(
                                 canProceed ?
                                     LinearGradient(colors: buttonGradientColors,
                                                  startPoint: .leading, endPoint: .trailing) :
-                                    LinearGradient(colors: [Color.gray],
+                                    LinearGradient(colors: [AppTheme.mediumGray],
                                                  startPoint: .leading, endPoint: .trailing)
                             )
                             .cornerRadius(16)
-                            .shadow(color: canProceed ? Color.purple.opacity(0.3) : Color.clear, radius: 10, y: 5)
+                            .shadow(color: canProceed ? AppTheme.systemPurple.opacity(0.3) : AppTheme.clear, radius: 10, y: 5)
                         }
                         .disabled(!canProceed || isSubmitting || isSearching)
                     }
@@ -205,41 +205,50 @@ struct OnboardingView: View {
     // MARK: - Gradient Backgrounds
 
     private var pageGradient: LinearGradient {
-        let colors: [Color]
+        // Map page indices to gradient array indices (0-7)
+        let gradientIndex: Int
         switch currentPage {
-        case 0:
-            colors = [Color.blue.opacity(0.3), Color.cyan.opacity(0.2), Color.white]
-        case 1:
-            colors = [Color.green.opacity(0.3), Color.mint.opacity(0.2), Color.white]
-        case 2:
-            colors = [Color.purple.opacity(0.3), Color.pink.opacity(0.2), Color.white]
-        case 3:
-            colors = [Color.orange.opacity(0.3), Color.yellow.opacity(0.2), Color.white]
-        case usernamePageIndex:
-            colors = [Color.indigo.opacity(0.3), Color.purple.opacity(0.2), Color.white]
-        case schedulePageIndex:
-            colors = [Color.pink.opacity(0.3), Color.red.opacity(0.2), Color.white]
-        case declarationPageIndex:
-            colors = [Color.purple.opacity(0.3), Color.blue.opacity(0.2), Color.white]
-        case searchPageIndex:
-            colors = [Color.teal.opacity(0.3), Color.blue.opacity(0.2), Color.white]
-        default:
-            colors = [Color.blue.opacity(0.3), Color.white]
+        case 0: gradientIndex = 0  // Learning Language
+        case 1: gradientIndex = 1  // Native Language
+        case 2: gradientIndex = 2  // Test Prep
+        case 3: gradientIndex = 3  // Study Duration
+        case usernamePageIndex: gradientIndex = 4  // Username
+        case schedulePageIndex: gradientIndex = 5  // Schedule Preview
+        case declarationPageIndex: gradientIndex = 6  // Declaration
+        case searchPageIndex: gradientIndex = 7  // Search Word
+        default: gradientIndex = 0  // Fallback to first gradient
         }
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+        return AppTheme.onboardingBackgroundGradients[gradientIndex]
     }
 
     private var buttonGradientColors: [Color] {
+        // Map page indices to gradient array indices (0-7)
+        let gradientIndex: Int
         switch currentPage {
-        case 0: return [Color.blue, Color.cyan]
-        case 1: return [Color.green, Color.mint]
-        case 2: return [Color.purple, Color.pink]
-        case 3: return [Color.orange, Color.yellow]
-        case usernamePageIndex: return [Color.indigo, Color.purple]
-        case schedulePageIndex: return [Color.pink, Color.red]
-        case declarationPageIndex: return [Color.purple, Color.blue]
-        case searchPageIndex: return [Color.teal, Color.blue]
-        default: return [Color.blue, Color.purple]
+        case 0: gradientIndex = 0  // Learning Language
+        case 1: gradientIndex = 1  // Native Language
+        case 2: gradientIndex = 2  // Test Prep
+        case 3: gradientIndex = 3  // Study Duration
+        case usernamePageIndex: gradientIndex = 4  // Username
+        case schedulePageIndex: gradientIndex = 5  // Schedule Preview
+        case declarationPageIndex: gradientIndex = 6  // Declaration
+        case searchPageIndex: gradientIndex = 7  // Search Word
+        default: gradientIndex = 0  // Fallback to first gradient
+        }
+        // Extract colors from the gradient
+        let gradient = AppTheme.onboardingPageGradients[gradientIndex]
+        // Return the gradient colors (we need to extract them from LinearGradient)
+        // Since we can't extract, return the same colors used in ThemeConstants
+        switch gradientIndex {
+        case 0: return [AppTheme.systemBlue, AppTheme.systemCyan]
+        case 1: return [AppTheme.systemGreen, AppTheme.systemMint]
+        case 2: return [AppTheme.systemPurple, AppTheme.systemPink]
+        case 3: return [AppTheme.systemOrange, AppTheme.systemYellow]
+        case 4: return [AppTheme.systemIndigo, AppTheme.systemPurple]
+        case 5: return [AppTheme.systemPink, AppTheme.systemRed]
+        case 6: return [AppTheme.systemPurple, AppTheme.systemBlue]
+        case 7: return [AppTheme.systemTeal, AppTheme.systemBlue]
+        default: return [AppTheme.systemBlue, AppTheme.systemPurple]
         }
     }
 
@@ -257,7 +266,7 @@ struct OnboardingView: View {
             VStack(spacing: 20) {
                 Text(emoji)
                     .font(.system(size: 80))
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, y: 5)
+                    .shadow(color: AppTheme.black.opacity(0.1), radius: 10, y: 5)
 
                 Text(title)
                     .font(.system(size: 32, weight: .bold))
@@ -311,13 +320,13 @@ struct OnboardingView: View {
             VStack(spacing: 20) {
                 Text("🌟")
                     .font(.system(size: 80))
-                    .shadow(color: Color.yellow.opacity(0.3), radius: 10, y: 5)
+                    .shadow(color: AppTheme.systemYellow.opacity(0.3), radius: 10, y: 5)
 
                 Text("Give yourself a cool name")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.indigo, Color.purple],
+                        LinearGradient(colors: [AppTheme.systemIndigo, AppTheme.systemPurple],
                                      startPoint: .leading, endPoint: .trailing)
                     )
 
@@ -332,18 +341,18 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                TextField("", text: $userName, prompt: Text("Enter your name").foregroundColor(.gray))
+                TextField("", text: $userName, prompt: Text("Enter your name").foregroundColor(AppTheme.mediumGray))
                     .font(.title3)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
-                            .shadow(color: Color.indigo.opacity(0.2), radius: 10, y: 5)
+                            .fill(AppTheme.white)
+                            .shadow(color: AppTheme.systemIndigo.opacity(0.2), radius: 10, y: 5)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                LinearGradient(colors: [Color.indigo, Color.purple],
+                                LinearGradient(colors: [AppTheme.systemIndigo, AppTheme.systemPurple],
                                              startPoint: .leading, endPoint: .trailing),
                                 lineWidth: 2
                             )
@@ -354,7 +363,7 @@ struct OnboardingView: View {
 
                 Text("\(userName.count)/30 characters")
                     .font(.caption)
-                    .foregroundColor(userName.count > 25 ? .orange : .secondary)
+                    .foregroundColor(userName.count > 25 ? AppTheme.systemOrange : .secondary)
             }
 
             Spacer()
@@ -368,13 +377,13 @@ struct OnboardingView: View {
             VStack(spacing: 20) {
                 Text("📚")
                     .font(.system(size: 80))
-                    .shadow(color: Color.purple.opacity(0.3), radius: 10, y: 5)
+                    .shadow(color: AppTheme.systemPurple.opacity(0.3), radius: 10, y: 5)
 
                 Text("Are you studying for a test?")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.purple, Color.pink],
+                        LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemPink],
                                      startPoint: .leading, endPoint: .trailing)
                     )
 
@@ -389,24 +398,24 @@ struct OnboardingView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     // TOEFL options
-                    testPrepButton(title: "TOEFL Beginner", subtitle: "Foundation vocabulary", emoji: "🌱", testType: .toeflBeginner, colors: [Color.green, Color.mint])
-                    testPrepButton(title: "TOEFL Intermediate", subtitle: "Includes beginner words", emoji: "🌿", testType: .toeflIntermediate, colors: [Color.teal, Color.cyan])
-                    testPrepButton(title: "TOEFL Advanced", subtitle: "Complete TOEFL vocabulary", emoji: "🌳", testType: .toeflAdvanced, colors: [Color.blue, Color.purple])
+                    testPrepButton(title: "TOEFL Beginner", subtitle: "Foundation vocabulary", emoji: "🌱", testType: .toeflBeginner, colors: [AppTheme.systemGreen, AppTheme.systemMint])
+                    testPrepButton(title: "TOEFL Intermediate", subtitle: "Includes beginner words", emoji: "🌿", testType: .toeflIntermediate, colors: [AppTheme.systemTeal, AppTheme.systemCyan])
+                    testPrepButton(title: "TOEFL Advanced", subtitle: "Complete TOEFL vocabulary", emoji: "🌳", testType: .toeflAdvanced, colors: [AppTheme.systemBlue, AppTheme.systemPurple])
 
                     Divider().padding(.vertical, 8)
 
                     // IELTS options
-                    testPrepButton(title: "IELTS Beginner", subtitle: "Foundation vocabulary", emoji: "🎯", testType: .ieltsBeginner, colors: [Color.orange, Color.yellow])
-                    testPrepButton(title: "IELTS Intermediate", subtitle: "Includes beginner words", emoji: "🎪", testType: .ieltsIntermediate, colors: [Color.pink, Color.red])
-                    testPrepButton(title: "IELTS Advanced", subtitle: "Complete IELTS vocabulary", emoji: "🏆", testType: .ieltsAdvanced, colors: [Color.purple, Color.indigo])
+                    testPrepButton(title: "IELTS Beginner", subtitle: "Foundation vocabulary", emoji: "🎯", testType: .ieltsBeginner, colors: [AppTheme.systemOrange, AppTheme.systemYellow])
+                    testPrepButton(title: "IELTS Intermediate", subtitle: "Includes beginner words", emoji: "🎪", testType: .ieltsIntermediate, colors: [AppTheme.systemPink, AppTheme.systemRed])
+                    testPrepButton(title: "IELTS Advanced", subtitle: "Complete IELTS vocabulary", emoji: "🏆", testType: .ieltsAdvanced, colors: [AppTheme.systemPurple, AppTheme.systemIndigo])
 
                     Divider().padding(.vertical, 8)
 
                     // TIANZ option
-                    testPrepButton(title: "Tianz Test", subtitle: "Specialized vocabulary", emoji: "⭐", testType: .tianz, colors: [Color.indigo, Color.purple])
+                    testPrepButton(title: "Tianz Test", subtitle: "Specialized vocabulary", emoji: "⭐", testType: .tianz, colors: [AppTheme.systemIndigo, AppTheme.systemPurple])
 
                     // Neither option
-                    testPrepButton(title: "None", subtitle: "Skip test preparation", emoji: "🎨", testType: nil, colors: [Color.gray, Color.gray.opacity(0.6)])
+                    testPrepButton(title: "None", subtitle: "Skip test preparation", emoji: "🎨", testType: nil, colors: [AppTheme.mediumGray, AppTheme.disabledGray])
                 }
                 .padding(.horizontal, 24)
             }
@@ -480,7 +489,7 @@ struct OnboardingView: View {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(selectedTestType == testType ? colors[0].opacity(0.15) : Color.white)
+                    .fill(selectedTestType == testType ? colors[0].opacity(0.15) : AppTheme.white)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
@@ -488,12 +497,12 @@ struct OnboardingView: View {
                         selectedTestType == testType ?
                             LinearGradient(colors: colors,
                                          startPoint: .leading, endPoint: .trailing) :
-                            LinearGradient(colors: [Color.gray.opacity(0.2)],
+                            LinearGradient(colors: [AppTheme.lightGray.opacity(0.67)],
                                          startPoint: .leading, endPoint: .trailing),
                         lineWidth: selectedTestType == testType ? 3 : 1
                     )
             )
-            .shadow(color: selectedTestType == testType ? colors[0].opacity(0.3) : Color.clear, radius: 10, y: 5)
+            .shadow(color: selectedTestType == testType ? colors[0].opacity(0.3) : AppTheme.clear, radius: 10, y: 5)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -505,13 +514,13 @@ struct OnboardingView: View {
             VStack(spacing: 20) {
                 Text("⏰")
                     .font(.system(size: 80))
-                    .shadow(color: Color.orange.opacity(0.3), radius: 10, y: 5)
+                    .shadow(color: AppTheme.systemOrange.opacity(0.3), radius: 10, y: 5)
 
                 Text("How long do you want to study?")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.orange, Color.yellow],
+                        LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemYellow],
                                      startPoint: .leading, endPoint: .trailing)
                     )
 
@@ -528,7 +537,7 @@ struct OnboardingView: View {
             if isLoadingVocabulary {
                 ProgressView()
                     .scaleEffect(1.5)
-                    .tint(Color.orange)
+                    .tint(AppTheme.systemOrange)
             } else {
                 VStack(spacing: 32) {
                     // Duration display
@@ -536,10 +545,10 @@ struct OnboardingView: View {
                         Text("\(Int(selectedStudyDuration))")
                             .font(.system(size: 80, weight: .bold))
                             .foregroundStyle(
-                                LinearGradient(colors: [Color.orange, Color.yellow],
+                                LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemYellow],
                                              startPoint: .topLeading, endPoint: .bottomTrailing)
                             )
-                            .shadow(color: Color.orange.opacity(0.3), radius: 10, y: 5)
+                            .shadow(color: AppTheme.systemOrange.opacity(0.3), radius: 10, y: 5)
                         Text("days")
                             .font(.title2)
                             .foregroundColor(.secondary)
@@ -548,7 +557,7 @@ struct OnboardingView: View {
                     // Slider
                     VStack(spacing: 8) {
                         Slider(value: $selectedStudyDuration, in: 1...365, step: 1)
-                            .tint(Color.orange)
+                            .tint(AppTheme.systemOrange)
 
                         HStack {
                             Text("1 day")
@@ -581,15 +590,15 @@ struct OnboardingView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(
-                                    LinearGradient(colors: [Color.orange.opacity(0.2), Color.yellow.opacity(0.1)],
+                                    LinearGradient(colors: [AppTheme.systemOrange.opacity(0.2), AppTheme.systemYellow.opacity(0.1)],
                                                  startPoint: .leading, endPoint: .trailing)
                                 )
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.orange.opacity(0.3), lineWidth: 2)
+                                .stroke(AppTheme.systemOrange.opacity(0.3), lineWidth: 2)
                         )
-                        .shadow(color: Color.orange.opacity(0.2), radius: 10, y: 5)
+                        .shadow(color: AppTheme.systemOrange.opacity(0.2), radius: 10, y: 5)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -622,13 +631,13 @@ struct OnboardingView: View {
             VStack(spacing: 20) {
                 Text("🧠")
                     .font(.system(size: 80))
-                    .shadow(color: Color.purple.opacity(0.3), radius: 10, y: 5)
+                    .shadow(color: AppTheme.systemPurple.opacity(0.3), radius: 10, y: 5)
 
                 Text("How Fledge Works")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.purple, Color.blue],
+                        LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemBlue],
                                      startPoint: .leading, endPoint: .trailing)
                     )
             }
@@ -679,13 +688,13 @@ struct OnboardingView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(
-                            LinearGradient(colors: [Color.purple.opacity(0.1), Color.blue.opacity(0.05)],
+                            LinearGradient(colors: [AppTheme.systemPurple.opacity(0.1), AppTheme.systemBlue.opacity(0.05)],
                                          startPoint: .leading, endPoint: .trailing)
                         )
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.purple.opacity(0.2), lineWidth: 2)
+                        .stroke(AppTheme.systemPurple.opacity(0.2), lineWidth: 2)
                 )
             }
             .padding(.horizontal, 24)
@@ -701,13 +710,13 @@ struct OnboardingView: View {
             VStack(spacing: 20) {
                 Text("🔍")
                     .font(.system(size: 80))
-                    .shadow(color: Color.teal.opacity(0.3), radius: 10, y: 5)
+                    .shadow(color: AppTheme.systemTeal.opacity(0.3), radius: 10, y: 5)
 
                 Text("Search a word")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(
-                        LinearGradient(colors: [Color.teal, Color.blue],
+                        LinearGradient(colors: [AppTheme.systemTeal, AppTheme.systemBlue],
                                      startPoint: .leading, endPoint: .trailing)
                     )
 
@@ -722,18 +731,18 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                TextField("", text: $searchWord, prompt: Text("e.g. unforgettable").foregroundColor(.gray))
+                TextField("", text: $searchWord, prompt: Text("e.g. unforgettable").foregroundColor(AppTheme.mediumGray))
                     .font(.title3)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
-                            .shadow(color: Color.teal.opacity(0.2), radius: 10, y: 5)
+                            .fill(AppTheme.white)
+                            .shadow(color: AppTheme.systemTeal.opacity(0.2), radius: 10, y: 5)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                LinearGradient(colors: [Color.teal, Color.blue],
+                                LinearGradient(colors: [AppTheme.systemTeal, AppTheme.systemBlue],
                                              startPoint: .leading, endPoint: .trailing),
                                 lineWidth: 2
                             )

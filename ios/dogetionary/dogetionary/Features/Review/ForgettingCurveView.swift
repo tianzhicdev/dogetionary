@@ -136,7 +136,7 @@ struct ForgettingCurveView: View {
                             .symbolSize(100)
                             
                             RuleMark(x: .value("Date", date))
-                                .foregroundStyle(Color.gray.opacity(AppTheme.strongOpacity))
+                                .foregroundStyle(AppTheme.darkGray)
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
                         }
                     }
@@ -532,7 +532,7 @@ struct FallbackCurveView: View {
             if let nextDate = nextReviewDate {
                 HStack {
                     Image(systemName: "clock")
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppTheme.warningColor)
                     Text("Next: \(formatDate(nextDate, style: .relative))")
                         .font(.caption)
                         .foregroundColor(.secondary)
