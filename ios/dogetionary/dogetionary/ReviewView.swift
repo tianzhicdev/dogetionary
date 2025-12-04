@@ -13,37 +13,13 @@ struct ReviewView: View {
     // Queue manager for instant question loading
     @StateObject private var queueManager = QuestionQueueManager.shared
 
-    @State private var errorMessage: String?
-    @State private var reviewStartTime: Date?
+    // ViewModel
+    @StateObject private var viewModel = ReviewViewModel()
 
     // Current question is now computed directly from queue - no caching
     private var currentQuestion: BatchReviewQuestion? {
         return queueManager.currentQuestion()
     }
-
-    // Practice status
-    @State private var practiceStatus: PracticeStatusResponse?
-    @State private var isLoadingStatus = true
-
-    // Score tracking with animation
-    @State private var currentScore: Int = 0
-    @State private var scoreAnimationScale: CGFloat = 1.0
-    @State private var scoreAnimationColor: Color = .primary
-
-    // Badge celebration
-    @State private var showBadgeCelebration = false
-    @State private var earnedBadge: NewBadge?
-
-    // Mini curve animation
-    @State private var showMiniCurve = false
-    @State private var curveIsCorrect: Bool = false
-
-    // Card swipe state
-    @State private var cardOffset: CGFloat = 0
-    @State private var cardOpacity: Double = 1
-    @State private var isAnswered = false
-    @State private var wasCorrect: Bool? = nil
-    @State private var pendingSubmission: (response: Bool, questionType: String)?
 
     var body: some View {
         ZStack {
@@ -54,14 +30,14 @@ struct ReviewView: View {
             VStack(spacing: 0) {
                 // Status bar (fixed at top)
                 PracticeStatusBar(
-                    practiceStatus: practiceStatus,
-                    score: currentScore,
-                    scoreAnimationScale: scoreAnimationScale,
-                    scoreAnimationColor: scoreAnimationColor,
-                    showMiniCurve: showMiniCurve,
-                    curveIsCorrect: curveIsCorrect,
+                    practiceStatus: viewModel.practiceStatus,
+                    score: viewModel.currentScore,
+                    scoreAnimationScale: viewModel.scoreAnimationScale,
+                    scoreAnimationColor: viewModel.scoreAnimationColor,
+                    showMiniCurve: viewModel.showMiniCurve,
+                    curveIsCorrect: viewModel.curveIsCorrect,
                     onCurveDismiss: {
-                        showMiniCurve = false
+                        viewModel.dismissMiniCurve()
                     }
                 )
                 .padding(.horizontal)
@@ -73,9 +49,9 @@ struct ReviewView: View {
 
                 // Main content area (fills remaining space)
                 ZStack {
-                    if isLoadingStatus {
+                    if viewModel.isLoadingStatus {
                         ProgressView("Loading practice...")
-                    } else if let status = practiceStatus, !status.has_practice, !queueManager.hasQuestions {
+                    } else if let status = viewModel.practiceStatus, !status.has_practice, !queueManager.hasQuestions {
                         NothingToPracticeView()
                     } else if queueManager.isFetching && currentQuestion == nil {
                         ProgressView("Loading question...")
@@ -87,19 +63,17 @@ struct ReviewView: View {
                             word: question.word,
                             learningLanguage: question.learning_language,
                             nativeLanguage: question.native_language,
-                            isAnswered: $isAnswered,
-                            wasCorrect: $wasCorrect,
+                            isAnswered: $viewModel.isAnswered,
+                            wasCorrect: $viewModel.wasCorrect,
                             onImmediateFeedback: { isCorrect in
-                                // Show mini curve animation immediately
-                                curveIsCorrect = isCorrect
-                                showMiniCurve = true
+                                viewModel.showMiniCurveAnimation(isCorrect: isCorrect)
                             },
-                            onAnswer: handleAnswer,
-                            onSwipeComplete: handleSwipeComplete
+                            onAnswer: viewModel.handleAnswer,
+                            onSwipeComplete: { viewModel.handleSwipeComplete(currentQuestion: currentQuestion) }
                         )
                         .id(question.word)
-                        .offset(x: cardOffset)
-                        .opacity(cardOpacity)
+                        .offset(x: viewModel.cardOffset)
+                        .opacity(viewModel.cardOpacity)
                     } else if !queueManager.hasMore && !queueManager.hasQuestions {
                         NothingToPracticeView()
                     } else {
@@ -112,7 +86,7 @@ struct ReviewView: View {
                             } else {
                                 Button("Retry") {
                                     queueManager.forceRefresh()
-                                    loadPracticeStatus()
+                                    viewModel.loadPracticeStatus()
                                 }
                                 .buttonStyle(.bordered)
                             }
@@ -121,7 +95,7 @@ struct ReviewView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                if let errorMessage = errorMessage {
+                if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .foregroundColor(AppTheme.errorColor)
                         .font(.caption)
@@ -130,10 +104,9 @@ struct ReviewView: View {
             }
 
             // Badge celebration overlay
-            if showBadgeCelebration, let badge = earnedBadge {
+            if viewModel.showBadgeCelebration, let badge = viewModel.earnedBadge {
                 BadgeCelebrationView(badge: badge) {
-                    showBadgeCelebration = false
-                    earnedBadge = nil
+                    viewModel.dismissBadgeCelebration()
                 }
             }
 
@@ -147,7 +120,7 @@ struct ReviewView: View {
             }
         }
         .onAppear {
-            loadPracticeStatus()
+            viewModel.loadPracticeStatus()
 
             // Refresh practice status when Practice tab appears
             Task {
@@ -155,7 +128,7 @@ struct ReviewView: View {
             }
         }
         .refreshable {
-            await refreshPracticeStatus()
+            await viewModel.refreshPracticeStatus()
         }
         // Trigger queue refill when needed (UI updates automatically via computed property)
         .onChange(of: queueManager.queueCount) { _, _ in
@@ -163,169 +136,6 @@ struct ReviewView: View {
         }
     }
 
-    // MARK: - Actions
-
-    private func handleAnswer(_ isCorrect: Bool, questionType: String) {
-        isAnswered = true
-        wasCorrect = isCorrect
-        pendingSubmission = (response: isCorrect, questionType: questionType)
-    }
-
-    private func handleSwipeComplete() {
-        // Animate card off screen
-        withAnimation(.easeOut(duration: 0.25)) {
-            cardOffset = -UIScreen.main.bounds.width
-            cardOpacity = 0
-        }
-
-        // Submit and load next after animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if let submission = pendingSubmission {
-                submitReview(response: submission.response, questionType: submission.questionType)
-            }
-            // Reset card state for next question
-            cardOffset = 0
-            cardOpacity = 1
-            isAnswered = false
-            wasCorrect = nil
-            pendingSubmission = nil
-        }
-    }
-
-    private func loadPracticeStatus() {
-        isLoadingStatus = true
-        errorMessage = nil
-
-        DictionaryService.shared.getPracticeStatus { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let status):
-                    self.practiceStatus = status
-                    self.currentScore = status.score
-                    self.isLoadingStatus = false
-
-                    // If there's practice available, ensure the queue is loading
-                    if status.has_practice || self.queueManager.hasQuestions {
-                        // If queue is empty and not currently fetching, trigger a fetch
-                        if !self.queueManager.hasQuestions && !self.queueManager.isFetching {
-                            self.queueManager.forceRefresh()
-                        }
-                    }
-                    // currentQuestion now updates automatically via computed property
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    self.isLoadingStatus = false
-                }
-            }
-        }
-    }
-
-    @MainActor
-    private func refreshPracticeStatus() async {
-        // Force refresh the queue
-        queueManager.forceRefresh()
-
-        await withCheckedContinuation { continuation in
-            DictionaryService.shared.getPracticeStatus { result in
-                DispatchQueue.main.async {
-                    if case .success(let status) = result {
-                        self.practiceStatus = status
-                        self.currentScore = status.score
-                    }
-                    continuation.resume()
-                }
-            }
-        }
-    }
-
-    private func advanceToNextQuestion() {
-        // Remove the current question from queue (after submit)
-        _ = queueManager.popQuestion()
-
-        // Reset review start time for next question
-        reviewStartTime = Date()
-
-        // Trigger refill if needed (currentQuestion updates automatically via computed property)
-        if !queueManager.hasQuestions && !queueManager.hasMore {
-            refreshStatusAfterCompletion()
-        } else {
-            queueManager.refillIfNeeded()
-        }
-    }
-
-    private func refreshStatusAfterCompletion() {
-        DictionaryService.shared.getPracticeStatus { result in
-            DispatchQueue.main.async {
-                if case .success(let status) = result {
-                    self.practiceStatus = status
-                }
-            }
-        }
-    }
-
-    private func submitReview(response: Bool, questionType: String) {
-        guard let question = currentQuestion else { return }
-
-        let word = question.word
-        let learningLanguage = question.learning_language
-        let nativeLanguage = question.native_language
-        let responseTime = reviewStartTime.map { Int(Date().timeIntervalSince($0) * 1000) }
-
-        // Track analytics
-        let action: AnalyticsAction = response ? .reviewAnswerCorrect : .reviewAnswerIncorrect
-        AnalyticsManager.shared.track(action: action, metadata: [
-            "word": word,
-            "question_type": questionType,
-            "response_time_ms": responseTime ?? 0
-        ])
-
-        DictionaryService.shared.submitReview(
-            word: word,
-            learningLanguage: learningLanguage,
-            nativeLanguage: nativeLanguage,
-            response: response,
-            questionType: questionType
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let submitResponse):
-                    self.animateScoreChange(points: response ? 2 : 1, isCorrect: response)
-
-                    if let newBadge = submitResponse.new_badge {
-                        self.earnedBadge = newBadge
-                        self.showBadgeCelebration = true
-                    }
-
-                    // Advance to next question (removes current from queue)
-                    self.advanceToNextQuestion()
-                    self.refreshStatusAfterCompletion()
-
-                    // Refresh practice status after review submission
-                    Task {
-                        await UserManager.shared.refreshPracticeStatus()
-                    }
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-
-    private func animateScoreChange(points: Int, isCorrect: Bool) {
-        currentScore += points
-        scoreAnimationColor = isCorrect ? AppTheme.successColor : AppTheme.warningColor
-
-        withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-            scoreAnimationScale = 1.3
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                self.scoreAnimationScale = 1.0
-                self.scoreAnimationColor = .primary
-            }
-        }
-    }
 }
 
 // MARK: - Question Card View
