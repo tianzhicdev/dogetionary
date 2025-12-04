@@ -7,12 +7,14 @@
 
 import SwiftUI
 import StoreKit
+import os.log
 
 @MainActor
 class SearchViewModel: ObservableObject {
     // MARK: - Dependencies
     private let dictionaryService: DictionaryService
     private let userManager: UserManager
+    private let logger = Logger(subsystem: "com.dogetionary.app", category: "SearchViewModel")
 
     // MARK: - Published State
 
@@ -244,13 +246,13 @@ class SearchViewModel: ObservableObject {
                                     NotificationCenter.default.post(name: .wordAutoSaved, object: word)
 
                                 case .failure(let error):
-                                    print("Auto-save failed for word '\(word)': \(error.localizedDescription)")
+                                    self.logger.error("Auto-save failed for word '\(word, privacy: .public)': \(error.localizedDescription, privacy: .public)")
                                 }
                             }
                         }
                     }
                 case .failure(let error):
-                    print("Failed to check saved words for auto-save: \(error.localizedDescription)")
+                    self.logger.error("Failed to check saved words for auto-save: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }

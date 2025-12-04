@@ -7,8 +7,10 @@
 
 import SwiftUI
 import AVFoundation
+import os.log
 
 struct PronounceSentenceQuestionView: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "PronounceSentence")
     let question: ReviewQuestion
     let onImmediateFeedback: ((Bool) -> Void)?
     let onAnswer: (Bool) -> Void
@@ -300,7 +302,7 @@ struct PronounceSentenceQuestionView: View {
 
                 case .failure(let error):
                     // Show error to user
-                    print("Error evaluating pronunciation: \(error)")
+                    Self.logger.error("Error evaluating pronunciation: \(error.localizedDescription, privacy: .public)")
                     // TODO: Show error message in UI
                 }
             }
@@ -341,10 +343,10 @@ struct PronunciationEvaluationResult: Codable {
             evaluation_threshold: AppConstants.Validation.pronunciationThreshold
         ),
         onImmediateFeedback: { passed in
-            print("Immediate feedback: \(passed)")
+            // Preview: Immediate feedback callback
         },
         onAnswer: { passed in
-            print("Final answer: \(passed)")
+            // Preview: Final answer callback
         }
     )
 }

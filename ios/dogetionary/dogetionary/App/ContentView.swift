@@ -98,9 +98,7 @@ struct ContentView: View {
 
             // Request notification permissions
             notificationManager.requestPermission { granted in
-                if granted {
-                    print("✅ User granted notification permission")
-                }
+                // NotificationManager already logs the permission result
             }
 
             // Refresh practice status on app startup

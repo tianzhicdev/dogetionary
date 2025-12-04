@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import os.log
 
 // MARK: - Main Review View
 
 struct ReviewView: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "ReviewView")
     // Queue manager for instant question loading
     @StateObject private var queueManager = QuestionQueueManager.shared
 
@@ -551,6 +553,8 @@ struct TodayCompleteView: View {
 }
 
 struct ReviewSessionView: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "ReviewSession")
+
     let currentWord: ReviewWord
     let progress: String
     let onResponse: (Bool) -> Void
@@ -970,7 +974,7 @@ struct ReviewSessionView: View {
                     }
                 case .failure(let error):
                     // Handle error silently or show user-friendly message
-                    print("Failed to load word definitions: \(error)")
+                    Self.logger.error("Failed to load word definitions: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }

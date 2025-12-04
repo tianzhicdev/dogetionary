@@ -192,7 +192,7 @@ struct Definition: Identifiable {
                     definition: definitionText,
                     example: exampleText,
                     synonyms: nil,
-                    antonyms: def.cultural_notes != nil ? [def.cultural_notes!] : nil // Use antonyms field for cultural notes
+                    antonyms: def.cultural_notes.map { [$0] } // Use antonyms field for cultural notes
                 )
             }
             return Meaning(partOfSpeech: partOfSpeech, definitions: definitionDetails)

@@ -6,8 +6,10 @@
 //
 
 import SwiftUI
+import os.log
 
 struct OnboardingView: View {
+    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "Onboarding")
     @StateObject private var userManager = UserManager.shared
     @Environment(\.dismiss) var dismiss
 
@@ -990,7 +992,7 @@ struct OnboardingView: View {
                 isLoadingVocabulary = false
 
                 if let error = error {
-                    print("Error fetching vocabulary count: \(error)")
+                    Self.logger.error("Error fetching vocabulary count: \(error.localizedDescription, privacy: .public)")
                     setDefaultStudyPlans()
                     return
                 }
@@ -1019,7 +1021,7 @@ struct OnboardingView: View {
                         setDefaultStudyPlans()
                     }
                 } catch {
-                    print("Error parsing vocabulary count response: \(error)")
+                    Self.logger.error("Error parsing vocabulary count response: \(error.localizedDescription, privacy: .public)")
                     setDefaultStudyPlans()
                 }
             }
@@ -1039,18 +1041,18 @@ struct OnboardingView: View {
         let baseURL = Configuration.effectiveBaseURL
         // Fetch all test types using "ALL" shorthand
         guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=ALL") else {
-            print("Invalid URL for fetching all vocabulary counts")
+            Self.logger.error("Invalid URL for fetching all vocabulary counts")
             return
         }
 
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("Error fetching all vocabulary counts: \(error)")
+                Self.logger.error("Error fetching all vocabulary counts: \(error.localizedDescription, privacy: .public)")
                 return
             }
 
             guard let data = data else {
-                print("No data received for vocabulary counts")
+                Self.logger.warning("No data received for vocabulary counts")
                 return
             }
 
@@ -1061,10 +1063,10 @@ struct OnboardingView: View {
                 DispatchQueue.main.async {
                     // Store all counts in the dictionary
                     self.vocabularyCounts = response.allCounts()
-                    print("Fetched vocabulary counts for \(self.vocabularyCounts.count) test types")
+                    Self.logger.info("Fetched vocabulary counts for \(self.vocabularyCounts.count) test types")
                 }
             } catch {
-                print("Error decoding vocabulary counts: \(error)")
+                Self.logger.error("Error decoding vocabulary counts: \(error.localizedDescription, privacy: .public)")
             }
         }.resume()
     }
