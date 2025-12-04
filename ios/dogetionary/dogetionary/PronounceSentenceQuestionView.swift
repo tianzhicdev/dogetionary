@@ -105,23 +105,16 @@ struct PronounceSentenceQuestionView: View {
                 }
             }
 
-            // Submit button
-            if hasRecorded && !hasAnswered {
-                Button(action: submitPronunciation) {
-                    if isSubmitting {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                    } else {
-                        Text("Submit")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 40)
-                            .background(Color.blue)
-                            .cornerRadius(10)
-                    }
+            // Evaluating indicator
+            if isSubmitting {
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                    Text("Evaluating...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .disabled(isSubmitting)
+                .padding(.vertical, 12)
             }
 
             // Evaluation results
@@ -237,6 +230,9 @@ struct PronounceSentenceQuestionView: View {
         if audioRecorder.isRecording {
             audioRecorder.stopRecording()
             hasRecorded = true
+
+            // Auto-evaluate immediately after recording stops
+            evaluatePronunciation()
         } else {
             // Stop any playing audio
             referenceAudioPlayer.stopAudio()
@@ -255,37 +251,57 @@ struct PronounceSentenceQuestionView: View {
         recordedAudioPlayer.playAudio(from: audioData)
     }
 
-    private func submitPronunciation() {
+    private func evaluatePronunciation() {
         guard let audioData = audioRecorder.audioData,
               let sentence = question.sentence else { return }
 
         isSubmitting = true
 
-        Task {
-            do {
-                let result = try await DictionaryService.shared.submitPronunciationReview(
-                    audioData: audioData,
-                    originalText: sentence,
-                    word: question.word,
-                    evaluationThreshold: question.evaluation_threshold ?? 0.7
-                )
+        // Use practice API (not review API) for evaluation only
+        let metadata: [String: Any] = [
+            "word": question.word,
+            "question_type": "pronounce_sentence",
+            "source": "review"
+        ]
 
-                await MainActor.run {
-                    evaluationResult = result
+        DictionaryService.shared.practicePronunciation(
+            originalText: sentence,
+            audioData: audioData,
+            metadata: metadata
+        ) { result in
+            DispatchQueue.main.async {
+                isSubmitting = false
+
+                switch result {
+                case .success(let practiceResult):
+                    // Hard-coded threshold: 0.8 (80%)
+                    let threshold = 0.8
+                    let passed = practiceResult.similarityScore >= threshold
+
+                    // Convert to evaluation result for display
+                    evaluationResult = PronunciationEvaluationResult(
+                        success: true,
+                        passed: passed,
+                        similarity_score: practiceResult.similarityScore,
+                        recognized_text: practiceResult.recognizedText,
+                        feedback: practiceResult.feedback,
+                        evaluation_threshold: threshold,
+                        review_id: 0,  // Not submitted yet, will be submitted on swipe
+                        next_interval_days: 0  // Will be calculated on submit
+                    )
+
                     hasAnswered = true
-                    isSubmitting = false
 
-                    // Immediate feedback
-                    onImmediateFeedback?(result.passed)
+                    // Immediate feedback (triggers mini curve animation)
+                    onImmediateFeedback?(passed)
 
-                    // Final answer callback
-                    onAnswer(result.passed)
-                }
-            } catch {
-                await MainActor.run {
-                    isSubmitting = false
-                    // TODO: Show error to user
-                    print("Error submitting pronunciation: \(error)")
+                    // Trigger showing definition in parent
+                    onAnswer(passed)
+
+                case .failure(let error):
+                    // Show error to user
+                    print("Error evaluating pronunciation: \(error)")
+                    // TODO: Show error message in UI
                 }
             }
         }

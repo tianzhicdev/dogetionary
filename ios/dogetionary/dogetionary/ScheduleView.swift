@@ -342,7 +342,7 @@ struct SimpleScheduleListView: View {
                                 }
 
                                 Menu {
-                                    ForEach(1...200, id: \.self) { days in
+                                    ForEach(1...365, id: \.self) { days in
                                         Button(action: { targetDays = days }) {
                                             HStack {
                                                 Text("\(days) days → \(formattedEndDate(days: days))")

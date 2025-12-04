@@ -94,6 +94,10 @@ def update_test_settings():
         test_type = data.get('test_type')
         target_days = data.get('target_days', 30)
 
+        # Validate target_days range (1-365 days)
+        if not isinstance(target_days, int) or target_days < 1 or target_days > 365:
+            return jsonify({"error": "target_days must be an integer between 1 and 365"}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
 

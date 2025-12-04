@@ -332,7 +332,7 @@ struct ReviewView: View {
 
 struct QuestionCardView: View {
     let question: ReviewQuestion
-    let definition: DefinitionData?
+    let definition: WordDefinitionResponse?
     let word: String
     let learningLanguage: String
     let nativeLanguage: String
@@ -351,44 +351,11 @@ struct QuestionCardView: View {
 
     private let swipeThreshold: CGFloat = 100
 
-    // Convert DefinitionData to Definition model for DefinitionCard
+    // Convert WordDefinitionResponse to Definition model for DefinitionCard
+    // Uses the same conversion logic as search results
     private var convertedDefinition: Definition? {
-        guard let def = definition else { return nil }
-
-        let groupedDefinitions = Dictionary(grouping: def.definitions) { $0.type }
-        let meanings = groupedDefinitions.map { (partOfSpeech, definitions) in
-            let definitionDetails = definitions.map { d in
-                let definitionText: String
-                if let nativeDefinition = d.definition_native,
-                   !nativeDefinition.isEmpty && nativeDefinition != d.definition {
-                    definitionText = "\(d.definition)\n\n\(nativeDefinition)"
-                } else {
-                    definitionText = d.definition
-                }
-                return DefinitionDetail(
-                    definition: definitionText,
-                    example: d.examples.first,
-                    synonyms: nil,
-                    antonyms: d.cultural_notes != nil ? [d.cultural_notes!] : nil
-                )
-            }
-            return Meaning(partOfSpeech: partOfSpeech, definitions: definitionDetails)
-        }
-
-        return Definition(
-            id: UUID(),
-            word: word,
-            phonetic: def.phonetic,
-            learning_language: learningLanguage,
-            native_language: nativeLanguage,
-            translations: def.translations ?? [],
-            meanings: meanings,
-            audioData: nil,
-            hasWordAudio: false,
-            exampleAudioAvailability: [:],
-            validWordScore: def.valid_word_score ?? 1.0,
-            suggestion: def.suggestion
-        )
+        guard let defResponse = definition else { return nil }
+        return Definition(from: defResponse)
     }
 
     var body: some View {
@@ -437,7 +404,6 @@ struct QuestionCardView: View {
                         Spacer()
                             .frame(height: 20)
                     }
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
             .padding(.vertical, 20)
@@ -491,7 +457,7 @@ struct QuestionCardView: View {
                                 .font(.system(size: 32, weight: .bold))
                                 .foregroundStyle(AppTheme.primaryGradient)
 
-                            Text("Swipe")
+                            Text("next")
                                 .font(.headline)
                                 .fontWeight(.bold)
                                 .foregroundStyle(AppTheme.primaryGradient)
@@ -1229,54 +1195,16 @@ struct ReviewSessionView: View {
 
 struct DefinitionSheetView: View {
     let word: String
-    let definition: DefinitionData
+    let definition: WordDefinitionResponse
     let learningLanguage: String
     let nativeLanguage: String
     let isCorrect: Bool
     let onNext: () -> Void
 
-    // Convert DefinitionData to Definition model for DefinitionCard
+    // Convert WordDefinitionResponse to Definition model for DefinitionCard
+    // Uses the same conversion logic as search results
     private var convertedDefinition: Definition {
-        // Group definitions by type (part of speech)
-        let groupedDefinitions = Dictionary(grouping: definition.definitions) { $0.type }
-        let meanings = groupedDefinitions.map { (partOfSpeech, definitions) in
-            let definitionDetails = definitions.map { def in
-                // Show native definition if it exists and is different from main definition
-                let definitionText: String
-                if let nativeDefinition = def.definition_native,
-                   !nativeDefinition.isEmpty && nativeDefinition != def.definition {
-                    definitionText = "\(def.definition)\n\n\(nativeDefinition)"
-                } else {
-                    definitionText = def.definition
-                }
-
-                // Use first example (always in learning language)
-                let exampleText = def.examples.first
-
-                return DefinitionDetail(
-                    definition: definitionText,
-                    example: exampleText,
-                    synonyms: nil,
-                    antonyms: def.cultural_notes != nil ? [def.cultural_notes!] : nil
-                )
-            }
-            return Meaning(partOfSpeech: partOfSpeech, definitions: definitionDetails)
-        }
-
-        return Definition(
-            id: UUID(),
-            word: word,
-            phonetic: definition.phonetic,
-            learning_language: learningLanguage,
-            native_language: nativeLanguage,
-            translations: definition.translations ?? [],
-            meanings: meanings,
-            audioData: nil,
-            hasWordAudio: false,
-            exampleAudioAvailability: [:],
-            validWordScore: definition.valid_word_score ?? 1.0,
-            suggestion: definition.suggestion
-        )
+        return Definition(from: definition)
     }
 
     var body: some View {
