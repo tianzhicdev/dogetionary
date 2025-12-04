@@ -305,6 +305,20 @@ def get_word_definition_v4():
 
         logger.info(f"V4: Definition for '{word_normalized}': score={valid_word_score}, suggestion={suggestion}")
 
+        # Auto-save word to user's vocabulary (idempotent)
+        try:
+            from utils.database import db_execute
+            db_execute("""
+                INSERT INTO saved_words (user_id, word, learning_language, native_language)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT ON CONSTRAINT saved_words_user_id_word_learning_language_native_language_key
+                DO NOTHING
+            """, (user_id, word_normalized, learning_lang, native_lang), commit=True)
+            logger.info(f"Auto-saved word '{word_normalized}' for user {user_id}")
+        except Exception as e:
+            # Log but don't fail the request if auto-save fails
+            logger.warning(f"Failed to auto-save word '{word_normalized}': {e}")
+
         # Collect audio references
         audio_refs = collect_audio_references(definition_data, learning_lang)
 

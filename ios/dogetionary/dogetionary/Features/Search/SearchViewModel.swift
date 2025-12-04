@@ -97,11 +97,9 @@ class SearchViewModel: ObservableObject {
                     self.validationSuggestion = definition.suggestion
 
                     if definition.isValid {
-                        // High confidence (≥0.9) - show definition immediately + auto-save
+                        // High confidence (≥0.9) - show definition immediately
+                        // Note: Word is auto-saved by backend on search
                         self.definitions = definitions
-
-                        // Auto-save the word
-                        self.autoSaveWord(definition.word)
 
                         // Track successful search
                         AnalyticsManager.shared.track(action: .dictionaryAutoSave, metadata: [
@@ -219,44 +217,6 @@ class SearchViewModel: ObservableObject {
     }
 
     // MARK: - Private Methods
-
-    private func autoSaveWord(_ word: String) {
-        // Check if word is already saved
-        dictionaryService.getSavedWords { [weak self] result in
-            guard let self = self else { return }
-
-            Task { @MainActor in
-                switch result {
-                case .success(let savedWords):
-                    let alreadySaved = savedWords.contains { $0.word.lowercased() == word.lowercased() }
-
-                    if !alreadySaved {
-                        // Save the word
-                        self.dictionaryService.saveWord(word) { saveResult in
-                            Task { @MainActor in
-                                switch saveResult {
-                                case .success:
-                                    // Track auto-save
-                                    AnalyticsManager.shared.track(action: .dictionaryAutoSave, metadata: [
-                                        "word": word,
-                                        "language": self.userManager.learningLanguage
-                                    ])
-
-                                    // Notify DefinitionCards to update their bookmark state
-                                    NotificationCenter.default.post(name: .wordAutoSaved, object: word)
-
-                                case .failure(let error):
-                                    self.logger.error("Auto-save failed for word '\(word, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-                                }
-                            }
-                        }
-                    }
-                case .failure(let error):
-                    self.logger.error("Failed to check saved words for auto-save: \(error.localizedDescription, privacy: .public)")
-                }
-            }
-        }
-    }
 
     private func requestAppRating() {
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {

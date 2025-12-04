@@ -30,18 +30,8 @@ class QuestionQueueManager: ObservableObject {
     @Published var debugMode = DebugConfig.enableDebugLogging
 
     private init() {
-        // Listen for test settings changes to refresh queue
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleTestSettingsChanged),
-            name: .testSettingsChanged,
-            object: nil
-        )
-        logger.info("QuestionQueueManager initialized with test settings observer")
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self)
+        logger.info("QuestionQueueManager initialized")
+        // Note: Test settings change observation now handled via AppState in ReviewView
     }
 
     // MARK: - Queue Operations
@@ -126,16 +116,6 @@ class QuestionQueueManager: ObservableObject {
     func forceRefresh() {
         clearQueue()
         preloadQuestions()
-    }
-
-    // MARK: - Notification Handlers
-
-    /// Handle test settings change notification
-    @objc private func handleTestSettingsChanged() {
-        logger.info("Test settings changed - refreshing question queue to reflect new test type/target days")
-        DispatchQueue.main.async {
-            self.forceRefresh()
-        }
     }
 
     // MARK: - Private Methods

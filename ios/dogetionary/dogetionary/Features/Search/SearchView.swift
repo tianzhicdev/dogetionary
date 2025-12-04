@@ -14,6 +14,7 @@ struct SearchView: View {
 
     @ObservedObject private var userManager = UserManager.shared
     @StateObject private var viewModel = SearchViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,8 +115,8 @@ struct SearchView: View {
         } message: {
             Text("\"\(viewModel.currentSearchQuery)\" is likely not a valid word or phrase, are you sure you want to read its definition?")
         }
-        .onReceive(NotificationCenter.default.publisher(for: .performSearchFromOnboarding)) { notification in
-            if let word = notification.object as? String {
+        .onChange(of: appState.searchQueryFromOnboarding) { _, query in
+            if let word = query {
                 viewModel.performSearchFromOnboarding(word: word)
             }
         }
@@ -126,20 +127,14 @@ struct SearchView: View {
                 viewModel.loadTestVocabularyAwards()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .wordAutoSaved)) { _ in
-            // Refresh progress when a word is saved
-            if showProgressBar {
-                viewModel.loadTestProgress()
-                viewModel.loadAchievementProgress()
-                viewModel.loadTestVocabularyAwards()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .testSettingsChanged)) { _ in
-            // Refresh progress when test settings change
-            if showProgressBar {
-                viewModel.loadTestProgress()
-                viewModel.loadAchievementProgress()
-                viewModel.loadTestVocabularyAwards()
+        .onChange(of: appState.testSettingsChanged) { _, changed in
+            if changed {
+                // Refresh progress when test settings change
+                if showProgressBar {
+                    viewModel.loadTestProgress()
+                    viewModel.loadAchievementProgress()
+                    viewModel.loadTestVocabularyAwards()
+                }
             }
         }
     }

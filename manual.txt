@@ -149,3 +149,554 @@ get_daily_test_words -- if user enabled any test, we add 10 (make it configurabl
 
 --- done ---
 
+
+  1. HOW COMPONENTS INTERACT WITH EACH OTHER
+
+  Architecture Pattern: Singleton-Heavy Service Layer
+
+  The app uses a singleton-based architecture rather than traditional MVVM:
+
+  ┌─────────────────────────────────────────┐
+  │         ContentView (Root)              │
+  │  - Initializes 4 singleton managers     │
+  │  - Controls tab navigation (int index)  │
+  └──────────────┬──────────────────────────┘
+                 │
+          ┌──────┴──────┬──────────┬─────────┬──────────┐
+          ▼             ▼          ▼         ▼          ▼
+     SearchView   ScheduleView  ReviewView SavedWords Settings
+          │             │          │         │          │
+          └─────────────┴──────────┴─────────┴──────────┘
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+    5 Singleton Managers        DictionaryService
+    ├── UserManager              (30+ API methods)
+    ├── QuestionQueueManager
+    ├── NotificationManager
+    ├── AnalyticsManager
+    └── AppVersionManager
+
+  Data Flow Patterns
+
+  1. Singleton Dependencies (Heavy Coupling)
+  - Every major view depends on 3-5 singleton managers via @StateObject
+  - Example from ContentView.swift:11-14:
+  @StateObject private var userManager = UserManager.shared
+  @StateObject private var notificationManager = NotificationManager.shared
+  @StateObject private var questionQueue = QuestionQueueManager.shared
+  @StateObject private var appVersionManager = AppVersionManager.shared
+
+  2. UserManager as God Object
+  - Manages 491 lines of responsibilities:
+    - User identity (UUID generation)
+    - Language preferences (learning/native)
+    - Profile data (name, motto)
+    - Test settings (TOEFL/IELTS/Tianz - legacy + V3 API)
+    - Practice count caching
+    - Onboarding state
+    - Notification timing
+    - Server sync on every property change (UserManager.swift:46-74)
+
+  3. DictionaryService as API Gateway (1530 lines)
+  - Single massive service with 30+ methods:
+    - Word operations: search, save, unsave
+    - Review system: submit, batch fetch, practice status
+    - Audio: TTS generation, fetching
+    - Illustrations: generate, fetch
+    - User profile, leaderboard, achievements
+    - Test progress, schedules
+    - Feedback submission
+  - Tight coupling: Calls UserManager.shared.getUserID() in every method
+  (DictionaryService.swift:92)
+
+  4. Communication Mechanisms
+
+  NotificationCenter (6 notifications):
+  .wordAutoSaved           → DefinitionCard updates bookmark
+  .wordUnsaved             → SavedWordsView refreshes list
+  .refreshSavedWords       → SavedWordsView reloads
+  .shouldNavigateToReview  → ContentView switches to tab 2
+  .performSearchFromOnboarding → SearchView executes search
+  .testSettingsChanged     → QuestionQueueManager clears queue
+
+  @Published Properties (Cascade Updates):
+  UserManager.practiceCount
+      ↓ triggers
+  FloatingActionMenu badge update
+      ↓ triggers
+  ContentView re-render
+
+  Completion Closures (everywhere):
+  - DictionaryService uses callbacks for all async operations
+  - No async/await consistency
+  - Mix of Result<T, Error> and plain callbacks
+
+  Question Queue System (Complex State Machine)
+
+  QuestionQueueManager implements a sophisticated preload/refill pattern:
+
+  App Launch
+    ↓
+  ContentView.onAppear (ContentView.swift:78)
+    ↓
+  questionQueue.preloadQuestions() → fetches 3 questions
+    ↓
+    └→ triggers refillIfNeeded() → fetches 7 more (target: 10)
+
+  ReviewView renders
+    ↓
+  currentQuestion() → questionQueue.first (computed)
+    ↓
+  User swipes → popQuestion()
+    ↓
+    └→ removes from queue → triggers refillIfNeeded()
+
+  Issue: ReviewView recomputes currentQuestion on every render cycle instead
+  of caching.
+
+  ---
+  2. WHAT CAN BE SIMPLIFIED FOR BETTER MANAGEABILITY
+
+  CRITICAL SIMPLIFICATIONS
+
+  A. Break Up God Objects
+
+  DictionaryService (1530 lines) → Split into:
+  NetworkClient (shared infrastructure)
+    ↓ Used by:
+  ├── WordService (search, save, unsave)
+  ├── ReviewService (submit answers, batch fetch)
+  ├── AudioService (TTS, audio fetching)
+  ├── IllustrationService (generate, fetch)
+  ├── UserService (profile, preferences sync)
+  └── LeaderboardService (rankings, achievements)
+
+  UserManager (491 lines) → Extract:
+  UserManager (identity only)
+    ├── userID
+    ├── getUserID()
+    └── (100 lines)
+
+  PreferencesManager
+    ├── languages
+    ├── profile (name, motto)
+    ├── syncToServer()
+    └── (150 lines)
+
+  TestSettingsManager
+    ├── activeTestType
+    ├── targetDays
+    └── (100 lines)
+
+  PracticeStatusManager
+    ├── practiceCount
+    └── refreshPracticeStatus()
+
+  ReviewView (1393 lines) → Extract:
+  ReviewView (coordinator)
+    ├── QuestionCardView (presentation)
+    ├── ReviewViewModel (state + logic)
+    │   ├── questionState
+    │   ├── answerState
+    │   └── submitAnswer()
+    └── BadgeCelebrationView (already separate)
+
+  B. Eliminate Singleton Overuse
+
+  Current (ContentView.swift:11-14):
+  @StateObject private var userManager = UserManager.shared
+  @StateObject private var notificationManager = NotificationManager.shared
+  @StateObject private var questionQueue = QuestionQueueManager.shared
+  @StateObject private var appVersionManager = AppVersionManager.shared
+
+  Simplified:
+  // Use SwiftUI Environment for shared state
+  @Environment(\.userManager) private var userManager
+  @Environment(\.apiClient) private var apiClient
+
+  // Or inject dependencies
+  struct ReviewView {
+      let questionQueue: QuestionQueueManager
+      let reviewService: ReviewService
+  }
+
+  Benefits:
+  - Testable (mock dependencies)
+  - Clear dependencies (visible in initializer)
+  - No hidden global state
+
+  C. Consolidate Duplicate Patterns
+
+  Pattern Found 5+ Times:
+  func load<Something>Status() {
+      isLoading = true
+      DictionaryService.shared.get<Something> { result in
+          DispatchQueue.main.async {
+              self.isLoading = false
+              switch result {
+              case .success(let data):
+                  self.<something> = data
+              case .failure(let error):
+                  print("Error: \(error)")
+              }
+          }
+      }
+  }
+
+  Simplified with generic helper:
+  extension View {
+      func loadData<T>(
+          _ loader: (@escaping (Result<T, Error>) -> Void) -> Void,
+          into binding: Binding<T?>
+      ) -> some View { ... }
+  }
+
+  // Usage:
+  .task { await loadData(service.getPracticeStatus, into: $practiceStatus) }
+
+  D. Remove NotificationCenter Dependency
+
+  Current: 6 different notifications for inter-view communication
+
+  Simplified:
+  // Use @Environment for shared observable state
+  @Observable class AppState {
+      var practiceCount: Int = 0
+      var savedWords: [SavedWord] = []
+      var shouldShowReview: Bool = false
+  }
+
+  // In views:
+  @Environment(AppState.self) var appState
+
+  E. Centralize Audio Management
+
+  Current: Audio loading duplicated in:
+  - DefinitionCard (word + examples)
+  - ReviewView
+  - SearchView
+  - Each maintains separate @State var audioData
+
+  Simplified:
+  @Observable class AudioCache {
+      private var cache: [String: Data] = [:]
+
+      func audio(for text: String, language: String) async -> Data? {
+          if let cached = cache["\(text)-\(language)"] {
+              return cached
+          }
+          let data = await audioService.fetch(text, language)
+          cache["\(text)-\(language)"] = data
+          return data
+      }
+  }
+
+  F. Simplify Navigation
+
+  Current: Integer-based tab selection
+  @State private var selectedView = 0  // What's 0? What's 2?
+  selectedView = 2  // Magic number
+
+  Simplified:
+  enum AppTab: Int, CaseIterable {
+      case search = 0
+      case schedule = 1
+      case practice = 2
+      case savedWords = 3
+      case leaderboard = 4
+      case settings = 5
+  }
+
+  @State private var selectedTab: AppTab = .search
+  selectedTab = .practice  // Clear intent
+
+  ---
+  3. CODE QUALITY IMPROVEMENTS
+
+  A. Architectural Issues
+
+  1. Hidden Dependencies
+  - Every view secretly depends on 5 singletons
+  - No way to see dependencies from function signature
+  - Impossible to test in isolation
+
+  2. Violation of Single Responsibility
+  - DictionaryService does 30+ different things
+  - UserManager manages identity + preferences + test settings + practice
+  cache
+  - ReviewView handles questions + animations + audio + networking
+
+  3. Tight Coupling
+  - DictionaryService.swift:92 directly calls UserManager.shared.getUserID()
+  - Views directly call DictionaryService.shared.searchWord()
+  - Cannot swap implementations or mock for testing
+
+  B. Error Handling Inconsistencies
+
+  3 Different Patterns:
+
+  1. Completion with Result (most common):
+  completion: @escaping (Result<T, Error>) -> Void
+  2. Async/await (UserManager.swift:107):
+  func refreshPracticeStatus() async
+  3. Silent failures (CompactIllustrationView.swift:501):
+  case .failure(_):
+      // Illustration doesn't exist yet, auto-generate it
+      self.generateIllustration()
+
+  Recommendation: Standardize on async/await with typed errors:
+  enum ServiceError: Error {
+      case networkError(URLError)
+      case decodingError(DecodingError)
+      case serverError(Int, String?)
+      case notFound
+  }
+
+  C. Performance Issues
+
+  1. Unnecessary Re-computation
+  - ReviewView recomputes currentQuestion every render
+  - Should cache and only update when queue changes
+
+  2. Main Thread Blocking
+  - Base64 encoding/decoding happens synchronously
+  - ISO8601DateFormatter created in loops (SavedWordsView:63)
+
+  3. Memory Concerns
+  - No cache eviction policy for audio data
+  - QuestionQueue can grow unbounded
+  - Singleton managers never deallocate
+
+  D. Magic Numbers Everywhere
+
+  let swipeThreshold: CGFloat = 100  // QuestionCardView
+  private let initialLoadCount = 3   // QuestionQueueManager
+  private let targetQueueSize = 10
+  .shadow(radius: 8, x: 0, y: 4)    // Repeated 20+ times
+  .padding(.horizontal, 16)          // Inconsistent spacing
+
+  Recommendation: Create constants file:
+  enum AppConstants {
+      enum Animation {
+          static let defaultShadow = (radius: 8.0, x: 0.0, y: 4.0)
+          static let swipeThreshold: CGFloat = 100
+      }
+      enum Layout {
+          static let standardPadding: CGFloat = 16
+          static let cardCornerRadius: CGFloat = 12
+      }
+      enum Queue {
+          static let initialLoadCount = 3
+          static let targetSize = 10
+      }
+  }
+
+  E. Inconsistent Naming
+
+  Swift side:
+  var learningLanguage: String  // camelCase
+
+  Model (from API):
+  let learning_language: String  // snake_case
+
+  Mixed:
+  struct Definition {
+      let word: String           // camelCase
+      let learning_language: String  // snake_case
+      let wordFamily: [WordFamilyEntry]  // camelCase
+  }
+
+  F. Missing Abstractions
+
+  No NetworkRequest Protocol:
+  // Instead of:
+  performNetworkRequest(url: url, method: "POST", body: data, ...)
+
+  // Could have:
+  protocol NetworkRequest {
+      associatedtype Response: Codable
+      var endpoint: Endpoint { get }
+      var method: HTTPMethod { get }
+      var body: Encodable? { get }
+  }
+
+  // Usage:
+  struct SaveWordRequest: NetworkRequest {
+      typealias Response = SaveWordResponse
+      let endpoint = .saveWord
+      let method = .post
+      let word: String
+  }
+
+  No typed endpoints:
+  // Currently:
+  guard let url = URL(string: "\(baseURL)/v3/save") else { ... }
+
+  // Could be:
+  enum Endpoint {
+      case saveWord
+      case searchWord(String)
+      case nextReviewBatch(count: Int)
+
+      var path: String { ... }
+  }
+
+  G. File Organization Chaos
+
+  Current: 37 files in flat directory
+
+  Issues:
+  - Related files scattered
+  - No clear module boundaries
+  - Hard to navigate
+  - Models file is 1293 lines with 50+ types
+
+  Recommended Structure:
+  dogetionary/
+  ├── App/
+  │   ├── dogetionaryApp.swift
+  │   └── ContentView.swift
+  ├── Features/
+  │   ├── Search/
+  │   │   ├── SearchView.swift
+  │   │   ├── SearchViewModel.swift
+  │   │   └── Models/
+  │   │       └── SearchResult.swift
+  │   ├── Review/
+  │   │   ├── Views/
+  │   │   │   ├── ReviewView.swift
+  │   │   │   ├── QuestionCardView.swift
+  │   │   │   └── BadgeCelebrationView.swift
+  │   │   ├── ViewModels/
+  │   │   │   └── ReviewViewModel.swift
+  │   │   ├── Models/
+  │   │   │   └── ReviewQuestion.swift
+  │   │   └── Services/
+  │   │       ├── QuestionQueueManager.swift
+  │   │       └── ReviewService.swift
+  │   ├── SavedWords/
+  │   ├── Schedule/
+  │   ├── Leaderboard/
+  │   └── Settings/
+  ├── Core/
+  │   ├── Networking/
+  │   │   ├── NetworkClient.swift
+  │   │   ├── Endpoint.swift
+  │   │   └── HTTPMethod.swift
+  │   ├── Models/
+  │   │   ├── Definition.swift
+  │   │   ├── SavedWord.swift
+  │   │   └── User.swift
+  │   └── Services/
+  │       ├── AudioService.swift
+  │       └── IllustrationService.swift
+  ├── Shared/
+  │   ├── Components/
+  │   │   ├── DefinitionCard.swift
+  │   │   └── FloatingActionMenu.swift
+  │   ├── Managers/
+  │   │   ├── UserManager.swift
+  │   │   └── AnalyticsManager.swift
+  │   └── Theme/
+  │       ├── AppTheme.swift
+  │       └── AppConstants.swift
+  └── Utilities/
+      ├── AudioPlayer.swift
+      └── Extensions/
+
+  H. Specific Code Smells
+
+  1. Completion Handler Pyramid
+  DictionaryService.shared.searchWord(word) { result in
+      DispatchQueue.main.async {
+          switch result {
+          case .success(let data):
+              DictionaryService.shared.fetchAudio(word) { audioResult in
+                  DispatchQueue.main.async {
+                      // Nested callbacks...
+                  }
+              }
+          }
+      }
+  }
+
+  2. No [weak self] in closures
+  - Risk of retain cycles with singleton managers
+  - Example: QuestionQueueManager.swift:87 uses [weak self] but most places
+  don't
+
+  3. State machine not explicit
+  - Review flow has implicit states (idle → answering → submitting →
+  transitioning)
+  - Should use enum:
+  enum ReviewState {
+      case idle
+      case answering(question: BatchReviewQuestion)
+      case submitting(answer: Answer)
+      case transitioning
+      case celebrating(Badge)
+  }
+
+  ---
+  SUMMARY & PRIORITIZED RECOMMENDATIONS
+
+  Critical (Do First)
+
+  1. Split DictionaryService → Domain-specific services (WordService,
+  ReviewService, etc.)
+  2. Extract ViewModels from heavy views (ReviewView, SearchView)
+  3. Organize files into feature folders
+  4. Replace NotificationCenter with Environment objects
+
+  High Priority
+
+  5. Centralize audio management → AudioCache service
+  6. Break up UserManager → Separate identity, preferences, test settings
+  7. Create constants file → Remove magic numbers
+  8. Standardize error handling → Use async/await + typed errors
+
+  Medium Priority
+
+  9. Add typed endpoints → NetworkRequest protocol
+  10. Fix naming inconsistencies → All camelCase
+  11. Inject dependencies → Remove singleton overuse
+  12. Implement state machines → Explicit review flow
+
+  Long Term
+
+  13. Add comprehensive tests (currently impossible due to singletons)
+  14. Performance optimization → Cache computed properties, background
+  processing
+  15. Modularize into Swift Packages → Clear boundaries
+
+  ---
+  The codebase is functional but not maintainable. The biggest issue is
+  excessive singleton usage creating hidden dependencies and tight coupling.
+  This makes testing impossible and reasoning about code flow difficult. A
+  phased refactoring focused on dependency injection and domain separation
+  would dramatically improve code quality.
+
+
+
+
+
+
+  Phase 1: Foundation (Low Risk)
+  - Expand ThemeConstants.swift with spacing/corner radius/shadow scales
+  - Add semantic theme layer (AppTheme.swift)
+  - No UI changes yet
+
+  Phase 2: Components (Medium Risk)
+  - Create button component library
+  - Create card/badge/input components
+  - Migrate one view at a time to test
+
+  Phase 3: Migration (High Risk)
+  - Systematically replace inline styles with themed components
+  - Start with OnboardingView (biggest win - 241 lines → ~20)
+  - Then ReviewView, ScheduleView, etc.
+
+  Phase 4: Polish
+  - Add color playground for experimentation
+  - Document the design system

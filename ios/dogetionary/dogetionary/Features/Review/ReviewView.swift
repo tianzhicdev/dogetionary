@@ -18,6 +18,9 @@ struct ReviewView: View {
     // ViewModel
     @StateObject private var viewModel = ReviewViewModel()
 
+    // App state for cross-view communication
+    @Environment(AppState.self) private var appState
+
     // Current question is now computed directly from queue - no caching
     private var currentQuestion: BatchReviewQuestion? {
         return queueManager.currentQuestion()
@@ -135,6 +138,14 @@ struct ReviewView: View {
         // Trigger queue refill when needed (UI updates automatically via computed property)
         .onChange(of: queueManager.queueCount) { _, _ in
             queueManager.refillIfNeeded()
+        }
+        // Handle test settings changes via AppState
+        .onChange(of: appState.testSettingsChanged) { _, changed in
+            if changed {
+                Self.logger.info("Test settings changed - refreshing question queue")
+                queueManager.forceRefresh()
+                viewModel.loadPracticeStatus()
+            }
         }
     }
 

@@ -16,6 +16,7 @@ struct WordDetailView: View {
     @State private var isLoadingStats = false
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     
     var body: some View {
         VStack(spacing: 0) {
@@ -64,16 +65,11 @@ struct WordDetailView: View {
                 loadWordDetails()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .wordUnsaved)) { notification in
-            if let unsavedWord = notification.object as? String,
+        .onChange(of: appState.recentlyUnsavedWord) { _, unsavedWord in
+            if let unsavedWord = unsavedWord,
                unsavedWord == savedWord.word {
-                // Word was unsaved, dismiss this detail view and refresh saved words list
+                // Word was unsaved, dismiss this detail view
                 dismiss()
-
-                // Post notification to refresh saved words list
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    NotificationCenter.default.post(name: .refreshSavedWords, object: nil)
-                }
             }
         }
     }

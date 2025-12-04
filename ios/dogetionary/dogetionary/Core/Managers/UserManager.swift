@@ -350,9 +350,9 @@ class UserManager: ObservableObject {
             await self.refreshPracticeStatus()
         }
 
-        // Notify SavedWordsView to refresh schedule status
+        // Notify views to refresh schedule status via AppState
         DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .testSettingsChanged, object: nil)
+            AppState.shared.notifyTestSettingsChanged()
         }
     }
 

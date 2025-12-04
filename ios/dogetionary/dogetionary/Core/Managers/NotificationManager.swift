@@ -198,20 +198,19 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Handle notification tap - could navigate to review view
+        // Handle notification tap - navigate to review view
         if response.notification.request.identifier == "daily-review-reminder" {
-            // Post a notification that the app can listen to for navigation
-            NotificationCenter.default.post(name: .shouldNavigateToReview, object: nil)
+            Task { @MainActor in
+                AppState.shared.navigateToReview()
+            }
         }
         completionHandler()
     }
 }
 
+// Note: Notification names now replaced by AppState for cross-view communication
+// Only legacy notification definitions that may still be in use are kept here
 extension Notification.Name {
+    // Legacy: Still used in some places, consider migrating to AppState
     static let shouldNavigateToReview = Notification.Name("shouldNavigateToReview")
-    static let wordAutoSaved = Notification.Name("wordAutoSaved")
-    static let wordUnsaved = Notification.Name("wordUnsaved")
-    static let refreshSavedWords = Notification.Name("refreshSavedWords")
-    static let performSearchFromOnboarding = Notification.Name("performSearchFromOnboarding")
-    static let testSettingsChanged = Notification.Name("testSettingsChanged")
 }
