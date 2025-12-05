@@ -21,40 +21,12 @@ struct AppTheme {
      
      // Pink Accent
      static let accentPink = Color(red: 1.0, green: 0.0, blue: 0.67)        // #FF00AA
-
-    
-    static let bgSecondary = Color(red: 0.10, green: 0.10, blue: 0.18)    // #1A1A2E
-    static let bgTertiary = Color(red: 0.09, green: 0.13, blue: 0.24)     // #16213E
-    
-    // Text
-    static let textPrimary = Color(red: 0.88, green: 0.88, blue: 1.0)     // #E0E0FF
-    static let textSecondary = Color(red: 0.53, green: 0.53, blue: 0.67)  // #8888AA
-    static let textAccent = Color(red: 0.0, green: 1.0, blue: 1.0)        // #00FFFF
-    
-    // Buttons
-    static let buttonPrimary = Color(red: 1.0, green: 0.0, blue: 0.63)    // #FF00A0
-    static let buttonSecondary = Color(red: 0.0, green: 0.83, blue: 1.0)  // #00D4FF
-    
-    // Icons
-    static let iconDefault = Color(red: 0.53, green: 0.53, blue: 0.67)    // #8888AA
-    static let iconActive = Color(red: 0.0, green: 1.0, blue: 1.0)        // #00FFFF
-    
-    // Semantic
-    static let warning = Color(red: 1.0, green: 0.72, blue: 0.0)          // #FFB800
-    static let error = Color(red: 1.0, green: 0.2, blue: 0.4)             // #FF3366
-    static let success = Color(red: 0.0, green: 1.0, blue: 0.62)          // #00FF9F
-    static let info = Color(red: 0.0, green: 0.83, blue: 1.0)             // #00D4FF
-    
+//    
     // Accents
     static let neonPurple = Color(red: 0.62, green: 0.0, blue: 1.0)       // #9D00FF
     static let electricYellow = Color(red: 0.94, green: 1.0, blue: 0.0)
 
-    
-    static let primaryGradient = LinearGradient(
-        colors: [Color(red: 0.4, green: 0.5, blue: 1.0), Color(red: 0.6, green: 0.4, blue: 1.0)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+
     
     static let verticalGradient2 = LinearGradient(
         colors: [bgPrimary, Color(red: 0.09, green: 0.13, blue: 0.24)],
@@ -63,10 +35,6 @@ struct AppTheme {
     )
     
     static let gradient1 = LinearGradient(colors: [accentCyan, accentCyan], startPoint: .leading, endPoint: .trailing)
-    static let gradient2 = LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemPink], startPoint: .leading, endPoint: .trailing)
-    static let gradient3 = LinearGradient(colors: [AppTheme.systemGreen, AppTheme.systemMint], startPoint: .leading, endPoint: .trailing)
-    static let gradient4 = LinearGradient(colors: [AppTheme.systemRed, AppTheme.systemOrange], startPoint: .leading, endPoint: .trailing)
-    static let gradient5 = LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemPink], startPoint: .leading, endPoint: .trailing)
     
     static let smallTextColor1 = electricYellow
     static let mediumTextColor1 = electricYellow
@@ -78,7 +46,12 @@ struct AppTheme {
     
     // MARK: - Basic Colors
 
-
+    static let primaryGradient = LinearGradient(
+        colors: [Color(red: 0.4, green: 0.5, blue: 1.0), Color(red: 0.6, green: 0.4, blue: 1.0)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
     /// Pure white color
     static let white = Color.white
 
@@ -879,7 +852,7 @@ struct ScoreStar: View {
         Image(systemName: "star.fill")
             .font(.system(size: 12))
             .foregroundStyle(
-                LinearGradient(colors: [AppTheme.systemYellow, AppTheme.warningColor],
+                LinearGradient(colors: [AppTheme.electricYellow, AppTheme.accentCyan],
                              startPoint: .topLeading, endPoint: .bottomTrailing)
             )
     }

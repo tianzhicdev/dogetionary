@@ -15,46 +15,61 @@ struct LeaderboardView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
-            AppTheme.backgroundGradient
+            // Background gradient - matches SettingsView
+            AppTheme.verticalGradient2
                 .ignoresSafeArea()
 
             Group {
                     if isLoading {
                         VStack(spacing: 16) {
                             ProgressView()
-                            Text("Loading leaderboard...")
-                                .foregroundColor(AppTheme.systemText)
+                                .tint(AppTheme.accentCyan)
+                            Text("LOADING LEADERBOARD...")
+                                .foregroundColor(AppTheme.mediumTextColor1)
 
                         }
                     } else if let errorMessage = errorMessage {
                         VStack(spacing: 16) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: AppTheme.emptyStateIconSize))
-                                .foregroundColor(AppTheme.warningColor)
+                                .foregroundColor(AppTheme.selectableTint)
 
-                            Text("Error")
+                            Text("ERROR")
                                 .font(.title2)
                                 .fontWeight(.semibold)
+                                .foregroundColor(AppTheme.mediumTextColor1)
 
-                            Text(errorMessage)
-                                .foregroundColor(.secondary)
+                            Text(errorMessage.uppercased())
+                                .foregroundColor(AppTheme.smallTextColor1)
                                 .multilineTextAlignment(.center)
 
-                            Button("Try Again") {
+                            Button("TRY AGAIN") {
                                 Task {
                                     await loadLeaderboard()
                                 }
                             }
-                            .buttonStyle(.borderedProminent)
+                            .foregroundColor(AppTheme.bgPrimary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(AppTheme.accentCyan)
+                            .cornerRadius(4)
                         }
                         .padding()
                     } else if leaderboard.isEmpty {
-                        AppTheme.emptyState(
-                            icon: "chart.bar",
-                            title: "No users found",
-                            message: "Be the first to start learning!"
-                        )
+                        VStack(spacing: 20) {
+                            Image(systemName: "chart.bar")
+                                .font(.system(size: AppTheme.emptyStateIconSize))
+                                .foregroundColor(AppTheme.accentCyan)
+
+                            Text("NO USERS FOUND")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(AppTheme.mediumTextColor1)
+
+                            Text("BE THE FIRST TO START LEARNING!")
+                                .foregroundColor(AppTheme.smallTextColor1)
+                                .multilineTextAlignment(.center)
+                        }
                     } else {
                         ScrollView {
                             VStack(spacing: 6) {
@@ -111,29 +126,29 @@ struct LeaderboardRowView: View {
             // Name and motto
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(entry.user_name)
+                    Text(entry.user_name.uppercased())
                         .font(.system(size: 15, weight: isCurrentUser ? .semibold : .medium))
                         .foregroundColor(
                             isCurrentUser ?
-                            AppTheme.leaderboard.currentUserNameTextColor : AppTheme.leaderboard.userNameTextColor
+                            AppTheme.accentCyan : AppTheme.mediumTextColor1
                         )
                         .lineLimit(1)
 
                     if isCurrentUser {
-                        Text("You")
+                        Text("YOU")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.leaderboard.you.foreground)
+                            .foregroundColor(AppTheme.bgPrimary)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(AppTheme.leaderboard.you.background)
+                            .background(AppTheme.selectableTint)
                             .cornerRadius(AppTheme.smallBadge.cornerRadius)
                     }
                 }
 
                 if !entry.user_motto.isEmpty {
-                    Text(entry.user_motto)
+                    Text(entry.user_motto.uppercased())
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.motto.foreground)
+                        .foregroundColor(AppTheme.smallTextColor1)
                         .lineLimit(1)
                 }
             }
@@ -143,20 +158,21 @@ struct LeaderboardRowView: View {
             // Score with icon
             HStack(spacing: 4) {
                 ScoreStar()
-                
+
                 Text("\(entry.score ?? entry.total_reviews)")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(
-                        AppTheme.leaderboard.scoreTextColor
-                    )
+                    .foregroundColor(AppTheme.mediumTextColor1)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(AppTheme.leaderboard.rowBackgroundColor)
-                .shadow(color: AppTheme.subtleShadowColor, radius: 3, x: 0, y: 1)
+            RoundedRectangle(cornerRadius: 4)
+                .fill(AppTheme.panelFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+                )
         )
     }
 }
@@ -164,38 +180,37 @@ struct LeaderboardRowView: View {
 struct RankBadgeView: View {
     let rank: Int
 
-    private var badgeGradient: LinearGradient {
+    private var badgeColor: Color {
         switch rank {
         case 1:
-            return AppTheme.goldGradient
+            return AppTheme.electricYellow
         case 2:
-            return AppTheme.silverGradient
+            return AppTheme.accentCyan
         case 3:
-            return AppTheme.bronzeGradient
+            return AppTheme.selectableTint
         default:
-            return AppTheme.defaultRankGradient
+            return AppTheme.panelFill
         }
     }
 
     private var textColor: Color {
         switch rank {
-        case 1:
-            return AppTheme.goldTextColor
-        case 2:
-            return AppTheme.silverTextColor
-        case 3:
-            return AppTheme.silverTextColor
+        case 1, 2, 3:
+            return AppTheme.bgPrimary
         default:
-            return AppTheme.defaultRankTextColor
+            return AppTheme.mediumTextColor1
         }
     }
 
     var body: some View {
         ZStack {
             Circle()
-                .fill(badgeGradient)
+                .fill(badgeColor)
                 .frame(width: 30, height: 30)
-                .shadow(color: rank <= 3 ? AppTheme.black.opacity(AppTheme.mediumOpacity) : AppTheme.clear, radius: 3, y: 2)
+                .overlay(
+                    Circle()
+                        .stroke(rank <= 3 ? AppTheme.accentCyan : AppTheme.accentCyan.opacity(0.3), lineWidth: rank <= 3 ? 2 : 1)
+                )
 
             if rank <= 3 {
                 Image(systemName: "crown.fill")

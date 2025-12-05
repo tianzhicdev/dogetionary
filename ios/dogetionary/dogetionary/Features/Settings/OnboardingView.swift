@@ -7,6 +7,7 @@
 
 import SwiftUI
 import os.log
+import Lottie
 
 struct OnboardingView: View {
     private static let logger = Logger(subsystem: "com.dogetionary.app", category: "Onboarding")
@@ -60,9 +61,8 @@ struct OnboardingView: View {
                         ForEach(0..<totalPages, id: \.self) { index in
                             Capsule()
                                 .fill(index <= displayPageIndex ?
-                                    LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemBlue],
-                                                 startPoint: .leading, endPoint: .trailing) :
-                                    LinearGradient(colors: [AppTheme.lightGray],
+                                    AppTheme.gradient1 :
+                                    LinearGradient(colors: [AppTheme.panelFill],
                                                  startPoint: .leading, endPoint: .trailing))
                                 .frame(height: 4)
                         }
@@ -75,23 +75,21 @@ struct OnboardingView: View {
                     TabView(selection: $currentPage) {
                         // Page 0: Learning Language
                         languageSelectionPage(
-                            title: "What language are you learning?",
-                            description: "Choose the language you want to learn and improve",
-                            emoji: "🌍",
+                            title: "WHAT LANGUAGE ARE YOU LEARNING?",
+                            description: "CHOOSE THE LANGUAGE YOU WANT TO LEARN AND IMPROVE",
+                            lottieAnimation: "globe2",
                             selectedLanguage: $selectedLearningLanguage,
-                            excludeLanguage: selectedNativeLanguage,
-                            gradientColors: [AppTheme.systemBlue, AppTheme.systemCyan]
+                            excludeLanguage: selectedNativeLanguage
                         )
                         .tag(0)
 
                         // Page 1: Native Language
                         languageSelectionPage(
-                            title: "What is your native language?",
-                            description: "Choose your native language for translations",
-                            emoji: "🏠",
+                            title: "WHAT IS YOUR NATIVE LANGUAGE?",
+                            description: "CHOOSE YOUR NATIVE LANGUAGE FOR TRANSLATIONS",
+                            symbolName: "house.fill",
                             selectedLanguage: $selectedNativeLanguage,
-                            excludeLanguage: selectedLearningLanguage,
-                            gradientColors: [AppTheme.systemGreen, AppTheme.systemMint]
+                            excludeLanguage: selectedLearningLanguage
                         )
                         .tag(1)
 
@@ -131,55 +129,45 @@ struct OnboardingView: View {
                     // Navigation buttons
                     HStack(spacing: 16) {
                         if currentPage > 0 {
-                            Button(action: {
+                            Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     currentPage -= 1
                                 }
-                            }) {
-                                HStack {
-                                    Image(systemName: "arrow.left")
-                                    Text("Back")
-                                }
-                                .font(.headline)
-                                .foregroundColor(AppTheme.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    LinearGradient(colors: [AppTheme.disabledGray, AppTheme.lightGray.opacity(1.33)],
-                                                 startPoint: .leading, endPoint: .trailing)
-                                )
-                                .cornerRadius(16)
-                                .shadow(color: AppTheme.black.opacity(0.1), radius: 5, y: 3)
+                            } label: {
+                                Label("BACK", systemImage: "arrow.left")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(8)
+                                    .background(AppTheme.panelFill)
+                                    .cornerRadius(10)
                             }
                         }
 
-                        Button(action: {
+                        Button {
                             handleNextButton()
-                        }) {
-                            HStack {
-                                if isSubmitting || isSearching {
+                        } label: {
+                            if isSubmitting || isSearching {
+                                HStack {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.white))
                                         .scaleEffect(0.8)
+                                    Text(buttonTitle.uppercased())
                                 }
-                                Text(buttonTitle)
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(8)
+                                .background(AppTheme.selectableTint.opacity(0.6))
+                                .cornerRadius(10)
+                            } else {
+                                Label(buttonTitle.uppercased(), systemImage: currentPage < totalPages - 1 ? "arrow.right" : "checkmark")
                                     .font(.headline)
-                                if currentPage < totalPages - 1 && !isSubmitting && !isSearching {
-                                    Image(systemName: "arrow.right")
-                                }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(8)
+                                    .background(canProceed ? AppTheme.selectableTint : AppTheme.panelFill)
+                                    .cornerRadius(10)
                             }
-                            .foregroundColor(AppTheme.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                canProceed ?
-                                    LinearGradient(colors: buttonGradientColors,
-                                                 startPoint: .leading, endPoint: .trailing) :
-                                    LinearGradient(colors: [AppTheme.mediumGray],
-                                                 startPoint: .leading, endPoint: .trailing)
-                            )
-                            .cornerRadius(16)
-                            .shadow(color: canProceed ? AppTheme.systemPurple.opacity(0.3) : AppTheme.clear, radius: 10, y: 5)
                         }
                         .disabled(!canProceed || isSubmitting || isSearching)
                     }
@@ -188,10 +176,10 @@ struct OnboardingView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Error", isPresented: $showError) {
+            .alert("ERROR", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(errorMessage)
+                Text(errorMessage.uppercased())
             }
         }
         .interactiveDismissDisabled()
@@ -202,112 +190,59 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Gradient Backgrounds
-
-    private var pageGradient: LinearGradient {
-        // Map page indices to gradient array indices (0-7)
-        let gradientIndex: Int
-        switch currentPage {
-        case 0: gradientIndex = 0  // Learning Language
-        case 1: gradientIndex = 1  // Native Language
-        case 2: gradientIndex = 2  // Test Prep
-        case 3: gradientIndex = 3  // Study Duration
-        case usernamePageIndex: gradientIndex = 4  // Username
-        case schedulePageIndex: gradientIndex = 5  // Schedule Preview
-        case declarationPageIndex: gradientIndex = 6  // Declaration
-        case searchPageIndex: gradientIndex = 7  // Search Word
-        default: gradientIndex = 0  // Fallback to first gradient
-        }
-        return AppTheme.onboardingBackgroundGradients[gradientIndex]
-    }
-
-    private var buttonGradientColors: [Color] {
-        // Map page indices to gradient array indices (0-7)
-        let gradientIndex: Int
-        switch currentPage {
-        case 0: gradientIndex = 0  // Learning Language
-        case 1: gradientIndex = 1  // Native Language
-        case 2: gradientIndex = 2  // Test Prep
-        case 3: gradientIndex = 3  // Study Duration
-        case usernamePageIndex: gradientIndex = 4  // Username
-        case schedulePageIndex: gradientIndex = 5  // Schedule Preview
-        case declarationPageIndex: gradientIndex = 6  // Declaration
-        case searchPageIndex: gradientIndex = 7  // Search Word
-        default: gradientIndex = 0  // Fallback to first gradient
-        }
-        // Extract colors from the gradient
-        let gradient = AppTheme.onboardingPageGradients[gradientIndex]
-        // Return the gradient colors (we need to extract them from LinearGradient)
-        // Since we can't extract, return the same colors used in ThemeConstants
-        switch gradientIndex {
-        case 0: return [AppTheme.systemBlue, AppTheme.systemCyan]
-        case 1: return [AppTheme.systemGreen, AppTheme.systemMint]
-        case 2: return [AppTheme.systemPurple, AppTheme.systemPink]
-        case 3: return [AppTheme.systemOrange, AppTheme.systemYellow]
-        case 4: return [AppTheme.systemIndigo, AppTheme.systemPurple]
-        case 5: return [AppTheme.systemPink, AppTheme.systemRed]
-        case 6: return [AppTheme.systemPurple, AppTheme.systemBlue]
-        case 7: return [AppTheme.systemTeal, AppTheme.systemBlue]
-        default: return [AppTheme.systemBlue, AppTheme.systemPurple]
-        }
-    }
-
     // MARK: - Language Selection Page
 
     private func languageSelectionPage(
         title: String,
         description: String,
-        emoji: String,
+        symbolName: String? = nil,
+        lottieAnimation: String? = nil,
         selectedLanguage: Binding<String>,
-        excludeLanguage: String,
-        gradientColors: [Color]
+        excludeLanguage: String
     ) -> some View {
         VStack(spacing: 40) {
             VStack(spacing: 20) {
-                Text(emoji)
-                    .font(.system(size: 80))
-                    .shadow(color: AppTheme.black.opacity(0.1), radius: 10, y: 5)
+                if let lottieAnimation = lottieAnimation {
+                    LottieView(animation: .named(lottieAnimation))
+                        .playing(loopMode: .loop)
+//                        .frame(width: 200, height: 200)
+                } else if let symbolName = symbolName {
+                    Image(systemName: symbolName)
+                        .font(.system(size: 80))
+                        .foregroundStyle(AppTheme.gradient1)
+                }
 
                 Text(title)
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(colors: gradientColors,
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fixedSize(horizontal: false, vertical: true)
+                    
 
-                Text(description)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+//                Text(description)
+//                    .font(.body)
+//                    .foregroundColor(AppTheme.mediumTextColor1)
+//                    .multilineTextAlignment(.center)
+//                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 24)
             .padding(.top, 40)
 
             Spacer()
 
-            Picker("Select Language", selection: selectedLanguage) {
-                ForEach(LanguageConstants.availableLanguages.filter { $0.0 != excludeLanguage }, id: \.0) { language in
-                    HStack {
-                        Text(language.1)
-                            .font(.title3)
-                        Text("(\(language.0.uppercased()))")
-                            .font(.body)
-                            .foregroundColor(.secondary)
+            HStack {
+                Spacer()
+                Picker("SELECT LANGUAGE", selection: selectedLanguage) {
+                    ForEach(LanguageConstants.availableLanguages.filter { $0.0 != excludeLanguage }, id: \.0) { language in
+                        Text("\(language.1.uppercased()) (\(language.0.uppercased()))")
+                            .tag(language.0)
                     }
-                    .tag(language.0)
                 }
+                .pickerStyle(.wheel)
+                .colorInvert()  // hack for dark backgrounds
+                .colorMultiply(AppTheme.selectableTint)
+                Spacer()
             }
-            .pickerStyle(MenuPickerStyle())
-            .tint(gradientColors[0])
-            .padding(.horizontal, 24)
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(gradientColors[0].opacity(0.1))
-                    .shadow(color: gradientColors[0].opacity(0.2), radius: 10, y: 5)
-            )
-            .padding(.horizontal, 24)
 
             Spacer()
         }
@@ -318,21 +253,18 @@ struct OnboardingView: View {
     private var usernamePage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Text("🌟")
+                Image(systemName: "star.fill")
                     .font(.system(size: 80))
-                    .shadow(color: AppTheme.systemYellow.opacity(0.3), radius: 10, y: 5)
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("Give yourself a cool name")
+                Text("GIVE YOURSELF A COOL NAME")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemIndigo, AppTheme.systemPurple],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("This name will be displayed on the leaderboard")
+                Text("THIS NAME WILL BE DISPLAYED ON THE LEADERBOARD")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
@@ -341,29 +273,23 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                TextField("", text: $userName, prompt: Text("Enter your name").foregroundColor(AppTheme.mediumGray))
+                TextField("", text: $userName, prompt: Text("ENTER YOUR NAME").foregroundColor(AppTheme.smallTextColor1))
                     .font(.title3)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(AppTheme.white)
-                            .shadow(color: AppTheme.systemIndigo.opacity(0.2), radius: 10, y: 5)
-                    )
+                    .foregroundColor(AppTheme.smallTextColor1)
+                    .padding(4)
+                    .background(AppTheme.textFieldBackgroundColor)
+                    .cornerRadius(4)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                LinearGradient(colors: [AppTheme.systemIndigo, AppTheme.systemPurple],
-                                             startPoint: .leading, endPoint: .trailing),
-                                lineWidth: 2
-                            )
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
                     )
                     .padding(.horizontal, 24)
                     .autocapitalization(.words)
                     .disableAutocorrection(false)
 
-                Text("\(userName.count)/30 characters")
+                Text("\(userName.count)/30 CHARACTERS")
                     .font(.caption)
-                    .foregroundColor(userName.count > 25 ? AppTheme.systemOrange : .secondary)
+                    .foregroundColor(AppTheme.smallTextColor1)
             }
 
             Spacer()
@@ -375,21 +301,18 @@ struct OnboardingView: View {
     private var testPrepPage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Text("📚")
+                Image(systemName: "books.vertical.fill")
                     .font(.system(size: 80))
-                    .shadow(color: AppTheme.systemPurple.opacity(0.3), radius: 10, y: 5)
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("Are you studying for a test?")
+                Text("ARE YOU STUDYING FOR A TEST?")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemPink],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("Choose your test level")
+                Text("CHOOSE YOUR TEST LEVEL")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
@@ -398,24 +321,24 @@ struct OnboardingView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     // TOEFL options
-                    testPrepButton(title: "TOEFL Beginner", subtitle: "Foundation vocabulary", emoji: "🌱", testType: .toeflBeginner, colors: [AppTheme.systemGreen, AppTheme.systemMint])
-                    testPrepButton(title: "TOEFL Intermediate", subtitle: "Includes beginner words", emoji: "🌿", testType: .toeflIntermediate, colors: [AppTheme.systemTeal, AppTheme.systemCyan])
-                    testPrepButton(title: "TOEFL Advanced", subtitle: "Complete TOEFL vocabulary", emoji: "🌳", testType: .toeflAdvanced, colors: [AppTheme.systemBlue, AppTheme.systemPurple])
+                    testPrepButton(title: "TOEFL BEGINNER", subtitle: "FOUNDATION VOCABULARY", emoji: "🌱", testType: .toeflBeginner)
+                    testPrepButton(title: "TOEFL INTERMEDIATE", subtitle: "INCLUDES BEGINNER WORDS", emoji: "🌿", testType: .toeflIntermediate)
+                    testPrepButton(title: "TOEFL ADVANCED", subtitle: "COMPLETE TOEFL VOCABULARY", emoji: "🌳", testType: .toeflAdvanced)
 
                     Divider().padding(.vertical, 8)
 
                     // IELTS options
-                    testPrepButton(title: "IELTS Beginner", subtitle: "Foundation vocabulary", emoji: "🎯", testType: .ieltsBeginner, colors: [AppTheme.systemOrange, AppTheme.systemYellow])
-                    testPrepButton(title: "IELTS Intermediate", subtitle: "Includes beginner words", emoji: "🎪", testType: .ieltsIntermediate, colors: [AppTheme.systemPink, AppTheme.systemRed])
-                    testPrepButton(title: "IELTS Advanced", subtitle: "Complete IELTS vocabulary", emoji: "🏆", testType: .ieltsAdvanced, colors: [AppTheme.systemPurple, AppTheme.systemIndigo])
+                    testPrepButton(title: "IELTS BEGINNER", subtitle: "FOUNDATION VOCABULARY", emoji: "🎯", testType: .ieltsBeginner)
+                    testPrepButton(title: "IELTS INTERMEDIATE", subtitle: "INCLUDES BEGINNER WORDS", emoji: "🎪", testType: .ieltsIntermediate)
+                    testPrepButton(title: "IELTS ADVANCED", subtitle: "COMPLETE IELTS VOCABULARY", emoji: "🏆", testType: .ieltsAdvanced)
 
                     Divider().padding(.vertical, 8)
 
                     // TIANZ option
-                    testPrepButton(title: "Tianz Test", subtitle: "Specialized vocabulary", emoji: "⭐", testType: .tianz, colors: [AppTheme.systemIndigo, AppTheme.systemPurple])
+                    testPrepButton(title: "TIANZ TEST", subtitle: "SPECIALIZED VOCABULARY", emoji: "⭐", testType: .tianz)
 
                     // Neither option
-                    testPrepButton(title: "None", subtitle: "Skip test preparation", emoji: "🎨", testType: nil, colors: [AppTheme.mediumGray, AppTheme.disabledGray])
+                    testPrepButton(title: "NONE", subtitle: "SKIP TEST PREPARATION", emoji: "🎨", testType: nil)
                 }
                 .padding(.horizontal, 24)
             }
@@ -426,12 +349,12 @@ struct OnboardingView: View {
         }
     }
 
-    private func testPrepButton(title: String, subtitle: String, emoji: String, testType: TestType?, colors: [Color]) -> some View {
-        Button(action: {
+    private func testPrepButton(title: String, subtitle: String, emoji: String, testType: TestType?) -> some View {
+        Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 selectedTestType = testType
             }
-        }) {
+        } label: {
             HStack(spacing: 16) {
                 Text(emoji)
                     .font(.system(size: 32))
@@ -439,70 +362,47 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(AppTheme.mediumTextColor1)
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.smallTextColor1)
                 }
                 Spacer()
 
                 // Word count badge
                 if let testType = testType, let count = vocabularyCounts[testType] {
-                    Text(formatWordCount(count.total_words))
+                    Text(formatWordCount(count.total_words).uppercased())
                         .font(.caption)
                         .fontWeight(.bold)
-                        .foregroundStyle(
-                            LinearGradient(colors: colors,
-                                         startPoint: .leading, endPoint: .trailing)
-                        )
+                        .foregroundColor(AppTheme.selectableTint)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [colors[0].opacity(0.15), colors[1].opacity(0.15)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                        )
+                        .background(AppTheme.textFieldBackgroundColor)
+                        .cornerRadius(4)
                         .overlay(
-                            Capsule()
-                                .stroke(
-                                    LinearGradient(colors: colors,
-                                                 startPoint: .leading, endPoint: .trailing),
-                                    lineWidth: 1
-                                )
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
                         )
                 }
 
                 if selectedTestType == testType {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(
-                            LinearGradient(colors: colors,
-                                         startPoint: .leading, endPoint: .trailing)
-                        )
+                        .foregroundColor(AppTheme.selectableTint)
                         .font(.title2)
                 }
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(selectedTestType == testType ? colors[0].opacity(0.15) : AppTheme.white)
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(selectedTestType == testType ? AppTheme.textFieldBackgroundColor : AppTheme.panelFill)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 10)
                     .stroke(
-                        selectedTestType == testType ?
-                            LinearGradient(colors: colors,
-                                         startPoint: .leading, endPoint: .trailing) :
-                            LinearGradient(colors: [AppTheme.lightGray.opacity(0.67)],
-                                         startPoint: .leading, endPoint: .trailing),
-                        lineWidth: selectedTestType == testType ? 3 : 1
+                        selectedTestType == testType ? AppTheme.textFieldBorderColor : AppTheme.panelFill,
+                        lineWidth: selectedTestType == testType ? 2 : 1
                     )
             )
-            .shadow(color: selectedTestType == testType ? colors[0].opacity(0.3) : AppTheme.clear, radius: 10, y: 5)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -512,21 +412,18 @@ struct OnboardingView: View {
     private var studyDurationPage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Text("⏰")
+                Image(systemName: "clock.fill")
                     .font(.system(size: 80))
-                    .shadow(color: AppTheme.systemOrange.opacity(0.3), radius: 10, y: 5)
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("How long do you want to study?")
+                Text("HOW LONG DO YOU WANT TO STUDY?")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemYellow],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("Set your study timeline for \(selectedTestType?.displayName ?? "")")
+                Text("SET YOUR STUDY TIMELINE FOR \((selectedTestType?.displayName ?? "").uppercased())")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
@@ -537,36 +434,32 @@ struct OnboardingView: View {
             if isLoadingVocabulary {
                 ProgressView()
                     .scaleEffect(1.5)
-                    .tint(AppTheme.systemOrange)
+                    .tint(AppTheme.selectableTint)
             } else {
                 VStack(spacing: 32) {
                     // Duration display
                     VStack(spacing: 8) {
                         Text("\(Int(selectedStudyDuration))")
                             .font(.system(size: 80, weight: .bold))
-                            .foregroundStyle(
-                                LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemYellow],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing)
-                            )
-                            .shadow(color: AppTheme.systemOrange.opacity(0.3), radius: 10, y: 5)
-                        Text("days")
+                            .foregroundStyle(AppTheme.gradient1)
+                        Text("DAYS")
                             .font(.title2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppTheme.mediumTextColor1)
                     }
 
                     // Slider
                     VStack(spacing: 8) {
                         Slider(value: $selectedStudyDuration, in: 1...365, step: 1)
-                            .tint(AppTheme.systemOrange)
+                            .tint(AppTheme.selectableTint)
 
                         HStack {
-                            Text("1 day")
+                            Text("1 DAY")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTextColor1)
                             Spacer()
-                            Text("365 days")
+                            Text("365 DAYS")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTextColor1)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -578,27 +471,21 @@ struct OnboardingView: View {
                             HStack {
                                 Text("📝")
                                     .font(.title)
-                                Text("~\(wordsPerDay) new words per day")
+                                Text("~\(wordsPerDay) NEW WORDS PER DAY")
                                     .font(.headline)
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(AppTheme.mediumTextColor1)
                             }
-                            Text("\(vocabularyCount) total \(selectedTestType?.displayName ?? "") words")
+                            Text("\(vocabularyCount) TOTAL \((selectedTestType?.displayName ?? "").uppercased()) WORDS")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTextColor1)
                         }
                         .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(
-                                    LinearGradient(colors: [AppTheme.systemOrange.opacity(0.2), AppTheme.systemYellow.opacity(0.1)],
-                                                 startPoint: .leading, endPoint: .trailing)
-                                )
-                        )
+                        .background(AppTheme.textFieldBackgroundColor)
+                        .cornerRadius(10)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(AppTheme.systemOrange.opacity(0.3), lineWidth: 2)
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
                         )
-                        .shadow(color: AppTheme.systemOrange.opacity(0.2), radius: 10, y: 5)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -629,17 +516,14 @@ struct OnboardingView: View {
     private var declarationPage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Text("🧠")
+                Image(systemName: "brain.head.profile")
                     .font(.system(size: 80))
-                    .shadow(color: AppTheme.systemPurple.opacity(0.3), radius: 10, y: 5)
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("How Fledge Works")
+                Text("HOW FLEDGE WORKS")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemBlue],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(AppTheme.gradient1)
             }
             .padding(.horizontal, 24)
             .padding(.top, 40)
@@ -647,14 +531,14 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(alignment: .leading, spacing: 24) {
-                Text("Building vocabulary the old way is wasteful—you forget, re-learn, forget again.")
+                Text("BUILDING VOCABULARY THE OLD WAY IS WASTEFUL—YOU FORGET, RE-LEARN, FORGET AGAIN.")
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Fledge fixes this. It tracks every word you study, calculates when you're about to forget, and prompts you at exactly the right moment.")
+                Text("FLEDGE FIXES THIS. IT TRACKS EVERY WORD YOU STUDY, CALCULATES WHEN YOU'RE ABOUT TO FORGET, AND PROMPTS YOU AT EXACTLY THE RIGHT MOMENT.")
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                     .fixedSize(horizontal: false, vertical: true)
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -662,12 +546,12 @@ struct OnboardingView: View {
                         Text("⚡")
                             .font(.title)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("SuperMemo Spaced Repetition")
+                            Text("SUPERMEMO SPACED REPETITION")
                                 .font(.headline)
-                                .foregroundColor(.primary)
-                            Text("Up to 20x more efficient learning")
+                                .foregroundColor(AppTheme.mediumTextColor1)
+                            Text("UP TO 20X MORE EFFICIENT LEARNING")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTextColor1)
                         }
                     }
 
@@ -675,26 +559,21 @@ struct OnboardingView: View {
                         Text("⏱")
                             .font(.title)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Save Your Time")
+                            Text("SAVE YOUR TIME")
                                 .font(.headline)
-                                .foregroundColor(.primary)
-                            Text("80+ hours back for every 1,000 words")
+                                .foregroundColor(AppTheme.mediumTextColor1)
+                            Text("80+ HOURS BACK FOR EVERY 1,000 WORDS")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTextColor1)
                         }
                     }
                 }
                 .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(colors: [AppTheme.systemPurple.opacity(0.1), AppTheme.systemBlue.opacity(0.05)],
-                                         startPoint: .leading, endPoint: .trailing)
-                        )
-                )
+                .background(AppTheme.textFieldBackgroundColor)
+                .cornerRadius(10)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(AppTheme.systemPurple.opacity(0.2), lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
                 )
             }
             .padding(.horizontal, 24)
@@ -708,21 +587,18 @@ struct OnboardingView: View {
     private var searchWordPage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Text("🔍")
+                Image(systemName: "magnifyingglass")
                     .font(.system(size: 80))
-                    .shadow(color: AppTheme.systemTeal.opacity(0.3), radius: 10, y: 5)
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("Search a word")
+                Text("SEARCH A WORD")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemTeal, AppTheme.systemBlue],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(AppTheme.gradient1)
 
-                Text("Try searching for your first word to get started")
+                Text("TRY SEARCHING FOR YOUR FIRST WORD TO GET STARTED")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
@@ -731,21 +607,15 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                TextField("", text: $searchWord, prompt: Text("e.g. unforgettable").foregroundColor(AppTheme.mediumGray))
+                TextField("", text: $searchWord, prompt: Text("E.G. UNFORGETTABLE").foregroundColor(AppTheme.smallTextColor1))
                     .font(.title3)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(AppTheme.white)
-                            .shadow(color: AppTheme.systemTeal.opacity(0.2), radius: 10, y: 5)
-                    )
+                    .foregroundColor(AppTheme.smallTextColor1)
+                    .padding(4)
+                    .background(AppTheme.textFieldBackgroundColor)
+                    .cornerRadius(4)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                LinearGradient(colors: [AppTheme.systemTeal, AppTheme.systemBlue],
-                                             startPoint: .leading, endPoint: .trailing),
-                                lineWidth: 2
-                            )
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
                     )
                     .padding(.horizontal, 24)
                     .autocapitalization(.none)
@@ -865,11 +735,11 @@ struct OnboardingView: View {
 
     private var buttonTitle: String {
         if currentPage == usernamePageIndex {
-            return "Get Started"
+            return "GET STARTED"
         } else if currentPage == searchPageIndex {
-            return "Search"
+            return "SEARCH"
         } else {
-            return "Next"
+            return "NEXT"
         }
     }
 
