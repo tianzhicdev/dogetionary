@@ -206,27 +206,28 @@ struct SavedWordsListView: View {
                 } else {
                     VStack(spacing: 0) {
                         // Filter text bar
+
                         HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(AppTheme.accentCyan)
-                            TextField("FILTER WORDS...", text: $filterText)
-                                .font(.body)
-                                .foregroundColor(AppTheme.smallTitleText)
+                            TextField("", text: $filterText)
+                                .font(.title2)
+                                .foregroundColor(AppTheme.textFieldUserInput)
                             if !filterText.isEmpty {
                                 Button(action: {
                                     filterText = ""
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(AppTheme.selectableTint)
+                                        .font(.title3)
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
-                        .padding(12)
-                        .background(AppTheme.panelFill)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.textFieldBackgroundColor)
                         .cornerRadius(4)
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
-                                .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+                                .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
                         )
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
@@ -256,7 +257,7 @@ struct SavedWordsListView: View {
                                 }
                             }
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
+                            .padding(.vertical, 1)
                         }
                     }
                 }
@@ -287,9 +288,9 @@ struct SavedWordRow: View {
         HStack(spacing: 10) {
             // Word name with test badges
             HStack(spacing: 6) {
-                Text(savedWord.word.uppercased())
+                Text(savedWord.word)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(AppTheme.electricYellow)
+                    .foregroundColor(AppTheme.bodyText)
                     .lineLimit(1)
 
                 // Show test labels only if user has enabled tests
@@ -354,12 +355,7 @@ struct SavedWordRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(savedWord.is_known ? AppTheme.panelFill.opacity(0.5) : AppTheme.panelFill)
-        .cornerRadius(4)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(savedWord.is_known ? AppTheme.selectableTint.opacity(0.3) : AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
-        )
+        .background(AppTheme.clear)
     }
 
     @ViewBuilder
@@ -405,35 +401,11 @@ struct WordProgressBar: View {
 
     // Gradient color based on progress level
     private var progressColor: LinearGradient {
-        if progressLevel <= 2 {
-            // Pink for low progress
-            return LinearGradient(
-                colors: [AppTheme.selectableTint, AppTheme.neonPurple],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        } else if progressLevel <= 4 {
-            // Purple-yellow for medium progress
-            return LinearGradient(
-                colors: [AppTheme.neonPurple, AppTheme.electricYellow],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        } else if progressLevel <= 6 {
-            // Yellow-cyan for good progress
-            return LinearGradient(
-                colors: [AppTheme.electricYellow, AppTheme.accentCyan],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        } else {
-            // Cyan for mastered
-            return LinearGradient(
-                colors: [AppTheme.accentCyan, AppTheme.accentCyan],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        }
+        return LinearGradient(
+            colors: [AppTheme.selectableTint, AppTheme.neonPurple],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 
     private var emptyColor: Color {
