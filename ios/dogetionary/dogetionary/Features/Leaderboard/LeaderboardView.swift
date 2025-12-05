@@ -25,7 +25,7 @@ struct LeaderboardView: View {
                             ProgressView()
                                 .tint(AppTheme.accentCyan)
                             Text("LOADING LEADERBOARD...")
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
 
                         }
                     } else if let errorMessage = errorMessage {
@@ -37,7 +37,7 @@ struct LeaderboardView: View {
                             Text("ERROR")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
 
                             Text(errorMessage.uppercased())
                                 .foregroundColor(AppTheme.smallTextColor1)
@@ -64,7 +64,7 @@ struct LeaderboardView: View {
                             Text("NO USERS FOUND")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
 
                             Text("BE THE FIRST TO START LEARNING!")
                                 .foregroundColor(AppTheme.smallTextColor1)
@@ -126,11 +126,9 @@ struct LeaderboardRowView: View {
             // Name and motto
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(entry.user_name.uppercased())
-                        .font(.system(size: 15, weight: isCurrentUser ? .semibold : .medium))
-                        .foregroundColor(
-                            isCurrentUser ?
-                            AppTheme.accentCyan : AppTheme.mediumTextColor1
+                    Text(entry.user_name)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(AppTheme.bodyText
                         )
                         .lineLimit(1)
 
@@ -146,7 +144,7 @@ struct LeaderboardRowView: View {
                 }
 
                 if !entry.user_motto.isEmpty {
-                    Text(entry.user_motto.uppercased())
+                    Text(entry.user_motto)
                         .font(.system(size: 12))
                         .foregroundColor(AppTheme.smallTextColor1)
                         .lineLimit(1)
@@ -161,19 +159,12 @@ struct LeaderboardRowView: View {
 
                 Text("\(entry.score ?? entry.total_reviews)")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(AppTheme.mediumTextColor1)
+                    .foregroundColor(AppTheme.bodyText)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(AppTheme.panelFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
-                )
-        )
+
     }
 }
 
@@ -183,13 +174,13 @@ struct RankBadgeView: View {
     private var badgeColor: Color {
         switch rank {
         case 1:
-            return AppTheme.electricYellow
+            return AppTheme.gold
         case 2:
-            return AppTheme.accentCyan
+            return AppTheme.silver
         case 3:
-            return AppTheme.selectableTint
+            return AppTheme.bronze
         default:
-            return AppTheme.panelFill
+            return AppTheme.clear
         }
     }
 
@@ -198,7 +189,7 @@ struct RankBadgeView: View {
         case 1, 2, 3:
             return AppTheme.bgPrimary
         default:
-            return AppTheme.mediumTextColor1
+            return AppTheme.smallTitleText
         }
     }
 
@@ -207,10 +198,10 @@ struct RankBadgeView: View {
             Circle()
                 .fill(badgeColor)
                 .frame(width: 30, height: 30)
-                .overlay(
-                    Circle()
-                        .stroke(rank <= 3 ? AppTheme.accentCyan : AppTheme.accentCyan.opacity(0.3), lineWidth: rank <= 3 ? 2 : 1)
-                )
+//                .overlay(
+//                    Circle()
+//                        .stroke(rank <= 3 ? AppTheme.accentCyan : AppTheme.accentCyan.opacity(0.3), lineWidth: rank <= 3 ? 2 : 1)
+//                )
 
             if rank <= 3 {
                 Image(systemName: "crown.fill")
@@ -218,7 +209,7 @@ struct RankBadgeView: View {
                     .foregroundColor(textColor)
             } else {
                 Text("\(rank)")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundColor(textColor)
             }
         }

@@ -172,31 +172,34 @@ struct SavedWordsListView: View {
 
             Group {
                 if isLoading {
-                    ProgressView("Loading saved words...")
+                    ProgressView("LOADING SAVED WORDS...")
+                        .tint(AppTheme.accentCyan)
+                        .foregroundColor(AppTheme.smallTitleText)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if savedWords.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "book.closed")
-                            .font(.system(size: 48))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: AppTheme.emptyStateIconSize))
+                            .foregroundColor(AppTheme.accentCyan)
 
-                        Text("No Saved Words")
+                        Text("NO SAVED WORDS")
                             .font(.title2)
                             .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.smallTitleText)
 
-                        Text("Words you save will appear here")
+                        Text("WORDS YOU SAVE WILL APPEAR HERE")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppTheme.smallTextColor1)
                             .multilineTextAlignment(.center)
                     }
                     .padding()
                 } else if let errorMessage = errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 48))
-                            .foregroundColor(AppTheme.warningColor)
-                        Text(errorMessage)
-                            .foregroundColor(AppTheme.errorColor)
+                            .font(.system(size: AppTheme.emptyStateIconSize))
+                            .foregroundColor(AppTheme.selectableTint)
+                        Text(errorMessage.uppercased())
+                            .foregroundColor(AppTheme.selectableTint)
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -205,22 +208,26 @@ struct SavedWordsListView: View {
                         // Filter text bar
                         HStack {
                             Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
-                            TextField("Filter words...", text: $filterText)
+                                .foregroundColor(AppTheme.accentCyan)
+                            TextField("FILTER WORDS...", text: $filterText)
                                 .font(.body)
+                                .foregroundColor(AppTheme.smallTitleText)
                             if !filterText.isEmpty {
                                 Button(action: {
                                     filterText = ""
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppTheme.selectableTint)
                                 }
                             }
                         }
                         .padding(12)
-                        .background(AppTheme.white)
-                        .cornerRadius(10)
-                        .shadow(color: AppTheme.lightGray, radius: 4, x: 0, y: 2)
+                        .background(AppTheme.panelFill)
+                        .cornerRadius(4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+                        )
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
                         .padding(.bottom, 8)
@@ -280,9 +287,9 @@ struct SavedWordRow: View {
         HStack(spacing: 10) {
             // Word name with test badges
             HStack(spacing: 6) {
-                Text(savedWord.word)
+                Text(savedWord.word.uppercased())
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.electricYellow)
                     .lineLimit(1)
 
                 // Show test labels only if user has enabled tests
@@ -296,19 +303,19 @@ struct SavedWordRow: View {
                 HStack(spacing: 2) {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(AppTheme.errorColor)
+                        .foregroundColor(AppTheme.selectableTint)
                     Text("\(savedWord.incorrect_reviews)")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.smallTextColor1)
                 }
 
                 HStack(spacing: 2) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(AppTheme.successColor)
+                        .foregroundColor(AppTheme.accentCyan)
                     Text("\(savedWord.correct_reviews)")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.smallTextColor1)
                 }
             }
 
@@ -323,9 +330,9 @@ struct SavedWordRow: View {
                             onToggleKnown()
                         } label: {
                             if savedWord.is_known {
-                                Label("Include in Practice", systemImage: "book.fill")
+                                Label("INCLUDE IN PRACTICE", systemImage: "book.fill")
                             } else {
-                                Label("Exclude from Practice", systemImage: "xmark.circle.fill")
+                                Label("EXCLUDE FROM PRACTICE", systemImage: "xmark.circle.fill")
                             }
                         }
                     }
@@ -334,22 +341,25 @@ struct SavedWordRow: View {
                         Button(role: .destructive) {
                             onDelete()
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("DELETE", systemImage: "trash")
                         }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.accentCyan)
                         .frame(width: 24, height: 24)
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(savedWord.is_known ? AppTheme.errorColor.opacity(AppTheme.lightOpacity) : AppTheme.white)
-        .cornerRadius(10)
-        .shadow(color: AppTheme.lightGray, radius: 3, x: 0, y: 1)
+        .background(savedWord.is_known ? AppTheme.panelFill.opacity(0.5) : AppTheme.panelFill)
+        .cornerRadius(4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(savedWord.is_known ? AppTheme.selectableTint.opacity(0.3) : AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -358,30 +368,30 @@ struct SavedWordRow: View {
             if userManager.toeflEnabled && (savedWord.is_toefl == true) {
                 Text("TOEFL")
                     .font(.system(size: 8, weight: .semibold))
-                    .foregroundColor(AppTheme.white)
+                    .foregroundColor(AppTheme.bgPrimary)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(AppTheme.systemBlue)
+                    .background(AppTheme.accentCyan)
                     .cornerRadius(4)
             }
 
             if userManager.ieltsEnabled && (savedWord.is_ielts == true) {
                 Text("IELTS")
                     .font(.system(size: 8, weight: .semibold))
-                    .foregroundColor(AppTheme.white)
+                    .foregroundColor(AppTheme.bgPrimary)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(AppTheme.systemGreen)
+                    .background(AppTheme.electricYellow)
                     .cornerRadius(4)
             }
 
             if userManager.tianzEnabled && (savedWord.is_tianz == true) {
                 Text("TIANZ")
                     .font(.system(size: 8, weight: .semibold))
-                    .foregroundColor(AppTheme.white)
+                    .foregroundColor(AppTheme.bgPrimary)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(AppTheme.warningColor)
+                    .background(AppTheme.selectableTint)
                     .cornerRadius(4)
             }
         }
@@ -396,30 +406,38 @@ struct WordProgressBar: View {
     // Gradient color based on progress level
     private var progressColor: LinearGradient {
         if progressLevel <= 2 {
-            // Red-orange for low progress
-            return AppTheme.feedbackIncorrectGradient
-        } else if progressLevel <= 4 {
-            // Orange-yellow for medium progress
+            // Pink for low progress
             return LinearGradient(
-                colors: [AppTheme.warningColor, AppTheme.systemYellow],
+                colors: [AppTheme.selectableTint, AppTheme.neonPurple],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        } else if progressLevel <= 4 {
+            // Purple-yellow for medium progress
+            return LinearGradient(
+                colors: [AppTheme.neonPurple, AppTheme.electricYellow],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else if progressLevel <= 6 {
-            // Yellow-green for good progress
+            // Yellow-cyan for good progress
             return LinearGradient(
-                colors: [AppTheme.yellowGreen, AppTheme.successColor],
+                colors: [AppTheme.electricYellow, AppTheme.accentCyan],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
-            // Green-teal for mastered
-            return AppTheme.feedbackCorrectGradient
+            // Cyan for mastered
+            return LinearGradient(
+                colors: [AppTheme.accentCyan, AppTheme.accentCyan],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
         }
     }
 
     private var emptyColor: Color {
-        Color(.systemGray5)
+        AppTheme.bgPrimary
     }
 
     var body: some View {

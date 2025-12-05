@@ -116,7 +116,7 @@ struct SettingsView: View {
             }) {
                 HStack {
                     Text("ID:")
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                     Spacer()
                     Text(userManager.userID.uppercased())
                         .font(.caption)
@@ -191,14 +191,14 @@ struct SettingsView: View {
                                 Text(name.uppercased())
                                 Text("(\(code.uppercased()))")
                                     .font(.caption2)
-                                    .foregroundColor(AppTheme.mediumTextColor1)
+                                    .foregroundColor(AppTheme.smallTitleText)
                             }
                             .tag(code)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
                     .tint(AppTheme.selectableTint)
-                    .foregroundColor(AppTheme.mediumTextColor1)
+                    .foregroundColor(AppTheme.smallTitleText)
                 }
 
                 HStack {
@@ -209,14 +209,14 @@ struct SettingsView: View {
                                 Text(name.uppercased())
                                 Text("(\(code.uppercased()))")
                                     .font(.caption2)
-                                    .foregroundColor(AppTheme.mediumTextColor1)
+                                    .foregroundColor(AppTheme.smallTitleText)
                             }
                             .tag(code)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
                     .tint(AppTheme.selectableTint)
-                    .foregroundColor(AppTheme.mediumTextColor1)
+                    .foregroundColor(AppTheme.smallTitleText)
                 }
             }
         }.listRowBackground(Color.clear)
@@ -244,7 +244,7 @@ struct SettingsView: View {
                 HStack {
                     Text("TIMEZONE")
                         .font(.subheadline)
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                     Spacer()
                     Text(TimeZone.current.identifier.uppercased())
                         .font(.subheadline)
@@ -314,7 +314,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("CURRENT ENVIRONMENT:")
-                            .foregroundColor(AppTheme.mediumTextColor1)
+                            .foregroundColor(AppTheme.smallTitleText)
                         Spacer()
                         Text(currentEnvironment)
                             .fontWeight(.medium)
@@ -323,13 +323,13 @@ struct SettingsView: View {
 
                     Text("BASE URL: \(Configuration.effectiveBaseURL.uppercased())")
                         .font(.caption)
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                 }
 
                 if Configuration.environment == .development {
                     Toggle("FORCE PRODUCTION MODE", isOn: $forceProduction)
                         .tint(AppTheme.selectableTint)
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                         .onChange(of: forceProduction) { _, newValue in
                             AppState.shared.notifyEnvironmentChanged()
                         }
@@ -343,7 +343,7 @@ struct SettingsView: View {
             }) {
                 HStack {
                     Text("BUILD CONFIGURATION:")
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                     Spacer()
                     Text("DEBUG")
                         .foregroundColor(AppTheme.selectableTint)
@@ -351,7 +351,7 @@ struct SettingsView: View {
 
                 HStack {
                     Text("DEFAULT ENVIRONMENT:")
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                     Spacer()
                     Text(Configuration.environment == .development ? "DEVELOPMENT" : "PRODUCTION")
                         .foregroundColor(AppTheme.selectableTint)
@@ -396,7 +396,7 @@ struct SettingsView: View {
                             .foregroundColor(connectionTestResult.contains("✅") ? AppTheme.successColor : AppTheme.errorColor)
                         Text(connectionTestResult)
                             .font(.caption)
-                            .foregroundColor(AppTheme.mediumTextColor1)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
                 }
             }.listRowBackground(Color.clear)
@@ -432,7 +432,7 @@ struct SettingsView: View {
         ) {
             Toggle("DEVELOPER MODE", isOn: $developerModeEnabled)
                 .tint(AppTheme.selectableTint)
-                .foregroundColor(AppTheme.mediumTextColor1)
+                .foregroundColor(AppTheme.smallTitleText)
                 .onChange(of: developerModeEnabled) { _, newValue in
                     DebugConfig.isDeveloperModeEnabled = newValue
                     AnalyticsManager.shared.track(action: .settingsDeveloperMode, metadata: [

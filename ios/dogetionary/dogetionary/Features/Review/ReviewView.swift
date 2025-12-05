@@ -28,8 +28,8 @@ struct ReviewView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            AppTheme.backgroundGradient
+            // Gradient background
+            AppTheme.verticalGradient2
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {

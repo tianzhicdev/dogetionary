@@ -15,30 +15,30 @@ struct RegisterBadge: View {
     private var color: Color {
         switch register.lowercased() {
         case "formal":
-            return AppTheme.infoColor
+            return AppTheme.accentCyan
         case "neutral":
-            return AppTheme.systemPurple
+            return AppTheme.neonPurple
         case "informal":
-            return AppTheme.warningColor
+            return AppTheme.electricYellow
         case "slang":
-            return AppTheme.errorColor
+            return AppTheme.selectableTint
         case "literary":
-            return AppTheme.systemIndigo
+            return AppTheme.accentCyan
         case "technical":
-            return AppTheme.systemTeal
+            return AppTheme.neonPurple
         default:
-            return AppTheme.mediumGray
+            return AppTheme.smallTitleText
         }
     }
 
     var body: some View {
-        Text(register.capitalized)
+        Text(register.uppercased())
             .font(AppTheme.badgeLabelFont)
-            .foregroundColor(AppTheme.white)
+            .foregroundColor(AppTheme.bgPrimary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(color)
-            .cornerRadius(6)
+            .cornerRadius(4)
     }
 }
 
@@ -50,30 +50,30 @@ struct FrequencyBadge: View {
     private var color: Color {
         switch frequency.lowercased() {
         case "very_common":
-            return AppTheme.successColor
+            return AppTheme.accentCyan
         case "common":
-            return AppTheme.yellowGreen
+            return AppTheme.electricYellow
         case "uncommon":
-            return AppTheme.warningColor
+            return AppTheme.selectableTint
         case "rare":
-            return AppTheme.errorColor
+            return AppTheme.neonPurple
         default:
-            return AppTheme.mediumGray
+            return AppTheme.smallTitleText
         }
     }
 
     private var displayText: String {
         switch frequency.lowercased() {
         case "very_common":
-            return "Very Common"
+            return "VERY COMMON"
         case "common":
-            return "Common"
+            return "COMMON"
         case "uncommon":
-            return "Uncommon"
+            return "UNCOMMON"
         case "rare":
-            return "Rare"
+            return "RARE"
         default:
-            return frequency.capitalized
+            return frequency.uppercased()
         }
     }
 
@@ -84,12 +84,12 @@ struct FrequencyBadge: View {
                 .frame(width: 8, height: 8)
             Text(displayText)
                 .font(AppTheme.badgeLabelFont)
-                .foregroundColor(color)
+                .foregroundColor(AppTheme.bgPrimary)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(color.opacity(AppTheme.lightOpacity))
-        .cornerRadius(6)
+        .background(color)
+        .cornerRadius(4)
     }
 }
 
@@ -101,13 +101,13 @@ struct ConnotationBadge: View {
     private var color: Color {
         switch connotation.lowercased() {
         case "positive":
-            return AppTheme.successColor
+            return AppTheme.accentCyan
         case "negative":
-            return AppTheme.errorColor
+            return AppTheme.selectableTint
         case "neutral":
-            return AppTheme.mediumGray
+            return AppTheme.smallTitleText
         default:
-            return AppTheme.mediumGray
+            return AppTheme.smallTitleText
         }
     }
 
@@ -128,15 +128,15 @@ struct ConnotationBadge: View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 10))
-                .foregroundColor(color)
-            Text(connotation.capitalized)
+                .foregroundColor(AppTheme.bgPrimary)
+            Text(connotation.uppercased())
                 .font(AppTheme.badgeLabelFont)
-                .foregroundColor(color)
+                .foregroundColor(AppTheme.bgPrimary)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(color.opacity(AppTheme.lightOpacity))
-        .cornerRadius(6)
+        .background(color)
+        .cornerRadius(4)
     }
 }
 
@@ -146,17 +146,13 @@ struct TagPill: View {
     let tag: String
 
     var body: some View {
-        Text(tag)
+        Text(tag.uppercased())
             .font(AppTheme.badgeLabelFont)
-            .foregroundColor(AppTheme.infoColor)
+            .foregroundColor(AppTheme.bgPrimary)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(AppTheme.lightBlue)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(AppTheme.infoColor.opacity(0.2), lineWidth: 1)
-            )
+            .background(AppTheme.accentCyan)
+            .cornerRadius(4)
     }
 }
 
@@ -178,17 +174,17 @@ struct CollapsibleSection<Content: View>: View {
                 HStack(spacing: 8) {
                     Image(systemName: icon)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(AppTheme.infoColor)
+                        .foregroundColor(AppTheme.accentCyan)
 
-                    Text(title)
+                    Text(title.uppercased())
                         .font(AppTheme.titleFont)
-                        .foregroundColor(.primary)
+                        .foregroundColor(AppTheme.smallTitleText)
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.selectableTint)
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
                 .padding(.vertical, 8)
@@ -202,8 +198,12 @@ struct CollapsibleSection<Content: View>: View {
             }
         }
         .padding(12)
-        .background(AppTheme.veryLightBlue)
-        .cornerRadius(10)
+        .background(AppTheme.bgPrimary)
+        .cornerRadius(4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
@@ -217,25 +217,25 @@ struct SynonymAntonymRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
-                Image(systemName: title == "Synonyms" ? "equal.circle.fill" : "arrow.left.arrow.right.circle.fill")
+                Image(systemName: title == "SYNONYMS" ? "equal.circle.fill" : "arrow.left.arrow.right.circle.fill")
                     .font(.system(size: 12))
                     .foregroundColor(color)
 
                 Text(title)
                     .font(AppTheme.captionFont)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.smallTitleText)
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(words, id: \.self) { word in
-                        Text(word)
+                        Text(word.uppercased())
                             .font(AppTheme.bodyFont)
-                            .foregroundColor(color)
+                            .foregroundColor(AppTheme.bgPrimary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(color.opacity(AppTheme.lightOpacity))
-                            .cornerRadius(8)
+                            .background(color)
+                            .cornerRadius(4)
                     }
                 }
             }
@@ -261,17 +261,17 @@ struct InfoSection<Content: View>: View {
 
                 Text(title)
                     .font(AppTheme.captionFont)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.smallTitleText)
             }
 
             content
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(color.opacity(AppTheme.subtleOpacity))
-                .cornerRadius(8)
+                .background(AppTheme.bgPrimary)
+                .cornerRadius(4)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(color.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
                 )
         }
         .padding(.vertical, 4)
@@ -288,12 +288,12 @@ struct QuoteCard: View {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "quote.opening")
                     .font(.system(size: 16))
-                    .foregroundColor(AppTheme.infoColor.opacity(0.6))
+                    .foregroundColor(AppTheme.smallTitleText)
                     .padding(.top, 2)
 
                 Text(quote.quote)
                     .font(.system(size: 14, weight: .regular, design: .serif))
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.bodyText)
                     .italic()
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -302,16 +302,16 @@ struct QuoteCard: View {
                 Spacer()
                 Text("— \(quote.source)")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.smallTextColor1)
             }
         }
-        .padding(12)
-        .background(AppTheme.veryLightBlue)
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(AppTheme.infoColor.opacity(0.1), lineWidth: 1)
-        )
+//        .padding(12)
+//        .background(AppTheme.bgPrimary)
+//        .cornerRadius(4)
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 4)
+//                .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+//        )
     }
 }
 
