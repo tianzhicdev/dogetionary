@@ -11,6 +11,25 @@ import SwiftUI
 
 struct AppTheme {
     
+    
+    static let gold = Color(red: 1.0, green: 0.84, blue: 0.0)
+    static let silver = Color(red: 0.75, green: 0.75, blue: 0.77)
+    static let bronze = Color(red: 0.80, green: 0.50, blue: 0.20)
+
+    // Shiny yellow-white gradient
+    static let shinyGradient = LinearGradient(
+        colors: [
+            Color(red: 1.0, green: 1.0, blue: 0.85),   // warm white
+            Color(red: 1.0, green: 0.95, blue: 0.4),   // bright yellow
+            Color(red: 1.0, green: 1.0, blue: 0.9),    // highlight
+            Color(red: 1.0, green: 0.92, blue: 0.3),   // yellow
+            Color(red: 1.0, green: 1.0, blue: 0.85)    // warm white
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    
     static let bgPrimary = Color(red: 0.05, green: 0.08, blue: 0.13)       // #0D1520
      
      // Panel Fill
@@ -25,6 +44,7 @@ struct AppTheme {
     // Accents
     static let neonPurple = Color(red: 0.62, green: 0.0, blue: 1.0)       // #9D00FF
     static let electricYellow = Color(red: 0.94, green: 1.0, blue: 0.0)
+    
 
 
     
@@ -36,8 +56,15 @@ struct AppTheme {
     
     static let gradient1 = LinearGradient(colors: [accentCyan, accentCyan], startPoint: .leading, endPoint: .trailing)
     
+    
+    
+    static let bigTitleText = accentCyan
     static let smallTextColor1 = electricYellow
-    static let mediumTextColor1 = electricYellow
+    static let smallTitleText = electricYellow
+    
+    
+    static let bodyText = accentCyan
+    
     static let textFieldBorderColor = accentPink
     
     static let textFieldUserInput = accentPink
@@ -46,6 +73,12 @@ struct AppTheme {
     static let textFieldBackgroundColor = Color.black
     
     static let selectableTint = accentPink
+    
+    
+    static let buttonBackground1 = accentPink
+    static let buttonForeground1 = white
+    
+    
     
     
     
@@ -856,9 +889,6 @@ struct ScoreStar: View {
     var body: some View {
         Image(systemName: "star.fill")
             .font(.system(size: 12))
-            .foregroundStyle(
-                LinearGradient(colors: [AppTheme.electricYellow, AppTheme.accentCyan],
-                             startPoint: .topLeading, endPoint: .bottomTrailing)
-            )
+            .foregroundStyle(AppTheme.shinyGradient)
     }
 }

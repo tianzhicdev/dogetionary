@@ -21,26 +21,31 @@ struct DefinitionCard: View {
     @ObservedObject private var userManager = UserManager.shared
 
     var body: some View {
+        ZStack {
+            
         VStack(alignment: .leading, spacing: 8) {
+            
             // V4: Famous Quote
             if let quote = definition.famousQuote {
                 QuoteCard(quote: quote)
                     .padding(.top, 6)
+                Spacer()
             }
             
             // Header with word, phonetic, and compact illustration in top right
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(definition.word)
-                        .font(.title2)
+                        .font(.title)
                         .fontWeight(.bold)
-
+                        .foregroundColor(AppTheme.bigTitleText)
+                    
                     if let phonetic = definition.phonetic {
                         Text(phonetic)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
-
+                    
                     HStack(spacing: 12) {
                         // Audio play button
                         Button(action: {
@@ -51,17 +56,36 @@ struct DefinitionCard: View {
                             }
                         }) {
                             if loadingAudio {
-                                ProgressView()
-                                    .scaleEffect(0.8)
+                                HStack(spacing: 4) {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                    Text("Loading")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(AppTheme.accentCyan.opacity(0.15))
+                                .foregroundColor(AppTheme.accentCyan)
+                                .cornerRadius(8)
                             } else {
-                                Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(AppTheme.infoColor)
+                                HStack(spacing: 4) {
+                                    Image(systemName: audioPlayer.isPlaying ? "stop.fill" : "play.fill")
+                                        .font(.caption)
+                                    Text(audioPlayer.isPlaying ? "Stop" : "Play")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(AppTheme.accentCyan.opacity(0.15))
+                                .foregroundColor(AppTheme.accentCyan)
+                                .cornerRadius(8)
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
                         .disabled(loadingAudio)
-
+                        
                         // Pronunciation practice button
                         PronunciationPracticeView(
                             originalText: definition.word,
@@ -70,9 +94,9 @@ struct DefinitionCard: View {
                         )
                     }
                 }
-
+                
                 Spacer()
-
+                
                 // Compact AI Illustration in top right corner
                 CompactIllustrationView(
                     word: definition.word,
@@ -87,46 +111,58 @@ struct DefinitionCard: View {
             
             // Show translations if available
             if !definition.translations.isEmpty {
-                Text(definition.translations.joined(separator: " • "))
+                Text(definition.translations.joined(separator: " • ").uppercased())
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.bodyText)
                     .padding(.bottom, 8)
             }
             
-
+            
             ForEach(definition.meanings, id: \.partOfSpeech) { meaning in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(meaning.partOfSpeech)
+                    Text(meaning.partOfSpeech.uppercased())
                         .font(.headline)
-                        .foregroundColor(AppTheme.infoColor)
-
+                        .foregroundColor(AppTheme.smallTitleText)
+                    
                     ForEach(Array(meaning.definitions.enumerated()), id: \.offset) { index, def in
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(index + 1). \(def.definition)")
                                 .font(.body)
-
+                                .foregroundColor(AppTheme.bodyText)
+                            
                             if let example = def.example {
-                                HStack(alignment: .top, spacing: 8) {
-                                    Text("Example: \(example)")
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("\(example)")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppTheme.bodyText)
                                         .italic()
 
-                                    Button(action: {
-                                        playExampleAudio(example)
-                                    }) {
-                                        Image(systemName: "speaker.wave.2")
-                                            .font(.title3)
-                                            .foregroundColor(AppTheme.infoColor)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
+                                    HStack(spacing: 8) {
+                                        Button(action: {
+                                            playExampleAudio(example)
+                                        }) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "play.fill")
+                                                    .font(.caption)
+                                                Text("Play")
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+                                            }
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(AppTheme.accentCyan.opacity(0.15))
+                                            .foregroundColor(AppTheme.accentCyan)
+                                            .cornerRadius(8)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
 
-                                    // Pronunciation practice for examples
-                                    PronunciationPracticeView(
-                                        originalText: example,
-                                        source: "example",
-                                        wordId: nil
-                                    )
+                                        // Pronunciation practice for examples
+                                        PronunciationPracticeView(
+                                            originalText: example,
+                                            source: "example",
+                                            wordId: nil
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -135,15 +171,15 @@ struct DefinitionCard: View {
                 }
                 .padding(.vertical, 2)
             }
-
+            
             // V4: Synonyms and Antonyms after main definitions
             if !definition.synonyms.isEmpty || !definition.antonyms.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     if !definition.synonyms.isEmpty {
-                        SynonymAntonymRow(title: "Synonyms", words: definition.synonyms, color: AppTheme.successColor)
+                        SynonymAntonymRow(title: "SYNONYMS", words: definition.synonyms, color: AppTheme.accentCyan)
                     }
                     if !definition.antonyms.isEmpty {
-                        SynonymAntonymRow(title: "Antonyms", words: definition.antonyms, color: AppTheme.errorColor)
+                        SynonymAntonymRow(title: "ANTONYMS", words: definition.antonyms, color: AppTheme.selectableTint)
                     }
                 }
                 .padding(.top, 8)
@@ -154,118 +190,117 @@ struct DefinitionCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: "info.circle")
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                             .font(.caption)
-                        Text("Usage Notes")
+                        Text("USAGE NOTES")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
                     Text(comment)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.bottom, 6)
             }
-
+            
             // V4: Source (etymology)
             if let source = definition.source {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: "book.closed")
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                             .font(.caption)
-                        Text("Word Origin")
+                        Text("WORD ORIGIN")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
                     Text(source)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.bottom, 6)
             }
-
+            
             // V4: Common Collocations
             if !definition.collocations.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: "text.append")
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                             .font(.caption)
-                        Text("Common Collocations")
+                        Text("COMMON COLLOCATIONS")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
                     ForEach(definition.collocations, id: \.self) { collocation in
                         HStack(alignment: .top, spacing: 6) {
                             Image(systemName: "circle.fill")
                                 .font(.system(size: 4))
-                                .foregroundColor(AppTheme.infoColor)
+                                .foregroundColor(AppTheme.selectableTint)
                                 .padding(.top, 6)
                             Text(collocation)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.bodyText)
                         }
                     }
                 }
                 .padding(.bottom, 6)
             }
-
+            
             // V4: Word Family
             if !definition.wordFamily.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: "link")
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                             .font(.caption)
-                        Text("Word Family")
+                        Text("WORD FAMILY")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
                     ForEach(definition.wordFamily) { entry in
                         HStack {
                             Text(entry.word)
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundColor(.primary)
+                                .foregroundColor(AppTheme.bodyText)
                             Spacer()
                             Text(entry.part_of_speech)
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.bodyText)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
-                                .background(AppTheme.lightBlue)
-                                .cornerRadius(3)
                         }
                     }
                 }
                 .padding(.bottom, 6)
             }
-
+            
             // V4: Cognates section
             if let cognates = definition.cognates {
-                InfoSection(title: "Cognates", icon: "globe", color: AppTheme.infoColor) {
+                InfoSection(title: "COGNATES", icon: "globe", color: AppTheme.smallTitleText) {
                     Text(cognates)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 8)
             }
-
+            
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .background(AppTheme.clear)
+//        )
         .onAppear {
             loadWordAudioIfNeeded()
         }
+    }
     }
 
     private func loadWordAudioIfNeeded() {
@@ -453,15 +488,15 @@ struct FullscreenWordCardView: View {
                 VStack(spacing: 16) {
                     // Word and pronunciation
                     VStack(spacing: 8) {
-                        Text(word)
+                        Text(word.uppercased())
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.primary)
+                            .foregroundColor(AppTheme.electricYellow)
 
                         if let phonetic = phonetic {
                             Text(phonetic)
                                 .font(.title2)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTitleText)
                         }
                     }
 
@@ -469,15 +504,19 @@ struct FullscreenWordCardView: View {
                     if let firstDefinition = firstDefinition {
                         Text(firstDefinition)
                             .font(.title3)
-                            .foregroundColor(.primary)
+                            .foregroundColor(AppTheme.smallTitleText)
                             .multilineTextAlignment(.center)
                             .lineLimit(nil)
                             .padding(.horizontal)
                     }
                 }
                 .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(16)
+                .background(AppTheme.panelFill)
+                .cornerRadius(4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+                )
                 .padding(.horizontal)
 
                 Spacer()
@@ -497,27 +536,56 @@ struct FullscreenWordCardView: View {
 }
 
 #Preview {
-    // Preview with sample definition
+    // Preview with full V4 schema - comprehensive sample definition
     let sampleDefinition = Definition(
-        word: "apple",
-        phonetic: "/ˈæp.əl/",
+        word: "serendipity",
+        phonetic: "/ˌser.ənˈdɪp.ə.ti/",
         learning_language: "en",
         native_language: "zh",
-        translations: ["苹果", "苹果公司"],
+        translations: ["意外发现", "机缘巧合"],
         meanings: [
             Meaning(
                 partOfSpeech: "noun",
                 definitions: [
                     DefinitionDetail(
-                        definition: "A round fruit with red, green, or yellow skin and a whitish interior that grows on apple trees.",
-                        example: "I bought some fresh apples from the market.",
+                        definition: "The occurrence and development of events by chance in a happy or beneficial way.",
+                        example: "A fortunate stroke of serendipity brought the two old friends together after twenty years.",
+                        synonyms: nil,
+                        antonyms: nil
+                    ),
+                    DefinitionDetail(
+                        definition: "The faculty of making happy and unexpected discoveries by accident.",
+                        example: "The scientist's serendipity led to a groundbreaking discovery in medicine.",
                         synonyms: nil,
                         antonyms: nil
                     )
                 ]
             )
         ],
-        audioData: nil
+        audioData: nil,
+        hasWordAudio: true,
+        exampleAudioAvailability: [:],
+        validWordScore: 0.95,
+        suggestion: nil,
+        collocations: [
+            "pure serendipity",
+            "a moment of serendipity",
+            "by serendipity",
+            "serendipitous discovery"
+        ],
+        synonyms: ["chance", "luck", "fortune", "coincidence", "accident"],
+        antonyms: ["misfortune", "bad luck", "design", "intention", "plan"],
+        comment: "Formal register. Often used in academic and literary contexts. The word carries a positive connotation of fortunate accidents. Note: Don't confuse with 'synchronicity' which implies meaningful coincidence rather than happy accident.",
+        source: "Coined by Horace Walpole in 1754, from the Persian fairy tale 'The Three Princes of Serendip' (Serendip being an old name for Sri Lanka). The princes were always making discoveries by accident of things they were not seeking.",
+        wordFamily: [
+            WordFamilyEntry(word: "serendipitous", part_of_speech: "adjective"),
+            WordFamilyEntry(word: "serendipitously", part_of_speech: "adverb")
+        ],
+        cognates: "French: sérendipité, Spanish: serendipia, German: Serendipität, Italian: serendipità",
+        famousQuote: FamousQuote(
+            quote: "Serendipity is looking in a haystack for a needle and discovering a farmer's daughter.",
+            source: "Julius Comroe Jr."
+        )
     )
 
     DefinitionCard(definition: sampleDefinition)

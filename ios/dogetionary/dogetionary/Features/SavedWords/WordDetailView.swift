@@ -19,17 +19,22 @@ struct WordDetailView: View {
     @Environment(AppState.self) private var appState
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Custom tab picker
-            Picker("Tab", selection: $selectedTab) {
-                Text("Definition").tag(0)
-                Text("Practice Stats").tag(1)
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding()
-            
-            // Tab content
-            TabView(selection: $selectedTab) {
+        ZStack {
+            // Gradient background
+            AppTheme.verticalGradient2
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Custom tab picker
+                Picker("Tab", selection: $selectedTab) {
+                    Text("DEFINITION").tag(0)
+                    Text("PRACTICE STATS").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+
+                // Tab content
+                TabView(selection: $selectedTab) {
                 // Definition tab
                 DefinitionTabView(
                     savedWord: savedWord,
@@ -48,8 +53,9 @@ struct WordDetailView: View {
                 .tag(1)
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            }
         }
-        .navigationTitle(savedWord.word)
+        .navigationTitle(savedWord.word.uppercased())
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if selectedTab == 0 {

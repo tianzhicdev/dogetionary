@@ -17,10 +17,15 @@ struct SearchView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Show progress bar at top only when NOT showing search results
-            // Hide it when user has searched for a word to save screen space
-            if showProgressBar, !viewModel.isSearchActive, let progress = viewModel.testProgress, (progress.has_schedule || viewModel.achievementProgress != nil) {
+        ZStack {
+            // Gradient background
+            AppTheme.verticalGradient2
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Show progress bar at top only when NOT showing search results
+                // Hide it when user has searched for a word to save screen space
+                if showProgressBar, !viewModel.isSearchActive, let progress = viewModel.testProgress, (progress.has_schedule || viewModel.achievementProgress != nil) {
                 TestProgressBar(
                     progress: progress.progress,
                     totalWords: progress.total_words,
@@ -46,13 +51,15 @@ struct SearchView: View {
                             .padding(.horizontal)
 
                         if viewModel.isLoading {
-                            ProgressView("Searching...")
+                            ProgressView("SEARCHING...")
+                                .tint(AppTheme.accentCyan)
+                                .foregroundColor(AppTheme.smallTitleText)
                                 .padding()
                         }
 
                         if let errorMessage = viewModel.errorMessage {
-                            Text(errorMessage)
-                                .foregroundColor(AppTheme.errorColor)
+                            Text(errorMessage.uppercased())
+                                .foregroundColor(AppTheme.selectableTint)
                                 .padding()
                         }
 
@@ -83,10 +90,10 @@ struct SearchView: View {
                     }
                 }
             }
-            
-            Spacer()
+
+                Spacer()
+            }
         }
-//        .contentShape(Rectangle())
         .onTapGesture {
             // Dismiss keyboard when tapping outside text field
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -137,15 +144,16 @@ struct SearchView: View {
                 }
             }
         }
+        
     }
     
     @ViewBuilder
     private func searchBarView() -> some View {
         HStack(spacing: 12) {
             HStack {
-                TextField("Enter a word or phrase", text: $viewModel.searchText)
+                TextField("", text: $viewModel.searchText)
                     .font(.title2)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.textFieldUserInput)
                     .onSubmit {
                         viewModel.searchWord()
                     }
@@ -157,7 +165,7 @@ struct SearchView: View {
                         viewModel.errorMessage = nil
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.systemPurple.opacity(0.6))
+                            .foregroundColor(AppTheme.selectableTint)
                             .font(.title3)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -165,49 +173,25 @@ struct SearchView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(AppTheme.verticalGradient2)
-            .cornerRadius(12)
+            .background(AppTheme.textFieldBackgroundColor)
+            .cornerRadius(4)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                AppTheme.infoColor.opacity(AppTheme.strongOpacity),
-                                AppTheme.systemPurple.opacity(AppTheme.strongOpacity)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.5
-                    )
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
             )
-            .shadow(color: AppTheme.systemPurple.opacity(AppTheme.lightOpacity), radius: 8, x: 0, y: 4)
 
             Button(action: {
                 viewModel.searchWord()
             }) {
                 Image(systemName: "magnifyingglass")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.white, .white.opacity(0.9)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .font(.headline)
+                    .foregroundColor(AppTheme.buttonForeground1)
                     .frame(width: 50, height: 50)
-                    .background(
-                        LinearGradient(
-                            colors: [AppTheme.infoColor, AppTheme.systemPurple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .cornerRadius(12)
-                    .shadow(color: AppTheme.infoColor.opacity(AppTheme.strongOpacity), radius: 8, x: 0, y: 4)
+                    .background(AppTheme.buttonBackground1)
+                    .cornerRadius(10)
             }
             .disabled(viewModel.searchText.isEmpty || viewModel.isLoading)
+//            .opacity((viewModel.searchText.isEmpty || viewModel.isLoading) ? 0.5 : 1.0)
         }
     }
 }
@@ -215,4 +199,5 @@ struct SearchView: View {
 
 #Preview {
     SearchView()
+        .environment(AppState.shared)
 }

@@ -348,7 +348,7 @@ struct OnboardingView: View {
                             .foregroundStyle(AppTheme.gradient1)
                         Text("DAYS")
                             .font(.title2)
-                            .foregroundColor(AppTheme.mediumTextColor1)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
 
                     // Slider
@@ -373,7 +373,7 @@ struct OnboardingView: View {
                         let wordsPerDay = max(1, vocabularyCount / Int(selectedStudyDuration))
                         Text("~\(wordsPerDay) NEW WORDS PER DAY")
                             .font(.headline)
-                            .foregroundColor(AppTheme.mediumTextColor1)
+                            .foregroundColor(AppTheme.smallTitleText)
 //                        VStack(spacing: 8) {
 //                            HStack {
 //                                Text("📝")
@@ -443,7 +443,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("YOUR BRAIN FORGETS IN PREDICTABLE PATTERNS. HARSH WORDS TRACKS EACH WORD INDIVIDUALLY AND PROMPTS REVIEW AT THE PRECISE MOMENT WHEN RECALL IS CHALLENGING BUT STILL POSSIBLE. THIS \"DESIRABLE DIFFICULTY\" IS WHAT TRANSFORMS SHORT-TERM MEMORIZATION INTO PERMANENT VOCABULARY.")
                     .font(.body)
-                    .foregroundColor(AppTheme.mediumTextColor1)
+                    .foregroundColor(AppTheme.smallTitleText)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -465,7 +465,7 @@ struct OnboardingView: View {
 
                 Text("TRY SEARCHING FOR YOUR FIRST WORD TO GET STARTED")
                     .font(.body)
-                    .foregroundColor(AppTheme.mediumTextColor1)
+                    .foregroundColor(AppTheme.smallTitleText)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)

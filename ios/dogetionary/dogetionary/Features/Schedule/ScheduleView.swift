@@ -45,7 +45,7 @@ struct ScheduleView: View {
                             ProgressView()
                                 .tint(AppTheme.accentCyan)
                             Text("LOADING SCHEDULE...")
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
                         }
                         .frame(maxHeight: .infinity)
                     } else if let error = errorMessage {
@@ -54,7 +54,7 @@ struct ScheduleView: View {
                                 .font(.system(size: 48))
                                 .foregroundColor(AppTheme.selectableTint)
                             Text(error.uppercased())
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
                                 .multilineTextAlignment(.center)
                                 .padding()
                         }
@@ -87,7 +87,7 @@ struct ScheduleView: View {
                                 Text("ALL CAUGHT UP!")
                                     .font(.title2)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(AppTheme.mediumTextColor1)
+                                    .foregroundColor(AppTheme.smallTitleText)
                                 Text("NO TASKS SCHEDULED FOR THE NEXT 60 DAYS.")
                                     .foregroundColor(AppTheme.smallTextColor1)
                                     .multilineTextAlignment(.center)
@@ -222,7 +222,7 @@ struct SimpleScheduleListView: View {
                                 Text("TEST LEVEL")
                                     .font(.caption)
                                     .fontWeight(.medium)
-                                    .foregroundColor(AppTheme.mediumTextColor1)
+                                    .foregroundColor(AppTheme.smallTitleText)
                             }
 
                             Menu {
@@ -311,7 +311,7 @@ struct SimpleScheduleListView: View {
                                     Spacer()
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.caption2)
-                                        .foregroundColor(AppTheme.mediumTextColor1)
+                                        .foregroundColor(AppTheme.smallTitleText)
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 10)
@@ -334,7 +334,7 @@ struct SimpleScheduleListView: View {
                                     Text("STUDY DURATION")
                                         .font(.caption)
                                         .fontWeight(.medium)
-                                        .foregroundColor(AppTheme.mediumTextColor1)
+                                        .foregroundColor(AppTheme.smallTitleText)
                                 }
 
                                 Menu {
@@ -357,7 +357,7 @@ struct SimpleScheduleListView: View {
                                         Spacer()
                                         Image(systemName: "chevron.up.chevron.down")
                                             .font(.caption2)
-                                            .foregroundColor(AppTheme.mediumTextColor1)
+                                            .foregroundColor(AppTheme.smallTitleText)
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 10)
@@ -402,7 +402,7 @@ struct SimpleScheduleListView: View {
                             Text("NO TEST SELECTED")
                                 .font(.title3)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
                             Text("SELECT A TEST LEVEL ABOVE TO CREATE YOUR STUDY SCHEDULE")
                                 .foregroundColor(AppTheme.smallTextColor1)
                                 .multilineTextAlignment(.center)
@@ -414,7 +414,7 @@ struct SimpleScheduleListView: View {
                             Text("NO SCHEDULE CREATED")
                                 .font(.title3)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
                             Text("PLEASE WAIT WHILE WE CREATE YOUR STUDY SCHEDULE")
                                 .foregroundColor(AppTheme.smallTextColor1)
                                 .multilineTextAlignment(.center)
@@ -426,7 +426,7 @@ struct SimpleScheduleListView: View {
                             Text("ALL CAUGHT UP!")
                                 .font(.title3)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.mediumTextColor1)
+                                .foregroundColor(AppTheme.smallTitleText)
                             Text("NO TASKS SCHEDULED FOR THE NEXT 60 DAYS")
                                 .foregroundColor(AppTheme.smallTextColor1)
                                 .multilineTextAlignment(.center)
@@ -498,10 +498,10 @@ struct DayCard: View {
                 VStack(spacing: 2) {
                     Text(dayOfMonth)
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                     Text(monthAbbreviation.uppercased())
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.mediumTextColor1)
+                        .foregroundColor(AppTheme.smallTitleText)
                 }
                 .frame(width: 60, height: 60)
 
@@ -509,7 +509,7 @@ struct DayCard: View {
                     HStack(spacing: 6) {
                         Text(dayOfWeek)
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(AppTheme.mediumTextColor1)
+                            .foregroundColor(AppTheme.smallTitleText)
 
                         if isToday {
                             Text("TODAY")
@@ -641,7 +641,7 @@ struct TaskBadge: View {
             Text(label.uppercased())
                 .font(.system(size: 11, weight: .medium))
         }
-        .foregroundColor(completed == count && count > 0 ? AppTheme.accentCyan : AppTheme.mediumTextColor1)
+        .foregroundColor(completed == count && count > 0 ? AppTheme.accentCyan : AppTheme.smallTitleText)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
@@ -735,7 +735,7 @@ struct NoScheduleView: View {
             Text("NO SCHEDULE YET")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.mediumTextColor1)
+                .foregroundColor(AppTheme.smallTitleText)
 
             Text(message.uppercased())
                 .font(.subheadline)
