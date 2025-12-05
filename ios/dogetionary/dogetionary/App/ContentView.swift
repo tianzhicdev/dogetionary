@@ -27,6 +27,9 @@ struct ContentView: View {
             )
         } else {
         ZStack(alignment: .bottomTrailing) {
+            AppTheme.verticalGradient2
+                .ignoresSafeArea()
+            
             VStack(spacing: 0) {
                 // App banner at the top
                 AppBanner()

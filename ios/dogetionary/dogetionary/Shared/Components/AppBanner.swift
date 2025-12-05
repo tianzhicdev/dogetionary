@@ -10,28 +10,22 @@ import SwiftUI
 struct AppBanner: View {
     var body: some View {
         HStack(spacing: 8) {
-            // Logo
-            Image("logo")
+            // Banner 1
+            Image("banner1")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)
+                .frame(height: 22)
 
-            // App title
-            Text("Unforgettable Dictionary")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
+            // Banner 2
+            Image("banner2")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 22)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(.systemBackground))
-        .overlay(
-            Rectangle()
-                .frame(height: 0.5)
-                .foregroundColor(Color(.systemGray4)),
-            alignment: .bottom
-        )
+        .padding(.vertical, 4)
+        .background(AppTheme.clear)
     }
 }
 

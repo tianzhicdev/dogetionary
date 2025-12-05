@@ -11,12 +11,10 @@ import SwiftUI
 
 struct AppTheme {
     
-    
+    // approved colors
     static let gold = Color(red: 1.0, green: 0.84, blue: 0.0)
     static let silver = Color(red: 0.75, green: 0.75, blue: 0.77)
     static let bronze = Color(red: 0.80, green: 0.50, blue: 0.20)
-
-    // Shiny yellow-white gradient
     static let shinyGradient = LinearGradient(
         colors: [
             Color(red: 1.0, green: 1.0, blue: 0.85),   // warm white
@@ -61,23 +59,18 @@ struct AppTheme {
     static let bigTitleText = accentCyan
     static let smallTextColor1 = electricYellow
     static let smallTitleText = electricYellow
-    
-    
     static let bodyText = accentCyan
-    
-    static let textFieldBorderColor = accentPink
-    
-    static let textFieldUserInput = accentPink
-//    static let textFieldBackgroundColor = panelFill
-    
+    static let textFieldBorderColor = accentCyan
+    static let textFieldUserInput = accentCyan
     static let textFieldBackgroundColor = Color.black
-    
     static let selectableTint = accentPink
-    
+    static let bigButtonBackground1 = accentCyan
+    static let bigButtonForeground1 = white
     
     static let buttonBackground1 = accentPink
     static let buttonForeground1 = white
     
+    // end approved colors
     
     
     
@@ -887,8 +880,9 @@ struct AppTheme {
 
 struct ScoreStar: View {
     var body: some View {
-        Image(systemName: "star.fill")
-            .font(.system(size: 12))
-            .foregroundStyle(AppTheme.shinyGradient)
+        Image("score_star")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 25, height: 25)
     }
 }

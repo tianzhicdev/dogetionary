@@ -185,9 +185,9 @@ struct SearchView: View {
             }) {
                 Image(systemName: "magnifyingglass")
                     .font(.headline)
-                    .foregroundColor(AppTheme.buttonForeground1)
+                    .foregroundColor(AppTheme.bigButtonForeground1)
                     .frame(width: 50, height: 50)
-                    .background(AppTheme.buttonBackground1)
+                    .background(AppTheme.bigButtonBackground1)
                     .cornerRadius(10)
             }
             .disabled(viewModel.searchText.isEmpty || viewModel.isLoading)
