@@ -41,20 +41,20 @@ struct TestProgressBar: View {
                     Text(badgeText)
                         .font(.system(size: 12, weight: .semibold))
                 }
-                .foregroundColor(AppTheme.white)
+                .foregroundColor(AppTheme.bodyText)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(gradientForTestType)
-                )
+//                .background(
+//                    Capsule()
+//                        .fill(gradientForTestType)
+//                )
 
                 Spacer()
 
                 // Progress percentage
                 Text("\(Int(displayProgress * 100))%")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.bodyText)
 
                 // Expand/collapse button
                 Button(action: {
@@ -64,7 +64,7 @@ struct TestProgressBar: View {
                 }) {
                     Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.selectableTint)
                 }
             }
 
@@ -72,7 +72,7 @@ struct TestProgressBar: View {
             ZStack(alignment: .leading) {
                 // Background track
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(AppTheme.mediumGray.opacity(AppTheme.lightOpacity * 2))
+                    .fill(AppTheme.panelFill)
                     .frame(height: 20)
 
                 // Animated progress fill with gradient
@@ -86,43 +86,9 @@ struct TestProgressBar: View {
                             )
                         )
                         .frame(width: geometry.size.width * animatedProgress, height: 20)
-                        .overlay(
-                            // Shimmer effect
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            AppTheme.white.opacity(0.0),
-                                            AppTheme.white.opacity(0.3),
-                                            AppTheme.white.opacity(0.0)
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: geometry.size.width * animatedProgress)
-                                .mask(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .frame(width: geometry.size.width * animatedProgress)
-                                )
-                                .offset(x: isExpanded ? 0 : -100)
-                                .animation(
-                                    Animation.linear(duration: 1.5)
-                                        .repeatForever(autoreverses: false),
-                                    value: isExpanded
-                                )
-                        )
                 }
                 .frame(height: 20)
 
-                // Progress text overlay
-                HStack {
-                    Spacer()
-                    Text("\(displayCurrent) / \(displayTotal)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(animatedProgress > 0.5 ? AppTheme.white : .primary)
-                        .padding(.trailing, 8)
-                }
             }
 
             // Detailed stats (expandable)
@@ -132,52 +98,42 @@ struct TestProgressBar: View {
 
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Remaining")
+                            Text("REMAINING")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTitleText)
                             HStack(spacing: 2) {
                                 Text("\(displayRemaining)")
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(AppTheme.warningColor)
-                                if !isTestMode {
-                                    Text("pts")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                                    .foregroundColor(AppTheme.accentPink)
                             }
                         }
 
                         Spacer()
 
                         VStack(alignment: .center, spacing: 4) {
-                            Text("Streak")
+                            Text("STREAK")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTitleText)
                             HStack(spacing: 4) {
                                 Image(systemName: "flame.fill")
-                                    .foregroundColor(streakDays > 0 ? AppTheme.warningColor : AppTheme.mediumGray)
+                                    .foregroundColor(AppTheme.electricYellow)
                                     .font(.system(size: 14))
                                 Text("\(streakDays)")
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(streakDays > 0 ? AppTheme.warningColor : AppTheme.mediumGray)
+                                    .foregroundColor(AppTheme.electricYellow)
                             }
                         }
 
                         Spacer()
 
                         VStack(alignment: .trailing, spacing: 4) {
-                            Text(isTestMode ? "Completed" : "Score")
+                            Text(isTestMode ? "COMPLETED" : "SCORE")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.smallTitleText)
                             HStack(spacing: 2) {
                                 Text("\(displayCurrent)")
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(AppTheme.successColor)
-                                if !isTestMode {
-                                    Text("pts")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                                    .foregroundColor(AppTheme.accentCyan)
                             }
                         }
                     }
@@ -197,17 +153,15 @@ struct TestProgressBar: View {
 
                             VStack(spacing: 12) {
                                 HStack {
-                                    Text("Achievements")
+                                    Text("ACHEIVEMENTS")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppTheme.smallTitleText)
                                     Spacer()
-                                    if let current = achievements.current_achievement {
-                                        Image(systemName: current.symbol)
-                                            .font(.system(size: 16))
-                                            .foregroundColor(colorForAchievementTier(current.tier))
-                                        Text("\(achievements.score) pts")
+                                    HStack(spacing: -10) {
+                                        Text("\(achievements.score)")
                                             .font(.system(size: 13, weight: .medium))
-                                            .foregroundColor(.primary)
+                                            .foregroundColor(AppTheme.bodyText)
+                                        AnimatedScoreStar(size: 45)
                                     }
                                 }
 
@@ -227,13 +181,13 @@ struct TestProgressBar: View {
 
                                             Text("\(achievement.milestone)")
                                                 .font(.system(size: 9, weight: .medium))
-                                                .foregroundColor(.primary)
+                                                .foregroundColor(AppTheme.electricYellow)
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 6)
                                         .background(
                                             RoundedRectangle(cornerRadius: 6)
-                                                .fill(colorForAchievementTier(achievement.tier).opacity(AppTheme.subtleOpacity))
+                                                .fill(AppTheme.panelFill)
                                         )
                                     }
 
@@ -243,20 +197,20 @@ struct TestProgressBar: View {
                                             VStack(spacing: 4) {
                                                 Image(systemName: metadata.symbol)
                                                     .font(.system(size: 20))
-                                                    .foregroundColor(AppTheme.successColor)
+                                                    .foregroundColor(AppTheme.accentCyan)
 
                                                 Text(metadata.title)
                                                     .font(.system(size: 9, weight: .medium))
-                                                    .foregroundColor(.primary)
+                                                    .foregroundColor(AppTheme.electricYellow)
                                                     .multilineTextAlignment(.center)
                                                     .lineLimit(2)
                                             }
                                             .frame(maxWidth: .infinity)
                                             .padding(.vertical, 6)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .fill(AppTheme.successColor.opacity(AppTheme.subtleOpacity))
-                                            )
+//                                            .background(
+//                                                RoundedRectangle(cornerRadius: 6)
+//                                                    .fill(AppTheme.panelFill)
+//                                            )
                                         }
                                     }
                                 }
@@ -271,8 +225,8 @@ struct TestProgressBar: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: AppTheme.subtleShadowColor, radius: 10, x: 0, y: 4)
+                .fill(AppTheme.panelFill)
+                .shadow(color: AppTheme.black.opacity(0.3), radius: 10, x: 0, y: 4)
         )
         .onAppear {
             withAnimation(.easeOut(duration: 1.0)) {
@@ -292,19 +246,19 @@ struct TestProgressBar: View {
         if isTestMode {
             switch testType {
             case "TOEFL":
-                return [AppTheme.infoColor, AppTheme.systemCyan]
+                return [AppTheme.accentCyan, AppTheme.neonPurple]
             case "IELTS":
-                return [AppTheme.systemPurple, AppTheme.systemPink]
+                return [AppTheme.neonPurple, AppTheme.accentPink]
             case "TIANZ":
-                return [AppTheme.warningColor, AppTheme.systemYellow]
+                return [AppTheme.electricYellow, AppTheme.accentCyan]
             case "BOTH":
-                return [AppTheme.infoColor, AppTheme.systemPurple, AppTheme.systemPink]
+                return [AppTheme.accentCyan, AppTheme.neonPurple, AppTheme.accentPink]
             default:
-                return [AppTheme.successColor, AppTheme.infoColor]
+                return [AppTheme.accentCyan, AppTheme.neonPurple]
             }
         } else {
             // Score mode gradient
-            return [AppTheme.systemPurple, AppTheme.warningColor]
+            return [AppTheme.neonPurple, AppTheme.electricYellow]
         }
     }
 
@@ -356,13 +310,13 @@ struct TestProgressBar: View {
     private func colorForAchievementTier(_ tier: AchievementTier) -> Color {
         switch tier {
         case .beginner:
-            return AppTheme.successColor
+            return AppTheme.bronze
         case .intermediate:
-            return AppTheme.infoColor
+            return AppTheme.silver
         case .advanced:
-            return AppTheme.systemPurple
+            return AppTheme.gold
         case .expert:
-            return AppTheme.warningColor
+            return AppTheme.gold
         }
     }
 }
@@ -370,9 +324,32 @@ struct TestProgressBar: View {
 // Preview
 struct TestProgressBar_Previews: PreviewProvider {
     struct PreviewWrapper: View {
-        @State private var isExpanded1 = false
+        @State private var isExpanded1 = true
         @State private var isExpanded2 = false
-        @State private var isExpanded3 = false
+        @State private var isExpanded3 = true
+
+        // Sample achievement progress with multiple unlocked achievements
+        static let sampleAchievementProgress = AchievementProgressResponse(
+            user_id: "preview-user",
+            score: 850,
+            achievements: [
+                Achievement(milestone: 100, title: "First Steps", symbol: "star.fill", tier: .beginner, is_award: false, unlocked: true),
+                Achievement(milestone: 250, title: "Getting Started", symbol: "star.circle.fill", tier: .beginner, is_award: false, unlocked: true),
+                Achievement(milestone: 500, title: "Dedicated Learner", symbol: "sparkles", tier: .intermediate, is_award: false, unlocked: true),
+                Achievement(milestone: 750, title: "Word Master", symbol: "crown.fill", tier: .intermediate, is_award: false, unlocked: true),
+                Achievement(milestone: 1000, title: "Elite Scholar", symbol: "brain.head.profile", tier: .advanced, is_award: false, unlocked: false),
+                Achievement(milestone: 2500, title: "Vocabulary Guru", symbol: "flame.fill", tier: .expert, is_award: false, unlocked: false)
+            ],
+            next_milestone: 1000,
+            next_achievement: AchievementInfo(milestone: 1000, title: "Elite Scholar", symbol: "brain.head.profile", tier: .advanced, is_award: false),
+            current_achievement: AchievementInfo(milestone: 750, title: "Word Master", symbol: "crown.fill", tier: .intermediate, is_award: false)
+        )
+
+        // Sample test vocabulary awards
+        static let sampleTestAwards: TestVocabularyAwardsResponse = [
+            "TOEFL_BEGINNER": TestVocabularyProgress(saved_test_words: 1000, total_test_words: 1000),
+            "IELTS_INTERMEDIATE": TestVocabularyProgress(saved_test_words: 1500, total_test_words: 1500)
+        ]
 
         var body: some View {
             VStack(spacing: 20) {
@@ -382,8 +359,8 @@ struct TestProgressBar_Previews: PreviewProvider {
                     savedWords: 525,
                     testType: "TOEFL",
                     streakDays: 5,
-                    achievementProgress: nil,
-                    testVocabularyAwards: nil,
+                    achievementProgress: Self.sampleAchievementProgress,
+                    testVocabularyAwards: Self.sampleTestAwards,
                     isExpanded: $isExpanded1
                 )
 
@@ -393,8 +370,8 @@ struct TestProgressBar_Previews: PreviewProvider {
                     savedWords: 1876,
                     testType: "IELTS",
                     streakDays: 12,
-                    achievementProgress: nil,
-                    testVocabularyAwards: nil,
+                    achievementProgress: Self.sampleAchievementProgress,
+                    testVocabularyAwards: Self.sampleTestAwards,
                     isExpanded: $isExpanded2
                 )
 
@@ -404,8 +381,8 @@ struct TestProgressBar_Previews: PreviewProvider {
                     savedWords: 4600,
                     testType: "BOTH",
                     streakDays: 0,
-                    achievementProgress: nil,
-                    testVocabularyAwards: nil,
+                    achievementProgress: Self.sampleAchievementProgress,
+                    testVocabularyAwards: Self.sampleTestAwards,
                     isExpanded: $isExpanded3
                 )
             }

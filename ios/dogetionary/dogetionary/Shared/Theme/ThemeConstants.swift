@@ -883,6 +883,6 @@ struct ScoreStar: View {
         Image("score_star")
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .frame(width: 25, height: 25)
+            .frame(width: 18, height: 18)
     }
 }

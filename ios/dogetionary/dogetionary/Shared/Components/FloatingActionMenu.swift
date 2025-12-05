@@ -66,11 +66,11 @@ struct FloatingActionMenu: View {
 
                         Image(systemName: isExpanded ? "xmark" : (showBrainIcon ? "brain.head.profile" : "line.3.horizontal"))
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(AppTheme.white)
+                            .foregroundColor(AppTheme.bgPrimary)
                             .frame(width: 56, height: 56)
-                            .background(showBrainIcon ? AppTheme.errorColor : AppTheme.primaryBlue)
+                            .background(showBrainIcon ? AppTheme.accentPink : AppTheme.accentCyan)
                             .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
                             .scaleEffect(showBrainIcon && isPulsing ? 1.15 : 1.0)
                             .rotationEffect(.degrees(showBrainIcon && isPulsing ? 5 : 0))
@@ -79,11 +79,11 @@ struct FloatingActionMenu: View {
                         if showBrainIcon {
                             Text("\(practiceCount)")
                                 .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(AppTheme.white)
+                                .foregroundColor(AppTheme.bgPrimary)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .frame(minWidth: 20)
-                                .background(AppTheme.warningColor)
+                                .background(AppTheme.electricYellow)
                                 .clipShape(Capsule())
                                 .offset(x: 8, y: -4)
                         }
@@ -125,17 +125,29 @@ struct FloatingActionMenu: View {
     // Menu items configuration
     private var menuItems: [(icon: String, label: String, tag: Int, color: LinearGradient)] {
         [
-            (icon: "magnifyingglass", label: "Search", tag: 0, color: AppTheme.primaryGradient),
-            (icon: "calendar", label: "Schedule", tag: 1, color: AppTheme.feedbackSelectedGradient),
-            (icon: "brain.head.profile", label: "Practice", tag: 2, color: AppTheme.feedbackCorrectGradient),
-            (icon: "book.fill", label: "Vocabulary", tag: 3, color: LinearGradient(
-                colors: [AppTheme.warningColor, AppTheme.yellowGreen],
+            (icon: "magnifyingglass", label: "Search", tag: 0, color: LinearGradient(
+                colors: [AppTheme.accentCyan, AppTheme.neonPurple],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )),
-            (icon: "trophy.fill", label: "Leaderboard", tag: 4, color: AppTheme.goldGradient),
+            (icon: "calendar", label: "Schedule", tag: 1, color: LinearGradient(
+                colors: [AppTheme.electricYellow, AppTheme.accentCyan],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )),
+            (icon: "brain.head.profile", label: "Practice", tag: 2, color: LinearGradient(
+                colors: [AppTheme.accentPink, AppTheme.neonPurple],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )),
+            (icon: "book.fill", label: "Vocabulary", tag: 3, color: LinearGradient(
+                colors: [AppTheme.neonPurple, AppTheme.accentCyan],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )),
+            (icon: "trophy.fill", label: "Leaderboard", tag: 4, color: AppTheme.shinyGradient),
             (icon: "gear", label: "Settings", tag: 5, color: LinearGradient(
-                colors: [AppTheme.accentPurple, AppTheme.primaryBlue],
+                colors: [AppTheme.accentCyan, AppTheme.accentPink],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ))

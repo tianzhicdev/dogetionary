@@ -48,8 +48,8 @@ struct ReviewView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 12)
                 .background(
-                    AppTheme.lightBlue
-                        .shadow(color: AppTheme.subtleShadowColor, radius: 2, x: 0, y: 2)
+                    AppTheme.panelFill
+                        .shadow(color: AppTheme.black.opacity(0.3), radius: 2, x: 0, y: 2)
                 )
 
                 // Main content area (fills remaining space)
@@ -393,7 +393,7 @@ struct PracticeStatusBar: View {
                     icon: "star.fill",
                     count: status.new_words_count,
                     label: "new",
-                    color: AppTheme.infoColor
+                    color: AppTheme.accentCyan
                 )
             }
 
@@ -403,7 +403,7 @@ struct PracticeStatusBar: View {
                     icon: "book.fill",
                     count: status.test_practice_count,
                     label: "test",
-                    color: AppTheme.warningColor
+                    color: AppTheme.electricYellow
                 )
             }
 
@@ -413,7 +413,7 @@ struct PracticeStatusBar: View {
                     icon: "repeat",
                     count: status.non_test_practice_count,
                     label: "prac",
-                    color: AppTheme.successColor
+                    color: AppTheme.neonPurple
                 )
             }
 
@@ -423,7 +423,7 @@ struct PracticeStatusBar: View {
                     icon: "arrow.counterclockwise",
                     count: status.not_due_yet_count,
                     label: "extra",
-                    color: AppTheme.systemPurple
+                    color: AppTheme.accentPink
                 )
             }
 
