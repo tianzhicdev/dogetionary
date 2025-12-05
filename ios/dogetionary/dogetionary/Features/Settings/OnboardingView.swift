@@ -51,7 +51,7 @@ struct OnboardingView: View {
         NavigationView {
             ZStack {
                 // Gradient background
-                pageGradient
+                AppTheme.verticalGradient2
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
