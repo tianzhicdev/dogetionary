@@ -199,7 +199,7 @@ struct FillInBlankQuestionView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(AppTheme.secondaryGradient)
+                            .fill(AppTheme.verticalGradient2)
                             .shadow(color: AppTheme.infoColor.opacity(AppTheme.mediumHighOpacity), radius: 8, y: 4)
                     )
                     .overlay(

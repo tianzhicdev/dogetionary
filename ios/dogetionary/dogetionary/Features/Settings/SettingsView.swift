@@ -33,7 +33,7 @@ struct SettingsView: View {
     var body: some View {
         ZStack {
             // Soft blue gradient background
-            AppTheme.secondaryGradient
+            AppTheme.verticalGradient2
                 .ignoresSafeArea()
 
             Form {
@@ -141,170 +141,148 @@ struct SettingsView: View {
     private var profileSection: some View {
         Section(header:
             HStack {
-                Text("Profile")
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemPurple, AppTheme.systemPink],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                Text("PROFILE")
+                .foregroundStyle(AppTheme.gradient1)
                     .fontWeight(.semibold)
             }
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Name")
+                    Text("NAME")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.smallTextColor1)
+                    
                     TextField("Enter your name", text: $userManager.userName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
                         .onSubmit {
                             AnalyticsManager.shared.track(action: .profileNameUpdate, metadata: [
                                 "name_length": userManager.userName.count
                             ])
                         }
+                        .padding(4)
+                        .background(AppTheme.textFieldBackgroundColor)
+                        .border(AppTheme.textFieldBorderColor).cornerRadius(4)
+                        .foregroundColor(AppTheme.smallTextColor1)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Motto")
+                    Text("MOTTO")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.smallTextColor1)
                     TextField("Enter your motto", text: $userManager.userMotto)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
                         .onSubmit {
                             AnalyticsManager.shared.track(action: .profileMottoUpdate, metadata: [
                                 "motto_length": userManager.userMotto.count
                             ])
                         }
+                        .padding(4)
+                        .background(AppTheme.textFieldBackgroundColor)
+                        .border(AppTheme.textFieldBorderColor).cornerRadius(4)
+                        .foregroundColor(AppTheme.smallTextColor1)
+                    
                 }
             }
-        }
+        }.listRowBackground(Color.clear)
     }
 
     @ViewBuilder
     private var languagePreferencesSection: some View {
         Section(header:
             HStack {
-                Text("Language Preferences")
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemBlue, AppTheme.systemCyan],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                Text("LANGUAGE PREFERENCES")
+                .foregroundStyle(AppTheme.gradient1)
                     .fontWeight(.semibold)
             }
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Spacer()
-                    Picker("Learning Language", selection: learningLanguageBinding) {
+                    Picker("LEARNING LANGUAGE", selection: learningLanguageBinding) {
                         ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
                             HStack {
                                 Text(name)
                                 Text("(\(code.uppercased()))")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppTheme.mediumTextColor1)
                             }
                             .tag(code)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
-                    .tint(.blue)
+                    .tint(AppTheme.selectableTint)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                 }
 
                 HStack {
                     Spacer()
-                    Picker("Native Language", selection: nativeLanguageBinding) {
+                    Picker("NATIVE LANGUAGE", selection: nativeLanguageBinding) {
                         ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
                             HStack {
                                 Text(name)
                                 Text("(\(code.uppercased()))")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppTheme.mediumTextColor1)
                             }
                             .tag(code)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
-                    .tint(.blue)
+                    .tint(AppTheme.selectableTint)
+                    .foregroundColor(AppTheme.mediumTextColor1)
                 }
             }
-
-            if let learningLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.learningLanguage }),
-               let nativeLang = LanguageConstants.availableLanguages.first(where: { $0.0 == userManager.nativeLanguage }) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Current Configuration")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("Learning \(learningLang.1) → Native \(nativeLang.1)")
-                        .font(.footnote)
-                        .foregroundColor(AppTheme.infoColor)
-                }
-                .padding(.top, 8)
-            }
-        }
+        }.listRowBackground(Color.clear)
     }
 
     @ViewBuilder
     private var notificationsSection: some View {
         Section(header:
             HStack {
-                Text("Notifications")
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemOrange, AppTheme.systemPink],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                Text("NOTIFICATIONS")
+                    .foregroundStyle(AppTheme.gradient1)
                     .fontWeight(.semibold)
             }
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Daily Reminder")
-                        .font(.subheadline)
                     Spacer()
                     DatePicker("", selection: $userManager.reminderTime, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
+                        .datePickerStyle(.wheel)
+                            .colorInvert()  // hack for dark backgrounds
+                            .colorMultiply(AppTheme.selectableTint)
+                        
                 }
-
-                Text("You'll receive a reminder to practice at this time each day")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Divider()
 
                 HStack {
-                    Text("Timezone")
+                    Text("TIMEZONE")
                         .font(.subheadline)
+                        .foregroundColor(AppTheme.mediumTextColor1)
                     Spacer()
-                    Text(TimeZone.current.identifier)
+                    Text(TimeZone.current.identifier.uppercased())
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        
+                        .foregroundColor(AppTheme.selectableTint)
                 }
-
-                Text("Timezone is automatically detected from your device")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
-        }
+        }.listRowBackground(Color.clear)
     }
 
     @ViewBuilder
     private var feedbackSection: some View {
         Section(header:
             HStack {
-                Text("Feedback")
+                Text("FEEDBACK")
                     .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemGreen, AppTheme.systemMint],
-                                     startPoint: .leading, endPoint: .trailing)
+                        AppTheme.gradient1
                     )
                     .fontWeight(.semibold)
             }
         ) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Help us improve Unforgettable Dictionary")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
                 TextField("Share your thoughts, suggestions, or report issues...", text: $feedbackText, axis: .vertical)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .lineLimit(3...6)
+                    .padding(4)
+                    .background(AppTheme.textFieldBackgroundColor)
+                    .border(AppTheme.textFieldBorderColor).cornerRadius(4)
 
                 HStack {
                     Text("\(feedbackText.count)/500")
@@ -317,19 +295,22 @@ struct SettingsView: View {
                         HStack {
                             ProgressView()
                                 .scaleEffect(0.8)
-                            Text("Submitting...")
-                                .font(.caption)
                         }
                     } else {
-                        Button("Submit") {
+                        Button {
                             submitFeedback()
+                        } label: {
+                            Label("SEND ", systemImage: "paperplane.fill")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(8)
+                                .background(AppTheme.selectableTint)
+                                .cornerRadius(10)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
             }
-        }
+        }.listRowBackground(Color.clear)
     }
 
     @ViewBuilder
@@ -491,28 +472,22 @@ struct SettingsView: View {
     private var developerOptionsSection: some View {
         Section(header:
             HStack {
-                Text("Developer Options")
-                    .foregroundStyle(
-                        LinearGradient(colors: [AppTheme.systemRed, AppTheme.systemOrange],
-                                     startPoint: .leading, endPoint: .trailing)
-                    )
+                Text("DEVELOPER OPTIONS")
+                    .foregroundStyle(AppTheme.gradient1)
                     .fontWeight(.semibold)
             }
         ) {
-            Toggle("Developer Mode", isOn: $developerModeEnabled)
+            Toggle("DEVELOPER MODE", isOn: $developerModeEnabled)
+                .tint(AppTheme.selectableTint)
+                .foregroundColor(AppTheme.mediumTextColor1)
                 .onChange(of: developerModeEnabled) { _, newValue in
                     DebugConfig.isDeveloperModeEnabled = newValue
                     AnalyticsManager.shared.track(action: .settingsDeveloperMode, metadata: [
                         "enabled": newValue
                     ])
                 }
-
-            if developerModeEnabled {
-                Text("Developer features enabled. User ID, API config, test vocabularies, and other debug info will be visible.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
+            
+        }.listRowBackground(Color.clear)
     }
 
     // MARK: - Helper Methods
