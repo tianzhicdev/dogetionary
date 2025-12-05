@@ -38,8 +38,13 @@ struct AppTheme {
     
     static let smallTextColor1 = electricYellow
     static let mediumTextColor1 = electricYellow
-    static let textFieldBorderColor = accentCyan
-    static let textFieldBackgroundColor = panelFill
+    static let textFieldBorderColor = accentPink
+    
+    static let textFieldUserInput = accentPink
+//    static let textFieldBackgroundColor = panelFill
+    
+    static let textFieldBackgroundColor = Color.black
+    
     static let selectableTint = accentPink
     
     
