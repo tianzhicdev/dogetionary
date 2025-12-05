@@ -165,7 +165,7 @@ struct SearchView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(AppTheme.secondaryGradient)
+            .background(AppTheme.verticalGradient2)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

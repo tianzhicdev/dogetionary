@@ -167,7 +167,7 @@ struct SavedWordsListView: View {
     var body: some View {
         ZStack {
             // Soft blue gradient background
-            AppTheme.secondaryGradient
+            AppTheme.verticalGradient2
                 .ignoresSafeArea()
 
             Group {
