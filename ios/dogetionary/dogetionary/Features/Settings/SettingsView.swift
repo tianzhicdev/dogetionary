@@ -23,13 +23,6 @@ struct SettingsView: View {
     @ObservedObject private var userManager = UserManager.shared
     @State private var developerModeEnabled = DebugConfig.isDeveloperModeEnabled
 
-    // Color Playground state
-    @State private var debugPrimaryColor = AppTheme.getPrimaryColor()
-    @State private var debugAccentColor = AppTheme.getAccentColor()
-    @State private var debugBackgroundColor = AppTheme.getBackgroundColor()
-    @State private var showColorExportSheet = false
-    @State private var exportedColorCode = ""
-
     var body: some View {
         ZStack {
             // Soft blue gradient background
@@ -43,7 +36,6 @@ struct SettingsView: View {
                 notificationsSection
                 feedbackSection
                 debugAPIConfigSection
-                debugColorPlaygroundSection
                 developerOptionsSection
             }
             .onTapGesture {
@@ -52,38 +44,30 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
         }
-        .alert("Invalid Language Selection", isPresented: $showLanguageAlert) {
+        .alert("INVALID LANGUAGE SELECTION", isPresented: $showLanguageAlert) {
             Button("OK") { }
         } message: {
-            Text("Learning language and native language cannot be the same. Please choose different languages.")
+            Text("LEARNING LANGUAGE AND NATIVE LANGUAGE CANNOT BE THE SAME. PLEASE CHOOSE DIFFERENT LANGUAGES.")
         }
-        .alert("Feedback", isPresented: $showFeedbackAlert) {
+        .alert("FEEDBACK", isPresented: $showFeedbackAlert) {
             Button("OK") {
-                if feedbackAlertMessage.contains("Thank you") {
+                if feedbackAlertMessage.contains("Thank you") || feedbackAlertMessage.contains("THANK YOU") {
                     feedbackText = ""
                 }
             }
         } message: {
-            Text(feedbackAlertMessage)
+            Text(feedbackAlertMessage.uppercased())
         }
     }
-    
+
     private var currentEnvironment: String {
         if forceProduction {
-            return "Production (Forced)"
+            return "PRODUCTION (FORCED)"
         } else {
-            return Configuration.environment == .development ? "Development" : "Production"
+            return Configuration.environment == .development ? "DEVELOPMENT" : "PRODUCTION"
         }
     }
-    
-    private var environmentColor: Color {
-        if forceProduction {
-            return .green
-        } else {
-            return Configuration.environment == .development ? .blue : .green
-        }
-    }
-    
+
     private var learningLanguageBinding: Binding<String> {
         Binding(
             get: { userManager.learningLanguage },
@@ -125,15 +109,20 @@ struct SettingsView: View {
     @ViewBuilder
     private var debugUserInfoSection: some View {
         if DebugConfig.showUserID {
-            Section(header: Text("Debug Info")) {
+            Section(header: HStack {
+                Text("USER INFO")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }) {
                 HStack {
-                    Text("User ID:")
+                    Text("ID:")
+                        .foregroundColor(AppTheme.mediumTextColor1)
                     Spacer()
-                    Text(userManager.userID)
+                    Text(userManager.userID.uppercased())
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.selectableTint)
                 }
-            }
+            }.listRowBackground(Color.clear)
         }
     }
 
@@ -152,7 +141,7 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundColor(AppTheme.smallTextColor1)
                     
-                    TextField("Enter your name", text: $userManager.userName)
+                    TextField("ENTER YOUR NAME", text: $userManager.userName)
                         .onSubmit {
                             AnalyticsManager.shared.track(action: .profileNameUpdate, metadata: [
                                 "name_length": userManager.userName.count
@@ -168,7 +157,7 @@ struct SettingsView: View {
                     Text("MOTTO")
                         .font(.caption)
                         .foregroundColor(AppTheme.smallTextColor1)
-                    TextField("Enter your motto", text: $userManager.userMotto)
+                    TextField("ENTER YOUR MOTTO", text: $userManager.userMotto)
                         .onSubmit {
                             AnalyticsManager.shared.track(action: .profileMottoUpdate, metadata: [
                                 "motto_length": userManager.userMotto.count
@@ -199,7 +188,7 @@ struct SettingsView: View {
                     Picker("LEARNING LANGUAGE", selection: learningLanguageBinding) {
                         ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
                             HStack {
-                                Text(name)
+                                Text(name.uppercased())
                                 Text("(\(code.uppercased()))")
                                     .font(.caption2)
                                     .foregroundColor(AppTheme.mediumTextColor1)
@@ -217,7 +206,7 @@ struct SettingsView: View {
                     Picker("NATIVE LANGUAGE", selection: nativeLanguageBinding) {
                         ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
                             HStack {
-                                Text(name)
+                                Text(name.uppercased())
                                 Text("(\(code.uppercased()))")
                                     .font(.caption2)
                                     .foregroundColor(AppTheme.mediumTextColor1)
@@ -278,16 +267,17 @@ struct SettingsView: View {
             }
         ) {
             VStack(alignment: .leading, spacing: 12) {
-                TextField("Share your thoughts, suggestions, or report issues...", text: $feedbackText, axis: .vertical)
+                TextField("", text: $feedbackText, axis: .vertical)
                     .lineLimit(3...6)
                     .padding(4)
                     .background(AppTheme.textFieldBackgroundColor)
                     .border(AppTheme.textFieldBorderColor).cornerRadius(4)
+                    .foregroundColor(AppTheme.smallTextColor1)
 
                 HStack {
                     Text("\(feedbackText.count)/500")
                         .font(.caption2)
-                        .foregroundColor(feedbackText.count > 450 ? .orange : .secondary)
+                        .foregroundColor(AppTheme.smallTextColor1)
 
                     Spacer()
 
@@ -316,60 +306,89 @@ struct SettingsView: View {
     @ViewBuilder
     private var debugAPIConfigSection: some View {
         if DebugConfig.showAPIConfig {
-            Section(header: Text("API Configuration")) {
+            Section(header: HStack {
+                Text("API CONFIGURATION")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Current Environment:")
+                        Text("CURRENT ENVIRONMENT:")
+                            .foregroundColor(AppTheme.mediumTextColor1)
                         Spacer()
                         Text(currentEnvironment)
                             .fontWeight(.medium)
-                            .foregroundColor(environmentColor)
+                            .foregroundColor(AppTheme.selectableTint)
                     }
 
-                    Text("Base URL: \(Configuration.effectiveBaseURL)")
+                    Text("BASE URL: \(Configuration.effectiveBaseURL.uppercased())")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.mediumTextColor1)
                 }
 
                 if Configuration.environment == .development {
-                    Toggle("Force Production Mode", isOn: $forceProduction)
+                    Toggle("FORCE PRODUCTION MODE", isOn: $forceProduction)
+                        .tint(AppTheme.selectableTint)
+                        .foregroundColor(AppTheme.mediumTextColor1)
                         .onChange(of: forceProduction) { _, newValue in
                             AppState.shared.notifyEnvironmentChanged()
                         }
                 }
-            }
+            }.listRowBackground(Color.clear)
 
-            Section(header: Text("Environment Info")) {
+            Section(header: HStack {
+                Text("ENVIRONMENT INFO")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }) {
                 HStack {
-                    Text("Build Configuration:")
+                    Text("BUILD CONFIGURATION:")
+                        .foregroundColor(AppTheme.mediumTextColor1)
                     Spacer()
-                    Text("Debug")
-                        .foregroundColor(AppTheme.warningColor)
+                    Text("DEBUG")
+                        .foregroundColor(AppTheme.selectableTint)
                 }
 
                 HStack {
-                    Text("Default Environment:")
+                    Text("DEFAULT ENVIRONMENT:")
+                        .foregroundColor(AppTheme.mediumTextColor1)
                     Spacer()
-                    Text(Configuration.environment == .development ? "Development" : "Production")
-                        .foregroundColor(Configuration.environment == .development ? .blue : .green)
+                    Text(Configuration.environment == .development ? "DEVELOPMENT" : "PRODUCTION")
+                        .foregroundColor(AppTheme.selectableTint)
                 }
-            }
+            }.listRowBackground(Color.clear)
 
-            Section(header: Text("Test Connection")) {
-                Button(action: {
+            Section(header: HStack {
+                Text("TEST CONNECTION")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }) {
+                Button {
                     testConnection()
-                }) {
-                    HStack {
-                        if isTestingConnection {
+                } label: {
+                    if isTestingConnection {
+                        HStack {
                             ProgressView()
                                 .scaleEffect(0.8)
-                                .padding(.trailing, 8)
+                            Text("TESTING...")
                         }
-                        Text(isTestingConnection ? "Testing..." : "Test API Connection")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(8)
+                        .background(AppTheme.selectableTint.opacity(0.6))
+                        .cornerRadius(10)
+                    } else {
+                        Label("TEST API CONNECTION", systemImage: "network")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(8)
+                            .background(AppTheme.selectableTint)
+                            .cornerRadius(10)
                     }
                 }
                 .disabled(isTestingConnection)
-                .foregroundColor(AppTheme.infoColor)
 
                 if !connectionTestResult.isEmpty {
                     HStack {
@@ -377,94 +396,28 @@ struct SettingsView: View {
                             .foregroundColor(connectionTestResult.contains("✅") ? AppTheme.successColor : AppTheme.errorColor)
                         Text(connectionTestResult)
                             .font(.caption)
+                            .foregroundColor(AppTheme.mediumTextColor1)
                     }
                 }
-            }
+            }.listRowBackground(Color.clear)
 
-            Section(header: Text("Reset Onboarding")) {
-                Button(action: {
+            Section(header: HStack {
+                Text("RESET ONBOARDING")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }) {
+                Button {
                     UserManager.shared.resetOnboarding()
-                }) {
-                    Text("Reset Onboarding")
-                        .foregroundColor(AppTheme.infoColor)
+                } label: {
+                    Label("RESET ONBOARDING", systemImage: "arrow.counterclockwise")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(8)
+                        .background(AppTheme.selectableTint)
+                        .cornerRadius(10)
                 }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var debugColorPlaygroundSection: some View {
-        if DebugConfig.showColorPlayground {
-            Section(header: Text("Color Playground")) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Experiment with theme colors in real-time. Changes are saved and persist across app restarts.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    // Primary Color Picker
-                    ColorPicker("Primary Color", selection: $debugPrimaryColor)
-                        .onChange(of: debugPrimaryColor) { _, newColor in
-                            AppTheme.setDebugPrimaryColor(newColor)
-                        }
-
-                    // Accent Color Picker
-                    ColorPicker("Accent Color", selection: $debugAccentColor)
-                        .onChange(of: debugAccentColor) { _, newColor in
-                            AppTheme.setDebugAccentColor(newColor)
-                        }
-
-                    // Background Color Picker
-                    ColorPicker("Background Color", selection: $debugBackgroundColor)
-                        .onChange(of: debugBackgroundColor) { _, newColor in
-                            AppTheme.setDebugBackgroundColor(newColor)
-                        }
-                }
-
-                // Reset Button
-                Button(action: {
-                    AppTheme.resetDebugColors()
-                    debugPrimaryColor = AppTheme.getPrimaryColor()
-                    debugAccentColor = AppTheme.getAccentColor()
-                    debugBackgroundColor = AppTheme.getBackgroundColor()
-                }) {
-                    HStack {
-                        Image(systemName: "arrow.counterclockwise")
-                        Text("Reset to Defaults")
-                    }
-                }
-                .foregroundColor(.orange)
-
-                // Export Button
-                Button(action: {
-                    exportedColorCode = AppTheme.exportDebugColorsAsCode()
-                    showColorExportSheet = true
-                }) {
-                    HStack {
-                        Image(systemName: "doc.on.doc")
-                        Text("Export as Swift Code")
-                    }
-                }
-                .foregroundColor(.blue)
-                .sheet(isPresented: $showColorExportSheet) {
-                    NavigationView {
-                        ScrollView {
-                            Text(exportedColorCode)
-                                .font(.system(.body, design: .monospaced))
-                                .padding()
-                                .textSelection(.enabled)
-                        }
-                        .navigationTitle("Color Code")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Done") {
-                                    showColorExportSheet = false
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            }.listRowBackground(Color.clear)
         }
     }
 
@@ -516,11 +469,11 @@ struct SettingsView: View {
                 switch result {
                 case .success:
                     Self.logger.info("Feedback submitted successfully")
-                    self.feedbackAlertMessage = "Feedback submitted successfully!"
+                    self.feedbackAlertMessage = "FEEDBACK SUBMITTED SUCCESSFULLY!"
                     self.showFeedbackAlert = true
                 case .failure(let error):
                     Self.logger.error("Feedback submission failed: \(error.localizedDescription, privacy: .public)")
-                    self.feedbackAlertMessage = "Failed to submit feedback: \(error.localizedDescription)"
+                    self.feedbackAlertMessage = "FAILED TO SUBMIT FEEDBACK: \(error.localizedDescription.uppercased())"
                     self.showFeedbackAlert = true
                 }
             }
@@ -539,12 +492,12 @@ struct SettingsView: View {
                 switch result {
                 case .success(let definitions):
                     if !definitions.isEmpty {
-                        connectionTestResult = "✅ Connection successful - API responding"
+                        connectionTestResult = "✅ CONNECTION SUCCESSFUL - API RESPONDING"
                     } else {
-                        connectionTestResult = "⚠️ Connection OK but no data returned"
+                        connectionTestResult = "⚠️ CONNECTION OK BUT NO DATA RETURNED"
                     }
                 case .failure(let error):
-                    connectionTestResult = "❌ Connection failed: \(error.localizedDescription)"
+                    connectionTestResult = "❌ CONNECTION FAILED: \(error.localizedDescription.uppercased())"
                 }
             }
         }
