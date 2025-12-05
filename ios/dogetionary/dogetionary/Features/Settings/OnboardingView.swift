@@ -87,7 +87,6 @@ struct OnboardingView: View {
                         languageSelectionPage(
                             title: "WHAT IS YOUR NATIVE LANGUAGE?",
                             description: "CHOOSE YOUR NATIVE LANGUAGE FOR TRANSLATIONS",
-                            symbolName: "house.fill",
                             selectedLanguage: $selectedNativeLanguage,
                             excludeLanguage: selectedLearningLanguage
                         )
@@ -218,12 +217,6 @@ struct OnboardingView: View {
                     .foregroundStyle(AppTheme.gradient1)
                     .fixedSize(horizontal: false, vertical: true)
                     
-
-//                Text(description)
-//                    .font(.body)
-//                    .foregroundColor(AppTheme.mediumTextColor1)
-//                    .multilineTextAlignment(.center)
-//                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 24)
             .padding(.top, 40)
@@ -253,19 +246,10 @@ struct OnboardingView: View {
     private var usernamePage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(AppTheme.gradient1)
-
                 Text("GIVE YOURSELF A COOL NAME")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.gradient1)
-
-                Text("THIS NAME WILL BE DISPLAYED ON THE LEADERBOARD")
-                    .font(.body)
-                    .foregroundColor(AppTheme.mediumTextColor1)
-                    .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
             .padding(.top, 40)
@@ -273,9 +257,9 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                TextField("", text: $userName, prompt: Text("ENTER YOUR NAME").foregroundColor(AppTheme.smallTextColor1))
+                TextField("", text: $userName)
                     .font(.title3)
-                    .foregroundColor(AppTheme.smallTextColor1)
+                    .foregroundColor(AppTheme.textFieldUserInput)
                     .padding(4)
                     .background(AppTheme.textFieldBackgroundColor)
                     .cornerRadius(4)
@@ -299,48 +283,35 @@ struct OnboardingView: View {
     // MARK: - Test Prep Page
 
     private var testPrepPage: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 40) {
             VStack(spacing: 20) {
-                Image(systemName: "books.vertical.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(AppTheme.gradient1)
-
                 Text("ARE YOU STUDYING FOR A TEST?")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.gradient1)
-
-                Text("CHOOSE YOUR TEST LEVEL")
-                    .font(.body)
-                    .foregroundColor(AppTheme.mediumTextColor1)
-                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 24)
             .padding(.top, 40)
 
-            ScrollView {
-                VStack(spacing: 12) {
-                    // TOEFL options
-                    testPrepButton(title: "TOEFL BEGINNER", subtitle: "FOUNDATION VOCABULARY", emoji: "🌱", testType: .toeflBeginner)
-                    testPrepButton(title: "TOEFL INTERMEDIATE", subtitle: "INCLUDES BEGINNER WORDS", emoji: "🌿", testType: .toeflIntermediate)
-                    testPrepButton(title: "TOEFL ADVANCED", subtitle: "COMPLETE TOEFL VOCABULARY", emoji: "🌳", testType: .toeflAdvanced)
-
-                    Divider().padding(.vertical, 8)
-
-                    // IELTS options
-                    testPrepButton(title: "IELTS BEGINNER", subtitle: "FOUNDATION VOCABULARY", emoji: "🎯", testType: .ieltsBeginner)
-                    testPrepButton(title: "IELTS INTERMEDIATE", subtitle: "INCLUDES BEGINNER WORDS", emoji: "🎪", testType: .ieltsIntermediate)
-                    testPrepButton(title: "IELTS ADVANCED", subtitle: "COMPLETE IELTS VOCABULARY", emoji: "🏆", testType: .ieltsAdvanced)
-
-                    Divider().padding(.vertical, 8)
-
-                    // TIANZ option
-                    testPrepButton(title: "TIANZ TEST", subtitle: "SPECIALIZED VOCABULARY", emoji: "⭐", testType: .tianz)
-
-                    // Neither option
-                    testPrepButton(title: "NONE", subtitle: "SKIP TEST PREPARATION", emoji: "🎨", testType: nil)
+            HStack {
+                Spacer()
+                Picker("SELECT TEST", selection: $selectedTestType) {
+                    Text("NONE").tag(nil as TestType?)
+                    ForEach(TestType.allCases, id: \.self) { testType in
+                        if let count = vocabularyCounts[testType] {
+                            Text("\(testType.displayName.uppercased()), \(formatWordCount(count.total_words))")
+                                .tag(testType as TestType?)
+                        } else {
+                            Text(testType.displayName.uppercased())
+                                .tag(testType as TestType?)
+                        }
+                    }
                 }
-                .padding(.horizontal, 24)
+                .pickerStyle(.wheel)
+                .colorInvert()
+                .colorMultiply(AppTheme.selectableTint)
+                Spacer()
             }
         }
         .onAppear {
@@ -349,82 +320,15 @@ struct OnboardingView: View {
         }
     }
 
-    private func testPrepButton(title: String, subtitle: String, emoji: String, testType: TestType?) -> some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                selectedTestType = testType
-            }
-        } label: {
-            HStack(spacing: 16) {
-                Text(emoji)
-                    .font(.system(size: 32))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundColor(AppTheme.mediumTextColor1)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(AppTheme.smallTextColor1)
-                }
-                Spacer()
-
-                // Word count badge
-                if let testType = testType, let count = vocabularyCounts[testType] {
-                    Text(formatWordCount(count.total_words).uppercased())
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(AppTheme.selectableTint)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(AppTheme.textFieldBackgroundColor)
-                        .cornerRadius(4)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
-                        )
-                }
-
-                if selectedTestType == testType {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.selectableTint)
-                        .font(.title2)
-                }
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(selectedTestType == testType ? AppTheme.textFieldBackgroundColor : AppTheme.panelFill)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(
-                        selectedTestType == testType ? AppTheme.textFieldBorderColor : AppTheme.panelFill,
-                        lineWidth: selectedTestType == testType ? 2 : 1
-                    )
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-
     // MARK: - Study Duration Page
 
     private var studyDurationPage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Image(systemName: "clock.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(AppTheme.gradient1)
-
-                Text("HOW LONG DO YOU WANT TO STUDY?")
+                Text("HOW LONG DO YOU WANT TO MASTER THE VOCABULARY?")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.gradient1)
-
-                Text("SET YOUR STUDY TIMELINE FOR \((selectedTestType?.displayName ?? "").uppercased())")
-                    .font(.body)
-                    .foregroundColor(AppTheme.mediumTextColor1)
-                    .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
             .padding(.top, 40)
@@ -467,25 +371,28 @@ struct OnboardingView: View {
                     // Words per day calculation
                     if vocabularyCount > 0 {
                         let wordsPerDay = max(1, vocabularyCount / Int(selectedStudyDuration))
-                        VStack(spacing: 8) {
-                            HStack {
-                                Text("📝")
-                                    .font(.title)
-                                Text("~\(wordsPerDay) NEW WORDS PER DAY")
-                                    .font(.headline)
-                                    .foregroundColor(AppTheme.mediumTextColor1)
-                            }
-                            Text("\(vocabularyCount) TOTAL \((selectedTestType?.displayName ?? "").uppercased()) WORDS")
-                                .font(.subheadline)
-                                .foregroundColor(AppTheme.smallTextColor1)
-                        }
-                        .padding()
-                        .background(AppTheme.textFieldBackgroundColor)
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
-                        )
+                        Text("~\(wordsPerDay) NEW WORDS PER DAY")
+                            .font(.headline)
+                            .foregroundColor(AppTheme.mediumTextColor1)
+//                        VStack(spacing: 8) {
+//                            HStack {
+//                                Text("📝")
+//                                    .font(.title)
+//                                Text("~\(wordsPerDay) NEW WORDS PER DAY")
+//                                    .font(.headline)
+//                                    .foregroundColor(AppTheme.mediumTextColor1)
+//                            }
+//                            Text("\(vocabularyCount) TOTAL \((selectedTestType?.displayName ?? "").uppercased()) WORDS")
+//                                .font(.subheadline)
+//                                .foregroundColor(AppTheme.smallTextColor1)
+//                        }
+//                        .padding()
+//                        .background(AppTheme.textFieldBackgroundColor)
+//                        .cornerRadius(10)
+//                        .overlay(
+//                            RoundedRectangle(cornerRadius: 10)
+//                                .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
+//                        )
                     }
                 }
                 .padding(.horizontal, 24)
@@ -514,67 +421,31 @@ struct OnboardingView: View {
     // MARK: - Declaration Page
 
     private var declarationPage: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 40) {
             VStack(spacing: 20) {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 80))
-                    .foregroundStyle(AppTheme.gradient1)
-
-                Text("HOW FLEDGE WORKS")
+                Text("HOW HARSH WORDS WORKS")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.gradient1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 24)
             .padding(.top, 40)
 
-            Spacer()
+            // Illustration image
+            Image("declaration_illustration")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxHeight: 200)
+                .cornerRadius(12)
+                .padding(.horizontal, 24)
 
-            VStack(alignment: .leading, spacing: 24) {
-                Text("BUILDING VOCABULARY THE OLD WAY IS WASTEFUL—YOU FORGET, RE-LEARN, FORGET AGAIN.")
+            VStack(alignment: .leading, spacing: 16) {
+                Text("YOUR BRAIN FORGETS IN PREDICTABLE PATTERNS. HARSH WORDS TRACKS EACH WORD INDIVIDUALLY AND PROMPTS REVIEW AT THE PRECISE MOMENT WHEN RECALL IS CHALLENGING BUT STILL POSSIBLE. THIS \"DESIRABLE DIFFICULTY\" IS WHAT TRANSFORMS SHORT-TERM MEMORIZATION INTO PERMANENT VOCABULARY.")
                     .font(.body)
                     .foregroundColor(AppTheme.mediumTextColor1)
+                    .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
-
-                Text("FLEDGE FIXES THIS. IT TRACKS EVERY WORD YOU STUDY, CALCULATES WHEN YOU'RE ABOUT TO FORGET, AND PROMPTS YOU AT EXACTLY THE RIGHT MOMENT.")
-                    .font(.body)
-                    .foregroundColor(AppTheme.mediumTextColor1)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("⚡")
-                            .font(.title)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("SUPERMEMO SPACED REPETITION")
-                                .font(.headline)
-                                .foregroundColor(AppTheme.mediumTextColor1)
-                            Text("UP TO 20X MORE EFFICIENT LEARNING")
-                                .font(.subheadline)
-                                .foregroundColor(AppTheme.smallTextColor1)
-                        }
-                    }
-
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("⏱")
-                            .font(.title)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("SAVE YOUR TIME")
-                                .font(.headline)
-                                .foregroundColor(AppTheme.mediumTextColor1)
-                            Text("80+ HOURS BACK FOR EVERY 1,000 WORDS")
-                                .font(.subheadline)
-                                .foregroundColor(AppTheme.smallTextColor1)
-                        }
-                    }
-                }
-                .padding()
-                .background(AppTheme.textFieldBackgroundColor)
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
-                )
             }
             .padding(.horizontal, 24)
 
@@ -587,10 +458,6 @@ struct OnboardingView: View {
     private var searchWordPage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 80))
-                    .foregroundStyle(AppTheme.gradient1)
-
                 Text("SEARCH A WORD")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
@@ -609,7 +476,7 @@ struct OnboardingView: View {
             VStack(spacing: 16) {
                 TextField("", text: $searchWord, prompt: Text("E.G. UNFORGETTABLE").foregroundColor(AppTheme.smallTextColor1))
                     .font(.title3)
-                    .foregroundColor(AppTheme.smallTextColor1)
+                    .foregroundColor(AppTheme.textFieldUserInput)
                     .padding(4)
                     .background(AppTheme.textFieldBackgroundColor)
                     .cornerRadius(4)

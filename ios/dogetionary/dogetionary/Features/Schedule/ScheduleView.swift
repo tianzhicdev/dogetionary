@@ -34,8 +34,8 @@ struct ScheduleView: View {
 
     private var scheduleContent: some View {
         ZStack {
-            // Simple gradient background
-            AppTheme.backgroundGradient
+            // Cyberpunk gradient background - matches SettingsView
+            AppTheme.verticalGradient2
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -43,17 +43,18 @@ struct ScheduleView: View {
                     if isLoading {
                         VStack(spacing: 16) {
                             ProgressView()
-                            Text("Loading schedule...")
-                                .foregroundColor(.secondary)
+                                .tint(AppTheme.accentCyan)
+                            Text("LOADING SCHEDULE...")
+                                .foregroundColor(AppTheme.mediumTextColor1)
                         }
                         .frame(maxHeight: .infinity)
                     } else if let error = errorMessage {
                         VStack(spacing: 16) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: 48))
-                                .foregroundColor(AppTheme.warningColor)
-                            Text(error)
-                                .foregroundColor(AppTheme.errorColor)
+                                .foregroundColor(AppTheme.selectableTint)
+                            Text(error.uppercased())
+                                .foregroundColor(AppTheme.mediumTextColor1)
                                 .multilineTextAlignment(.center)
                                 .padding()
                         }
@@ -82,18 +83,19 @@ struct ScheduleView: View {
                             VStack(spacing: 16) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 48))
-                                    .foregroundColor(AppTheme.successColor)
-                                Text("All caught up!")
+                                    .foregroundColor(AppTheme.accentCyan)
+                                Text("ALL CAUGHT UP!")
                                     .font(.title2)
                                     .fontWeight(.semibold)
-                                Text("No tasks scheduled for the next 60 days.")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppTheme.mediumTextColor1)
+                                Text("NO TASKS SCHEDULED FOR THE NEXT 60 DAYS.")
+                                    .foregroundColor(AppTheme.smallTextColor1)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal)
                             }
                             .frame(maxHeight: .infinity)
                         } else {
-                            NoScheduleView(message: "No schedule available.")
+                            NoScheduleView(message: "NO SCHEDULE AVAILABLE.")
                         }
                     }
                 }
@@ -217,19 +219,16 @@ struct SimpleScheduleListView: View {
                         // Test type picker
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 4) {
-                                Image(systemName: "graduationcap.fill")
-                                    .font(.caption)
-                                    .foregroundColor(AppTheme.infoColor)
-                                Text("Test Level")
+                                Text("TEST LEVEL")
                                     .font(.caption)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppTheme.mediumTextColor1)
                             }
 
                             Menu {
                                 Button(action: { activeTestType = nil }) {
                                     HStack {
-                                        Text("None")
+                                        Text("NONE")
                                         if activeTestType == nil {
                                             Spacer()
                                             Image(systemName: "checkmark")
@@ -239,7 +238,7 @@ struct SimpleScheduleListView: View {
                                 Divider()
                                 Button(action: { activeTestType = .toeflBeginner }) {
                                     HStack {
-                                        Text("TOEFL Beginner")
+                                        Text("TOEFL BEGINNER")
                                         if activeTestType == .toeflBeginner {
                                             Spacer()
                                             Image(systemName: "checkmark")
@@ -248,7 +247,7 @@ struct SimpleScheduleListView: View {
                                 }
                                 Button(action: { activeTestType = .toeflIntermediate }) {
                                     HStack {
-                                        Text("TOEFL Intermediate")
+                                        Text("TOEFL INTERMEDIATE")
                                         if activeTestType == .toeflIntermediate {
                                             Spacer()
                                             Image(systemName: "checkmark")
@@ -257,7 +256,7 @@ struct SimpleScheduleListView: View {
                                 }
                                 Button(action: { activeTestType = .toeflAdvanced }) {
                                     HStack {
-                                        Text("TOEFL Advanced")
+                                        Text("TOEFL ADVANCED")
                                         if activeTestType == .toeflAdvanced {
                                             Spacer()
                                             Image(systemName: "checkmark")
@@ -267,7 +266,7 @@ struct SimpleScheduleListView: View {
                                 Divider()
                                 Button(action: { activeTestType = .ieltsBeginner }) {
                                     HStack {
-                                        Text("IELTS Beginner")
+                                        Text("IELTS BEGINNER")
                                         if activeTestType == .ieltsBeginner {
                                             Spacer()
                                             Image(systemName: "checkmark")
@@ -276,7 +275,7 @@ struct SimpleScheduleListView: View {
                                 }
                                 Button(action: { activeTestType = .ieltsIntermediate }) {
                                     HStack {
-                                        Text("IELTS Intermediate")
+                                        Text("IELTS INTERMEDIATE")
                                         if activeTestType == .ieltsIntermediate {
                                             Spacer()
                                             Image(systemName: "checkmark")
@@ -285,7 +284,7 @@ struct SimpleScheduleListView: View {
                                 }
                                 Button(action: { activeTestType = .ieltsAdvanced }) {
                                     HStack {
-                                        Text("IELTS Advanced")
+                                        Text("IELTS ADVANCED")
                                         if activeTestType == .ieltsAdvanced {
                                             Spacer()
                                             Image(systemName: "checkmark")
@@ -296,7 +295,7 @@ struct SimpleScheduleListView: View {
                                     Divider()
                                     Button(action: { activeTestType = .tianz }) {
                                         HStack {
-                                            Text("Tianz Test")
+                                            Text("TIANZ TEST")
                                             if activeTestType == .tianz {
                                                 Spacer()
                                                 Image(systemName: "checkmark")
@@ -306,21 +305,21 @@ struct SimpleScheduleListView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(testTypeLabel)
+                                    Text(testTypeLabel.uppercased())
                                         .font(.subheadline)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(AppTheme.textFieldUserInput)
                                     Spacer()
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppTheme.mediumTextColor1)
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 10)
-                                .background(AppTheme.white)
-                                .cornerRadius(8)
+                                .background(AppTheme.textFieldBackgroundColor)
+                                .cornerRadius(4)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(AppTheme.infoColor.opacity(AppTheme.mediumHighOpacity), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
                                 )
                             }
                             .onChange(of: activeTestType) { oldValue, newValue in
@@ -332,13 +331,10 @@ struct SimpleScheduleListView: View {
                         if activeTestType != nil {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 4) {
-                                    Image(systemName: "calendar")
-                                        .font(.caption)
-                                        .foregroundColor(AppTheme.successColor)
-                                    Text("Study Duration")
+                                    Text("STUDY DURATION")
                                         .font(.caption)
                                         .fontWeight(.medium)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppTheme.mediumTextColor1)
                                 }
 
                                 Menu {
@@ -355,21 +351,21 @@ struct SimpleScheduleListView: View {
                                     }
                                 } label: {
                                     HStack {
-                                        Text("\(targetDays) days → \(formattedEndDate(days: targetDays))")
+                                        Text("\(targetDays) DAYS → \(formattedEndDate(days: targetDays).uppercased())")
                                             .font(.subheadline)
-                                            .foregroundColor(.primary)
+                                            .foregroundColor(AppTheme.textFieldUserInput)
                                         Spacer()
                                         Image(systemName: "chevron.up.chevron.down")
                                             .font(.caption2)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(AppTheme.mediumTextColor1)
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 10)
-                                    .background(AppTheme.white)
-                                    .cornerRadius(8)
+                                    .background(AppTheme.textFieldBackgroundColor)
+                                    .cornerRadius(4)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(AppTheme.successColor.opacity(AppTheme.mediumHighOpacity), lineWidth: 1)
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
                                     )
                                 }
                                 .onChange(of: targetDays) { _, _ in
@@ -382,23 +378,16 @@ struct SimpleScheduleListView: View {
                             HStack {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                                Text("Updating schedule...")
+                                    .tint(AppTheme.accentCyan)
+                                Text("UPDATING SCHEDULE...")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppTheme.smallTextColor1)
                             }
                             .padding(.vertical, 4)
                         }
                     }
                     .padding(16)
-                    .background(
-                        LinearGradient(
-                            colors: [AppTheme.lightBlue, AppTheme.white],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .cornerRadius(12)
-                    .shadow(color: AppTheme.subtleShadowColor, radius: 8, x: 0, y: 2)
+                    .background(AppTheme.clear)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                 }
@@ -409,34 +398,37 @@ struct SimpleScheduleListView: View {
                         if activeTestType == nil {
                             Image(systemName: "calendar.badge.plus")
                                 .font(.system(size: 48))
-                                .foregroundColor(.secondary)
-                            Text("No test selected")
+                                .foregroundColor(AppTheme.accentCyan)
+                            Text("NO TEST SELECTED")
                                 .font(.title3)
                                 .fontWeight(.semibold)
-                            Text("Select a test level above to create your study schedule")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.mediumTextColor1)
+                            Text("SELECT A TEST LEVEL ABOVE TO CREATE YOUR STUDY SCHEDULE")
+                                .foregroundColor(AppTheme.smallTextColor1)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
                         } else if !userHasSchedule {
                             Image(systemName: "calendar.badge.exclamationmark")
                                 .font(.system(size: 48))
-                                .foregroundColor(AppTheme.warningColor)
-                            Text("No schedule created")
+                                .foregroundColor(AppTheme.selectableTint)
+                            Text("NO SCHEDULE CREATED")
                                 .font(.title3)
                                 .fontWeight(.semibold)
-                            Text("Please wait while we create your study schedule")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.mediumTextColor1)
+                            Text("PLEASE WAIT WHILE WE CREATE YOUR STUDY SCHEDULE")
+                                .foregroundColor(AppTheme.smallTextColor1)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
                         } else {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 48))
-                                .foregroundColor(AppTheme.successColor)
-                            Text("All caught up!")
+                                .foregroundColor(AppTheme.accentCyan)
+                            Text("ALL CAUGHT UP!")
                                 .font(.title3)
                                 .fontWeight(.semibold)
-                            Text("No tasks scheduled for the next 60 days")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.mediumTextColor1)
+                            Text("NO TASKS SCHEDULED FOR THE NEXT 60 DAYS")
+                                .foregroundColor(AppTheme.smallTextColor1)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
                         }
@@ -506,38 +498,23 @@ struct DayCard: View {
                 VStack(spacing: 2) {
                     Text(dayOfMonth)
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(isToday ? .white : AppTheme.primaryBlue)
-                    Text(monthAbbreviation)
+                        .foregroundColor(AppTheme.mediumTextColor1)
+                    Text(monthAbbreviation.uppercased())
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(isToday ? .white.opacity(0.9) : AppTheme.primaryBlue.opacity(0.7))
+                        .foregroundColor(AppTheme.mediumTextColor1)
                 }
                 .frame(width: 60, height: 60)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isToday ?
-                              LinearGradient(
-                                colors: [AppTheme.infoColor, AppTheme.systemPurple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                              ) :
-                              LinearGradient(
-                                colors: [AppTheme.lightBlue, AppTheme.mediumLightBlue],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                              )
-                        )
-                )
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(dayOfWeek)
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(AppTheme.mediumTextColor1)
 
                         if isToday {
                             Text("TODAY")
                                 .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(AppTheme.white)
+                                .foregroundColor(AppTheme.bgPrimary)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
                                 .background(AppTheme.accentPurple)
@@ -549,9 +526,10 @@ struct DayCard: View {
                 Spacer()
             }
             .padding(16)
-            .background(AppTheme.white)
+            .background(AppTheme.bgPrimary)
 
-            Divider()
+//            Divider()
+//                .background(AppTheme.accentCyan.opacity(0.3))
 
             // Word lists
             VStack(spacing: 12) {
@@ -560,11 +538,11 @@ struct DayCard: View {
                 let newWordsCompleted = entry.new_words_completed ?? []
                 if !newWords.isEmpty || !newWordsCompleted.isEmpty {
                     WordSection(
-                        label: "New Words",
+                        label: "NEW WORDS",
                         words: newWords,
                         completedWords: newWordsCompleted,
-                        backgroundColor: AppTheme.newWordBackground,
-                        textColor: AppTheme.newWordTextColor
+                        backgroundColor: AppTheme.clear,
+                        textColor: AppTheme.accentCyan
                     )
                 }
 
@@ -573,11 +551,11 @@ struct DayCard: View {
                 let testWordsCompleted = entry.test_practice_words_completed ?? []
                 if !testWords.isEmpty || !testWordsCompleted.isEmpty {
                     WordSection(
-                        label: "\(testLabel) Practice",
+                        label: "\(testLabel.uppercased()) PRACTICE",
                         words: testWords.map { $0.word },
                         completedWords: testWordsCompleted.map { $0.word },
-                        backgroundColor: AppTheme.testPracticeBackground,
-                        textColor: AppTheme.testPracticeTextColor
+                        backgroundColor: AppTheme.clear,
+                        textColor: AppTheme.accentCyan
                     )
                 }
 
@@ -586,20 +564,23 @@ struct DayCard: View {
                 let practiceWordsCompleted = entry.non_test_practice_words_completed ?? []
                 if !practiceWords.isEmpty || !practiceWordsCompleted.isEmpty {
                     WordSection(
-                        label: "Custom Practice",
+                        label: "CUSTOM PRACTICE",
                         words: practiceWords.map { $0.word },
                         completedWords: practiceWordsCompleted.map { $0.word },
-                        backgroundColor: AppTheme.lightBlue,
-                        textColor: AppTheme.customPracticeTextColor
+                        backgroundColor: AppTheme.clear,
+                        textColor: AppTheme.accentCyan
                     )
                 }
             }
             .padding(16)
-            .background(AppTheme.veryLightBlue)
+            .background(AppTheme.bgPrimary)
         }
-        .background(AppTheme.white)
-        .cornerRadius(16)
-        .shadow(color: AppTheme.subtleShadowColor, radius: 8, x: 0, y: 2)
+        .background(Color.clear)
+        .cornerRadius(10)
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 4)
+//                .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
+//        )
     }
 
     private var dayOfWeek: String {
@@ -652,19 +633,25 @@ struct TaskBadge: View {
                     .font(.system(size: 12, weight: .bold))
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.successColor)
+                    .foregroundColor(AppTheme.accentCyan)
             } else {
                 Text("\(count)")
                     .font(.system(size: 12, weight: .bold))
             }
-            Text(label)
+            Text(label.uppercased())
                 .font(.system(size: 11, weight: .medium))
         }
-        .foregroundColor(completed == count && count > 0 ? .green : color)
+        .foregroundColor(completed == count && count > 0 ? AppTheme.accentCyan : AppTheme.mediumTextColor1)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background((completed == count && count > 0 ? AppTheme.successColor : color).opacity(0.15))
-        .cornerRadius(6)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(AppTheme.panelFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(completed == count && count > 0 ? AppTheme.accentCyan : AppTheme.selectableTint.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 }
 
@@ -694,31 +681,31 @@ struct WordSection: View {
             HStack {
                 Text(label)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.accentPink)
                 if completedWords.isEmpty {
                     Text("(\(words.count))")
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.accentPink)
                 } else {
-                    Text("(\(completedWords.count)/\(totalCount) done)")
+                    Text("(\(completedWords.count)/\(totalCount) DONE)")
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.successColor)
+                        .foregroundColor(AppTheme.accentPink)
                 }
             }
 
             // Completed words with strikethrough
             if !completedWords.isEmpty {
-                Text(completedWords.joined(separator: ", "))
+                Text(completedWords.joined(separator: "  "))
                     .font(.system(size: 15))
-                    .strikethrough(true, color: .gray)
-                    .foregroundColor(.gray)
+                    .strikethrough(true, color: AppTheme.smallTextColor1)
+                    .foregroundColor(AppTheme.smallTextColor1)
                     .lineSpacing(4)
             }
 
             // Remaining words
             if !words.isEmpty {
-                Text(words.joined(separator: ", "))
-                    .font(.system(size: 15))
+                Text(words.joined(separator: "  "))
+                    .font(.system(size: 20))
                     .foregroundColor(textColor)
                     .lineSpacing(4)
             }
@@ -726,7 +713,11 @@ struct WordSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(backgroundColor)
-        .cornerRadius(10)
+//        .cornerRadius(4)
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 4)
+//                .stroke(AppTheme.accentCyan.opacity(0.2), lineWidth: 1)
+//        )
     }
 }
 
@@ -737,23 +728,18 @@ struct NoScheduleView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.lightBlue)
-                    .frame(width: 100, height: 100)
+            Image(systemName: "calendar.badge.plus")
+                .font(.system(size: AppTheme.emptyStateIconSize))
+                .foregroundColor(AppTheme.accentCyan)
 
-                Image(systemName: "calendar.badge.plus")
-                    .font(.system(size: 50))
-                    .foregroundColor(AppTheme.infoColor)
-            }
-
-            Text("No Schedule Yet")
+            Text("NO SCHEDULE YET")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundColor(AppTheme.mediumTextColor1)
 
-            Text(message)
+            Text(message.uppercased())
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.smallTextColor1)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

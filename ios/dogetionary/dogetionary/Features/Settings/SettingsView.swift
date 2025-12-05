@@ -150,7 +150,7 @@ struct SettingsView: View {
                         .padding(4)
                         .background(AppTheme.textFieldBackgroundColor)
                         .border(AppTheme.textFieldBorderColor).cornerRadius(4)
-                        .foregroundColor(AppTheme.smallTextColor1)
+                        .foregroundColor(AppTheme.textFieldUserInput)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -166,7 +166,7 @@ struct SettingsView: View {
                         .padding(4)
                         .background(AppTheme.textFieldBackgroundColor)
                         .border(AppTheme.textFieldBorderColor).cornerRadius(4)
-                        .foregroundColor(AppTheme.smallTextColor1)
+                        .foregroundColor(AppTheme.textFieldUserInput)
                     
                 }
             }
@@ -272,7 +272,7 @@ struct SettingsView: View {
                     .padding(4)
                     .background(AppTheme.textFieldBackgroundColor)
                     .border(AppTheme.textFieldBorderColor).cornerRadius(4)
-                    .foregroundColor(AppTheme.smallTextColor1)
+                    .foregroundColor(AppTheme.textFieldUserInput)
 
                 HStack {
                     Text("\(feedbackText.count)/500")
