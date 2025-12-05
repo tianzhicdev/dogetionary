@@ -305,13 +305,6 @@ struct QuoteCard: View {
                     .foregroundColor(AppTheme.smallTextColor1)
             }
         }
-//        .padding(12)
-//        .background(AppTheme.bgPrimary)
-//        .cornerRadius(4)
-//        .overlay(
-//            RoundedRectangle(cornerRadius: 4)
-//                .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
-//        )
     }
 }
 

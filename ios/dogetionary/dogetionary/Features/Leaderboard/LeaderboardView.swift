@@ -154,12 +154,13 @@ struct LeaderboardRowView: View {
             Spacer(minLength: 8)
 
             // Score with icon
-            HStack(spacing: 4) {
-                ScoreStar()
+            HStack(spacing: -10) {
 
                 Text("\(entry.score ?? entry.total_reviews)")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(AppTheme.bodyText)
+                
+                    AnimatedScoreStar(size: 45)
             }
         }
         .padding(.horizontal, 12)
