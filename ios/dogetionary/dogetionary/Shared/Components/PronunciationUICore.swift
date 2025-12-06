@@ -222,14 +222,14 @@ struct PronunciationUICore: View {
                 .foregroundColor(AppTheme.smallTitleText)
 
             // Pass/Try Again indicator
-            Text(state.isPassed ? "GREAT JOB!" : "KEEP PRACTICING!")
+            Text(state.isPassed ? "Great job!" : "Keep practicing!")
                 .font(.headline)
                 .foregroundColor(AppTheme.smallTitleText)
 
             // What user said (transcription)
             if !state.transcription.isEmpty {
                 VStack(spacing: 4) {
-                    Text("YOU SAID:")
+                    Text("You said:")
                         .font(.caption)
                         .foregroundColor(AppTheme.bodyText)
 
@@ -244,7 +244,7 @@ struct PronunciationUICore: View {
 
             // Feedback
             if !state.feedback.isEmpty {
-                Text(state.feedback.uppercased())
+                Text(state.feedback)
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.bodyText)

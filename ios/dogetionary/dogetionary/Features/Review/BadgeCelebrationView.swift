@@ -13,7 +13,7 @@ struct BadgeCelebrationView: View {
 
     @State private var scale: CGFloat = 0.5
     @State private var opacity: Double = 0
-    @State private var iconRotation: Double = 0
+    @State private var iconScale: CGFloat = 0.5
 
     var body: some View {
         ZStack {
@@ -34,9 +34,9 @@ struct BadgeCelebrationView: View {
                         .frame(width: 180, height: 180)
                         .blur(radius: 30)
 
-                    // Badge PNG with rotation animation
+                    // Badge PNG with scale animation
                     BadgeAnimation(badgeId: badge.badge_id, size: 140)
-                        .rotationEffect(.degrees(iconRotation))
+                        .scaleEffect(iconScale)
                         .shadow(color: AppTheme.bigTitleText.opacity(0.5), radius: 15, x: 0, y: 8)
                 }
 
@@ -84,9 +84,9 @@ struct BadgeCelebrationView: View {
                 opacity = 1.0
             }
 
-            // Subtle icon animation
-            withAnimation(.easeInOut(duration: 0.5).delay(0.3)) {
-                iconRotation = 360
+            // Subtle icon scale animation
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.5).delay(0.3)) {
+                iconScale = 1.2
             }
 
             // Auto-dismiss after 3 seconds

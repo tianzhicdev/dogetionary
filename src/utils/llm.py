@@ -18,6 +18,7 @@ from middleware.metrics import (
     llm_errors_total,
     estimate_cost
 )
+from config.config import GROQ_TO_OPENAI_FALLBACK
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +56,22 @@ def get_provider_for_model(model_name: str) -> str:
     return MODEL_PROVIDER_MAP.get(model_name, "openai")
 
 
+def get_fallback_model(groq_model: str) -> Optional[str]:
+    """
+    Get OpenAI fallback model for a Groq model.
+    Returns None if no fallback is configured.
+    """
+    return GROQ_TO_OPENAI_FALLBACK.get(groq_model)
+
+
 def llm_completion(
     messages: List[Dict[str, str]],
     model_name: str,
     response_format: Optional[Dict[str, Any]] = None,
     temperature: float = 1.0,
     max_tokens: Optional[int] = None,
-    max_completion_tokens: Optional[int] = None
+    max_completion_tokens: Optional[int] = None,
+    _is_fallback_attempt: bool = False
 ) -> Optional[str]:
     """
     Make an LLM completion API call with standardized error handling.
@@ -210,5 +220,26 @@ def llm_completion(
             llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
             llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
             llm_errors_total.labels(provider=provider, model=model_name, error_type=error_type).inc()
+
+        # Attempt fallback to OpenAI if this is a Groq over-capacity error
+        if (provider == "groq" and
+            not _is_fallback_attempt):
+
+            fallback_model = get_fallback_model(model_name)
+            if fallback_model:
+                logger.warning(f"Groq over capacity, falling back from {model_name} to {fallback_model}")
+
+                # Retry with OpenAI fallback model (only once)
+                return llm_completion(
+                    messages=messages,
+                    model_name=fallback_model,
+                    response_format=response_format,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    max_completion_tokens=max_completion_tokens,
+                    _is_fallback_attempt=True
+                )
+            else:
+                logger.warning(f"Groq over capacity but no fallback configured for {model_name}")
 
         return None

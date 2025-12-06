@@ -9,15 +9,8 @@ import SwiftUI
 
 struct AppBanner: View {
     var body: some View {
-        HStack(spacing: 8) {
-            // Banner 1
+        HStack {
             Image("banner1")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 22)
-
-            // Banner 2
-            Image("banner2")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(height: 22)

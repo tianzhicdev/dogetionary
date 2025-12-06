@@ -3,6 +3,15 @@
 COMPLETION_MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"  # Fast, cost-effective model for definitions, questions, user profiles
 COMPLETION_MODEL_NAME_ADVANCED = "meta-llama/llama-4-scout-17b-16e-instruct"  # More capable model for complex tasks (currently unused)
 
+# Fallback mappings: Groq model -> OpenAI model (when Groq is over capacity)
+GROQ_TO_OPENAI_FALLBACK = {
+    "meta-llama/llama-4-scout-17b-16e-instruct": "gpt-4o-mini",
+    "llama-4-scout": "gpt-4o-mini",
+    "llama-3.3-70b-versatile": "gpt-4o",
+    "llama-3.1-70b-versatile": "gpt-4o",
+    "mixtral-8x7b-32768": "gpt-4o-mini",
+}
+
 # Image generation models
 IMAGE_MODEL_NAME = "dall-e-3"  # High-quality image generation
 IMAGE_MODEL_SIZE = "1024x1024"  # Default image size

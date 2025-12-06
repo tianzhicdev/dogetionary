@@ -109,14 +109,19 @@ struct PronunciationPracticeSheet: View {
                     isDisabled: false
                 )
             }
-            .navigationTitle("PRONUNCIATION PRACTICE")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
-                trailing: Button("DONE") {
-                    stopAllAudio()
-                    showingPractice = false
-                }
-                .foregroundColor(AppTheme.selectableTint)
+                trailing:
+                    Button {
+                        stopAllAudio()
+                        showingPractice = false
+                    } label: {
+                        Text("DONE")
+                            .font(.headline)
+                            .foregroundColor(AppTheme.selectableTint)
+                            .padding(8)
+                            .cornerRadius(10)
+                    }
             )
         }
         .navigationViewStyle(StackNavigationViewStyle())
