@@ -220,7 +220,6 @@ struct ForgettingCurveView: View {
 //            ReviewTimelineView(reviewHistory: reviewHistory, createdAt: createdAt)
         }
         .padding()
-        .background(Color(UIColor.systemGray6))
         .cornerRadius(12)
         .onAppear {
             loadForgettingCurve()
