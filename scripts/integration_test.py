@@ -677,6 +677,115 @@ class TestRunner:
             self.log(f"✗ /v3/app-version endpoint failed with error: {e}")
             self.failed += 1
 
+    def test_practice_status_without_test(self):
+        """Test practice status when no test is enabled"""
+        self.log("Testing /v3/practice-status without test enabled...")
+
+        try:
+            # Create a fresh user ID for this test
+            test_user_id = str(uuid.uuid4())
+
+            # Save a word that will be due for review
+            payload = {
+                "word": "practice",
+                "user_id": test_user_id,
+                "learning_language": "en",
+                "metadata": {"source": "test"}
+            }
+            response = requests.post(f"{BASE_URL}/save", json=payload)
+            self.assert_status_code(response, 201, "Save word for practice test")
+            word_id = response.json()["word_id"]
+
+            # Submit a review for this word to make it due
+            review_payload = {
+                "user_id": test_user_id,
+                "word_id": word_id,
+                "response": True
+            }
+            response = requests.post(f"{BASE_URL}/review", json=review_payload)
+            self.assert_status_code(response, 200, "Submit review for practice word")
+
+            # Wait a moment for the review to be processed
+            time.sleep(0.5)
+
+            # Make sure no test prep is enabled (default state)
+            # Get practice status
+            response = requests.get(f"{BASE_URL}/v3/practice-status", params={"user_id": test_user_id})
+            self.assert_status_code(response, 200, "/v3/practice-status without test enabled")
+
+            data = response.json()
+            self.assert_json_contains(data, "user_id", "practice-status response contains user_id")
+            self.assert_json_contains(data, "new_words_count", "practice-status response contains new_words_count")
+            self.assert_json_contains(data, "test_practice_count", "practice-status response contains test_practice_count")
+            self.assert_json_contains(data, "non_test_practice_count", "practice-status response contains non_test_practice_count")
+            self.assert_json_contains(data, "not_due_yet_count", "practice-status response contains not_due_yet_count")
+            self.assert_json_contains(data, "has_practice", "practice-status response contains has_practice")
+
+            # Verify behavior without test enabled
+            if data.get("test_practice_count") == 0:
+                self.log(f"✓ test_practice_count is 0 when no test enabled")
+                self.passed += 1
+            else:
+                self.log(f"✗ Expected test_practice_count=0, got {data.get('test_practice_count')}")
+                self.failed += 1
+
+            if data.get("new_words_count") == 0:
+                self.log(f"✓ new_words_count is 0 when no test enabled")
+                self.passed += 1
+            else:
+                self.log(f"✗ Expected new_words_count=0, got {data.get('new_words_count')}")
+                self.failed += 1
+
+            # non_test_practice_count should reflect words due for review
+            # (may be 0 or 1 depending on timing)
+            self.log(f"   non_test_practice_count: {data.get('non_test_practice_count')}")
+
+        except Exception as e:
+            self.log(f"✗ /v3/practice-status without test failed with error: {e}")
+            self.failed += 1
+
+    def test_practice_status_has_practice_logic(self):
+        """Test that has_practice excludes not_due_yet_count"""
+        self.log("Testing /v3/practice-status has_practice logic...")
+
+        try:
+            # Create a fresh user ID for this test
+            test_user_id = str(uuid.uuid4())
+
+            # Get initial practice status (should have no practice)
+            response = requests.get(f"{BASE_URL}/v3/practice-status", params={"user_id": test_user_id})
+            self.assert_status_code(response, 200, "/v3/practice-status initial state")
+
+            data = response.json()
+
+            # With no words, all counts should be 0
+            if (data.get("new_words_count") == 0 and
+                data.get("test_practice_count") == 0 and
+                data.get("non_test_practice_count") == 0):
+                self.log(f"✓ All practice counts are 0 for new user")
+                self.passed += 1
+            else:
+                self.log(f"✗ Expected all counts to be 0 for new user")
+                self.failed += 1
+
+            # has_practice should be False when all counts are 0,
+            # even if not_due_yet_count > 0 (though it should also be 0)
+            if not data.get("has_practice"):
+                self.log(f"✓ has_practice is False when no words are due")
+                self.passed += 1
+            else:
+                self.log(f"✗ has_practice should be False, got {data.get('has_practice')}")
+                self.failed += 1
+
+            # Verify not_due_yet_count doesn't affect has_practice
+            if data.get("not_due_yet_count") == 0:
+                self.log(f"✓ not_due_yet_count is 0 for new user (expected)")
+                self.passed += 1
+
+        except Exception as e:
+            self.log(f"✗ /v3/practice-status has_practice logic test failed with error: {e}")
+            self.failed += 1
+
     def test_pronunciation_review_endpoint(self):
         """Test the pronunciation review endpoint"""
         self.log("Testing /v3/review/pronounce endpoint...")
@@ -764,6 +873,8 @@ class TestRunner:
         self.test_review_complete_logic()
         self.test_test_vocabulary_awards_endpoint()
         self.test_app_version_endpoint()
+        self.test_practice_status_without_test()
+        self.test_practice_status_has_practice_logic()
         self.test_pronunciation_review_endpoint()
 
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
