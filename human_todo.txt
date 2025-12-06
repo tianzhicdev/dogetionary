@@ -217,8 +217,13 @@ let's investigate what changes need to be made, including ios/backend and db
 
 scripts/import_test_vocabularies.py
 
+bf: current question problem
 
--- done --
+
+toggle bug
+
+when test prep settings change, lots of ui components should refresh according to the schedule; (could be race condition)
+
 
 
 9. badge for finishing
@@ -226,21 +231,124 @@ we need a badge/award for when users finish their test -- when all the words fro
 it should look and feel the same from the frontend perspective as other badges;
 write some review data so i can just practice a few words to see the award being acheived;
 
+1. we only display badges that are earned, we dont have to show greyed out badges
+2. there should be no difference between award and badge;
+3. there are 2 types of badges one that is based on score, one that is based on whether the user finishes a test prep;
+4. get_test_vocabulary_awards should be kept simple that return 
+{
+"test_name":{
+
+    saved_test_words: 20,
+    totol_test_words:2000,
+}
+...
+}  
+for all the tests regardless if the user has any test enabled -- we should display his past badges too.
+this should be sufficient for the UI to determine if the user earned test related badges.
+
+we should always display the progress bar, if the user has no test prep enabled, we display the progress toward the next score based badge; 
+
 
 6. changing schedule affect streak
 when user change the number of days for a test to change to another test, we should remind the user that if he change the test, he loses streaks
 
+8. tooltip
+
+Building vocabulary the old way is wasteful—you forget, re-learn, forget again. Fledge fixes this. It tracks every word you study, calculates when you're about to forget, and prompts you at exactly the right moment. This is SuperMemo spaced repetition, and it can make your learning up to 20x more efficient. For every 1,000 words, that's 80+ hours of your life back.
+Fledge manages your vocabulary building algorithmatically; fron your practice history, it calculates the best timing to reinforce your memory and prompts you to practice at the BEST timing to practice; this is the most effective method of building a vocabulary; using this method, you can achieve 20x of the efficiency;   
+
+1. forced upgrade
+1. LLM calls by type and duration
+operationally:
+2. user actions and action logs by user;
+
+rolling log - searchable log
+
+1. dumb down the words in the questions
+2. more types of questions that help memorize the words
+
+in the definition card, let's try to keep things more compact: 
+1. move the picture to the upper right of the corner and make it smaller (it should still be clickable as it is now)
+2. do not use collapseable components, just show the content;
+
+in the search tab, when a definition is displayed, we should hide the search/words toggle and the progress bar, they took too much of the screen;
+3. definitions need to help memorize too
+
+show only one quote;
+days configurable;
+
+quote
+
+-- done --
+
+
+bug:
+1. due soon should not be adding practice button or badge
+2. practice should be test practice or other practice words
+
+saved button
+
+declaration;
+branding, header size
+
+
+
+
+
+
+
+
+
 
 producitonize:
 
-forced upgrade
+branding
+
 grafana -- finetune, perhaps expose to the internet
+
+
 1. run the fixer
 2. deploy with backward compatibility
 3. test a few days
 
+ads:
+
+Harsh Words. Real results. Master TOEFL/IELTS vocabulary in 30 days.
+这个App不会对你手软。托福/雅思词汇 30天搞定
+不惯着你的背词App
+
+sound?
 
 
+
+
+
+--- future --- 
+
+no word specific lang;
+we should only support one type of learning lange and native language 
+
+if user change learning lange, saved words and schedule should be cleared; 
+
+perhaps not good for new words 
+
+1. ask user to pronounce a sentence or phrase with that word in it (we already have the capability to generate sound and verify user pronunciation, we should reuse exiting components as much as possible)
+2. spell the word with hints (fill some characters) apple -> a__le
+3. describe a situation and ask users to pick an appropriate word -> multi choice 
+"Your friend's cooking is terrible. Which word do you use?" (interesting / disgusting / unique)
+"Which is MORE extreme?" (dislike / loathe)
+Complete the Analogy -> multi choice -> multi choice "Happy : Ecstatic :: Sad : ____" (devastated / blue / meh)
+
+
+not all questions can use below format, need to categorize words
+
+
+3. which of the following word is a synonym -> multi choice
+4. which of the following word is an antonym -> multi choice
+5. describe a situation and ask users to pick an appropriate word -> multi choice 
+"Your friend's cooking is terrible. Which word do you use?" (interesting / disgusting / unique)
+"Which is MORE extreme?" (dislike / loathe)
+Complete the Analogy -> multi choice -> multi choice "Happy : Ecstatic :: Sad : ____" (devastated / blue / meh)
 
 
 

@@ -38,7 +38,12 @@ struct AppTheme {
      
      // Pink Accent
      static let accentPink = Color(red: 1.0, green: 0.0, blue: 0.67)        // #FF00AA
-//    
+    
+    static let neonGreen = Color(red: 0.0, green: 1.0, blue: 0.62)            // #00FF9F
+
+    // Hot Red-Pink (error/alerts)
+    static let hotRed = Color(red: 1.0, green: 0.2, blue: 0.4)
+//
     // Accents
     static let neonPurple = Color(red: 0.62, green: 0.0, blue: 1.0)       // #9D00FF
     static let electricYellow = Color(red: 0.94, green: 1.0, blue: 0.0)
@@ -67,8 +72,28 @@ struct AppTheme {
     static let bigButtonBackground1 = accentCyan
     static let bigButtonForeground1 = white
     
-    static let buttonBackground1 = accentPink
-    static let buttonForeground1 = white
+    
+    
+    static let buttonBackgroundCyan = accentCyan
+    static let buttonForegroundCyan = white
+    
+    static let buttonBackgroundPink = accentPink
+    static let buttonForegroundPink = white
+    
+    static let buttonBackgroundGreen = neonGreen
+    static let buttonForegroundGreen = black
+    
+    
+    static let buttonBackgroundRed = hotRed
+    static let buttonForegroundRed = black
+    
+    static let buttonBackgroundBlue = Color.blue
+    static let buttonForegroundBlue = black
+    
+    
+    static let buttonBackgroundOrange = Color.orange
+    static let buttonForegroundOrange = black
+    
     
     // end approved colors
     
