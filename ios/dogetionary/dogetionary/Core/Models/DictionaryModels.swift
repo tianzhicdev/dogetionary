@@ -1288,3 +1288,22 @@ struct VocabularyCountResponse: Codable {
         return result
     }
 }
+
+// MARK: - Pronunciation Models
+
+/// Response from /v3/review/pronounce endpoint
+struct PronunciationEvaluationResult: Codable {
+    let success: Bool
+    let passed: Bool
+    let similarity_score: Double
+    let recognized_text: String
+    let feedback: String
+    let evaluation_threshold: Double
+    let review_id: Int
+    let next_interval_days: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case success, passed, similarity_score, recognized_text, feedback,
+             evaluation_threshold, review_id, next_interval_days
+    }
+}

@@ -2,7 +2,7 @@
 //  PronounceSentenceQuestionView.swift
 //  dogetionary
 //
-//  Created for pronunciation sentence review feature
+//  Wrapper around PronunciationUICore for review flow
 //
 
 import SwiftUI
@@ -21,108 +21,33 @@ struct PronounceSentenceQuestionView: View {
 
     @State private var hasRecorded = false
     @State private var isSubmitting = false
-    @State private var evaluationResult: PronunciationEvaluationResult?
+    @State private var evaluationState: PronunciationEvaluationState?
     @State private var hasAnswered = false
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Instructions
-            Text(question.question_text)
-                .font(.headline)
-                .foregroundColor(AppTheme.selectableTint)
-
-            // Sentence display with highlighted word
-            sentenceDisplayView
-
-            // Translation
-            if let translation = question.sentence_translation {
-                Text(translation)
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.smallTitleText)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-
-            // Audio controls
-            HStack(spacing: 30) {
-                // Play reference audio button
-                Button(action: playReferenceAudio) {
-                    VStack {
-                        Image(systemName: referenceAudioPlayer.isPlaying ? "stop.circle.fill" : "speaker.wave.2.circle.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(AppTheme.buttonBackgroundBlue)
-
-                        Text(referenceAudioPlayer.isPlaying ? "Stop" : "Listen")
-                            .font(.caption)
-                            .foregroundColor(AppTheme.buttonBackgroundBlue)
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(question.audio_url == nil)
-
-                // Record button
-                Button(action: handleRecording) {
-                    VStack {
-                        Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                            .font(.system(size: 50)).foregroundColor(AppTheme.buttonBackgroundRed)
-                        Text(audioRecorder.isRecording ? "Stop" : "Record")
-                            .font(.caption)
-                            .foregroundColor(AppTheme.buttonBackgroundRed)
-                    }
-                }
-                .disabled(isSubmitting || hasAnswered)
-                .buttonStyle(PlainButtonStyle())
-
-                // Play recorded audio button
-                if hasRecorded {
-                    Button(action: playRecordedAudio) {
-                        VStack {
-                            Image(systemName: recordedAudioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                                .font(.system(size: 50))
-                                .foregroundColor(AppTheme.buttonBackgroundGreen)
-
-                            Text(recordedAudioPlayer.isPlaying ? "Stop" : "Replay")
-                                .font(.caption)
-                                .foregroundColor(AppTheme.buttonBackgroundGreen)
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
-            .padding(.vertical, 8)
-
-            // Volume indicator when recording
-            if audioRecorder.isRecording {
-                VStack(spacing: 8) {
-                    Text("Recording...")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.errorColor)
-
-                    // Simple volume meter
-                    ProgressView(value: min(Double(audioRecorder.currentVolume), 1.0))
-                        .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.errorColor))
-                        .frame(width: 200)
-                }
-            }
-
-            // Evaluating indicator
-            if isSubmitting {
-                VStack(spacing: 8) {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                    Text("Evaluating...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.vertical, 12)
-            }
-
-            // Evaluation results
-            if let result = evaluationResult {
-                evaluationResultView(result)
-            }
-        }
-        .padding()
+        PronunciationUICore(
+            displayContent: .highlightedSentence(
+                sentence: question.sentence ?? "",
+                highlight: question.word,
+                translation: question.sentence_translation
+            ),
+            audioSource: .preloaded(Data()),  // Not used directly, handled in callbacks
+            evaluationStyle: .compact,
+            behavior: .reviewDefault,
+            callbacks: PronunciationCallbacks(
+                onPlayReference: playReferenceAudio,
+                onStartRecording: startRecording,
+                onStopRecording: stopRecordingAndEvaluate,
+                onPlayRecorded: playRecordedAudio
+            ),
+            audioRecorder: audioRecorder,
+            referencePlayer: referenceAudioPlayer,
+            recordedPlayer: recordedAudioPlayer,
+            evaluationState: evaluationState,
+            isProcessing: isSubmitting,
+            hasRecorded: hasRecorded,
+            isDisabled: hasAnswered || question.audio_url == nil
+        )
         .onAppear {
             // Auto-play reference audio on appear
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -131,87 +56,7 @@ struct PronounceSentenceQuestionView: View {
         }
     }
 
-    // MARK: - Subviews
-
-    private var sentenceDisplayView: some View {
-        let sentence = question.sentence ?? ""
-        let word = question.word
-
-        return Text(attributedSentence(sentence: sentence, highlightWord: word))
-            .font(.title2)
-            .fontWeight(.medium)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal)
-            .foregroundColor(AppTheme.bigTitleText)
-    }
-
-    private func attributedSentence(sentence: String, highlightWord: String) -> AttributedString {
-        var attributedString = AttributedString(sentence)
-
-        // Find and highlight the target word (case-insensitive)
-        let lowercasedSentence = sentence.lowercased()
-        let lowercasedWord = highlightWord.lowercased()
-
-        if let range = lowercasedSentence.range(of: lowercasedWord) {
-            let startIndex = sentence.distance(from: sentence.startIndex, to: range.lowerBound)
-            let endIndex = sentence.distance(from: sentence.startIndex, to: range.upperBound)
-
-            if let attrRange = Range<AttributedString.Index>(
-                NSRange(location: startIndex, length: endIndex - startIndex),
-                in: attributedString
-            ) {
-                attributedString[attrRange].foregroundColor = AppTheme.selectableTint
-                attributedString[attrRange].font = .title2.bold()
-            }
-        }
-
-        return attributedString
-    }
-
-    private func evaluationResultView(_ result: PronunciationEvaluationResult) -> some View {
-        VStack(spacing: 12) {
-            // Score percentage with color
-            let scoreColor: Color = result.passed ? .green : .orange
-
-            Text("\(Int(result.similarity_score * 100))%")
-                .font(.system(size: 48, weight: .bold))
-                .foregroundColor(AppTheme.smallTitleText)
-
-            // Pass/Try Again indicator
-            Text(result.passed ? "Great job!" : "Keep practicing!")
-                .font(.headline)
-                .foregroundColor(AppTheme.smallTitleText)
-
-            // What user said (transcription)
-            if !result.recognized_text.isEmpty {
-                VStack(spacing: 4) {
-                    Text("You said:")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.bodyText)
-
-                    Text("\"\(result.recognized_text)\"")
-                        .font(.body)
-                        .italic()
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                        .foregroundColor(AppTheme.bodyText)
-                }
-            }
-
-            // Feedback
-            if !result.feedback.isEmpty {
-                Text(result.feedback)
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(AppTheme.bodyText)
-                    .padding(.horizontal)
-            }
-        }
-        .padding()
-        .padding(.horizontal)
-    }
-
-    // MARK: - Actions
+    // MARK: - Callback Implementations
 
     private func playReferenceAudio() {
         guard let audioUrl = question.audio_url else { return }
@@ -226,20 +71,20 @@ struct PronounceSentenceQuestionView: View {
         }
     }
 
-    private func handleRecording() {
-        if audioRecorder.isRecording {
-            audioRecorder.stopRecording()
-            hasRecorded = true
+    private func startRecording() {
+        // Stop any playing audio
+        referenceAudioPlayer.stopAudio()
+        recordedAudioPlayer.stopAudio()
 
-            // Auto-evaluate immediately after recording stops
-            evaluatePronunciation()
-        } else {
-            // Stop any playing audio
-            referenceAudioPlayer.stopAudio()
-            recordedAudioPlayer.stopAudio()
+        audioRecorder.startRecording()
+    }
 
-            audioRecorder.startRecording()
-        }
+    private func stopRecordingAndEvaluate(_ audioData: Data) {
+        audioRecorder.stopRecording()
+        hasRecorded = true
+
+        // Auto-evaluate immediately after recording stops
+        evaluatePronunciation()
     }
 
     private func playRecordedAudio() {
@@ -250,6 +95,8 @@ struct PronounceSentenceQuestionView: View {
 
         recordedAudioPlayer.playAudio(from: audioData)
     }
+
+    // MARK: - Evaluation Logic
 
     private func evaluatePronunciation() {
         guard let audioData = audioRecorder.audioData,
@@ -278,16 +125,12 @@ struct PronounceSentenceQuestionView: View {
                     let threshold = 0.8
                     let passed = practiceResult.similarityScore >= threshold
 
-                    // Convert to evaluation result for display
-                    evaluationResult = PronunciationEvaluationResult(
-                        success: true,
-                        passed: passed,
-                        similarity_score: practiceResult.similarityScore,
-                        recognized_text: practiceResult.recognizedText,
-                        feedback: practiceResult.feedback,
-                        evaluation_threshold: threshold,
-                        review_id: 0,  // Not submitted yet, will be submitted on swipe
-                        next_interval_days: 0  // Will be calculated on submit
+                    // Convert to evaluation state for display
+                    evaluationState = PronunciationEvaluationState(
+                        score: practiceResult.similarityScore,
+                        isPassed: passed,
+                        transcription: practiceResult.recognizedText,
+                        feedback: practiceResult.feedback
                     )
 
                     hasAnswered = true
@@ -299,13 +142,14 @@ struct PronounceSentenceQuestionView: View {
                     onAnswer(passed)
 
                 case .failure(let error):
-                    // Show error to user
                     Self.logger.error("Error evaluating pronunciation: \(error.localizedDescription, privacy: .public)")
                     // TODO: Show error message in UI
                 }
             }
         }
     }
+
+    // MARK: - Helpers
 
     private func extractBase64Data(from dataUri: String) -> String? {
         // Format: data:audio/mpeg;base64,ACTUALBASE64DATA
@@ -315,41 +159,29 @@ struct PronounceSentenceQuestionView: View {
     }
 }
 
-struct PronunciationEvaluationResult: Codable {
-    let success: Bool
-    let passed: Bool
-    let similarity_score: Double
-    let recognized_text: String
-    let feedback: String
-    let evaluation_threshold: Double
-    let review_id: Int
-    let next_interval_days: Int
-}
-
 #Preview {
-    ZStack{
-        
+    ZStack {
         AppTheme.verticalGradient2.ignoresSafeArea()
-    PronounceSentenceQuestionView(
-        question: ReviewQuestion(
-            question_type: "pronounce_sentence",
-            word: "ephemeral",
-            question_text: "Pronounce this sentence:",
-            options: nil,
-            correct_answer: nil,
-            sentence: "The beauty of cherry blossoms is ephemeral, lasting only a few weeks.",
-            sentence_translation: "樱花的美丽是短暂的，只持续几周。",
-            show_definition: nil,
-            audio_url: "data:audio/mpeg;base64,",
-            evaluation_threshold: AppConstants.Validation.pronunciationThreshold
-        ),
-        onImmediateFeedback: { passed in
-            // Preview: Immediate feedback callback
-        },
-        onAnswer: { passed in
-            // Preview: Final answer callback
-        }
-    )
-        
+
+        PronounceSentenceQuestionView(
+            question: ReviewQuestion(
+                question_type: "pronounce_sentence",
+                word: "ephemeral",
+                question_text: "Pronounce this sentence:",
+                options: nil,
+                correct_answer: nil,
+                sentence: "The beauty of cherry blossoms is ephemeral, lasting only a few weeks.",
+                sentence_translation: "樱花的美丽是短暂的，只持续几周。",
+                show_definition: nil,
+                audio_url: "data:audio/mpeg;base64,",
+                evaluation_threshold: AppConstants.Validation.pronunciationThreshold
+            ),
+            onImmediateFeedback: { passed in
+                // Preview: Immediate feedback callback
+            },
+            onAnswer: { passed in
+                // Preview: Final answer callback
+            }
+        )
     }
 }
