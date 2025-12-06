@@ -29,7 +29,7 @@ struct PronounceSentenceQuestionView: View {
             // Instructions
             Text(question.question_text)
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.selectableTint)
 
             // Sentence display with highlighted word
             sentenceDisplayView
@@ -38,7 +38,7 @@ struct PronounceSentenceQuestionView: View {
             if let translation = question.sentence_translation {
                 Text(translation)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppTheme.smallTitleText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
@@ -50,11 +50,11 @@ struct PronounceSentenceQuestionView: View {
                     VStack {
                         Image(systemName: referenceAudioPlayer.isPlaying ? "stop.circle.fill" : "speaker.wave.2.circle.fill")
                             .font(.system(size: 50))
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.buttonBackgroundBlue)
 
                         Text(referenceAudioPlayer.isPlaying ? "Stop" : "Listen")
                             .font(.caption)
-                            .foregroundColor(AppTheme.infoColor)
+                            .foregroundColor(AppTheme.buttonBackgroundBlue)
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -64,12 +64,10 @@ struct PronounceSentenceQuestionView: View {
                 Button(action: handleRecording) {
                     VStack {
                         Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(audioRecorder.isRecording ? AppTheme.errorColor : AppTheme.warningColor)
-
+                            .font(.system(size: 50)).foregroundColor(AppTheme.buttonBackgroundRed)
                         Text(audioRecorder.isRecording ? "Stop" : "Record")
                             .font(.caption)
-                            .foregroundColor(audioRecorder.isRecording ? AppTheme.errorColor : AppTheme.warningColor)
+                            .foregroundColor(AppTheme.buttonBackgroundRed)
                     }
                 }
                 .disabled(isSubmitting || hasAnswered)
@@ -81,11 +79,11 @@ struct PronounceSentenceQuestionView: View {
                         VStack {
                             Image(systemName: recordedAudioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 50))
-                                .foregroundColor(AppTheme.successColor)
+                                .foregroundColor(AppTheme.buttonBackgroundGreen)
 
                             Text(recordedAudioPlayer.isPlaying ? "Stop" : "Replay")
                                 .font(.caption)
-                                .foregroundColor(AppTheme.successColor)
+                                .foregroundColor(AppTheme.buttonBackgroundGreen)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -144,6 +142,7 @@ struct PronounceSentenceQuestionView: View {
             .fontWeight(.medium)
             .multilineTextAlignment(.center)
             .padding(.horizontal)
+            .foregroundColor(AppTheme.bigTitleText)
     }
 
     private func attributedSentence(sentence: String, highlightWord: String) -> AttributedString {
@@ -161,7 +160,7 @@ struct PronounceSentenceQuestionView: View {
                 NSRange(location: startIndex, length: endIndex - startIndex),
                 in: attributedString
             ) {
-                attributedString[attrRange].foregroundColor = .orange
+                attributedString[attrRange].foregroundColor = AppTheme.selectableTint
                 attributedString[attrRange].font = .title2.bold()
             }
         }
@@ -176,25 +175,26 @@ struct PronounceSentenceQuestionView: View {
 
             Text("\(Int(result.similarity_score * 100))%")
                 .font(.system(size: 48, weight: .bold))
-                .foregroundColor(scoreColor)
+                .foregroundColor(AppTheme.smallTitleText)
 
             // Pass/Try Again indicator
             Text(result.passed ? "Great job!" : "Keep practicing!")
                 .font(.headline)
-                .foregroundColor(scoreColor)
+                .foregroundColor(AppTheme.smallTitleText)
 
             // What user said (transcription)
             if !result.recognized_text.isEmpty {
                 VStack(spacing: 4) {
                     Text("You said:")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.bodyText)
 
                     Text("\"\(result.recognized_text)\"")
                         .font(.body)
                         .italic()
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                        .foregroundColor(AppTheme.bodyText)
                 }
             }
 
@@ -203,13 +203,11 @@ struct PronounceSentenceQuestionView: View {
                 Text(result.feedback)
                     .font(.body)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.bodyText)
                     .padding(.horizontal)
             }
         }
         .padding()
-        .background(AppTheme.lightGray)
-        .cornerRadius(12)
         .padding(.horizontal)
     }
 
@@ -329,6 +327,9 @@ struct PronunciationEvaluationResult: Codable {
 }
 
 #Preview {
+    ZStack{
+        
+        AppTheme.verticalGradient2.ignoresSafeArea()
     PronounceSentenceQuestionView(
         question: ReviewQuestion(
             question_type: "pronounce_sentence",
@@ -349,4 +350,6 @@ struct PronunciationEvaluationResult: Codable {
             // Preview: Final answer callback
         }
     )
+        
+    }
 }
