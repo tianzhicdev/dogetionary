@@ -134,6 +134,12 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: appState.testSettingsChanged) { _, changed in
+            if changed {
+                // Auto-refresh question queue when test settings change
+                questionQueue.forceRefresh()
+            }
+        }
         } // end else (not requiring upgrade)
     }
 }
