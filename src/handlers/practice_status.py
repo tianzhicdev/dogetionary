@@ -73,6 +73,26 @@ def get_practice_status():
             """, (user_id, user_tz, today))
             reviewed_today = {row['word'] for row in reviewed_today_row} if reviewed_today_row else set()
 
+            # Calculate non_test_practice_count (always, regardless of test settings)
+            non_test_due_row = db_fetch_all("""
+                SELECT sw.word
+                FROM saved_words sw
+                INNER JOIN (
+                    SELECT
+                        word_id,
+                        next_review_date,
+                        ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                    FROM reviews
+                ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
+                WHERE sw.user_id = %s
+                  AND (sw.is_known IS NULL OR sw.is_known = FALSE)
+                  AND COALESCE(latest_review.next_review_date, NOW()) <= NOW()
+            """, (user_id,))
+
+            if non_test_due_row:
+                non_test_due_words = {row['word'] for row in non_test_due_row}
+                non_test_practice_count = len(non_test_due_words - reviewed_today)
+
             # Get user preferences to determine test type and target_end_date
             prefs = db_fetch_one("""
                 SELECT
@@ -83,10 +103,7 @@ def get_practice_status():
                 WHERE user_id = %s
             """, (user_id,))
 
-            if not prefs:
-                # No preferences, skip schedule calculation
-                pass
-            else:
+            if prefs:
                 from handlers.test_vocabulary import get_active_test_type
                 test_type = get_active_test_type(prefs)
                 target_end_date = prefs.get('target_end_date')
@@ -117,14 +134,13 @@ def get_practice_status():
                     today_entry = schedule_result['daily_schedules'].get(today_key)
 
                     if today_entry:
-                        # Count words not yet reviewed today
+                        # Count words not yet reviewed today (only new_words and test_practice)
                         new_words = today_entry['new_words'] or []
                         test_words = [w.get('word') for w in (today_entry['test_practice'] or [])]
-                        non_test_words = [w.get('word') for w in (today_entry['non_test_practice'] or [])]
 
                         new_words_count = len([w for w in new_words if w not in reviewed_today])
                         test_practice_count = len([w for w in test_words if w not in reviewed_today])
-                        non_test_practice_count = len([w for w in non_test_words if w not in reviewed_today])
+
         except Exception as e:
             # If schedule calculation fails, default to 0
             logger.debug(f"Could not calculate schedule: {e}")
@@ -157,8 +173,9 @@ def get_practice_status():
         score = score_row['score'] if score_row else 0
 
         # Determine if there's anything to practice
+        # Note: not_due_yet_count is excluded because those words are not ready for practice yet
         has_practice = (new_words_count > 0 or test_practice_count > 0 or
-                        non_test_practice_count > 0 or not_due_yet_count > 0)
+                        non_test_practice_count > 0)
 
         return jsonify({
             "user_id": user_id,
