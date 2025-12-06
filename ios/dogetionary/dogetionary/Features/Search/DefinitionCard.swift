@@ -284,19 +284,27 @@ struct DefinitionCard: View {
             
             // V4: Cognates section
             if let cognates = definition.cognates {
-                InfoSection(title: "COGNATES", icon: "globe", color: AppTheme.smallTitleText) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "globe")
+                            .foregroundColor(AppTheme.smallTitleText)
+                            .font(.caption)
+                        Text("COGNATES")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.smallTitleText)
+                    }
                     Text(cognates)
                         .font(.caption)
                         .foregroundColor(AppTheme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.top, 8)
+                .padding(.bottom, 6)
             }
             
         }
         .padding()
         .background(AppTheme.clear)
-//        )
         .onAppear {
             loadWordAudioIfNeeded()
         }
@@ -463,78 +471,6 @@ struct CompactIllustrationView: View {
         }
     }
 }
-
-// MARK: - Fullscreen Word Card View
-
-struct FullscreenWordCardView: View {
-    let word: String
-    let phonetic: String?
-    let firstDefinition: String?
-    let illustration: UIImage
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                // Main illustration
-                Image(uiImage: illustration)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxHeight: 400)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(radius: 10)
-
-                // Word card content
-                VStack(spacing: 16) {
-                    // Word and pronunciation
-                    VStack(spacing: 8) {
-                        Text(word.uppercased())
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppTheme.electricYellow)
-
-                        if let phonetic = phonetic {
-                            Text(phonetic)
-                                .font(.title2)
-                                .foregroundColor(AppTheme.smallTitleText)
-                        }
-                    }
-
-                    // First definition
-                    if let firstDefinition = firstDefinition {
-                        Text(firstDefinition)
-                            .font(.title3)
-                            .foregroundColor(AppTheme.smallTitleText)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(nil)
-                            .padding(.horizontal)
-                    }
-                }
-                .padding()
-                .background(AppTheme.panelFill)
-                .cornerRadius(4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
-                )
-                .padding(.horizontal)
-
-                Spacer()
-            }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .navigationViewStyle(StackNavigationViewStyle())
-    }
-}
-
 #Preview {
     // Preview with full V4 schema - comprehensive sample definition
     let sampleDefinition = Definition(

@@ -32,7 +32,7 @@ struct ContentView: View {
             
             VStack(spacing: 0) {
                 // App banner at the top
-                AppBanner()
+//                AppBanner()
 
                 // View switcher
                 Group {

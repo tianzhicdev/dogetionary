@@ -279,16 +279,28 @@ days configurable;
 
 quote
 
--- done --
-
-
 bug:
+
 1. due soon should not be adding practice button or badge
 2. practice should be test practice or other practice words
 
-saved button
+
+
+saved button removed
+
+
+pronunciation practice done;
+picture view;
+
+spin;
+app logo;
+
+-- done --
+
+
 
 declaration;
+
 branding, header size
 
 
@@ -313,9 +325,12 @@ grafana -- finetune, perhaps expose to the internet
 
 ads:
 
-Harsh Words. Real results. Master TOEFL/IELTS vocabulary in 30 days.
 这个App不会对你手软。托福/雅思词汇 30天搞定
 不惯着你的背词App
+
+What if hard work was the shortcut?
+The hard way is the fast way.
+"What if easy apps are holding you back?"
 
 sound?
 
