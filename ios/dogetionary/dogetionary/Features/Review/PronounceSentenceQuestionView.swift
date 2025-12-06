@@ -32,7 +32,6 @@ struct PronounceSentenceQuestionView: View {
                 translation: question.sentence_translation
             ),
             audioSource: .preloaded(Data()),  // Not used directly, handled in callbacks
-            evaluationStyle: .compact,
             behavior: .reviewDefault,
             callbacks: PronunciationCallbacks(
                 onPlayReference: playReferenceAudio,

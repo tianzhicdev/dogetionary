@@ -93,7 +93,6 @@ struct PronunciationPracticeSheet: View {
                 PronunciationUICore(
                     displayContent: .plainText(originalText),
                     audioSource: .fetchOnDemand(text: originalText, language: UserManager.shared.learningLanguage),
-                    evaluationStyle: .detailed,
                     behavior: .practiceDefault,
                     callbacks: PronunciationCallbacks(
                         onPlayReference: playReferenceAudio,

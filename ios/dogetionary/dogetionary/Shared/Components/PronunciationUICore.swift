@@ -22,12 +22,6 @@ enum PronunciationAudioSource {
     case fetchOnDemand(text: String, language: String)
 }
 
-/// How to display evaluation results
-enum PronunciationEvaluationStyle {
-    case compact    // Simple display for review flow
-    case detailed   // Rich display for practice flow
-}
-
 /// Behavior configuration
 struct PronunciationBehaviorConfig {
     let autoPlay: Bool
@@ -61,7 +55,6 @@ struct PronunciationUICore: View {
     // Configuration
     let displayContent: PronunciationDisplayContent
     let audioSource: PronunciationAudioSource
-    let evaluationStyle: PronunciationEvaluationStyle
     let behavior: PronunciationBehaviorConfig
     let callbacks: PronunciationCallbacks
 
@@ -98,7 +91,7 @@ struct PronunciationUICore: View {
 
             // Evaluation results
             if let state = evaluationState {
-                evaluationResultView(state)
+                evaluationView(state)
             }
         }
         .padding()
@@ -221,18 +214,7 @@ struct PronunciationUICore: View {
         .padding(.vertical, 12)
     }
 
-    private func evaluationResultView(_ state: PronunciationEvaluationState) -> some View {
-        Group {
-            switch evaluationStyle {
-            case .compact:
-                compactResultView(state)
-            case .detailed:
-                detailedResultView(state)
-            }
-        }
-    }
-
-    private func compactResultView(_ state: PronunciationEvaluationState) -> some View {
+    private func evaluationView(_ state: PronunciationEvaluationState) -> some View {
         VStack(spacing: 12) {
             // Score percentage
             Text("\(Int(state.score * 100))%")
@@ -272,91 +254,6 @@ struct PronunciationUICore: View {
         .padding()
     }
 
-    private func detailedResultView(_ state: PronunciationEvaluationState) -> some View {
-        VStack(spacing: 16) {
-            // Header with icon
-            HStack {
-                Image(systemName: state.isPassed ? "checkmark.circle.fill" : "info.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(state.isPassed ? AppTheme.accentCyan : AppTheme.electricYellow)
-
-                Text("YOUR PRONUNCIATION")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.smallTitleText)
-
-                Spacer()
-            }
-
-            VStack(spacing: 12) {
-                // Accuracy score with visual indicator
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("ACCURACY")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(AppTheme.smallTextColor1)
-
-                        HStack {
-                            Text("\(Int(state.score * 100))%")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(state.isPassed ? AppTheme.accentCyan : AppTheme.electricYellow)
-
-                            // Visual progress bar
-                            ProgressView(value: state.score, total: 1.0)
-                                .progressViewStyle(LinearProgressViewStyle(tint: state.isPassed ? AppTheme.accentCyan : AppTheme.electricYellow))
-                                .frame(height: 8)
-                                .cornerRadius(4)
-                        }
-                    }
-                    Spacer()
-                }
-
-                Divider()
-                    .background(AppTheme.accentCyan.opacity(0.3))
-
-                // What you said
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("YOU SAID")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(AppTheme.smallTextColor1)
-
-                        Text("\"\(state.transcription)\"")
-                            .font(.body)
-                            .italic()
-                            .foregroundColor(AppTheme.bodyText)
-                    }
-                    Spacer()
-                }
-
-                Divider()
-                    .background(AppTheme.accentCyan.opacity(0.3))
-
-                // Feedback
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(state.feedback.uppercased())
-                            .font(.body)
-                            .foregroundColor(AppTheme.bodyText)
-                            .multilineTextAlignment(.leading)
-                    }
-                    Spacer()
-                }
-            }
-        }
-        .padding(20)
-        .background(AppTheme.bgPrimary)
-        .cornerRadius(4)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(AppTheme.accentCyan.opacity(0.3), lineWidth: 1)
-        )
-        .padding(.horizontal)
-    }
-
     // MARK: - Helpers
 
     private func handleRecordButton() {
@@ -391,14 +288,13 @@ struct PronunciationUICore: View {
     }
 }
 
-#Preview("Plain Text - Compact Results") {
+#Preview("Plain Text") {
     ZStack {
         AppTheme.verticalGradient2.ignoresSafeArea()
 
         PronunciationUICore(
             displayContent: .plainText("ephemeral"),
             audioSource: .fetchOnDemand(text: "ephemeral", language: "en"),
-            evaluationStyle: .compact,
             behavior: .practiceDefault,
             callbacks: PronunciationCallbacks(
                 onPlayReference: {},
@@ -422,7 +318,7 @@ struct PronunciationUICore: View {
     }
 }
 
-#Preview("Highlighted Sentence - Detailed Results") {
+#Preview("Highlighted Sentence") {
     ZStack {
         AppTheme.verticalGradient2.ignoresSafeArea()
 
@@ -433,7 +329,6 @@ struct PronunciationUICore: View {
                 translation: "樱花的美丽是短暂的。"
             ),
             audioSource: .preloaded(Data()),
-            evaluationStyle: .detailed,
             behavior: .reviewDefault,
             callbacks: PronunciationCallbacks(
                 onPlayReference: {},
