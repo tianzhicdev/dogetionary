@@ -1214,4 +1214,5 @@ struct BadgeCelebrationView: View {
 
 #Preview {
     ReviewView()
+        .environment(AppState.shared)
 }

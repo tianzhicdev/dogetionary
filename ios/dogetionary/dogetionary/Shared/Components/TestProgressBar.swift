@@ -94,7 +94,6 @@ struct TestProgressBar: View {
             // Detailed stats (expandable)
             if isExpanded {
                 VStack(spacing: 8) {
-                    Divider()
 
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
@@ -148,8 +147,6 @@ struct TestProgressBar: View {
 
                         // Only show section if there are any badges to display
                         if !unlockedAchievements.isEmpty || !earnedTestBadges.isEmpty {
-                            Divider()
-                                .padding(.vertical, 4)
 
                             VStack(spacing: 12) {
                                 HStack {
@@ -175,43 +172,21 @@ struct TestProgressBar: View {
                                     // Score-based achievements
                                     ForEach(unlockedAchievements) { achievement in
                                         VStack(spacing: 4) {
-                                            Image(systemName: achievement.symbol)
-                                                .font(.system(size: 20))
-                                                .foregroundColor(colorForAchievementTier(achievement.tier))
-
-                                            Text("\(achievement.milestone)")
-                                                .font(.system(size: 9, weight: .medium))
-                                                .foregroundColor(AppTheme.electricYellow)
+                                            BadgeAnimation(milestone: achievement.milestone, size: 60)
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 6)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .fill(AppTheme.panelFill)
-                                        )
                                     }
 
                                     // Test completion badges
                                     ForEach(earnedTestBadges, id: \.key) { testName, progress in
-                                        if let metadata = badgeMetadata[testName] {
-                                            VStack(spacing: 4) {
-                                                Image(systemName: metadata.symbol)
-                                                    .font(.system(size: 20))
-                                                    .foregroundColor(AppTheme.accentCyan)
-
-                                                Text(metadata.title)
-                                                    .font(.system(size: 9, weight: .medium))
-                                                    .foregroundColor(AppTheme.electricYellow)
-                                                    .multilineTextAlignment(.center)
-                                                    .lineLimit(2)
-                                            }
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 6)
-//                                            .background(
-//                                                RoundedRectangle(cornerRadius: 6)
-//                                                    .fill(AppTheme.panelFill)
-//                                            )
-                                        }
+                                        
+                                    VStack(spacing: 4) {
+                                        BadgeAnimation(testName: testName, size: 60)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 6)
+                                
                                     }
                                 }
                             }
@@ -223,11 +198,11 @@ struct TestProgressBar: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppTheme.panelFill)
-                .shadow(color: AppTheme.black.opacity(0.3), radius: 10, x: 0, y: 4)
-        )
+//        .background(
+////            RoundedRectangle(cornerRadius: 16)
+////                .fill(AppTheme.panelFill)
+////                .shadow(color: AppTheme.black.opacity(0.3), radius: 10, x: 0, y: 4)
+//        )
         .onAppear {
             withAnimation(.easeOut(duration: 1.0)) {
                 animatedProgress = displayProgress
