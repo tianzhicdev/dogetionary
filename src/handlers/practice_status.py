@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.database import db_fetch_one, db_fetch_all
 from services.schedule_service import get_user_timezone, get_today_in_timezone
+from handlers.achievements import calculate_user_score
 
 logger = logging.getLogger(__name__)
 
@@ -164,13 +165,8 @@ def get_practice_status():
         """, (user_id,))
         not_due_yet_count = not_due_yet_row['cnt'] if not_due_yet_row else 0
 
-        # Get score from reviews
-        score_row = db_fetch_one("""
-            SELECT COALESCE(SUM(CASE WHEN response THEN 2 ELSE 1 END), 0) as score
-            FROM reviews
-            WHERE user_id = %s
-        """, (user_id,))
-        score = score_row['score'] if score_row else 0
+        # Get score using utility function
+        score = calculate_user_score(user_id)
 
         # Determine if there's anything to practice
         # Note: not_due_yet_count is excluded because those words are not ready for practice yet

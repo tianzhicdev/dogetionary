@@ -26,6 +26,11 @@ from config.config import *
 from utils.database import validate_language, get_db_connection, db_insert_returning, db_cursor, db_fetch_one, db_fetch_all, db_execute
 from services.user_service import get_user_preferences
 from services.spaced_repetition_service import get_next_review_date_new
+from handlers.achievements import (
+    calculate_user_score,
+    get_newly_earned_score_badges,
+    check_test_completion_badges
+)
 
 # Get logger from current app context
 import logging
@@ -299,12 +304,7 @@ def submit_review():
         current_review_time = datetime.now()
 
         # Get old score BEFORE inserting review (for badge calculation)
-        old_score_result = db_fetch_one("""
-            SELECT COALESCE(SUM(CASE WHEN response THEN 2 ELSE 1 END), 0) as score
-            FROM reviews
-            WHERE user_id = %s
-        """, (user_id,))
-        old_score = old_score_result['score'] if old_score_result else 0
+        old_score = calculate_user_score(user_id)
 
         # Use a single connection for the entire transaction
         conn = get_db_connection()
@@ -371,104 +371,21 @@ def submit_review():
         # Calculate new score AFTER inserting review
         new_score = old_score + (2 if response_bool else 1)
 
-        # Check if user earned new badges (score-based + test completion)
-        from handlers.achievements import ACHIEVEMENTS
+        # Check if user earned new badges using utility functions
         new_badges = []
 
         # Check score-based achievements
-        for achievement in ACHIEVEMENTS:
-            milestone = achievement['milestone']
-            # Badge is newly earned if old_score < milestone <= new_score
-            if old_score < milestone <= new_score:
-                # Add this badge to the list (ultra-minimal structure)
-                new_badges.append({
-                    "badge_id": f"score_{milestone}",
-                    "title": achievement['title'],
-                    "description": f"{milestone} points reached"
-                })
-                # Don't break - keep going to collect all newly earned badges
+        score_badges = get_newly_earned_score_badges(old_score, new_score)
+        new_badges.extend(score_badges)
 
         # Check for test vocabulary completion badges
-        # Get user's active test type from preferences
-        conn = get_db_connection()
-        try:
-            cur = conn.cursor()
-
-            # Get user's test settings
-            cur.execute("""
-                SELECT toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
-                       ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
-                       tianz_enabled
-                FROM user_preferences
-                WHERE user_id = %s
-            """, (user_id,))
-
-            prefs = cur.fetchone()
-            if prefs:
-                # Map test types to their column names
-                test_types = {
-                    'TOEFL_BEGINNER': ('is_toefl_beginner', prefs.get('toefl_beginner_enabled')),
-                    'TOEFL_INTERMEDIATE': ('is_toefl_intermediate', prefs.get('toefl_intermediate_enabled')),
-                    'TOEFL_ADVANCED': ('is_toefl_advanced', prefs.get('toefl_advanced_enabled')),
-                    'IELTS_BEGINNER': ('is_ielts_beginner', prefs.get('ielts_beginner_enabled')),
-                    'IELTS_INTERMEDIATE': ('is_ielts_intermediate', prefs.get('ielts_intermediate_enabled')),
-                    'IELTS_ADVANCED': ('is_ielts_advanced', prefs.get('ielts_advanced_enabled')),
-                    'TIANZ': ('is_tianz', prefs.get('tianz_enabled'))
-                }
-
-                # Check each enabled test for completion
-                for test_name, (vocab_column, is_enabled) in test_types.items():
-                    if is_enabled:
-                        # Count total test words
-                        cur.execute(f"""
-                            SELECT COUNT(*) as total
-                            FROM test_vocabularies
-                            WHERE {vocab_column} = TRUE AND language = 'en'
-                        """)
-                        total_result = cur.fetchone()
-                        total_words = total_result['total'] if total_result else 0
-
-                        if total_words > 0:
-                            # Count saved test words
-                            cur.execute(f"""
-                                SELECT COUNT(DISTINCT sw.word) as saved
-                                FROM saved_words sw
-                                INNER JOIN test_vocabularies tv ON
-                                    LOWER(sw.word) = LOWER(tv.word) AND
-                                    sw.learning_language = tv.language
-                                WHERE sw.user_id = %s AND tv.{vocab_column} = TRUE
-                            """, (user_id,))
-                            saved_result = cur.fetchone()
-                            saved_words = saved_result['saved'] if saved_result else 0
-
-                            # Check if just completed (saved == total AND this was the completing word)
-                            if saved_words == total_words:
-                                # Check if this word is part of this test vocabulary
-                                cur.execute(f"""
-                                    SELECT COUNT(*) as is_test_word
-                                    FROM test_vocabularies
-                                    WHERE LOWER(word) = LOWER(%s)
-                                      AND language = %s
-                                      AND {vocab_column} = TRUE
-                                """, (word, learning_language))
-                                is_test_word_result = cur.fetchone()
-                                is_test_word = (is_test_word_result['is_test_word'] > 0) if is_test_word_result else False
-
-                                # If this review was for a test word, award the completion badge
-                                if is_test_word:
-                                    # Check if we already awarded this badge (by checking if already in list)
-                                    badge_already_awarded = any(b['badge_id'] == test_name for b in new_badges)
-                                    if not badge_already_awarded:
-                                        new_badges.append({
-                                            "badge_id": test_name,
-                                            "title": f"{test_name.replace('_', ' ').title()} Master",
-                                            "description": f"{test_name.replace('_', ' ')} vocabulary completed!"
-                                        })
-                                        logger.info(f"User {user_id} completed {test_name} test vocabulary!")
-
-            cur.close()
-        finally:
-            conn.close()
+        completion_badges = check_test_completion_badges(
+            user_id=user_id,
+            current_word=word,
+            learning_language=learning_language,
+            enabled_tests_only=True
+        )
+        new_badges.extend(completion_badges)
 
         # Calculate simple stats for response
         review_count = len(all_reviews)
