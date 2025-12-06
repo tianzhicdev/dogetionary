@@ -106,10 +106,14 @@ struct ReviewView: View {
                 }
             }
 
-            // Badge celebration overlay
-            if viewModel.showBadgeCelebration, let badge = viewModel.earnedBadge {
-                BadgeCelebrationView(badge: badge) {
-                    viewModel.dismissBadgeCelebration()
+            // Badge celebration overlay - show badges sequentially
+            if viewModel.showBadgeCelebration, let firstBadge = viewModel.earnedBadges.first {
+                BadgeCelebrationView(badge: firstBadge) {
+                    // Remove the first badge and continue showing if more exist
+                    viewModel.earnedBadges.removeFirst()
+                    if viewModel.earnedBadges.isEmpty {
+                        viewModel.showBadgeCelebration = false
+                    }
                 }
             }
 

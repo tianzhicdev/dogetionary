@@ -29,7 +29,7 @@ class ReviewViewModel: ObservableObject {
 
     // Badge celebration
     @Published var showBadgeCelebration = false
-    @Published var earnedBadge: NewBadge?
+    @Published var earnedBadges: [NewBadge] = []
 
     // Mini curve animation
     @Published var showMiniCurve = false
@@ -146,7 +146,7 @@ class ReviewViewModel: ObservableObject {
 
     func dismissBadgeCelebration() {
         showBadgeCelebration = false
-        earnedBadge = nil
+        earnedBadges.removeAll()
     }
 
     func dismissMiniCurve() {
@@ -194,8 +194,8 @@ class ReviewViewModel: ObservableObject {
                     case .success(let submitResponse):
                         self.animateScoreChange(points: response ? 2 : 1, isCorrect: response)
 
-                        if let newBadge = submitResponse.new_badge {
-                            self.earnedBadge = newBadge
+                        if let newBadges = submitResponse.new_badges, !newBadges.isEmpty {
+                            self.earnedBadges = newBadges
                             self.showBadgeCelebration = true
                         }
 

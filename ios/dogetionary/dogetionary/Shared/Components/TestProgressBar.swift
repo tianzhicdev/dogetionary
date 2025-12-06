@@ -172,7 +172,7 @@ struct TestProgressBar: View {
                                     // Score-based achievements
                                     ForEach(unlockedAchievements) { achievement in
                                         VStack(spacing: 4) {
-                                            BadgeAnimation(milestone: achievement.milestone, size: 60)
+                                            BadgeAnimation(badgeId: "score_\(achievement.milestone)", size: 60)
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 6)
@@ -180,9 +180,9 @@ struct TestProgressBar: View {
 
                                     // Test completion badges
                                     ForEach(earnedTestBadges, id: \.key) { testName, progress in
-                                        
+
                                     VStack(spacing: 4) {
-                                        BadgeAnimation(testName: testName, size: 60)
+                                        BadgeAnimation(badgeId: testName, size: 60)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 6)

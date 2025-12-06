@@ -371,20 +371,18 @@ struct ReviewSubmissionResponse: Codable {
     let interval_days: Int
     let next_review_date: String
     let new_score: Int?
-    let new_badge: NewBadge?
+    let new_badges: [NewBadge]?  // Array to support multiple badges (e.g., score milestone + test completion)
 
     private enum CodingKeys: String, CodingKey {
-        case success, word_id, response, review_count, interval_days, next_review_date, new_score, new_badge
+        case success, word_id, response, review_count, interval_days, next_review_date, new_score, new_badges
     }
 }
 
-// Badge earned from review
+// Badge earned from review (ultra-minimal structure)
 struct NewBadge: Codable {
-    let milestone: Int
-    let title: String
-    let symbol: String
-    let tier: String
-    let is_award: Bool
+    let badge_id: String      // "score_100" or "TIANZ" or "TOEFL_BEGINNER"
+    let title: String         // "First Steps" or "TIANZ Master"
+    let description: String   // "100 points reached" or "TIANZ vocabulary completed!"
 }
 
 // Toggle exclude from practice response

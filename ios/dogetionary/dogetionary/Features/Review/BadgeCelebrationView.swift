@@ -35,7 +35,7 @@ struct BadgeCelebrationView: View {
                         .blur(radius: 30)
 
                     // Badge PNG with rotation animation
-                    BadgeAnimation(milestone: badge.milestone, size: 140)
+                    BadgeAnimation(badgeId: badge.badge_id, size: 140)
                         .rotationEffect(.degrees(iconRotation))
                         .shadow(color: AppTheme.bigTitleText.opacity(0.5), radius: 15, x: 0, y: 8)
                 }
@@ -52,8 +52,8 @@ struct BadgeCelebrationView: View {
                     .fontWeight(.heavy)
                     .foregroundColor(AppTheme.bigTitleText)
 
-                // Milestone
-                Text("\(badge.milestone) points reached")
+                // Description
+                Text(badge.description)
                     .font(.subheadline)
                     .foregroundColor(AppTheme.selectableTint)
 
@@ -96,21 +96,6 @@ struct BadgeCelebrationView: View {
         }
     }
 
-    private var badgeColor: Color {
-        switch badge.tier {
-        case "beginner":
-            return AppTheme.bronze
-        case "intermediate":
-            return AppTheme.silver
-        case "advanced":
-            return AppTheme.gold
-        case "expert":
-            return AppTheme.electricYellow
-        default:
-            return AppTheme.accentCyan
-        }
-    }
-
     private func dismissWithAnimation() {
         withAnimation(.easeOut(duration: 0.2)) {
             scale = 0.8
@@ -124,17 +109,15 @@ struct BadgeCelebrationView: View {
 
 // MARK: - Preview
 
-#Preview("Badge Celebration - 100 Points (Bronze)") {
+#Preview("Badge Celebration - 100 Points") {
     @Previewable @State var showBadge = true
 
     if showBadge {
         BadgeCelebrationView(
             badge: NewBadge(
-                milestone: 100,
+                badge_id: "score_100",
                 title: "First Steps",
-                symbol: "star.fill",
-                tier: "beginner",
-                is_award: false
+                description: "100 points reached"
             ),
             onDismiss: {
                 showBadge = false
@@ -143,17 +126,15 @@ struct BadgeCelebrationView: View {
     }
 }
 
-#Preview("Badge Celebration - 500 Points (Silver)") {
+#Preview("Badge Celebration - 500 Points") {
     @Previewable @State var showBadge = true
 
     if showBadge {
         BadgeCelebrationView(
             badge: NewBadge(
-                milestone: 500,
+                badge_id: "score_500",
                 title: "Dedicated Learner",
-                symbol: "sparkles",
-                tier: "intermediate",
-                is_award: false
+                description: "500 points reached"
             ),
             onDismiss: {
                 showBadge = false
@@ -162,17 +143,15 @@ struct BadgeCelebrationView: View {
     }
 }
 
-#Preview("Badge Celebration - 1000 Points (Gold)") {
+#Preview("Badge Celebration - 1000 Points") {
     @Previewable @State var showBadge = true
 
     if showBadge {
         BadgeCelebrationView(
             badge: NewBadge(
-                milestone: 1000,
+                badge_id: "score_1000",
                 title: "Vocabulary Master",
-                symbol: "crown.fill",
-                tier: "advanced",
-                is_award: false
+                description: "1000 points reached"
             ),
             onDismiss: {
                 showBadge = false
@@ -181,17 +160,15 @@ struct BadgeCelebrationView: View {
     }
 }
 
-#Preview("Badge Celebration - 5000 Points (Expert)") {
+#Preview("Badge Celebration - TIANZ Test") {
     @Previewable @State var showBadge = true
 
     if showBadge {
         BadgeCelebrationView(
             badge: NewBadge(
-                milestone: 5000,
-                title: "Language Virtuoso",
-                symbol: "flame.fill",
-                tier: "expert",
-                is_award: false
+                badge_id: "TIANZ",
+                title: "TIANZ Master",
+                description: "TIANZ vocabulary completed!"
             ),
             onDismiss: {
                 showBadge = false
