@@ -13,6 +13,7 @@ struct OnboardingView: View {
     private static let logger = Logger(subsystem: "com.dogetionary.app", category: "Onboarding")
     @StateObject private var userManager = UserManager.shared
     @Environment(\.dismiss) var dismiss
+    @Environment(AppState.self) private var appState
 
     @State private var currentPage = 0
     @State private var selectedLearningLanguage = "en"
@@ -118,7 +119,7 @@ struct OnboardingView: View {
                         declarationPage
                             .tag(declarationPageIndex)
 
-                        // Search Word Page
+                        // Motivation Page
                         searchWordPage
                             .tag(searchPageIndex)
                     }
@@ -159,13 +160,23 @@ struct OnboardingView: View {
                                 .background(AppTheme.selectableTint.opacity(0.6))
                                 .cornerRadius(10)
                             } else {
-                                Label(buttonTitle.uppercased(), systemImage: currentPage < totalPages - 1 ? "arrow.right" : "checkmark")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(8)
-                                    .background(canProceed ? AppTheme.selectableTint : AppTheme.panelFill)
-                                    .cornerRadius(10)
+                                if currentPage < totalPages - 1 {
+                                    Label(buttonTitle.uppercased(), systemImage: "arrow.right")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(8)
+                                        .background(canProceed ? AppTheme.selectableTint : AppTheme.panelFill)
+                                        .cornerRadius(10)
+                                } else {
+                                    Text(buttonTitle.uppercased())
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(8)
+                                        .background(canProceed ? AppTheme.selectableTint : AppTheme.panelFill)
+                                        .cornerRadius(10)
+                                }
                             }
                         }
                         .disabled(!canProceed || isSubmitting || isSearching)
@@ -423,7 +434,7 @@ struct OnboardingView: View {
     private var declarationPage: some View {
         VStack(spacing: 40) {
             VStack(spacing: 20) {
-                Text("HOW HARSH WORDS WORKS")
+                Text("SPACED REPITITION")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.gradient1)
@@ -436,14 +447,28 @@ struct OnboardingView: View {
             Image("declaration_illustration")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(maxHeight: 200)
-                .cornerRadius(12)
-                .padding(.horizontal, 24)
+                .frame(maxHeight: 350)
+                .padding(.horizontal, 20)
 
             VStack(alignment: .leading, spacing: 16) {
-                Text("YOUR BRAIN FORGETS IN PREDICTABLE PATTERNS. HARSH WORDS TRACKS EACH WORD INDIVIDUALLY AND PROMPTS REVIEW AT THE PRECISE MOMENT WHEN RECALL IS CHALLENGING BUT STILL POSSIBLE. THIS \"DESIRABLE DIFFICULTY\" IS WHAT TRANSFORMS SHORT-TERM MEMORIZATION INTO PERMANENT VOCABULARY.")
+                (Text("Your brain forgets in predictable patterns. SHOJIN tracks each word individually and prompts review at the ")
+                    .foregroundColor(AppTheme.bodyText) +
+                Text("precise moment")
+                    .foregroundColor(AppTheme.selectableTint)
+                    .fontWeight(.semibold) +
+                Text(" when recall is challenging but still possible. This ")
+                    .foregroundColor(AppTheme.bodyText) +
+                Text("desirable difficulty")
+                    .foregroundColor(AppTheme.selectableTint)
+                    .fontWeight(.semibold) +
+                Text(" transforms short-term memorization into permanent vocabulary—making your study time up to ")
+                    .foregroundColor(AppTheme.bodyText) +
+                Text("20×")
+                    .foregroundColor(AppTheme.selectableTint)
+                    .fontWeight(.semibold) +
+                Text(" more efficient than traditional methods.")
+                    .foregroundColor(AppTheme.bodyText))
                     .font(.body)
-                    .foregroundColor(AppTheme.smallTitleText)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -453,41 +478,32 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Search Word Page
+    // MARK: - Motivation Page
 
     private var searchWordPage: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 20) {
-                Text("SEARCH A WORD")
-                    .font(.system(size: 32, weight: .bold))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(AppTheme.gradient1)
-
-                Text("TRY SEARCHING FOR YOUR FIRST WORD TO GET STARTED")
-                    .font(.body)
-                    .foregroundColor(AppTheme.smallTitleText)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 40)
-
+        VStack(spacing: 60) {
             Spacer()
 
-            VStack(spacing: 16) {
-                TextField("", text: $searchWord, prompt: Text("E.G. UNFORGETTABLE").foregroundColor(AppTheme.smallTextColor1))
-                    .font(.title3)
-                    .foregroundColor(AppTheme.textFieldUserInput)
-                    .padding(4)
-                    .background(AppTheme.textFieldBackgroundColor)
-                    .cornerRadius(4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 24)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-            }
+            // Logo
+            Image("logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 200, height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: AppTheme.bigTitleText.opacity(0.3), radius: 15, x: 0, y: 8)
+
+            // Motivation text
+            (Text("This won't be easy.\nBut if you persist, you will achieve ")
+                .foregroundColor(AppTheme.bodyText) +
+            Text("mastery")
+                .foregroundColor(AppTheme.accentPink)
+                .fontWeight(.semibold) +
+            Text(".")
+                .foregroundColor(AppTheme.bodyText))
+                .font(.title2)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 40)
 
             Spacer()
         }
@@ -497,11 +513,11 @@ struct OnboardingView: View {
 
     private var totalPages: Int {
         if selectedLearningLanguage == "en" {
-            // With test: Learning, Native, TestPrep, Duration, Username, Schedule, Declaration, Search = 8 pages
-            // Without test: Learning, Native, TestPrep, Username, Declaration, Search = 6 pages
+            // With test: Learning, Native, TestPrep, Duration, Username, Schedule, Declaration, Motivation = 8 pages
+            // Without test: Learning, Native, TestPrep, Username, Declaration, Motivation = 6 pages
             return showDurationPage ? 8 : 6
         }
-        // Non-English: Learning, Native, Username, Declaration, Search = 5 pages
+        // Non-English: Learning, Native, Username, Declaration, Motivation = 5 pages
         return 5
     }
 
@@ -531,6 +547,7 @@ struct OnboardingView: View {
     }
 
     private var searchPageIndex: Int {
+        // Note: This is actually the motivation page index (variable name kept for compatibility)
         if selectedLearningLanguage == "en" {
             // With test: page 7 (after declaration at page 6)
             // Without test: page 5 (after declaration at page 4)
@@ -568,7 +585,7 @@ struct OnboardingView: View {
                 return true // Declaration page - always can proceed
             }
         case 4:
-            // Username (if test) or Declaration (if no test) or Search (non-English) - English only
+            // Username (if test) or Declaration (if no test) or Motivation (non-English) - English only
             if selectedLearningLanguage == "en" {
                 if showDurationPage {
                     return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
@@ -576,14 +593,14 @@ struct OnboardingView: View {
                     return true // Declaration page - always can proceed
                 }
             } else {
-                return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
+                return true // Motivation page - always can proceed
             }
         case 5:
-            // Schedule preview page (English with test) or Search (if no test)
+            // Schedule preview page (English with test) or Motivation (if no test)
             if showDurationPage {
                 return true // Schedule preview - always can proceed
             } else {
-                return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Search page
+                return true // Motivation page - always can proceed
             }
         case 6:
             // Declaration page (English with test) or beyond
@@ -593,8 +610,8 @@ struct OnboardingView: View {
                 return false
             }
         case 7:
-            // Search page (English with test)
-            return !searchWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            // Motivation page (English with test)
+            return true // Motivation page - always can proceed
         default:
             return false
         }
@@ -604,7 +621,7 @@ struct OnboardingView: View {
         if currentPage == usernamePageIndex {
             return "GET STARTED"
         } else if currentPage == searchPageIndex {
-            return "SEARCH"
+            return "START"
         } else {
             return "NEXT"
         }
@@ -624,13 +641,20 @@ struct OnboardingView: View {
                 currentPage = declarationPageIndex
             }
         } else if currentPage == declarationPageIndex {
-            // Declaration page - just advance to search
+            // Declaration page - just advance to motivation page
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentPage = searchPageIndex
             }
         } else if currentPage == searchPageIndex {
-            // Perform search and dismiss onboarding
-            performSearch()
+            // Motivation page - complete onboarding, dismiss, and navigate to practice
+            userManager.completeOnboarding()
+            AnalyticsManager.shared.track(action: .onboardingComplete, metadata: ["completed_full_flow": true])
+            shouldDismiss = true
+            // Navigate to practice mode after dismissing
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms delay to ensure dismiss completes
+                appState.navigateToReview()
+            }
         }
     }
 
@@ -679,12 +703,12 @@ struct OnboardingView: View {
                     }
                     AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
 
-                    // Move to next page (schedule preview if test enabled, otherwise search)
+                    // Move to next page (schedule preview if test enabled, otherwise declaration)
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         if self.showDurationPage {
                             currentPage = schedulePageIndex
                         } else {
-                            currentPage = searchPageIndex
+                            currentPage = declarationPageIndex
                         }
                     }
 

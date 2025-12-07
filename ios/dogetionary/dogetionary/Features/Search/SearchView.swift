@@ -84,6 +84,11 @@ struct SearchView: View {
                     if !viewModel.isProgressBarExpanded {
                         VStack(spacing: 16) {
                             searchBarView()
+
+                            Text("Search for a word to add it to your vocabulary")
+                                .font(.subheadline)
+                                .foregroundColor(AppTheme.bodyText)
+                                
                         }
                         .padding(.horizontal, 24)
                         .transition(.opacity)

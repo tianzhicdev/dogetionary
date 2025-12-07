@@ -54,8 +54,8 @@ services:
     depends_on:
       - app
     volumes:
-      - /etc/letsencrypt/live/dogetionary.webhop.net/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-      - /etc/letsencrypt/live/dogetionary.webhop.net/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      - /etc/ssl/cloudflare/origin.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/ssl/cloudflare/origin-key.pem:/etc/nginx/ssl/privkey.pem:ro
       - ./nginx/index.html:/usr/share/nginx/html/index.html:ro
     networks:
       - dogetionary-network
