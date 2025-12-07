@@ -111,7 +111,7 @@ struct DefinitionCard: View {
             
             // Show translations if available
             if !definition.translations.isEmpty {
-                Text(definition.translations.joined(separator: " • ").uppercased())
+                Text(definition.translations.joined(separator: " • "))
                     .font(.body)
                     .foregroundColor(AppTheme.bodyText)
                     .padding(.bottom, 8)

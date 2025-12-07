@@ -295,13 +295,22 @@ picture view;
 spin;
 app logo;
 
--- done --
-
-
-
 declaration;
 
 branding, header size
+remove tianz;
+
+-- done --
+
+llm quality assurance;
+1. questions: some times all the choices are valid;
+2. no difficult words in the question;
+we need to monitor this prorcess;
+
+
+swipe button no animation;
+
+
 
 
 
