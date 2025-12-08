@@ -13,7 +13,7 @@ import os.log
 // MARK: - Main Review View
 
 struct ReviewView: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "ReviewView")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "ReviewView")
     // Queue manager for instant question loading
     @StateObject private var queueManager = QuestionQueueManager.shared
 
@@ -205,7 +205,7 @@ struct TodayCompleteView: View {
 }
 
 struct ReviewSessionView: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "ReviewSession")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "ReviewSession")
 
     let currentWord: ReviewWord
     let progress: String

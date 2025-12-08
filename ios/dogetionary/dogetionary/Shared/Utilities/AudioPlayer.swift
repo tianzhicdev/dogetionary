@@ -11,7 +11,7 @@ import os.log
 
 class AudioPlayer: NSObject, ObservableObject {
     private var player: AVAudioPlayer?
-    private let logger = Logger(subsystem: "com.dogetionary.app", category: "AudioPlayer")
+    private let logger = Logger(subsystem: "com.shojin.app", category: "AudioPlayer")
     
     @Published var isPlaying = false
     @Published var errorMessage: String?

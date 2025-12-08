@@ -9,7 +9,7 @@ import SwiftUI
 import os.log
 
 struct DefinitionCard: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "DefinitionCard")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "DefinitionCard")
     let definition: Definition
     @StateObject private var audioPlayer = AudioPlayer()
     @State private var wordAudioData: Data?
@@ -382,7 +382,7 @@ struct DefinitionCard: View {
 
 // Compact version of AI Illustration for top-right corner
 struct CompactIllustrationView: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "CompactIllustration")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "CompactIllustration")
 
     let word: String
     let language: String

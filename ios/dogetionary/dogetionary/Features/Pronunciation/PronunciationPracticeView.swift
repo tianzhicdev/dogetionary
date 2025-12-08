@@ -9,7 +9,7 @@ import SwiftUI
 import os.log
 
 struct PronunciationPracticeView: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "PronunciationPractice")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "PronunciationPractice")
     let originalText: String
     let source: String
     let wordId: String?
@@ -66,7 +66,7 @@ struct PronunciationPracticeView: View {
 }
 
 struct PronunciationPracticeSheet: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "PronunciationSheet")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "PronunciationSheet")
 
     let originalText: String
     let source: String

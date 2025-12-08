@@ -14,7 +14,7 @@ class SearchViewModel: ObservableObject {
     // MARK: - Dependencies
     private let dictionaryService: DictionaryService
     private let userManager: UserManager
-    private let logger = Logger(subsystem: "com.dogetionary.app", category: "SearchViewModel")
+    private let logger = Logger(subsystem: "com.shojin.app", category: "SearchViewModel")
 
     // MARK: - Published State
 

@@ -9,7 +9,7 @@ import SwiftUI
 import os.log
 
 struct SettingsView: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "Settings")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "Settings")
     @AppStorage("forceProduction") private var forceProduction: Bool = false
     @State private var connectionTestResult: String = ""
     @State private var isTestingConnection = false

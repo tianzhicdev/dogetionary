@@ -1,6 +1,6 @@
 //
-//  dogetionaryApp.swift
-//  dogetionary
+//  ShojinApp.swift
+//  Shojin
 //
 //  Created by biubiu on 9/6/25.
 //
@@ -9,7 +9,7 @@ import SwiftUI
 import UserNotifications
 
 @main
-struct dogetionaryApp: App {
+struct ShojinApp: App {
     @Environment(\.scenePhase) var scenePhase
 
     init() {

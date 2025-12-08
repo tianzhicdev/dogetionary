@@ -11,7 +11,7 @@ import os.log
 /// Manages app version checking and forced upgrade state
 class AppVersionManager: ObservableObject {
     static let shared = AppVersionManager()
-    private let logger = Logger(subsystem: "com.dogetionary.app", category: "AppVersionManager")
+    private let logger = Logger(subsystem: "com.shojin.app", category: "AppVersionManager")
 
     @Published var requiresUpgrade: Bool = false
     @Published var upgradeURL: String = ""

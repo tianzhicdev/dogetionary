@@ -14,7 +14,7 @@ class BaseNetworkService {
     let logger: Logger
 
     init(category: String) {
-        self.logger = Logger(subsystem: "com.dogetionary.app", category: category)
+        self.logger = Logger(subsystem: "com.shojin.app", category: category)
     }
 
     /// Generic network request handler with logging

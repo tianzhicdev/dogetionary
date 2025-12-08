@@ -15,7 +15,7 @@ class NotificationManager: NSObject, ObservableObject {
     @Published var isNotificationEnabled = false
     @Published var hasPermission = false
 
-    private let logger = Logger(subsystem: "com.dogetionary.app", category: "Notifications")
+    private let logger = Logger(subsystem: "com.shojin.app", category: "Notifications")
 
     private override init() {
         super.init()
