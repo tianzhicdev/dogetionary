@@ -50,7 +50,7 @@ struct PronunciationCallbacks {
 // MARK: - Core UI Component
 
 struct PronunciationUICore: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "PronunciationUICore")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "PronunciationUICore")
 
     // Configuration
     let displayContent: PronunciationDisplayContent

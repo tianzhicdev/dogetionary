@@ -10,7 +10,7 @@ import AVFoundation
 import os.log
 
 struct PronounceSentenceQuestionView: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "PronounceSentence")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "PronounceSentence")
     let question: ReviewQuestion
     let onImmediateFeedback: ((Bool) -> Void)?
     let onAnswer: (Bool) -> Void

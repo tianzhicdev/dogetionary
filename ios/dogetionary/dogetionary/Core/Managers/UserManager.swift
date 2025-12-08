@@ -11,7 +11,7 @@ import UIKit
 
 class UserManager: ObservableObject {
     static let shared = UserManager()
-    private let logger = Logger(subsystem: "com.dogetionary.app", category: "UserManager")
+    private let logger = Logger(subsystem: "com.shojin.app", category: "UserManager")
     private let userIDKey = "DogetionaryUserID"
     private let learningLanguageKey = "DogetionaryLearningLanguage"
     private let nativeLanguageKey = "DogetionaryNativeLanguage"

@@ -15,7 +15,7 @@ class AnalyticsManager: ObservableObject {
     private let baseURL: String
     private var sessionId: String
     private let appVersion: String
-    private let logger = Logger(subsystem: "com.dogetionary.app", category: "Analytics")
+    private let logger = Logger(subsystem: "com.shojin.app", category: "Analytics")
 
     private init() {
         self.baseURL = Configuration.effectiveBaseURL

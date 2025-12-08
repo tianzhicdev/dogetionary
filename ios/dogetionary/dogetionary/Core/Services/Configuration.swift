@@ -18,7 +18,7 @@ struct Configuration {
             case .development:
                 return "http://localhost:5001"
             case .production:
-                return "https://dogetionary.webhop.net/api"
+                return "https://kwafy.com/api"
             }
         }
     }

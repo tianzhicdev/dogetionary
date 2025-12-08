@@ -10,7 +10,7 @@ import os.log
 import Lottie
 
 struct OnboardingView: View {
-    private static let logger = Logger(subsystem: "com.dogetionary.app", category: "Onboarding")
+    private static let logger = Logger(subsystem: "com.shojin.app", category: "Onboarding")
     @StateObject private var userManager = UserManager.shared
     @Environment(\.dismiss) var dismiss
     @Environment(AppState.self) private var appState

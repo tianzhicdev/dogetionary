@@ -9,7 +9,7 @@ import SwiftUI
 import Charts
 import os.log
 
-private let logger = Logger(subsystem: "com.dogetionary.app", category: "ForgettingCurve")
+private let logger = Logger(subsystem: "com.shojin.app", category: "ForgettingCurve")
 
 // Helper function for parsing dates consistently
 private func parseDateString(_ dateString: String) -> Date? {
