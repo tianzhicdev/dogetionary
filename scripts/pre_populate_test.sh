@@ -18,6 +18,7 @@ set -e
 API_BASE="http://localhost:5001"
 INCLUDE_QUESTIONS="false"
 BATCH_SIZE=50
+BATCH_SIZE_WITH_QUESTIONS=5  # Smaller batches when generating questions (5 words × 5 = 25 definitions + 20 questions = 45 API calls)
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -69,6 +70,11 @@ fi
 if [[ -z "$NATIVE_LANG" ]]; then
     echo "Error: --native_lang is required"
     exit 1
+fi
+
+# Adjust batch size if questions are enabled (to avoid timeouts)
+if [[ "$INCLUDE_QUESTIONS" == "true" ]]; then
+    BATCH_SIZE=$BATCH_SIZE_WITH_QUESTIONS
 fi
 
 # Print configuration
