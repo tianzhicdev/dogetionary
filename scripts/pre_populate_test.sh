@@ -17,8 +17,6 @@ set -e
 # Default values
 API_BASE="http://localhost:5001"
 INCLUDE_QUESTIONS="false"
-BATCH_SIZE=50
-BATCH_SIZE_WITH_QUESTIONS=5  # Smaller batches when generating questions (5 words × 5 = 25 definitions + 20 questions = 45 API calls)
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -72,21 +70,16 @@ if [[ -z "$NATIVE_LANG" ]]; then
     exit 1
 fi
 
-# Adjust batch size if questions are enabled (to avoid timeouts)
-if [[ "$INCLUDE_QUESTIONS" == "true" ]]; then
-    BATCH_SIZE=$BATCH_SIZE_WITH_QUESTIONS
-fi
-
 # Print configuration
 echo "========================================="
-echo "Batch Pre-population Configuration"
+echo "Pre-population Configuration"
 echo "========================================="
 echo "CSV File:         $CSV_FILE"
 echo "Learning Lang:    $LEARNING_LANG"
 echo "Native Lang:      $NATIVE_LANG"
 echo "Include Questions: $INCLUDE_QUESTIONS"
 echo "API Base:         $API_BASE"
-echo "Batch Size:       $BATCH_SIZE words"
+echo "Mode:             Word-by-word (1 word per request)"
 echo "========================================="
 echo ""
 
@@ -137,10 +130,7 @@ fi
 echo "   ✓ Endpoint is available"
 echo ""
 
-# Calculate number of batches
-NUM_BATCHES=$(( (TOTAL_WORDS + BATCH_SIZE - 1) / BATCH_SIZE ))
-
-echo "🚀 Starting batch processing ($NUM_BATCHES batches)..."
+echo "🚀 Starting word-by-word processing ($TOTAL_WORDS words)..."
 echo ""
 
 # Track overall statistics
@@ -150,45 +140,37 @@ TOTAL_QUESTIONS_GENERATED=0
 TOTAL_QUESTIONS_CACHED=0
 TOTAL_ERRORS=0
 
-# Process in batches
-for ((batch_num=0; batch_num<NUM_BATCHES; batch_num++)); do
-    START_IDX=$((batch_num * BATCH_SIZE))
-    END_IDX=$((START_IDX + BATCH_SIZE))
+# Process each word individually
+for ((i=0; i<TOTAL_WORDS; i++)); do
+    WORD="${ALL_WORDS[$i]}"
+    WORD_NUM=$((i + 1))
 
-    if [[ $END_IDX -gt $TOTAL_WORDS ]]; then
-        END_IDX=$TOTAL_WORDS
-    fi
+    # Progress indicator
+    printf "[%d/%d] Processing: %-20s ... " "$WORD_NUM" "$TOTAL_WORDS" "$WORD"
 
-    # Extract batch of words
-    BATCH_WORDS=("${ALL_WORDS[@]:$START_IDX:$((END_IDX - START_IDX))}")
-
-    # Convert to JSON array
-    WORDS_JSON=$(printf '%s\n' "${BATCH_WORDS[@]}" | jq -R . | jq -s .)
-
-    # Build request payload
+    # Build request payload for single word
     REQUEST_JSON=$(jq -n \
-        --argjson words "$WORDS_JSON" \
+        --arg word "$WORD" \
         --arg learning_lang "$LEARNING_LANG" \
         --arg native_lang "$NATIVE_LANG" \
         --argjson gen_questions "$INCLUDE_QUESTIONS" \
         '{
-            words: $words,
+            words: [$word],
             learning_language: $learning_lang,
             native_language: $native_lang,
             generate_definitions: true,
             generate_questions: $gen_questions
         }')
 
-    echo "📦 Batch $((batch_num + 1))/$NUM_BATCHES (words $((START_IDX + 1))-$END_IDX)..."
-
     # Make API request
     RESPONSE=$(curl -s -X POST \
         -H "Content-Type: application/json" \
         -d "$REQUEST_JSON" \
-        "$API_BASE/api/test-prep/batch-populate")
+        "$API_BASE/api/test-prep/batch-populate" \
+        --max-time 120)
 
     # Parse response
-    SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
+    SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false' 2>/dev/null)
 
     if [[ "$SUCCESS" == "true" ]]; then
         # Extract statistics
@@ -196,7 +178,6 @@ for ((batch_num=0; batch_num<NUM_BATCHES; batch_num++)); do
         DEFS_CACHED=$(echo "$RESPONSE" | jq -r '.summary.definitions_cached // 0')
         QUESTIONS_GEN=$(echo "$RESPONSE" | jq -r '.summary.questions_generated // 0')
         QUESTIONS_CACHED=$(echo "$RESPONSE" | jq -r '.summary.questions_cached // 0')
-        ERRORS=$(echo "$RESPONSE" | jq -r '.summary.errors | length // 0')
         TIME=$(echo "$RESPONSE" | jq -r '.processing_time_seconds // 0')
 
         # Update totals
@@ -204,49 +185,36 @@ for ((batch_num=0; batch_num<NUM_BATCHES; batch_num++)); do
         TOTAL_DEFS_CACHED=$((TOTAL_DEFS_CACHED + DEFS_CACHED))
         TOTAL_QUESTIONS_GENERATED=$((TOTAL_QUESTIONS_GENERATED + QUESTIONS_GEN))
         TOTAL_QUESTIONS_CACHED=$((TOTAL_QUESTIONS_CACHED + QUESTIONS_CACHED))
-        TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
 
-        echo "   ✓ Completed in ${TIME}s"
-        echo "   Definitions: $DEFS_GEN generated, $DEFS_CACHED cached"
-
-        if [[ "$INCLUDE_QUESTIONS" == "true" ]]; then
-            echo "   Questions: $QUESTIONS_GEN generated, $QUESTIONS_CACHED cached"
+        # Status indicator
+        if [[ $DEFS_GEN -gt 0 ]]; then
+            STATUS="✨ generated"
+        else
+            STATUS="✓ cached"
         fi
 
-        if [[ $ERRORS -gt 0 ]]; then
-            echo "   ⚠️  $ERRORS errors encountered"
-        fi
+        printf "%s (%.2fs)\n" "$STATUS" "$TIME"
     else
-        ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"')
-        ERROR_DETAILS=$(echo "$RESPONSE" | jq -r '.message // .details // ""')
-
-        echo "   ❌ Batch failed: $ERROR_MSG"
-        if [[ -n "$ERROR_DETAILS" && "$ERROR_DETAILS" != "null" ]]; then
-            echo "      Details: $ERROR_DETAILS"
+        ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"' 2>/dev/null)
+        if [[ -z "$ERROR_MSG" || "$ERROR_MSG" == "null" ]]; then
+            ERROR_MSG="Request failed"
         fi
 
-        # Show raw response for debugging if error is unexpected
-        if [[ "$ERROR_MSG" == "Unknown error" || "$ERROR_MSG" == "null" ]]; then
-            echo "      Raw response: $RESPONSE"
-        fi
-
+        printf "❌ %s\n" "$ERROR_MSG"
         TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
 
-        # If first batch fails, likely a systemic issue - ask user if they want to continue
-        if [[ $batch_num -eq 0 ]]; then
-            echo ""
-            echo "   ⚠️  First batch failed - this might indicate a systemic issue."
-            echo "   Press Ctrl+C to abort, or wait 5 seconds to continue..."
-            sleep 5
+        # Log full error for first failure
+        if [[ $TOTAL_ERRORS -eq 1 ]]; then
+            echo "   → Full response: $RESPONSE"
         fi
     fi
-
-    echo ""
 done
+
+echo ""
 
 # Print final summary
 echo "========================================="
-echo "✅ Batch Pre-population Complete"
+echo "✅ Pre-population Complete"
 echo "========================================="
 echo "Total Words:               $TOTAL_WORDS"
 echo ""
