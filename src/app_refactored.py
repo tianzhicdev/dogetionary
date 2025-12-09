@@ -78,7 +78,8 @@ from handlers.test_vocabulary import (
     get_test_vocabulary_stats,
     get_test_vocabulary_count,
     manual_daily_job,
-    get_test_config
+    get_test_config,
+    batch_populate_test_vocabulary
 )
 app.route('/api/test-prep/settings', methods=['PUT'])(update_test_settings)
 app.route('/api/test-prep/settings', methods=['GET'])(get_test_settings)
@@ -86,6 +87,7 @@ app.route('/api/test-prep/add-words', methods=['POST'])(add_daily_test_words)
 app.route('/api/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
 app.route('/api/v3/test-vocabulary-count', methods=['GET'])(get_test_vocabulary_count)
 app.route('/api/test-prep/config', methods=['GET'])(get_test_config)
+app.route('/api/test-prep/batch-populate', methods=['POST'])(batch_populate_test_vocabulary)
 app.route('/test-review-intervals', methods=['GET'])(test_review_intervals) 
 app.route('/fix_next_review_dates', methods=['POST'])(fix_next_review_dates)
 app.route('/privacy', methods=['GET'])(privacy_agreement)

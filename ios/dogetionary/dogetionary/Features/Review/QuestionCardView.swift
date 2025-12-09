@@ -24,7 +24,6 @@ struct QuestionCardView: View {
     @State private var isExcluded = false
     @State private var showToast = false
     @State private var toastMessage = ""
-    @State private var swipeHintScale: CGFloat = 1.0
 
     private let swipeThreshold: CGFloat = 100
 
@@ -114,9 +113,12 @@ struct QuestionCardView: View {
                 withAnimation(.easeIn) {
                     showSwipeHint = true
                 }
-            } else {
-                // Reset scale when hiding
-                swipeHintScale = 1.0
+            }
+        }
+        .onAppear {
+            // Handle case where view loads with already-answered question (e.g., after refresh)
+            if isAnswered {
+                showSwipeHint = true
             }
         }
         .overlay(
@@ -125,44 +127,26 @@ struct QuestionCardView: View {
                 if isAnswered && showSwipeHint {
                     HStack {
                         Spacer()
-                        VStack(spacing: 8) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(AppTheme.gradient1)
-
-                            Text("next")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(AppTheme.gradient1)
-
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(AppTheme.gradient1)
+                        Button(action: {
+                            onSwipeComplete()
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 32, weight: .bold))
+                                    .foregroundStyle(AppTheme.gradient1)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 20)
+                            .background(
+                                Rectangle()
+                                    .fill(AppTheme.accentCyan.opacity(0.15))
+                                    .shadow(color: .black.opacity(0.3), radius: 8, x: -4, y: 0)
+                            )
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(AppTheme.accentCyan.opacity(0.15))
-                                .shadow(color: .black.opacity(0.3), radius: 8, x: -4, y: 0)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(AppTheme.accentCyan.opacity(0.5), lineWidth: 2)
-                        )
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.trailing, 8)
-                    .scaleEffect(swipeHintScale)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
-                    .onAppear {
-                        // Start pulsing animation
-                        withAnimation(
-                            Animation.easeInOut(duration: 1.0)
-                                .repeatForever(autoreverses: true)
-                        ) {
-                            swipeHintScale = 1.1
-                        }
-                    }
                 }
             }
         )

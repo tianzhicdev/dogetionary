@@ -236,8 +236,8 @@ struct SettingsView: View {
                     Spacer()
                     DatePicker("", selection: $userManager.reminderTime, displayedComponents: .hourAndMinute)
                         .datePickerStyle(.wheel)
-                            .colorInvert()  // hack for dark backgrounds
-                            .colorMultiply(AppTheme.selectableTint)
+                        .preferredColorScheme(.dark)  // Force dark mode → white text
+                        .colorMultiply(AppTheme.selectableTint)  // Tint white → cyan
                         
                 }
 

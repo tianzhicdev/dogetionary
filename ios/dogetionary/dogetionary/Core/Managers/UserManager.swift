@@ -464,8 +464,9 @@ class UserManager: ObservableObject {
             DictionaryService.shared.getPracticeStatus { result in
                 switch result {
                 case .success(let status):
-                    let totalCount = status.new_words_count + status.test_practice_count + status.non_test_practice_count + status.not_due_yet_count
-                    self.logger.info("Practice status refreshed - Total count: \(totalCount)")
+                    // Only count words that are actually due for practice (exclude not_due_yet_count)
+                    let totalCount = status.new_words_count + status.test_practice_count + status.non_test_practice_count
+                    self.logger.info("Practice status refreshed - Total count: \(totalCount) (excluded \(status.not_due_yet_count) not-due-yet words)")
 
                     DispatchQueue.main.async {
                         self.practiceCount = totalCount

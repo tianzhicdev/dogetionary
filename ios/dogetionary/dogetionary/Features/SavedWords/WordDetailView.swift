@@ -32,6 +32,8 @@ struct WordDetailView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding()
+//                .background(.clear)
+//                .foregroundStyle(AppTheme.buttonForegroundCyan)
 
                 // Tab content
                 TabView(selection: $selectedTab) {
@@ -55,9 +57,29 @@ struct WordDetailView: View {
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
         }
-        .navigationTitle(savedWord.word.uppercased())
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            // Customize segmented control colors using UIKit appearance API
+            let appearance = UISegmentedControl.appearance()
+
+            // Selected segment background (cyan)
+            appearance.selectedSegmentTintColor = UIColor(AppTheme.bodyText)
+
+            // Unselected text color (cyan)
+            appearance.setTitleTextAttributes([
+                .foregroundColor: UIColor(AppTheme.bodyText)
+            ], for: .normal)
+
+            // Selected text color (white for contrast on cyan background)
+            appearance.setTitleTextAttributes([
+                .foregroundColor: UIColor.white
+            ], for: .selected)
+
+            // Background of entire control (transparent for dark gradient)
+            appearance.backgroundColor = UIColor.clear
+
+            // Load data
             if selectedTab == 0 {
                 loadDefinitions()
             } else {
@@ -221,49 +243,6 @@ struct StatsTabView: View {
     }
 }
 
-struct WordInfoSection: View {
-    let details: WordDetails
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Word Information")
-            
-            VStack(spacing: 12) {
-                InfoRow(
-                    label: "Word",
-                    value: details.word,
-                    style: .prominent
-                )
-                
-                InfoRow(
-                    label: "First Added",
-                    value: formatDate(details.created_at, style: .full)
-                )
-                
-                if let nextReviewDate = details.next_review_date {
-                    InfoRow(
-                        label: "Next Practice",
-                        value: formatDate(nextReviewDate, style: .relative),
-                        style: isOverdue(nextReviewDate) ? .warning : .normal
-                    )
-                }
-
-                if let lastReviewed = details.last_reviewed_at {
-                    InfoRow(
-                        label: "Last Practice",
-                        value: formatDate(lastReviewed, style: .relative)
-                    )
-                }
-            }
-        }
-    }
-    
-    private func isOverdue(_ dateString: String) -> Bool {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return false }
-        return date <= Date()
-    }
-}
 
 struct ReviewHistorySection: View {
     let reviewHistory: [ReviewHistoryEntry]
@@ -302,7 +281,7 @@ struct ReviewHistorySection: View {
                         
                             Text(formatDate(createdAt, style: .short))
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.selectableTint)
                         }
                     }
                     
@@ -310,8 +289,6 @@ struct ReviewHistorySection: View {
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
                 
             }
         }
@@ -353,14 +330,6 @@ struct ReviewHistoryRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Review number
-//            Text("\(reviewNumber)")
-//                .font(.caption)
-//                .fontWeight(.medium)
-//                .foregroundColor(.secondary)
-//                .frame(width: 20)
-            
-            // Success/Failure indicator
             Image(systemName: entry.response ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.title3)
                 .foregroundColor(entry.response ? AppTheme.successColor : AppTheme.errorColor)
@@ -377,13 +346,7 @@ struct ReviewHistoryRow: View {
                     
                     Text(formatDate(entry.reviewed_at, style: .short))
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                if let responseTime = entry.response_time_ms {
-                    Text("Response time: \(formatResponseTime(responseTime))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.selectableTint)
                 }
             }
             
@@ -391,8 +354,6 @@ struct ReviewHistoryRow: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
     }
     
     private func formatResponseTime(_ ms: Int) -> String {
@@ -496,6 +457,7 @@ struct SectionHeader: View {
         Text(title)
             .font(.headline)
             .fontWeight(.semibold)
+            .foregroundColor(AppTheme.smallTitleText)
     }
 }
 
@@ -598,22 +560,272 @@ private enum DateStyle {
     case relative
 }
 
-#Preview {
-    NavigationView {
+// MARK: - Preview Data
+
+private struct PreviewData {
+    static var wordDetailsWithHistory: WordDetails {
+        let json = """
+        {
+            "id": 1,
+            "word": "ephemeral",
+            "learning_language": "en",
+            "created_at": "2025-09-01T10:00:00Z",
+            "review_count": 5,
+            "interval_days": 8,
+            "next_review_date": "2025-12-15T10:00:00Z",
+            "last_reviewed_at": "2025-12-07T14:30:00Z",
+            "review_history": [
+                {
+                    "response": true,
+                    "response_time_ms": 3500,
+                    "reviewed_at": "2025-09-01T10:00:00Z"
+                },
+                {
+                    "response": true,
+                    "response_time_ms": 2800,
+                    "reviewed_at": "2025-09-02T10:00:00Z"
+                },
+                {
+                    "response": false,
+                    "response_time_ms": 5200,
+                    "reviewed_at": "2025-09-04T10:00:00Z"
+                },
+                {
+                    "response": true,
+                    "response_time_ms": 2100,
+                    "reviewed_at": "2025-09-05T10:00:00Z"
+                },
+                {
+                    "response": true,
+                    "response_time_ms": 1900,
+                    "reviewed_at": "2025-12-07T14:30:00Z"
+                },
+                {
+                    "response": true,
+                    "response_time_ms": 1650,
+                    "reviewed_at": "2025-12-08T09:15:00Z"
+                }
+            ]
+        }
+        """
+        return try! JSONDecoder().decode(WordDetails.self, from: json.data(using: .utf8)!)
+    }
+
+    static var wordDetailsNoHistory: WordDetails {
+        let json = """
+        {
+            "id": 2,
+            "word": "serendipity",
+            "learning_language": "en",
+            "created_at": "2025-12-08T10:00:00Z",
+            "review_count": 0,
+            "interval_days": 0,
+            "next_review_date": null,
+            "last_reviewed_at": null,
+            "review_history": []
+        }
+        """
+        return try! JSONDecoder().decode(WordDetails.self, from: json.data(using: .utf8)!)
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Word Detail - Full View") {
+    NavigationStack {
         WordDetailView(savedWord: SavedWord(
             id: 1,
-            word: "example",
+            word: "ephemeral",
             learning_language: "en",
             native_language: "zh",
             metadata: nil,
             created_at: "2025-09-06T10:00:00Z",
-            review_count: 2,
-            correct_reviews: 1,
+            review_count: 5,
+            correct_reviews: 4,
             incorrect_reviews: 1,
             word_progress_level: 3,
-            interval_days: 6,
-            next_review_date: "2025-09-13",
-            last_reviewed_at: "2025-09-07T14:30:00Z"
+            interval_days: 8,
+            next_review_date: "2025-12-15T10:00:00Z",
+            last_reviewed_at: "2025-12-07T14:30:00Z"
         ))
     }
+    .environment(AppState.shared)
+}
+
+#Preview("Definition Tab - Loading") {
+    NavigationStack {
+        ZStack {
+            AppTheme.verticalGradient2.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Picker("Tab", selection: .constant(0)) {
+                    Text("DEFINITION").tag(0)
+                    Text("PRACTICE STATS").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+
+                DefinitionTabView(
+                    savedWord: SavedWord(
+                        id: 1,
+                        word: "ephemeral",
+                        learning_language: "en",
+                        native_language: "zh",
+                        metadata: nil,
+                        created_at: "2025-09-06T10:00:00Z",
+                        review_count: 0,
+                        correct_reviews: 0,
+                        incorrect_reviews: 0,
+                        word_progress_level: 0,
+                        interval_days: 0,
+                        next_review_date: nil,
+                        last_reviewed_at: nil
+                    ),
+                    definitions: [],
+                    isLoading: true,
+                    errorMessage: nil
+                )
+            }
+        }
+    }
+    .environment(AppState.shared)
+}
+
+#Preview("Definition Tab - With Error") {
+    NavigationStack {
+        ZStack {
+            AppTheme.verticalGradient2.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Picker("Tab", selection: .constant(0)) {
+                    Text("DEFINITION").tag(0)
+                    Text("PRACTICE STATS").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+//                .tint(AppTheme.selectableTint)
+                .foregroundStyle(AppTheme.selectableTint)
+                .padding()
+
+                DefinitionTabView(
+                    savedWord: SavedWord(
+                        id: 1,
+                        word: "xyzabc",
+                        learning_language: "en",
+                        native_language: "zh",
+                        metadata: nil,
+                        created_at: "2025-09-06T10:00:00Z",
+                        review_count: 0,
+                        correct_reviews: 0,
+                        incorrect_reviews: 0,
+                        word_progress_level: 0,
+                        interval_days: 0,
+                        next_review_date: nil,
+                        last_reviewed_at: nil
+                    ),
+                    definitions: [],
+                    isLoading: false,
+                    errorMessage: "Word not found in dictionary"
+                )
+            }
+        }
+    }
+    .environment(AppState.shared)
+}
+
+#Preview("Stats Tab - With Data") {
+    NavigationStack {
+        ZStack {
+            AppTheme.verticalGradient2.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Picker("Tab", selection: .constant(1)) {
+                    Text("DEFINITION").tag(0)
+                    Text("PRACTICE STATS").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+
+                ScrollView {
+                    StatsTabView(
+                        wordDetails: PreviewData.wordDetailsWithHistory,
+                        isLoading: false,
+                        errorMessage: nil
+                    )
+                }
+            }
+        }
+    }
+    .environment(AppState.shared)
+}
+
+#Preview("Stats Tab - No History") {
+    NavigationStack {
+        ZStack {
+            AppTheme.verticalGradient2.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Picker("Tab", selection: .constant(1)) {
+                    Text("DEFINITION").tag(0)
+                    Text("PRACTICE STATS").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+
+                StatsTabView(
+                    wordDetails: PreviewData.wordDetailsNoHistory,
+                    isLoading: false,
+                    errorMessage: nil
+                )
+            }
+        }
+    }
+    .environment(AppState.shared)
+}
+
+#Preview("Stats Tab - Loading") {
+    NavigationStack {
+        ZStack {
+            AppTheme.verticalGradient2.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Picker("Tab", selection: .constant(1)) {
+                    Text("DEFINITION").tag(0)
+                    Text("PRACTICE STATS").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+
+                StatsTabView(
+                    wordDetails: nil,
+                    isLoading: true,
+                    errorMessage: nil
+                )
+            }
+        }
+    }
+    .environment(AppState.shared)
+}
+
+#Preview("Stats Tab - Error") {
+    NavigationStack {
+        ZStack {
+            AppTheme.verticalGradient2.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Picker("Tab", selection: .constant(1)) {
+                    Text("DEFINITION").tag(0)
+                    Text("PRACTICE STATS").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+
+                StatsTabView(
+                    wordDetails: nil,
+                    isLoading: false,
+                    errorMessage: "Failed to load word details"
+                )
+            }
+        }
+    }
+    .environment(AppState.shared)
 }

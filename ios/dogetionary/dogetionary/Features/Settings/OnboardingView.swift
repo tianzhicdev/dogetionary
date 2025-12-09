@@ -243,8 +243,8 @@ struct OnboardingView: View {
                     }
                 }
                 .pickerStyle(.wheel)
-                .colorInvert()  // hack for dark backgrounds
-                .colorMultiply(AppTheme.selectableTint)
+                .preferredColorScheme(.dark)  // Force dark mode → white text
+                .colorMultiply(AppTheme.selectableTint)  // Tint white → cyan
                 Spacer()
             }
 
@@ -320,8 +320,8 @@ struct OnboardingView: View {
                     }
                 }
                 .pickerStyle(.wheel)
-                .colorInvert()
-                .colorMultiply(AppTheme.selectableTint)
+                .preferredColorScheme(.dark)  // Force dark mode → white text
+                .colorMultiply(AppTheme.selectableTint)  // Tint white → cyan
                 Spacer()
             }
         }
