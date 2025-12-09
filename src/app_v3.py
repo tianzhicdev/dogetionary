@@ -2,16 +2,21 @@
 # These endpoints represent the latest API version with all improvements
 # while maintaining backward compatibility in the main app
 
-from flask import Blueprint
+from flask import Blueprint, jsonify
+import logging
 from handlers.actions import save_word, delete_saved_word_v2, submit_feedback, submit_review
 from handlers.users import handle_user_preferences
 from handlers.reads import get_due_counts, get_review_progress_stats, get_forgetting_curve, get_leaderboard_v2
 from handlers.admin import test_review_intervals, fix_next_review_dates, privacy_agreement, support_page, health_check
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action
-from handlers.pronunciation import practice_pronunciation
-from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice
-from handlers.test_vocabulary import get_test_vocabulary_count
+from handlers.pronunciation import practice_pronunciation, submit_pronunciation_review
+from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice, is_word_saved
+from handlers.test_vocabulary import (
+    get_test_vocabulary_count, update_test_settings, get_test_settings,
+    add_daily_test_words, get_test_vocabulary_stats, batch_populate_test_vocabulary
+)
+from workers.test_vocabulary_worker import add_daily_test_words_for_all_users
 from handlers.schedule import get_today_schedule, get_schedule_range, get_test_progress
 from handlers.review_batch import get_review_words_batch
 from handlers.streaks import get_streak_days
@@ -54,12 +59,14 @@ v3_api.route('/leaderboard-score', methods=['GET'])(get_leaderboard_v2)
 
 # Pronunciation Features (V3)
 v3_api.route('/pronunciation/practice', methods=['POST'])(practice_pronunciation)
+v3_api.route('/review/pronounce', methods=['POST'])(submit_pronunciation_review)  # Pronunciation review during practice
 
 # Word Operations (V3)
 v3_api.route('/words/toggle-exclude', methods=['POST'])(toggle_exclude_from_practice)
+v3_api.route('/is-word-saved', methods=['GET'])(is_word_saved)  # Check if word is saved
 
 # Test Vocabulary (V3)
-v3_api.route('/api/test-vocabulary-count', methods=['GET'])(get_test_vocabulary_count)  # Onboarding endpoint
+v3_api.route('/api/test-vocabulary-count', methods=['GET'])(get_test_vocabulary_count)  # Onboarding endpoint (legacy path)
 
 # Schedule Management (V3) - Study plan scheduling (on-the-fly calculation)
 v3_api.route('/schedule/today', methods=['GET'])(get_today_schedule)
@@ -92,6 +99,80 @@ v3_api.route('/feedback', methods=['POST'])(submit_feedback)
 
 # App Version Check (V3)
 v3_api.route('/app-version', methods=['GET'])(check_app_version)
+
+# ============================================================================
+# TEST PREP ENDPOINTS (V3) - TOEFL/IELTS/TIANZ vocabulary preparation
+# ============================================================================
+
+# Test prep settings
+v3_api.route('/test-prep/settings', methods=['PUT'])(update_test_settings)
+v3_api.route('/test-prep/settings', methods=['GET'])(get_test_settings)
+
+# Test prep vocabulary management
+v3_api.route('/test-prep/add-words', methods=['POST'])(add_daily_test_words)
+v3_api.route('/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
+v3_api.route('/test-prep/vocabulary-count', methods=['GET'])(get_test_vocabulary_count)
+v3_api.route('/test-prep/batch-populate', methods=['POST'])(batch_populate_test_vocabulary)
+
+@v3_api.route('/test-prep/config', methods=['GET'])
+def get_test_config_endpoint():
+    """
+    Get test vocabulary configuration mapping languages to available tests.
+    Returns which tests are available for each learning language.
+    """
+    try:
+        # Static configuration - in the future this could be database-driven
+        config = {
+            "en": {
+                "tests": [
+                    {
+                        "code": "TOEFL",
+                        "name": "TOEFL Preparation",
+                        "description": "Test of English as a Foreign Language",
+                        "testing_only": False
+                    },
+                    {
+                        "code": "IELTS",
+                        "name": "IELTS Preparation",
+                        "description": "International English Language Testing System",
+                        "testing_only": False
+                    },
+                    {
+                        "code": "TIANZ",
+                        "name": "Tianz Test",
+                        "description": "Testing vocabulary list (20 words)",
+                        "testing_only": True  # Only visible in developer mode
+                    }
+                ]
+            },
+            # Future language support
+            "fr": {"tests": []},
+            "es": {"tests": []},
+            "de": {"tests": []},
+            "it": {"tests": []},
+            "pt": {"tests": []},
+            "ja": {"tests": []},
+            "ko": {"tests": []},
+            "zh": {"tests": []}
+        }
+
+        logging.info("Test configuration fetched successfully")
+        return jsonify({"config": config}), 200
+
+    except Exception as e:
+        logging.error(f"Error getting test config: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@v3_api.route('/test-prep/run-daily-job', methods=['POST'])
+def manual_daily_job():
+    """Manual trigger for daily test vocabulary job"""
+    try:
+        logging.info("Manual trigger of daily test vocabulary job")
+        add_daily_test_words_for_all_users()
+        return jsonify({"success": True, "message": "Daily job completed successfully"}), 200
+    except Exception as e:
+        logging.error(f"Manual daily job failed: {e}")
+        return jsonify({"error": "Failed to run daily job"}), 500
 
 def register_v3_routes(app):
     """Register all V3 routes with the Flask app"""

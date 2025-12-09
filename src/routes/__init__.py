@@ -9,7 +9,7 @@ def register_blueprints(app):
     from .users import users_bp
     from .admin import admin_bp
     from .analytics import analytics_bp
-    from .test_prep import test_prep_bp
+    # test_prep_bp removed - now part of v3 API
 
     # Register blueprints
     app.register_blueprint(words_bp)
@@ -17,7 +17,7 @@ def register_blueprints(app):
     app.register_blueprint(users_bp, url_prefix='/users')
     app.register_blueprint(admin_bp)
     app.register_blueprint(analytics_bp, url_prefix='/analytics')
-    app.register_blueprint(test_prep_bp, url_prefix='/api/test-prep')
+    # test_prep_bp registration removed - all test-prep endpoints moved to /v3/test-prep
 
     # Register v3 API
     try:
