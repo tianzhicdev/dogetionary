@@ -9,14 +9,33 @@
 #     --learning_lang en \
 #     --native_lang zh \
 #     [--include-questions] \
-#     [--api-base https://kwafy.com]
+#     [--env production|development]
+#
+# Environment:
+#   - development: http://localhost:5001 (direct to Flask, no nginx)
+#   - production:  https://kwafy.com/api (through nginx, strips /api prefix)
 #
 
 set -e
 
 # Default values
-API_BASE="http://localhost:5001"
+ENVIRONMENT="development"
 INCLUDE_QUESTIONS="false"
+
+# Environment-based API configuration (like iOS Configuration.swift)
+function get_api_base() {
+    case "$1" in
+        production)
+            echo "https://kwafy.com/api"
+            ;;
+        development)
+            echo "http://localhost:5001"
+            ;;
+        *)
+            echo "http://localhost:5001"
+            ;;
+    esac
+}
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -37,17 +56,20 @@ while [[ $# -gt 0 ]]; do
             INCLUDE_QUESTIONS="true"
             shift
             ;;
-        --api-base)
-            API_BASE="$2"
+        --env)
+            ENVIRONMENT="$2"
             shift 2
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 --csv FILE --learning_lang LANG --native_lang LANG [--include-questions] [--api-base URL]"
+            echo "Usage: $0 --csv FILE --learning_lang LANG --native_lang LANG [--include-questions] [--env production|development]"
             exit 1
             ;;
     esac
 done
+
+# Set API_BASE from environment
+API_BASE=$(get_api_base "$ENVIRONMENT")
 
 # Validate required arguments
 if [[ -z "$CSV_FILE" ]]; then
@@ -74,12 +96,13 @@ fi
 echo "========================================="
 echo "Pre-population Configuration"
 echo "========================================="
-echo "CSV File:         $CSV_FILE"
-echo "Learning Lang:    $LEARNING_LANG"
-echo "Native Lang:      $NATIVE_LANG"
+echo "CSV File:          $CSV_FILE"
+echo "Learning Lang:     $LEARNING_LANG"
+echo "Native Lang:       $NATIVE_LANG"
 echo "Include Questions: $INCLUDE_QUESTIONS"
-echo "API Base:         $API_BASE"
-echo "Mode:             Word-by-word (1 word per request)"
+echo "Environment:       $ENVIRONMENT"
+echo "API Base:          $API_BASE"
+echo "Mode:              Word-by-word (1 word per request)"
 echo "========================================="
 echo ""
 
@@ -98,12 +121,12 @@ echo "📚 Loaded $TOTAL_WORDS words from CSV"
 echo ""
 
 # Validate endpoint exists before processing
-echo "🔍 Validating endpoint: $API_BASE/api/test-prep/batch-populate"
+echo "🔍 Validating endpoint: $API_BASE/v3/test-prep/batch-populate"
 TEST_PAYLOAD='{"words":["test"],"learning_language":"en","native_language":"zh","generate_definitions":true,"generate_questions":false}'
 TEST_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
     -H "Content-Type: application/json" \
     -d "$TEST_PAYLOAD" \
-    "$API_BASE/api/test-prep/batch-populate")
+    "$API_BASE/v3/test-prep/batch-populate")
 
 # Extract HTTP status code (last line)
 HTTP_CODE=$(echo "$TEST_RESPONSE" | tail -n 1)
@@ -112,7 +135,7 @@ RESPONSE_BODY=$(echo "$TEST_RESPONSE" | sed '$d')
 if [[ "$HTTP_CODE" != "200" ]]; then
     echo ""
     echo "❌ ERROR: Endpoint validation failed!"
-    echo "   URL: $API_BASE/api/test-prep/batch-populate"
+    echo "   URL: $API_BASE/v3/test-prep/batch-populate"
     echo "   HTTP Status: $HTTP_CODE"
     echo "   Response: $RESPONSE_BODY"
     echo ""
@@ -121,8 +144,8 @@ if [[ "$HTTP_CODE" != "200" ]]; then
     echo "  - The server is using a different URL path"
     echo "  - The server requires authentication"
     echo ""
-    echo "If using production (--api-base https://kwafy.com), make sure"
-    echo "the latest code with batch-populate endpoint has been deployed."
+    echo "If using production (--env production), make sure"
+    echo "the latest code with v3 batch-populate endpoint has been deployed."
     echo ""
     exit 1
 fi
@@ -166,7 +189,7 @@ for ((i=0; i<TOTAL_WORDS; i++)); do
     RESPONSE=$(curl -s -X POST \
         -H "Content-Type: application/json" \
         -d "$REQUEST_JSON" \
-        "$API_BASE/api/test-prep/batch-populate" \
+        "$API_BASE/v3/test-prep/batch-populate" \
         --max-time 120)
 
     # Parse response
