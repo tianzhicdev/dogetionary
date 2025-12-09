@@ -229,7 +229,7 @@ struct SynonymAntonymRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(words, id: \.self) { word in
-                        Text(word.uppercased())
+                        Text(word)
                             .font(AppTheme.bodyFont)
                             .foregroundColor(AppTheme.bgPrimary)
                             .padding(.horizontal, 10)

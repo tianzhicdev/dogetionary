@@ -77,6 +77,7 @@ struct ForgettingCurveView: View {
                 Text("Memory Retention Curve")
                     .font(.headline)
                     .fontWeight(.semibold)
+                    .foregroundColor(AppTheme.smallTitleText)
                 
                 if isLoading {
                     Text("Loading curve data...")
@@ -98,7 +99,7 @@ struct ForgettingCurveView: View {
                             x: .value("Date", point.date),
                             y: .value("Retention", point.retention)
                         )
-//                        .foregroundStyle(Color.blue.gradient)
+                        .foregroundStyle(AppTheme.bodyText)
 //                        .lineStyle(StrokeStyle(lineWidth: 2))
                     }
                     
@@ -108,8 +109,7 @@ struct ForgettingCurveView: View {
                             x: .value("Date", point.date),
                             y: .value("Retention", point.retention)
                         )
-//                        .foregroundStyle(Color.gray)
-//                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
+                        .foregroundStyle(AppTheme.selectableTint)
                     }
                     
                     // Creation markers
@@ -119,7 +119,7 @@ struct ForgettingCurveView: View {
                                 x: .value("Date", date),
                                 y: .value("Retention", 100.0)
                             )
-                            .foregroundStyle(AppTheme.infoColor)
+                            .foregroundStyle(AppTheme.bodyText)
                             .symbol(.diamond)
                             .symbolSize(120)
                         }
@@ -136,7 +136,7 @@ struct ForgettingCurveView: View {
                             .symbolSize(100)
                             
                             RuleMark(x: .value("Date", date))
-                                .foregroundStyle(AppTheme.darkGray)
+                                .foregroundStyle(AppTheme.bodyText)
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
                         }
                     }
@@ -148,24 +148,24 @@ struct ForgettingCurveView: View {
                                 x: .value("Date", date),
                                 y: .value("Retention", 100.0)  // Always at 25% as requested
                             )
-                            .foregroundStyle(AppTheme.warningColor)
+                            .foregroundStyle(AppTheme.selectableTint)
                             .symbol(.diamond)
                             .symbolSize(150)
 
                             RuleMark(x: .value("Date", date))
-                                .foregroundStyle(AppTheme.warningColor.opacity(0.5))
+                                .foregroundStyle(AppTheme.selectableTint)
                                 .lineStyle(StrokeStyle(lineWidth: 2, dash: [8, 4]))
                         }
                     }
                     
                     // Remove next review from main chart - will show as separate bar below
                     
-                    // Retention threshold lines
-                    RuleMark(y: .value("Good", 80))
-                        .foregroundStyle(AppTheme.successColor.opacity(AppTheme.mediumHighOpacity))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+//                    // Retention threshold lines
+//                    RuleMark(y: .value("Good", 80))
+//                        .foregroundStyle(AppTheme.successColor.opacity(AppTheme.mediumHighOpacity))
+//                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
 
-                    RuleMark(y: .value("Warning", 60))
+                    RuleMark(y: .value("Review", 25))
                         .foregroundStyle(AppTheme.warningColor.opacity(AppTheme.mediumHighOpacity))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 }
@@ -177,8 +177,9 @@ struct ForgettingCurveView: View {
                             AxisValueLabel {
                                 Text(formatAxisDate(date))
                                     .font(.caption2)
+                                    .foregroundStyle(AppTheme.bodyText)
                             }
-                            AxisGridLine()
+                            AxisGridLine().foregroundStyle(AppTheme.bodyText)
                         }
                     }
                 }
@@ -188,8 +189,9 @@ struct ForgettingCurveView: View {
                             AxisValueLabel {
                                 Text("\(Int(retention))%")
                                     .font(.caption2)
+                                    .foregroundStyle(AppTheme.bodyText)
                             }
-                            AxisGridLine()
+                            AxisGridLine().foregroundStyle(AppTheme.bodyText)
                         }
                     }
                 }
@@ -406,7 +408,7 @@ struct ForgettingCurveLegendItem: View {
                     .frame(width: 8, height: 8)
             }
             Text(text)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.bodyText)
         }
     }
 }
@@ -419,17 +421,17 @@ struct NextReviewBarView: View {
             Text("Next Review")
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.smallTitleText)
             
             HStack {
                 Rectangle()
-                    .fill(AppTheme.warningColor)
+                    .fill(AppTheme.selectableTint)
                     .frame(width: 60, height: 8)
                     .cornerRadius(4)
 
                 Text(formatDate(nextReviewDate))
                     .font(.caption)
-                    .foregroundColor(AppTheme.warningColor)
+                    .foregroundColor(AppTheme.selectableTint)
                 
                 Spacer()
                 
@@ -438,7 +440,7 @@ struct NextReviewBarView: View {
                      daysFromNow == 1 ? "Tomorrow" : 
                      daysFromNow > 0 ? "in \(daysFromNow) days" : "\(-daysFromNow) days overdue")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.smallTitleText)
             }
         }
     }
@@ -449,59 +451,6 @@ struct NextReviewBarView: View {
         return formatter.string(from: date)
     }
 }
-//
-//struct ReviewTimelineView: View {
-//    let reviewHistory: [ReviewHistoryEntry]
-//    let createdAt: String
-//    
-//    var body: some View {
-//        VStack(alignment: .leading, spacing: 8) {
-//Text("Review History")
-//                .font(.caption)
-//                .fontWeight(.medium)
-//                .foregroundColor(.secondary)
-//            
-//            HStack(spacing: 4) {
-//                // Start marker (word creation with date)
-//                VStack(spacing: 2) {
-//                    Image(systemName: "plus.circle.fill")
-//                        .font(.caption2)
-//                        .foregroundColor(.blue)
-//                    if let creationDate = parseDateString(createdAt) {
-//                        Text(formatShortDate(creationDate))
-//                            .font(.system(size: 8))
-//                            .foregroundColor(.secondary)
-//                    } else {
-//                        Text("Created")
-//                            .font(.system(size: 8))
-//                            .foregroundColor(.secondary)
-//                    }
-//                }
-//                
-//                // Review markers
-//                ForEach(Array(reviewHistory.prefix(10).enumerated()), id: \.offset) { index, review in
-//                    VStack(spacing: 2) {
-//                        Text("|")
-//                            .font(.caption)
-//                            .fontWeight(.bold)
-//                            .foregroundColor(review.response ? .green : .red)
-//                        Text("\(index + 1)")
-//                            .font(.system(size: 8))
-//                            .foregroundColor(.secondary)
-//                    }
-//                }
-//                
-//                if reviewHistory.count > 10 {
-//                    Text("...")
-//                        .font(.caption)
-//                        .foregroundColor(.secondary)
-//                }
-//                
-//                Spacer()
-//            }
-//        }
-//    }
-//}
 
 // Fallback view for iOS 15 and below
 struct FallbackCurveView: View {
@@ -561,32 +510,36 @@ struct FallbackCurveView: View {
 }
 
 #Preview {
-    ForgettingCurveView(
-        reviewHistory: [
-            ReviewHistoryEntry(
-                response: true,
-                response_time_ms: 2000,
-                reviewed_at: "2025-01-05 14:30:00"
-            ),
-            ReviewHistoryEntry(
-                response: true,
-                response_time_ms: 1500,
-                reviewed_at: "2025-01-08 10:15:00"
-            ),
-            ReviewHistoryEntry(
-                response: false,
-                response_time_ms: 3000,
-                reviewed_at: "2025-01-12 16:45:00"
-            ),
-            ReviewHistoryEntry(
-                response: true,
-                response_time_ms: 1000,
-                reviewed_at: "2025-01-14 09:20:00"
-            )
-        ],
-        nextReviewDate: "2025-01-18 10:00:00",
-        createdAt: "2025-01-01 12:00:00",
-        wordId: 1
-    )
-    .padding()
+    ZStack {
+        AppTheme.verticalGradient2.ignoresSafeArea()
+        ForgettingCurveView(
+            reviewHistory: [
+                ReviewHistoryEntry(
+                    response: true,
+                    response_time_ms: 2000,
+                    reviewed_at: "2025-01-05 14:30:00"
+                ),
+                ReviewHistoryEntry(
+                    response: true,
+                    response_time_ms: 1500,
+                    reviewed_at: "2025-01-08 10:15:00"
+                ),
+                ReviewHistoryEntry(
+                    response: false,
+                    response_time_ms: 3000,
+                    reviewed_at: "2025-01-12 16:45:00"
+                ),
+                ReviewHistoryEntry(
+                    response: true,
+                    response_time_ms: 1000,
+                    reviewed_at: "2025-01-14 09:20:00"
+                )
+            ],
+            nextReviewDate: "2025-01-18 10:00:00",
+            createdAt: "2025-01-01 12:00:00",
+            wordId: 1
+        )
+        .padding()
+    }
+
 }

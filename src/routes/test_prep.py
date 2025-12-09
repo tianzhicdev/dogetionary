@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from handlers.test_vocabulary import (
     update_test_settings, get_test_settings,
     add_daily_test_words, get_test_vocabulary_stats,
-    get_test_vocabulary_count
+    get_test_vocabulary_count, batch_populate_test_vocabulary
 )
 from workers.test_vocabulary_worker import add_daily_test_words_for_all_users
 import logging
@@ -14,6 +14,7 @@ test_prep_bp.route('/settings', methods=['GET'])(get_test_settings)
 test_prep_bp.route('/add-words', methods=['POST'])(add_daily_test_words)
 test_prep_bp.route('/stats', methods=['GET'])(get_test_vocabulary_stats)
 test_prep_bp.route('/vocabulary-count', methods=['GET'])(get_test_vocabulary_count)
+test_prep_bp.route('/batch-populate', methods=['POST'])(batch_populate_test_vocabulary)
 
 @test_prep_bp.route('/config', methods=['GET'])
 def get_test_config_endpoint():

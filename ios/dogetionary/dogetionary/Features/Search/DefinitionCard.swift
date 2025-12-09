@@ -198,7 +198,7 @@ struct DefinitionCard: View {
                             .foregroundColor(AppTheme.smallTitleText)
                     }
                     Text(comment)
-                        .font(.caption)
+                        .font(.body)
                         .foregroundColor(AppTheme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -218,7 +218,7 @@ struct DefinitionCard: View {
                             .foregroundColor(AppTheme.smallTitleText)
                     }
                     Text(source)
-                        .font(.caption)
+                        .font(.body)
                         .foregroundColor(AppTheme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -244,7 +244,7 @@ struct DefinitionCard: View {
                                 .foregroundColor(AppTheme.selectableTint)
                                 .padding(.top, 6)
                             Text(collocation)
-                                .font(.caption)
+                                .font(.body)
                                 .foregroundColor(AppTheme.bodyText)
                         }
                     }
@@ -267,12 +267,12 @@ struct DefinitionCard: View {
                     ForEach(definition.wordFamily) { entry in
                         HStack {
                             Text(entry.word)
-                                .font(.caption)
+                                .font(.body)
                                 .fontWeight(.medium)
                                 .foregroundColor(AppTheme.bodyText)
                             Spacer()
                             Text(entry.part_of_speech)
-                                .font(.caption2)
+                                .font(.body)
                                 .foregroundColor(AppTheme.bodyText)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
@@ -295,7 +295,7 @@ struct DefinitionCard: View {
                             .foregroundColor(AppTheme.smallTitleText)
                     }
                     Text(cognates)
-                        .font(.caption)
+                        .font(.body)
                         .foregroundColor(AppTheme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
