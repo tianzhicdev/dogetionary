@@ -98,6 +98,39 @@ TOTAL_WORDS=${#ALL_WORDS[@]}
 echo "📚 Loaded $TOTAL_WORDS words from CSV"
 echo ""
 
+# Validate endpoint exists before processing
+echo "🔍 Validating endpoint: $API_BASE/api/test-prep/batch-populate"
+TEST_PAYLOAD='{"words":["test"],"learning_language":"en","native_language":"zh","generate_definitions":true,"generate_questions":false}'
+TEST_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+    -H "Content-Type: application/json" \
+    -d "$TEST_PAYLOAD" \
+    "$API_BASE/api/test-prep/batch-populate")
+
+# Extract HTTP status code (last line)
+HTTP_CODE=$(echo "$TEST_RESPONSE" | tail -n 1)
+RESPONSE_BODY=$(echo "$TEST_RESPONSE" | sed '$d')
+
+if [[ "$HTTP_CODE" != "200" ]]; then
+    echo ""
+    echo "❌ ERROR: Endpoint validation failed!"
+    echo "   URL: $API_BASE/api/test-prep/batch-populate"
+    echo "   HTTP Status: $HTTP_CODE"
+    echo "   Response: $RESPONSE_BODY"
+    echo ""
+    echo "This usually means:"
+    echo "  - The endpoint doesn't exist on this server yet"
+    echo "  - The server is using a different URL path"
+    echo "  - The server requires authentication"
+    echo ""
+    echo "If using production (--api-base https://kwafy.com), make sure"
+    echo "the latest code with batch-populate endpoint has been deployed."
+    echo ""
+    exit 1
+fi
+
+echo "   ✓ Endpoint is available"
+echo ""
+
 # Calculate number of batches
 NUM_BATCHES=$(( (TOTAL_WORDS + BATCH_SIZE - 1) / BATCH_SIZE ))
 
@@ -179,8 +212,27 @@ for ((batch_num=0; batch_num<NUM_BATCHES; batch_num++)); do
         fi
     else
         ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"')
+        ERROR_DETAILS=$(echo "$RESPONSE" | jq -r '.message // .details // ""')
+
         echo "   ❌ Batch failed: $ERROR_MSG"
+        if [[ -n "$ERROR_DETAILS" && "$ERROR_DETAILS" != "null" ]]; then
+            echo "      Details: $ERROR_DETAILS"
+        fi
+
+        # Show raw response for debugging if error is unexpected
+        if [[ "$ERROR_MSG" == "Unknown error" || "$ERROR_MSG" == "null" ]]; then
+            echo "      Raw response: $RESPONSE"
+        fi
+
         TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+
+        # If first batch fails, likely a systemic issue - ask user if they want to continue
+        if [[ $batch_num -eq 0 ]]; then
+            echo ""
+            echo "   ⚠️  First batch failed - this might indicate a systemic issue."
+            echo "   Press Ctrl+C to abort, or wait 5 seconds to continue..."
+            sleep 5
+        fi
     fi
 
     echo ""
