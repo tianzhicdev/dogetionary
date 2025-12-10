@@ -12,8 +12,8 @@
 #     [--env production|development]
 #
 # Environment:
-#   - development: http://localhost:5001 (direct to Flask, no nginx)
-#   - production:  https://kwafy.com/api (through nginx, strips /api prefix)
+#   - development|dev: http://localhost:5001 (direct to Flask, no nginx)
+#   - production|prod: https://kwafy.com/api (through nginx, strips /api prefix)
 #
 
 set -e
@@ -25,10 +25,10 @@ INCLUDE_QUESTIONS="false"
 # Environment-based API configuration (like iOS Configuration.swift)
 function get_api_base() {
     case "$1" in
-        production)
+        production|prod)
             echo "https://kwafy.com/api"
             ;;
-        development)
+        development|dev)
             echo "http://localhost:5001"
             ;;
         *)
@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 --csv FILE --learning_lang LANG --native_lang LANG [--include-questions] [--env production|development]"
+            echo "Usage: $0 --csv FILE --learning_lang LANG --native_lang LANG [--include-questions] [--env prod|dev]"
             exit 1
             ;;
     esac
@@ -144,7 +144,7 @@ if [[ "$HTTP_CODE" != "200" ]]; then
     echo "  - The server is using a different URL path"
     echo "  - The server requires authentication"
     echo ""
-    echo "If using production (--env production), make sure"
+    echo "If using production (--env prod), make sure"
     echo "the latest code with v3 batch-populate endpoint has been deployed."
     echo ""
     exit 1
