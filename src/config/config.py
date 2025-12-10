@@ -1,7 +1,11 @@
 # OpenAI Model Configuration
 # Text completion models
-COMPLETION_MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"  # Fast, cost-effective model for definitions, questions, user profiles
-COMPLETION_MODEL_NAME_ADVANCED = "meta-llama/llama-4-scout-17b-16e-instruct"  # More capable model for complex tasks (currently unused)
+# COMPLETION_MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"  # Fast, cost-effective model for definitions, questions, user profiles
+# COMPLETION_MODEL_NAME_ADVANCED = "meta-llama/llama-4-scout-17b-16e-instruct"  # More capable model for complex tasks (currently unused)
+
+COMPLETION_MODEL_NAME = "gpt-5-nano"  # Fast, cost-effective model for definitions, questions, user profiles
+COMPLETION_MODEL_NAME_ADVANCED = "gpt-5-nano"  # More capable model for complex tasks (currently unused)
+
 
 # Fallback mappings: Groq model -> OpenAI model (when Groq is over capacity)
 GROQ_TO_OPENAI_FALLBACK = {
