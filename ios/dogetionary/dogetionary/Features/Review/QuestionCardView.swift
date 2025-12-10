@@ -24,8 +24,9 @@ struct QuestionCardView: View {
     @State private var isExcluded = false
     @State private var showToast = false
     @State private var toastMessage = ""
+    @State private var isAtBottom = false  // Track if scrolled to bottom
 
-    private let swipeThreshold: CGFloat = 100
+    private let swipeThreshold: CGFloat = 100  // Vertical swipe threshold
 
     // Convert WordDefinitionResponse to Definition model for DefinitionCard
     // Uses the same conversion logic as search results
@@ -76,30 +77,61 @@ struct QuestionCardView: View {
                         }
                         .padding(.horizontal)
 
-                        // Prominent swipe indicator on the right side
+                        // Add some spacing before bottom sentinel
                         Spacer()
-                            .frame(height: 20)
+                            .frame(height: 40)
                     }
                 }
+
+                // Bottom sentinel - detects when user scrolls to bottom
+                GeometryReader { geometry in
+                    Color.clear
+                        .preference(
+                            key: BottomReachedPreferenceKey.self,
+                            value: geometry.frame(in: .named("scrollView")).maxY
+                        )
+                }
+                .frame(height: 1)
             }
             .padding(.vertical, 20)
         }
+        .coordinateSpace(name: "scrollView")
         .background(Color.clear)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .offset(x: dragOffset)
-        .gesture(
-            isAnswered ?
-            DragGesture()
+        .offset(y: dragOffset)
+        .onPreferenceChange(BottomReachedPreferenceKey.self) { maxY in
+            // Detect when scrolled to bottom
+            let screenHeight = UIScreen.main.bounds.height
+            isAtBottom = maxY <= screenHeight + 50  // 50pt buffer
+        }
+        .simultaneousGesture(
+            isAnswered && isAtBottom ?
+            DragGesture(minimumDistance: 20)
                 .onChanged { value in
-                    if value.translation.width < 0 {
-                        dragOffset = value.translation.width
+                    // Detect upward swipe (negative translation.height)
+                    if value.translation.height < 0 {
+                        dragOffset = value.translation.height
                     }
                 }
                 .onEnded { value in
-                    if value.translation.width < -swipeThreshold {
-                        onSwipeComplete()
+                    // If swiped up past threshold, advance to next question
+                    if value.translation.height < -swipeThreshold {
+                        // Haptic feedback
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+
+                        // Animate card sliding up off screen
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            dragOffset = -UIScreen.main.bounds.height
+                        }
+
+                        // Call completion after animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            onSwipeComplete()
+                        }
                     } else {
+                        // Not past threshold, spring back to original position
                         withAnimation(.spring()) {
                             dragOffset = 0
                         }
@@ -121,35 +153,14 @@ struct QuestionCardView: View {
                 showSwipeHint = true
             }
         }
-        .overlay(
-            // Prominent swipe indicator on the right edge
-            Group {
-                if isAnswered && showSwipeHint {
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            onSwipeComplete()
-                        }) {
-                            VStack(spacing: 8) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 32, weight: .bold))
-                                    .foregroundStyle(AppTheme.gradient1)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 20)
-                            .background(
-                                Rectangle()
-                                    .fill(AppTheme.accentCyan.opacity(0.15))
-                                    .shadow(color: .black.opacity(0.3), radius: 8, x: -4, y: 0)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    .padding(.trailing, 8)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
+        .overlay(alignment: .bottom) {
+            // Pull-to-advance indicator with progress
+            if isAnswered && isAtBottom && abs(dragOffset) > 20 {
+                PullToAdvanceIndicator(dragOffset: dragOffset, threshold: swipeThreshold)
+                    // Don't use separate offset - let it move with the card
+                    .transition(.identity)  // No transition - moves with parent card
             }
-        )
+        }
         .overlay(
             Group {
                 if showToast {
@@ -206,6 +217,73 @@ struct QuestionCardView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Bottom Detection
+
+private struct BottomReachedPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+// MARK: - Pull Indicator
+
+private struct PullToAdvanceIndicator: View {
+    let dragOffset: CGFloat
+    let threshold: CGFloat
+
+    private var progress: CGFloat {
+        min(abs(dragOffset) / threshold, 1.0)
+    }
+
+    private var shouldTrigger: Bool {
+        progress >= 1.0
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            // Circular progress
+            ZStack {
+                Circle()
+                    .stroke(AppTheme.accentCyan.opacity(0.2), lineWidth: 4)
+                    .frame(width: 56, height: 56)
+
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        shouldTrigger ? AppTheme.electricYellow : AppTheme.accentCyan,
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
+                    .frame(width: 56, height: 56)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeInOut, value: progress)
+
+                Image(systemName: shouldTrigger ? "checkmark" : "arrow.up")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(shouldTrigger ? AppTheme.electricYellow : AppTheme.accentCyan)
+                    .scaleEffect(shouldTrigger ? 1.2 : 1.0)
+                    .animation(.spring(), value: shouldTrigger)
+            }
+
+            Text(shouldTrigger ? "RELEASE TO CONTINUE" : "PULL TO CONTINUE")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(AppTheme.smallTextColor1)
+                .tracking(0.5)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AppTheme.bgPrimary)
+                .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+        )
+        .padding(.bottom, 24)
+        .opacity(min(abs(dragOffset) / 40.0, 1.0))  // Fade in as user pulls
+        .scaleEffect(min(abs(dragOffset) / threshold * 0.2 + 0.8, 1.0))  // Scale up as user pulls
     }
 }
 

@@ -153,23 +153,45 @@ fi
 echo "   ✓ Endpoint is available"
 echo ""
 
-echo "🚀 Starting word-by-word processing ($TOTAL_WORDS words)..."
+echo "🚀 Starting parallel processing ($TOTAL_WORDS words, 10 concurrent requests)..."
 echo ""
 
-# Track overall statistics
-TOTAL_DEFS_GENERATED=0
-TOTAL_DEFS_CACHED=0
-TOTAL_QUESTIONS_GENERATED=0
-TOTAL_QUESTIONS_CACHED=0
-TOTAL_ERRORS=0
+# Create temp directory for statistics tracking (file-based for parallel safety)
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
 
-# Process each word individually
-for ((i=0; i<TOTAL_WORDS; i++)); do
-    WORD="${ALL_WORDS[$i]}"
-    WORD_NUM=$((i + 1))
+# Initialize statistics files
+echo "0" > "$TEMP_DIR/defs_generated"
+echo "0" > "$TEMP_DIR/defs_cached"
+echo "0" > "$TEMP_DIR/questions_generated"
+echo "0" > "$TEMP_DIR/questions_cached"
+echo "0" > "$TEMP_DIR/errors"
+echo "0" > "$TEMP_DIR/processed"
 
-    # Progress indicator
-    printf "[%d/%d] Processing: %-20s ... " "$WORD_NUM" "$TOTAL_WORDS" "$WORD"
+# Simple file-based locking function (bash 3.2 compatible)
+lock_and_increment() {
+    local file="$1"
+    local amount="$2"
+    local lockfile="$TEMP_DIR/.lock"
+
+    # Simple spin lock
+    while ! mkdir "$lockfile" 2>/dev/null; do
+        sleep 0.01
+    done
+
+    # Critical section
+    local current=$(cat "$file")
+    echo $((current + amount)) > "$file"
+
+    # Release lock
+    rmdir "$lockfile"
+}
+
+# Function to process a single word (runs in background)
+process_word() {
+    local WORD="$1"
+    local WORD_NUM="$2"
+    local TOTAL="$3"
 
     # Build request payload for single word
     REQUEST_JSON=$(jq -n \
@@ -203,11 +225,12 @@ for ((i=0; i<TOTAL_WORDS; i++)); do
         QUESTIONS_CACHED=$(echo "$RESPONSE" | jq -r '.summary.questions_cached // 0')
         TIME=$(echo "$RESPONSE" | jq -r '.processing_time_seconds // 0')
 
-        # Update totals
-        TOTAL_DEFS_GENERATED=$((TOTAL_DEFS_GENERATED + DEFS_GEN))
-        TOTAL_DEFS_CACHED=$((TOTAL_DEFS_CACHED + DEFS_CACHED))
-        TOTAL_QUESTIONS_GENERATED=$((TOTAL_QUESTIONS_GENERATED + QUESTIONS_GEN))
-        TOTAL_QUESTIONS_CACHED=$((TOTAL_QUESTIONS_CACHED + QUESTIONS_CACHED))
+        # Atomic increment using simple lock
+        lock_and_increment "$TEMP_DIR/defs_generated" "$DEFS_GEN"
+        lock_and_increment "$TEMP_DIR/defs_cached" "$DEFS_CACHED"
+        lock_and_increment "$TEMP_DIR/questions_generated" "$QUESTIONS_GEN"
+        lock_and_increment "$TEMP_DIR/questions_cached" "$QUESTIONS_CACHED"
+        lock_and_increment "$TEMP_DIR/processed" "1"
 
         # Status indicator
         if [[ $DEFS_GEN -gt 0 ]]; then
@@ -216,22 +239,65 @@ for ((i=0; i<TOTAL_WORDS; i++)); do
             STATUS="✓ cached"
         fi
 
-        printf "%s (%.2fs)\n" "$STATUS" "$TIME"
+        printf "[%d/%d] %-20s %s (%.2fs)\n" "$WORD_NUM" "$TOTAL" "$WORD" "$STATUS" "$TIME"
     else
         ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"' 2>/dev/null)
         if [[ -z "$ERROR_MSG" || "$ERROR_MSG" == "null" ]]; then
             ERROR_MSG="Request failed"
         fi
 
-        printf "❌ %s\n" "$ERROR_MSG"
-        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+        # Atomic increment error counter
+        lock_and_increment "$TEMP_DIR/errors" "1"
+        lock_and_increment "$TEMP_DIR/processed" "1"
 
-        # Log full error for first failure
-        if [[ $TOTAL_ERRORS -eq 1 ]]; then
-            echo "   → Full response: $RESPONSE"
+        # Log full error for first failure only
+        if [[ ! -f "$TEMP_DIR/first_error.log" ]]; then
+            echo "   → First error details: $RESPONSE" >> "$TEMP_DIR/first_error.log"
         fi
+
+        printf "[%d/%d] %-20s ❌ %s\n" "$WORD_NUM" "$TOTAL" "$WORD" "$ERROR_MSG"
     fi
+}
+
+# Export function and variables for subshells
+export -f process_word lock_and_increment
+export API_BASE LEARNING_LANG NATIVE_LANG INCLUDE_QUESTIONS TEMP_DIR
+
+# Process words in parallel (10 at a time) - bash 3.2 compatible
+MAX_PARALLEL=10
+
+# Process in batches
+for ((i=0; i<TOTAL_WORDS; i+=MAX_PARALLEL)); do
+    # Launch batch of jobs
+    for ((j=0; j<MAX_PARALLEL && i+j<TOTAL_WORDS; j++)); do
+        WORD="${ALL_WORDS[$i+$j]}"
+        WORD_NUM=$((i + j + 1))
+        process_word "$WORD" "$WORD_NUM" "$TOTAL_WORDS" &
+    done
+
+    # Wait for entire batch to complete
+    wait
+
+    # Show progress
+    PROCESSED=$(cat "$TEMP_DIR/processed")
+    echo ""
+    echo "Progress: $PROCESSED / $TOTAL_WORDS words completed"
+    echo ""
 done
+
+# Show first error if any occurred
+if [[ -f "$TEMP_DIR/first_error.log" ]]; then
+    echo ""
+    echo "First error details:"
+    cat "$TEMP_DIR/first_error.log"
+fi
+
+# Read final statistics from files
+TOTAL_DEFS_GENERATED=$(cat "$TEMP_DIR/defs_generated")
+TOTAL_DEFS_CACHED=$(cat "$TEMP_DIR/defs_cached")
+TOTAL_QUESTIONS_GENERATED=$(cat "$TEMP_DIR/questions_generated")
+TOTAL_QUESTIONS_CACHED=$(cat "$TEMP_DIR/questions_cached")
+TOTAL_ERRORS=$(cat "$TEMP_DIR/errors")
 
 echo ""
 
