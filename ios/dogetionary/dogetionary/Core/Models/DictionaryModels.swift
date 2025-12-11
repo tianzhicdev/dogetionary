@@ -1048,9 +1048,10 @@ struct ReviewQuestion: Codable {
     // Video question fields
     let video_id: Int?  // For video_mc type - ID of the video to display
     let show_word_before_video: Bool?  // For video_mc type - whether to show word before playing video
+    let transcript: String?  // For video_mc type - video transcript text for highlighting the word
 
     private enum CodingKeys: String, CodingKey {
-        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video
+        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video, transcript
     }
 }
 

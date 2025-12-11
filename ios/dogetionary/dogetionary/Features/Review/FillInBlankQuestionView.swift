@@ -148,7 +148,8 @@ struct FillInBlankOptionButton: View {
         audio_url: nil,
         evaluation_threshold: nil,
         video_id: nil,
-        show_word_before_video: nil
+        show_word_before_video: nil,
+        transcript: nil
     )
 
     ZStack {

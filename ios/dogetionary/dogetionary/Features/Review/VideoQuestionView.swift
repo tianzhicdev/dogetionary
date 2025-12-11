@@ -76,6 +76,23 @@ struct VideoQuestionView: View {
                 }
             }
 
+            // Transcript display (if available)
+            if let transcript = question.transcript, !transcript.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Transcript:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    HighlightedTranscriptText(transcript: transcript, word: question.word)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .padding(12)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+            }
+
             // Question text
             Text(question.question_text)
                 .font(.title3)
@@ -199,6 +216,57 @@ struct VideoQuestionView: View {
     }
 }
 
+// MARK: - Highlighted Transcript Text
+
+struct HighlightedTranscriptText: View {
+    let transcript: String
+    let word: String
+
+    var body: some View {
+        Text(highlightedText())
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func highlightedText() -> AttributedString {
+        var attributedString = AttributedString(transcript)
+
+        // Case-insensitive search for the word in the transcript
+        let lowercaseTranscript = transcript.lowercased()
+        let lowercaseWord = word.lowercased()
+
+        // Find all occurrences of the word (whole word match)
+        var searchRange = lowercaseTranscript.startIndex
+
+        while let range = lowercaseTranscript.range(of: lowercaseWord, range: searchRange..<lowercaseTranscript.endIndex) {
+            // Check if it's a whole word match (not part of another word)
+            let beforeChar = range.lowerBound > lowercaseTranscript.startIndex ?
+                lowercaseTranscript[lowercaseTranscript.index(before: range.lowerBound)] : " "
+            let afterChar = range.upperBound < lowercaseTranscript.endIndex ?
+                lowercaseTranscript[range.upperBound] : " "
+
+            let isWholeWord = !beforeChar.isLetter && !beforeChar.isNumber &&
+                              !afterChar.isLetter && !afterChar.isNumber
+
+            if isWholeWord {
+                // Highlight this occurrence
+                let startIndex = attributedString.index(attributedString.startIndex, offsetByCharacters: lowercaseTranscript.distance(from: lowercaseTranscript.startIndex, to: range.lowerBound))
+                let endIndex = attributedString.index(attributedString.startIndex, offsetByCharacters: lowercaseTranscript.distance(from: lowercaseTranscript.startIndex, to: range.upperBound))
+
+                let attributedRange = startIndex..<endIndex
+                attributedString[attributedRange].foregroundColor = .white
+                attributedString[attributedRange].backgroundColor = .blue
+                attributedString[attributedRange].font = .body.weight(.bold)
+            }
+
+            // Move to next position
+            searchRange = range.upperBound
+        }
+
+        return attributedString
+    }
+}
+
 // MARK: - Preview
 
 struct VideoQuestionView_Previews: PreviewProvider {
@@ -207,7 +275,7 @@ struct VideoQuestionView_Previews: PreviewProvider {
             question: ReviewQuestion(
                 question_type: "video_mc",
                 word: "abdominal",
-                question_text: "Watch the video. What does 'abdominal' mean?",
+                question_text: "What does 'abdominal' mean?",
                 options: [
                     QuestionOption(id: "A", text: "relating to the abdomen"),
                     QuestionOption(id: "B", text: "relating to the chest"),
@@ -221,7 +289,8 @@ struct VideoQuestionView_Previews: PreviewProvider {
                 audio_url: nil,
                 evaluation_threshold: nil,
                 video_id: 12,
-                show_word_before_video: false
+                show_word_before_video: false,
+                transcript: "This is a sample transcript that mentions the word abdominal in context."
             ),
             onAnswer: { answer in
                 print("Selected: \(answer)")
