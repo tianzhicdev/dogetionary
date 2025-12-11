@@ -175,7 +175,8 @@ struct PronounceSentenceQuestionView: View {
                 audio_url: "data:audio/mpeg;base64,",
                 evaluation_threshold: AppConstants.Validation.pronunciationThreshold,
                 video_id: nil,
-                show_word_before_video: nil
+                show_word_before_video: nil,
+        transcript: nil
             ),
             onImmediateFeedback: { passed in
                 // Preview: Immediate feedback callback
