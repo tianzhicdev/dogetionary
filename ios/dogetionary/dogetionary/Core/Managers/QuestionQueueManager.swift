@@ -164,6 +164,24 @@ class QuestionQueueManager: ObservableObject {
             questionQueue.append(question)
             queuedWords.insert(question.word)
         }
+
+        // Prefetch videos for video_mc questions
+        prefetchVideosFromQueue(questions)
+    }
+
+    private func prefetchVideosFromQueue(_ questions: [BatchReviewQuestion]) {
+        let videoIds = questions.compactMap { question -> Int? in
+            guard question.question.question_type == "video_mc",
+                  let videoId = question.question.video_id else {
+                return nil
+            }
+            return videoId
+        }
+
+        if !videoIds.isEmpty {
+            logger.info("Prefetching \(videoIds.count) videos in background")
+            VideoService.shared.preloadVideos(videoIds: videoIds)
+        }
     }
 }
 

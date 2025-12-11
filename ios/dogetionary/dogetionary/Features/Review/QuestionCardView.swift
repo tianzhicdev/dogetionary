@@ -154,11 +154,11 @@ struct QuestionCardView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            // Pull-to-advance indicator with progress
-            if isAnswered && isAtBottom && abs(dragOffset) > 20 {
+            // Pull-to-advance indicator - show when at bottom
+            if isAnswered && isAtBottom {
                 PullToAdvanceIndicator(dragOffset: dragOffset, threshold: swipeThreshold)
                     // Don't use separate offset - let it move with the card
-                    .transition(.identity)  // No transition - moves with parent card
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .overlay(
@@ -236,54 +236,27 @@ private struct PullToAdvanceIndicator: View {
     let dragOffset: CGFloat
     let threshold: CGFloat
 
-    private var progress: CGFloat {
-        min(abs(dragOffset) / threshold, 1.0)
-    }
-
     private var shouldTrigger: Bool {
-        progress >= 1.0
+        abs(dragOffset) >= threshold
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            // Circular progress
-            ZStack {
-                Circle()
-                    .stroke(AppTheme.accentCyan.opacity(0.2), lineWidth: 4)
-                    .frame(width: 56, height: 56)
-
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(
-                        shouldTrigger ? AppTheme.electricYellow : AppTheme.accentCyan,
-                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                    )
-                    .frame(width: 56, height: 56)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut, value: progress)
-
-                Image(systemName: shouldTrigger ? "checkmark" : "arrow.up")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(shouldTrigger ? AppTheme.electricYellow : AppTheme.accentCyan)
-                    .scaleEffect(shouldTrigger ? 1.2 : 1.0)
-                    .animation(.spring(), value: shouldTrigger)
-            }
+        VStack(spacing: 6) {
+            Image(systemName: "arrow.up")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(AppTheme.selectableTint)
 
             Text(shouldTrigger ? "RELEASE TO CONTINUE" : "PULL TO CONTINUE")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(AppTheme.smallTextColor1)
-                .tracking(0.5)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(AppTheme.selectableTint)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppTheme.bgPrimary)
-                .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(AppTheme.bgPrimary.opacity(0.9))
         )
-        .padding(.bottom, 24)
-        .opacity(min(abs(dragOffset) / 40.0, 1.0))  // Fade in as user pulls
-        .scaleEffect(min(abs(dragOffset) / threshold * 0.2 + 0.8, 1.0))  // Scale up as user pulls
+        .padding(.bottom, 16)
     }
 }
 
@@ -308,7 +281,9 @@ private struct PullToAdvanceIndicator: View {
         sentence_translation: nil,
         show_definition: false,
         audio_url: nil,
-        evaluation_threshold: nil
+        evaluation_threshold: nil,
+        video_id: nil,
+        show_word_before_video: nil
     )
 
     ZStack {
@@ -350,7 +325,9 @@ private struct PullToAdvanceIndicator: View {
         sentence_translation: nil,
         show_definition: false,
         audio_url: nil,
-        evaluation_threshold: nil
+        evaluation_threshold: nil,
+        video_id: nil,
+        show_word_before_video: nil
     )
 
     ZStack {

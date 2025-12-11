@@ -146,7 +146,9 @@ struct FillInBlankOptionButton: View {
         sentence_translation: "今天的日落真是太美了。",
         show_definition: false,
         audio_url: nil,
-        evaluation_threshold: nil
+        evaluation_threshold: nil,
+        video_id: nil,
+        show_word_before_video: nil
     )
 
     ZStack {

@@ -264,16 +264,26 @@ def calc_schedule(
         target_schedule = test_practice_schedule if word in test_practice_words else non_test_practice_schedule
 
         # Add reviews that fall within our schedule window
+        # IMPORTANT: Overdue reviews (review_date < today) are scheduled for TODAY
+        # to ensure they appear in today's practice queue
         for idx, (review_date, _) in enumerate(future_reviews):
-            if today <= review_date.date() <= target_end_date:
-                if word not in target_schedule:
-                    target_schedule[word] = []
+            review_date_only = review_date.date()
 
-                target_schedule[word].append({
-                    'date': review_date.date(),
-                    'review_number': len(info['reviews']) + idx + 1,
-                    'word_id': info['id']
-                })
+            # Skip reviews that are beyond the target_end_date
+            if review_date_only > target_end_date:
+                continue
+
+            # Treat overdue reviews as due today
+            scheduled_date = review_date_only if review_date_only >= today else today
+
+            if word not in target_schedule:
+                target_schedule[word] = []
+
+            target_schedule[word].append({
+                'date': scheduled_date,
+                'review_number': len(info['reviews']) + idx + 1,
+                'word_id': info['id']
+            })
 
     # Build daily schedule and calculate projected reviews for new words
     schedule = {}
@@ -323,12 +333,19 @@ def calc_schedule(
 
             for idx, (review_datetime, _) in enumerate(future_reviews):
                 review_date = review_datetime.date()
-                if today <= review_date <= target_end_date:
-                    target_schedule[word].append({
-                        'date': review_date,
-                        'review_number': idx + 1,
-                        'word_id': None  # No word_id yet since not saved
-                    })
+
+                # Skip reviews beyond target_end_date
+                if review_date > target_end_date:
+                    continue
+
+                # Treat overdue reviews as due today (consistency with saved words)
+                scheduled_date = review_date if review_date >= today else today
+
+                target_schedule[word].append({
+                    'date': scheduled_date,
+                    'review_number': idx + 1,
+                    'word_id': None  # No word_id yet since not saved
+                })
 
         # Find test practice words due this day
         day_test_practice = []

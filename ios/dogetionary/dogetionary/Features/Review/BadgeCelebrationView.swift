@@ -14,6 +14,7 @@ struct BadgeCelebrationView: View {
     @State private var scale: CGFloat = 0.5
     @State private var opacity: Double = 0
     @State private var iconScale: CGFloat = 0.5
+    @State private var autoDismissTask: DispatchWorkItem?
 
     var body: some View {
         ZStack {
@@ -90,13 +91,19 @@ struct BadgeCelebrationView: View {
             }
 
             // Auto-dismiss after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            let task = DispatchWorkItem {
                 dismissWithAnimation()
             }
+            autoDismissTask = task
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: task)
         }
     }
 
     private func dismissWithAnimation() {
+        // Cancel auto-dismiss timer to prevent double-dismissal
+        autoDismissTask?.cancel()
+        autoDismissTask = nil
+
         withAnimation(.easeOut(duration: 0.2)) {
             scale = 0.8
             opacity = 0

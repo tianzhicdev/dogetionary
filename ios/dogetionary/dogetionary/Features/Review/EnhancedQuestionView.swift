@@ -49,6 +49,16 @@ struct EnhancedQuestionView: View {
                     onAnswer: onAnswer
                 )
 
+            case "video_mc":
+                VideoQuestionView(
+                    question: question,
+                    onAnswer: { selectedAnswer in
+                        let isCorrect = selectedAnswer == question.correct_answer
+                        onImmediateFeedback?(isCorrect)
+                        onAnswer(isCorrect)
+                    }
+                )
+
             default:
                 // Recognition type removed - will be handled by definition view
                 Text("Loading...")
@@ -77,7 +87,9 @@ struct EnhancedQuestionView: View {
         sentence_translation: nil,
         show_definition: false,
         audio_url: nil,
-        evaluation_threshold: nil
+        evaluation_threshold: nil,
+        video_id: nil,
+        show_word_before_video: nil
     )
 
     ZStack {
@@ -107,7 +119,9 @@ struct EnhancedQuestionView: View {
         sentence_translation: "山上的景色真是太壮丽了。",
         show_definition: false,
         audio_url: nil,
-        evaluation_threshold: nil
+        evaluation_threshold: nil,
+        video_id: nil,
+        show_word_before_video: nil
     )
 
     ZStack {
