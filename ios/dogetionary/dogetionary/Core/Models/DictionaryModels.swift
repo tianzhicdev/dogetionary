@@ -1034,7 +1034,7 @@ struct QuestionOption: Codable, Identifiable {
 
 /// Enhanced review question data
 struct ReviewQuestion: Codable {
-    let question_type: String  // "recognition", "mc_definition", "mc_word", "fill_blank", "pronounce_sentence"
+    let question_type: String  // "recognition", "mc_definition", "mc_word", "fill_blank", "pronounce_sentence", "video_mc"
     let word: String
     let question_text: String
     let options: [QuestionOption]?
@@ -1045,8 +1045,12 @@ struct ReviewQuestion: Codable {
     let audio_url: String?  // For pronounce_sentence type (base64 encoded audio data)
     let evaluation_threshold: Double?  // For pronounce_sentence type (minimum score to pass, default 0.7)
 
+    // Video question fields
+    let video_id: Int?  // For video_mc type - ID of the video to display
+    let show_word_before_video: Bool?  // For video_mc type - whether to show word before playing video
+
     private enum CodingKeys: String, CodingKey {
-        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold
+        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video
     }
 }
 

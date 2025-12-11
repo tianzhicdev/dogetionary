@@ -173,7 +173,9 @@ struct PronounceSentenceQuestionView: View {
                 sentence_translation: "樱花的美丽是短暂的，只持续几周。",
                 show_definition: nil,
                 audio_url: "data:audio/mpeg;base64,",
-                evaluation_threshold: AppConstants.Validation.pronunciationThreshold
+                evaluation_threshold: AppConstants.Validation.pronunciationThreshold,
+                video_id: nil,
+                show_word_before_video: nil
             ),
             onImmediateFeedback: { passed in
                 // Preview: Immediate feedback callback

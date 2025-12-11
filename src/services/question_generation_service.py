@@ -23,11 +23,13 @@ LANG_NAMES = {
 }
 
 # Question type weights for random selection
+# NOTE: Temporarily boosted video_mc to 90% for testing video questions
 QUESTION_TYPE_WEIGHTS = {
-    'mc_definition': 0.30,       # Tests comprehension
-    'mc_word': 0.25,             # Tests word recognition from definition
-    'fill_blank': 0.25,          # Tests contextual usage
-    'pronounce_sentence': 0.20,  # Tests pronunciation with sentence context
+    'mc_definition': 0.02,       # Tests comprehension
+    'mc_word': 0.02,             # Tests word recognition from definition
+    'fill_blank': 0.02,          # Tests contextual usage
+    'pronounce_sentence': 0.04,  # Tests pronunciation with sentence context
+    'video_mc': 0.90,            # Tests visual recognition from video (TESTING: normally 0.10)
 }
 
 
@@ -84,6 +86,154 @@ def cache_question(word: str, learning_lang: str, native_lang: str, question_typ
 
     except Exception as e:
         logger.error(f"Error caching question: {e}")
+
+
+def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
+    """
+    Check if word has linked videos available (under 5MB for performance).
+
+    Args:
+        word: The vocabulary word
+        learning_lang: Language of the word
+
+    Returns:
+        Dict with video_id and transcript if videos exist, None otherwise
+    """
+    try:
+        # Only select videos under 5MB (5242880 bytes) for better performance
+        result = db_fetch_one("""
+            SELECT v.id, v.transcript
+            FROM word_to_video wtv
+            JOIN videos v ON v.id = wtv.video_id
+            WHERE LOWER(wtv.word) = LOWER(%s)
+              AND wtv.learning_language = %s
+              AND v.size_bytes <= 5242880
+            ORDER BY wtv.relevance_score DESC NULLS LAST, RANDOM()
+            LIMIT 1
+        """, (word, learning_lang))
+
+        if result:
+            logger.info(f"Found video for word '{word}': video_id={result['id']}, has_transcript={result['transcript'] is not None}")
+            return {
+                'video_id': result['id'],
+                'transcript': result['transcript']
+            }
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Error checking videos for word '{word}': {e}")
+        return None
+
+
+def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, native_lang: str) -> Dict:
+    """
+    Generate a video multiple-choice question.
+
+    Args:
+        word: The vocabulary word
+        definition: Full definition data
+        learning_lang: Language being learned
+        native_lang: User's native language
+
+    Returns:
+        Dict containing video question data
+    """
+    # Check if word has videos
+    video_info = check_word_has_videos(word, learning_lang)
+
+    if not video_info:
+        logger.warning(f"No videos found for word '{word}', falling back to mc_definition")
+        # Fallback to mc_definition if no videos available
+        return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
+
+    video_id = video_info['video_id']
+    transcript = video_info.get('transcript')
+
+    # Get correct definition from definition data
+    definitions = definition.get('definitions', [])
+    if not definitions:
+        logger.error(f"No definitions found for word '{word}'")
+        raise ValueError(f"No definitions available for word: {word}")
+
+    # Use the first definition as the correct answer
+    correct_definition = definitions[0].get('definition', 'No definition available')
+
+    # Generate distractors using LLM (3 incorrect but plausible definitions)
+    prompt = f"""Generate 3 plausible but INCORRECT definitions for the word: "{word}"
+
+The correct definition is: "{correct_definition}"
+
+Requirements for distractors:
+- Must be semantically related or describe similar concepts
+- Should be plausible enough to confuse learners
+- Similar length and complexity to the correct definition
+- Use simple, common vocabulary
+- Avoid negations or "none of the above"
+
+Return ONLY a JSON array of 3 strings (the distractor definitions), nothing else.
+
+Example format:
+["distractor 1 text", "distractor 2 text", "distractor 3 text"]"""
+
+    try:
+        # Generate distractors with LLM
+        distractors_json = llm_completion(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a language learning expert. Return only valid JSON arrays without markdown formatting."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            model_name=COMPLETION_MODEL_NAME,
+            response_format={"type": "json_object"}
+        )
+
+        # Parse the response (may be wrapped in JSON object)
+        parsed = json.loads(distractors_json.strip())
+        if isinstance(parsed, dict) and 'distractors' in parsed:
+            distractors = parsed['distractors']
+        elif isinstance(parsed, list):
+            distractors = parsed
+        else:
+            raise ValueError("Unexpected LLM response format")
+
+        if not isinstance(distractors, list) or len(distractors) != 3:
+            raise ValueError("LLM did not return exactly 3 distractors")
+
+    except Exception as e:
+        logger.error(f"Error generating distractors for video question: {e}, using fallback")
+        # Fallback distractors
+        distractors = [
+            "a different meaning (distractor 1)",
+            "an alternative definition (distractor 2)",
+            "another interpretation (distractor 3)"
+        ]
+
+    # Build question data
+    question_data = {
+        'question_type': 'video_mc',
+        'word': word,
+        'video_id': video_id,
+        'transcript': transcript,  # Include transcript (may be None if not available)
+        'question_text': f"What does '{word}' mean?",  # Consistent with mc_definition format
+        'show_word_before_video': False,  # Hide word initially, reveal after answer
+        'options': [
+            {'id': 'A', 'text': correct_definition, 'is_correct': True},
+            {'id': 'B', 'text': distractors[0], 'is_correct': False},
+            {'id': 'C', 'text': distractors[1], 'is_correct': False},
+            {'id': 'D', 'text': distractors[2], 'is_correct': False}
+        ],
+        'correct_answer': 'A'
+    }
+
+    logger.info(f"Generated video_mc question for word '{word}' with video_id={video_id}, has_transcript={transcript is not None}")
+
+    return question_data
 
 
 def generate_mc_definition_prompt(word: str, definition_data: Dict, native_lang: str) -> str:
@@ -358,7 +508,11 @@ def generate_question_with_llm(
     """
     logger.info(f"Generating {question_type} question for word: {word}")
 
-    # Select appropriate prompt generator
+    # Handle video_mc type specially (doesn't use LLM for generation)
+    if question_type == 'video_mc':
+        return generate_video_mc_question(word, definition, learning_lang, native_lang)
+
+    # Select appropriate prompt generator for LLM-based questions
     if question_type == 'mc_definition':
         prompt = generate_mc_definition_prompt(word, definition, native_lang)
     elif question_type == 'mc_word':
@@ -402,9 +556,20 @@ def get_or_generate_question(
     """
     import copy
 
-    # Select random question type if not specified
+    # Select question type with video prioritization
     if question_type is None:
-        question_type = get_random_question_type()
+        # PRIORITY 1: Always use video_mc if word has videos
+        if check_word_has_videos(word, learning_lang):
+            question_type = 'video_mc'
+            logger.info(f"Prioritizing video_mc for '{word}' (videos available)")
+        else:
+            # PRIORITY 2: Random selection from all types (including video_mc with fallback)
+            question_type = get_random_question_type()
+
+            # If video_mc was randomly selected but no videos available, fallback to mc_definition
+            if question_type == 'video_mc':
+                logger.info(f"video_mc randomly selected but no videos for '{word}', using mc_definition instead")
+                question_type = 'mc_definition'
 
     # Check cache first
     cached = get_cached_question(word, learning_lang, native_lang, question_type)

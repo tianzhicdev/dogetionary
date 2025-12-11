@@ -142,7 +142,9 @@ struct MultipleChoiceOptionButton: View {
         sentence_translation: nil,
         show_definition: false,
         audio_url: nil,
-        evaluation_threshold: nil
+        evaluation_threshold: nil,
+        video_id: nil,
+        show_word_before_video: nil
     )
 
     ZStack {

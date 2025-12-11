@@ -109,10 +109,16 @@ struct ReviewView: View {
             // Badge celebration overlay - show badges sequentially
             if viewModel.showBadgeCelebration, let firstBadge = viewModel.earnedBadges.first {
                 BadgeCelebrationView(badge: firstBadge) {
-                    // Remove the first badge and continue showing if more exist
-                    viewModel.earnedBadges.removeFirst()
-                    if viewModel.earnedBadges.isEmpty {
-                        viewModel.showBadgeCelebration = false
+                    // Defer state mutation to next run loop to avoid SwiftUI state conflicts
+                    DispatchQueue.main.async {
+                        // Guard against double-dismissal (auto-dismiss + manual dismiss)
+                        guard !viewModel.earnedBadges.isEmpty else { return }
+
+                        // Remove the first badge and continue showing if more exist
+                        viewModel.earnedBadges.removeFirst()
+                        if viewModel.earnedBadges.isEmpty {
+                            viewModel.showBadgeCelebration = false
+                        }
                     }
                 }
             }
