@@ -97,12 +97,12 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
         learning_lang: Language of the word
 
     Returns:
-        Dict with video_id and transcript if videos exist, None otherwise
+        Dict with video_id and audio_transcript if videos exist, None otherwise
     """
     try:
         # Only select videos under 5MB (5242880 bytes) for better performance
         result = db_fetch_one("""
-            SELECT v.id, v.transcript
+            SELECT v.id, v.audio_transcript
             FROM word_to_video wtv
             JOIN videos v ON v.id = wtv.video_id
             WHERE LOWER(wtv.word) = LOWER(%s)
@@ -113,10 +113,10 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
         """, (word, learning_lang))
 
         if result:
-            logger.info(f"Found video for word '{word}': video_id={result['id']}, has_transcript={result['transcript'] is not None}")
+            logger.info(f"Found video for word '{word}': video_id={result['id']}, has_audio_transcript={result['audio_transcript'] is not None}")
             return {
                 'video_id': result['id'],
-                'transcript': result['transcript']
+                'audio_transcript': result['audio_transcript']
             }
 
         return None
@@ -130,9 +130,11 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
     """
     Generate a video multiple-choice question.
 
+    Uses LLM to infer the word's meaning from the video transcript and generate distractors.
+
     Args:
         word: The vocabulary word
-        definition: Full definition data
+        definition: Full definition data (not used for video questions)
         learning_lang: Language being learned
         native_lang: User's native language
 
@@ -148,41 +150,44 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
         return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
 
     video_id = video_info['video_id']
-    transcript = video_info.get('transcript')
+    audio_transcript = video_info.get('audio_transcript')
 
-    # Get correct definition from definition data
-    definitions = definition.get('definitions', [])
-    if not definitions:
-        logger.error(f"No definitions found for word '{word}'")
-        raise ValueError(f"No definitions available for word: {word}")
+    # If no transcript available, fallback to mc_definition
+    if not audio_transcript:
+        logger.warning(f"No audio_transcript available for video {video_id}, falling back to mc_definition")
+        return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
 
-    # Use the first definition as the correct answer
-    correct_definition = definitions[0].get('definition', 'No definition available')
+    # Generate meaning and distractors using LLM based on transcript context
+    prompt = f"""Given this audio transcript from a video and a target word, determine the word's meaning based on how it's used in the transcript, then generate 3 plausible but incorrect alternatives.
 
-    # Generate distractors using LLM (3 incorrect but plausible definitions)
-    prompt = f"""Generate 3 plausible but INCORRECT definitions for the word: "{word}"
+Audio transcript: "{audio_transcript}"
 
-The correct definition is: "{correct_definition}"
+Target word: "{word}"
 
-Requirements for distractors:
-- Must be semantically related or describe similar concepts
-- Should be plausible enough to confuse learners
-- Similar length and complexity to the correct definition
-- Use simple, common vocabulary
+Task:
+1. Infer the meaning of "{word}" based on how it's used in the transcript
+2. Generate 3 plausible but INCORRECT definitions that could confuse learners
+
+Requirements:
+- The correct meaning should be clear, concise, and pedagogically sound
+- Distractors must be semantically related or describe similar concepts
+- All definitions should use simple, common vocabulary
+- Similar length and complexity across all options
 - Avoid negations or "none of the above"
 
-Return ONLY a JSON array of 3 strings (the distractor definitions), nothing else.
-
-Example format:
-["distractor 1 text", "distractor 2 text", "distractor 3 text"]"""
+Return ONLY a JSON object with this structure:
+{{
+  "correct_meaning": "the correct definition inferred from transcript context",
+  "distractors": ["distractor 1 text", "distractor 2 text", "distractor 3 text"]
+}}"""
 
     try:
-        # Generate distractors with LLM
-        distractors_json = llm_completion(
+        # Generate meaning and distractors with LLM
+        response_json = llm_completion(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a language learning expert. Return only valid JSON arrays without markdown formatting."
+                    "content": "You are a language learning expert. Analyze transcripts to infer word meanings. Return only valid JSON without markdown formatting."
                 },
                 {
                     "role": "user",
@@ -193,21 +198,27 @@ Example format:
             response_format={"type": "json_object"}
         )
 
-        # Parse the response (may be wrapped in JSON object)
-        parsed = json.loads(distractors_json.strip())
-        if isinstance(parsed, dict) and 'distractors' in parsed:
-            distractors = parsed['distractors']
-        elif isinstance(parsed, list):
-            distractors = parsed
-        else:
-            raise ValueError("Unexpected LLM response format")
+        # Parse the response
+        parsed = json.loads(response_json.strip())
+
+        if not isinstance(parsed, dict) or 'correct_meaning' not in parsed or 'distractors' not in parsed:
+            raise ValueError("LLM response missing required fields")
+
+        correct_meaning = parsed['correct_meaning']
+        distractors = parsed['distractors']
 
         if not isinstance(distractors, list) or len(distractors) != 3:
             raise ValueError("LLM did not return exactly 3 distractors")
 
     except Exception as e:
-        logger.error(f"Error generating distractors for video question: {e}, using fallback")
-        # Fallback distractors
+        logger.error(f"Error generating video question with LLM: {e}, using fallback")
+        # Fallback to basic definition-based approach
+        definitions = definition.get('definitions', [])
+        if definitions:
+            correct_meaning = definitions[0].get('definition', 'No definition available')
+        else:
+            correct_meaning = f"Meaning related to '{word}'"
+
         distractors = [
             "a different meaning (distractor 1)",
             "an alternative definition (distractor 2)",
@@ -219,11 +230,11 @@ Example format:
         'question_type': 'video_mc',
         'word': word,
         'video_id': video_id,
-        'transcript': transcript,  # Include transcript (may be None if not available)
-        'question_text': f"What does '{word}' mean?",  # Consistent with mc_definition format
+        'audio_transcript': audio_transcript,  # Use audio_transcript field
+        'question_text': f"What does '{word}' mean?",
         'show_word_before_video': False,  # Hide word initially, reveal after answer
         'options': [
-            {'id': 'A', 'text': correct_definition, 'is_correct': True},
+            {'id': 'A', 'text': correct_meaning, 'is_correct': True},
             {'id': 'B', 'text': distractors[0], 'is_correct': False},
             {'id': 'C', 'text': distractors[1], 'is_correct': False},
             {'id': 'D', 'text': distractors[2], 'is_correct': False}
@@ -231,7 +242,7 @@ Example format:
         'correct_answer': 'A'
     }
 
-    logger.info(f"Generated video_mc question for word '{word}' with video_id={video_id}, has_transcript={transcript is not None}")
+    logger.info(f"Generated video_mc question for word '{word}' with video_id={video_id}, has_audio_transcript={audio_transcript is not None}")
 
     return question_data
 

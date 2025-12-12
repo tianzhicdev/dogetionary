@@ -76,19 +76,14 @@ struct VideoQuestionView: View {
                 }
             }
 
-            // Transcript display (if available)
-            if let transcript = question.transcript, !transcript.isEmpty {
+            // Audio transcript display (if available)
+            if let audio_transcript = question.audio_transcript, !audio_transcript.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Transcript:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
 
-                    HighlightedTranscriptText(transcript: transcript, word: question.word)
+                    HighlightedTranscriptText(transcript: audio_transcript, word: question.word)
                         .font(.body)
-                        .foregroundColor(.primary)
+                        .foregroundColor(AppTheme.bodyText)
                         .padding(12)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
                 }
                 .padding(.horizontal)
             }
@@ -100,6 +95,7 @@ struct VideoQuestionView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
                 .padding(.top, 8)
+                .foregroundStyle(AppTheme.bodyText)
 
             // Multiple choice options
             VStack(spacing: 12) {
@@ -108,39 +104,32 @@ struct VideoQuestionView: View {
                         handleAnswer(option.id)
                     }) {
                         HStack {
-                            // Option label (A, B, C, D)
+                            // Option ID (A, B, C, D) matching MultipleChoiceQuestionView
                             Text(option.id)
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .fontWeight(.bold)
+                                .foregroundColor(AppTheme.selectableTint)
                                 .frame(width: 32, height: 32)
-                                .background(optionColor(for: option.id))
-                                .clipShape(Circle())
 
                             // Option text
                             Text(option.text)
                                 .font(.body)
-                                .foregroundColor(.primary)
+                                .fontWeight(.medium)
+                                .foregroundColor(AppTheme.smallTitleText)
                                 .multilineTextAlignment(.leading)
-                                .lineLimit(nil)
-
-                            Spacer()
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
                             // Selection indicator
                             if selectedAnswer == option.id {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.selectableTint)
+                                    .font(.title3)
+                                    .shadow(color: AppTheme.black.opacity(0.6), radius: 2, y: 1)
                             }
                         }
                         .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(selectedAnswer == option.id ? Color.green.opacity(0.1) : Color(.systemGray6))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(selectedAnswer == option.id ? Color.green : Color.clear, lineWidth: 2)
-                        )
                     }
+                    .buttonStyle(PlainButtonStyle())
                     .disabled(selectedAnswer != nil)  // Disable after selection
                 }
             }
@@ -160,20 +149,6 @@ struct VideoQuestionView: View {
     }
 
     // MARK: - Helper Methods
-
-    private func optionColor(for optionId: String) -> Color {
-        if selectedAnswer == optionId {
-            return .green
-        }
-
-        switch optionId {
-        case "A": return .blue
-        case "B": return .purple
-        case "C": return .orange
-        case "D": return .pink
-        default: return .gray
-        }
-    }
 
     private func handleAnswer(_ answerId: String) {
         selectedAnswer = answerId
@@ -254,8 +229,7 @@ struct HighlightedTranscriptText: View {
                 let endIndex = attributedString.index(attributedString.startIndex, offsetByCharacters: lowercaseTranscript.distance(from: lowercaseTranscript.startIndex, to: range.upperBound))
 
                 let attributedRange = startIndex..<endIndex
-                attributedString[attributedRange].foregroundColor = .white
-                attributedString[attributedRange].backgroundColor = .blue
+                attributedString[attributedRange].foregroundColor = AppTheme.selectableTint
                 attributedString[attributedRange].font = .body.weight(.bold)
             }
 
@@ -271,30 +245,34 @@ struct HighlightedTranscriptText: View {
 
 struct VideoQuestionView_Previews: PreviewProvider {
     static var previews: some View {
-        VideoQuestionView(
-            question: ReviewQuestion(
-                question_type: "video_mc",
-                word: "abdominal",
-                question_text: "What does 'abdominal' mean?",
-                options: [
-                    QuestionOption(id: "A", text: "relating to the abdomen"),
-                    QuestionOption(id: "B", text: "relating to the chest"),
-                    QuestionOption(id: "C", text: "relating to the head"),
-                    QuestionOption(id: "D", text: "relating to the arms")
-                ],
-                correct_answer: "A",
-                sentence: nil,
-                sentence_translation: nil,
-                show_definition: nil,
-                audio_url: nil,
-                evaluation_threshold: nil,
-                video_id: 12,
-                show_word_before_video: false,
-                transcript: "This is a sample transcript that mentions the word abdominal in context."
-            ),
-            onAnswer: { answer in
-                print("Selected: \(answer)")
-            }
-        )
+        ZStack {
+            AppTheme.verticalGradient2.ignoresSafeArea()
+
+            VideoQuestionView(
+                question: ReviewQuestion(
+                    question_type: "video_mc",
+                    word: "diagnosis",
+                    question_text: "What does 'diagnosis' mean?",
+                    options: [
+                        QuestionOption(id: "A", text: "the identification of a disease or condition through examination"),
+                        QuestionOption(id: "B", text: "the treatment plan for a medical condition"),
+                        QuestionOption(id: "C", text: "the prevention of illness through vaccination"),
+                        QuestionOption(id: "D", text: "the recovery process after surgery")
+                    ],
+                    correct_answer: "A",
+                    sentence: nil,
+                    sentence_translation: nil,
+                    show_definition: nil,
+                    audio_url: nil,
+                    evaluation_threshold: nil,
+                    video_id: 1,
+                    show_word_before_video: false,
+                    audio_transcript: "After reviewing the patient's symptoms and test results, the doctor was able to make an accurate diagnosis of the condition. Early diagnosis is crucial for effective treatment and better outcomes."
+                ),
+                onAnswer: { answer in
+                    print("Selected: \(answer)")
+                }
+            )
+        }
     }
 }
