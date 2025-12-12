@@ -1,10 +1,12 @@
 # OpenAI Model Configuration
 # Text completion models
-# COMPLETION_MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"  # Fast, cost-effective model for definitions, questions, user profiles
-# COMPLETION_MODEL_NAME_ADVANCED = "meta-llama/llama-4-scout-17b-16e-instruct"  # More capable model for complex tasks (currently unused)
 
-COMPLETION_MODEL_NAME = "gpt-5-nano"  # Fast, cost-effective model for definitions, questions, user profiles
-COMPLETION_MODEL_NAME_ADVANCED = "gpt-5-nano"  # More capable model for complex tasks (currently unused)
+# Word search (user-facing, speed critical) - uses Groq for instant responses
+COMPLETION_MODEL_WORD_SEARCH = "llama-3.3-70b-versatile"  # Groq: Ultra-fast word definition lookup (200-500ms)
+
+# All other operations (async/cached, quality critical) - uses OpenAI GPT-5
+COMPLETION_MODEL_NAME = "gpt-5-nano"  # OpenAI: High-quality for questions, profiles, feedback
+COMPLETION_MODEL_NAME_ADVANCED = "gpt-5-nano"  # OpenAI: Advanced tasks (currently unused)
 
 
 # Fallback mappings: Groq model -> OpenAI model (when Groq is over capacity)

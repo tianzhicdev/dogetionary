@@ -11,7 +11,7 @@ from typing import Optional, Dict
 from datetime import datetime
 from utils.database import get_db_connection
 from utils.llm import llm_completion
-from config.config import COMPLETION_MODEL_NAME
+from config.config import COMPLETION_MODEL_WORD_SEARCH
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +243,8 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
         # Use V4 prompt
         prompt = build_v4_definition_prompt(word, learning_lang, native_lang)
 
-        # Call OpenAI API with V4 schema using utility function
+        # Call LLM API with V4 schema using utility function
+        # Uses Groq (llama-4-scout) for fast word search responses
         definition_content = llm_completion(
             messages=[
                 {
@@ -255,7 +256,7 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
                     "content": prompt
                 }
             ],
-            model_name=COMPLETION_MODEL_NAME,
+            model_name=COMPLETION_MODEL_WORD_SEARCH,
             response_format={
                 "type": "json_schema",
                 "json_schema": {
