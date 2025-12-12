@@ -303,13 +303,44 @@ remove tianz;
 move to server;
 use a new domain;
 
--- done --
-
 1. font too small;
 2. swipe difficult
 3. graph theme not done
 4. system color affects wheel text color
 5. badge should not include due soon; 
+
+-- done --
+
+
+1. videos multi select theme: it should be almost identical to other multi secletion themes; 
+
+it should look like
+video
+transcript; (highlight the word)
+what is the meaning of "word"? 
+A
+B
+C
+D
+
+UI 
+
+
+2.Pipeline: 
+some of the videos do not actually contain the word; lets do a clean up, remove word_to_video records where the transcript does not actually contain the word;
+
+3. prepopulate all the test words
+4. more test prep categories
+
+
+3. cloudflare cache;
+4. more video 
+
+
+
+
+
+-- 
 6. names
 
 
