@@ -11,6 +11,9 @@ load_dotenv('.env.secrets')
 
 app = Flask(__name__)
 
+# Allow large file uploads (20MB for video uploads)
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
+
 # Import and setup logging middleware
 from middleware.logging import setup_logging, log_request_info, log_response_info
 from middleware.api_usage_tracker import track_request_start as track_api_usage_start, track_request_end as track_api_usage_end

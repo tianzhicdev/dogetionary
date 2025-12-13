@@ -19,6 +19,9 @@ def create_app():
     """Create and configure the Flask application"""
     app = Flask(__name__)
 
+    # Allow large file uploads (20MB for video uploads)
+    app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
+
     # Setup logging
     setup_logging(app)
     app.logger.info("=== DOGETIONARY API INITIALIZED ===")
