@@ -9,4 +9,5 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["python", "app_refactored.py"]
+# Use the consolidated app.py entry point
+CMD ["python", "app.py"]

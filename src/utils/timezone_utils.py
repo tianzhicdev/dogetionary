@@ -7,7 +7,7 @@ All date/time calculations MUST use these utilities to ensure user timezone is r
 from datetime import date, datetime
 from typing import Optional
 import pytz
-from src.db import get_db_connection
+from utils.database import get_db_connection
 
 
 def get_user_timezone(user_id: str) -> str:
