@@ -15,6 +15,7 @@ from handlers.words import get_saved_words, get_word_definition_v4, get_word_det
 from handlers.videos import get_video
 from handlers.admin_videos import batch_upload_videos
 from handlers.admin_questions import batch_generate_questions
+from handlers.admin_questions_smart import smart_batch_generate_questions
 from handlers.test_vocabulary import (
     get_test_vocabulary_count, update_test_settings, get_test_settings,
     add_daily_test_words, get_test_vocabulary_stats, batch_populate_test_vocabulary
@@ -86,6 +87,7 @@ v3_api.route('/health', methods=['GET'])(health_check)
 v3_api.route('/usage', methods=['GET'])(get_usage_dashboard)
 v3_api.route('/admin/videos/batch-upload', methods=['POST'])(batch_upload_videos)
 v3_api.route('/admin/questions/batch-generate', methods=['POST'])(batch_generate_questions)
+v3_api.route('/admin/questions/smart-batch-generate', methods=['POST'])(smart_batch_generate_questions)
 
 # Analytics Tracking (V3)
 v3_api.route('/analytics/track', methods=['POST'])(track_user_action)
