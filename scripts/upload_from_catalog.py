@@ -123,17 +123,17 @@ class CatalogUploader:
             logger.warning(f"  Video folder not found: {video_name}")
             return None
 
-        # Load MP3 (required)
-        mp3_path = video_folder / f"{video_name}.mp3"
-        if not mp3_path.exists():
-            logger.warning(f"  MP3 not found: {video_name}")
+        # Load MP4 (required)
+        mp4_path = video_folder / f"{video_name}.mp4"
+        if not mp4_path.exists():
+            logger.warning(f"  MP4 not found: {video_name}")
             return None
 
         try:
-            with open(mp3_path, 'rb') as f:
-                mp3_bytes = f.read()
+            with open(mp4_path, 'rb') as f:
+                mp4_bytes = f.read()
         except Exception as e:
-            logger.error(f"  Failed to read MP3: {e}")
+            logger.error(f"  Failed to read MP4: {e}")
             return None
 
         # Load v3.json (required for quality scores)
@@ -170,7 +170,7 @@ class CatalogUploader:
                 pass
 
         return {
-            'mp3_bytes': mp3_bytes,
+            'mp4_bytes': mp4_bytes,
             'v3_data': v3_data,
             'v2_data': v2_data,
             'original_data': original_data
@@ -182,10 +182,10 @@ class CatalogUploader:
         v3_data = video_data['v3_data']
         v2_data = video_data['v2_data']
         original_data = video_data['original_data']
-        mp3_bytes = video_data['mp3_bytes']
+        mp4_bytes = video_data['mp4_bytes']
 
-        # Base64 encode MP3
-        mp3_base64 = base64.b64encode(mp3_bytes).decode('utf-8')
+        # Base64 encode MP4
+        mp4_base64 = base64.b64encode(mp4_bytes).decode('utf-8')
 
         # Extract metadata
         assessment = v3_data.get('llm_assessment', {})
@@ -232,9 +232,9 @@ class CatalogUploader:
             'videos': [{
                 'slug': video_name,
                 'name': video_name,
-                'format': 'mp3',
-                'video_data_base64': mp3_base64,
-                'size_bytes': len(mp3_bytes),
+                'format': 'mp4',
+                'video_data_base64': mp4_base64,
+                'size_bytes': len(mp4_bytes),
                 'transcript': original_data.get('transcript', '') if original_data else '',
                 'audio_transcript': catalog_row['audio_transcript'],
                 'audio_transcript_verified': True,
@@ -259,7 +259,7 @@ class CatalogUploader:
         # Build payload
         payload = self.build_upload_payload(catalog_row, video_data)
 
-        size_mb = len(video_data['mp3_bytes']) / (1024 * 1024)
+        size_mb = len(video_data['mp4_bytes']) / (1024 * 1024)
         word_count = len(payload['videos'][0]['word_mappings'])
 
         if self.dry_run:
@@ -267,7 +267,7 @@ class CatalogUploader:
             logger.info(f"    Educational: {catalog_row['educational_score']:.2f}, "
                        f"Context: {catalog_row['context_score']:.2f}")
             logger.info(f"    Words: {word_count} ({', '.join(catalog_row['linked_words'][:5])})")
-            logger.info(f"    MP3 size: {size_mb:.2f} MB")
+            logger.info(f"    MP4 size: {size_mb:.2f} MB")
             return {'dry_run': True, 'video_name': video_name, 'word_count': word_count}
 
         # Upload to backend
