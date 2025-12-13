@@ -18,6 +18,9 @@ class VideoService {
     private var downloadTasks: [Int: URLSessionDownloadTask] = [:]
     private let fileManager = FileManager.default
 
+    // Serial queue for sequential video downloads
+    private let serialDownloadQueue = DispatchQueue(label: "com.dogetionary.video.download", qos: .utility)
+
     private init() {
         self.baseURL = Configuration.effectiveBaseURL
 
@@ -49,33 +52,103 @@ class VideoService {
         return downloadVideo(videoId: videoId)
     }
 
-    /// Preload multiple videos in background
+    /// Preload multiple videos in background (sequential downloads, no locks needed)
     func preloadVideos(videoIds: [Int]) {
-        print("VideoService: Preloading \(videoIds.count) videos")
+        guard !videoIds.isEmpty else { return }
 
-        for videoId in videoIds {
-            // Skip if already cached
-            if getCachedVideoURL(videoId: videoId) != nil {
-                continue
-            }
+        print("VideoService: Queuing \(videoIds.count) videos for sequential download")
 
-            // Skip if already downloading
-            if downloadTasks[videoId] != nil {
-                continue
-            }
+        // Use serial queue to download videos one by one
+        serialDownloadQueue.async { [weak self] in
+            guard let self = self else { return }
 
-            // Start background download
-            _ = downloadVideo(videoId: videoId)
-                .sink(
-                    receiveCompletion: { completion in
-                        if case .failure(let error) = completion {
-                            print("VideoService: Preload failed for video \(videoId): \(error)")
+            for videoId in videoIds {
+                // Skip if already cached (check on background thread)
+                if self.getCachedVideoURL(videoId: videoId) != nil {
+                    print("VideoService: Skipping video \(videoId) - already cached")
+                    continue
+                }
+
+                print("VideoService: Downloading video \(videoId) sequentially...")
+
+                // Synchronous download using semaphore
+                let semaphore = DispatchSemaphore(value: 0)
+                var downloadError: Error?
+
+                _ = self.downloadVideo(videoId: videoId)
+                    .sink(
+                        receiveCompletion: { completion in
+                            if case .failure(let error) = completion {
+                                downloadError = error
+                                print("VideoService: Failed to download video \(videoId): \(error.localizedDescription)")
+                            }
+                            semaphore.signal()
+                        },
+                        receiveValue: { url in
+                            print("VideoService: ✓ Downloaded video \(videoId) -> \(url.lastPathComponent)")
                         }
-                    },
-                    receiveValue: { url in
-                        print("VideoService: Preloaded video \(videoId) -> \(url.lastPathComponent)")
-                    }
-                )
+                    )
+
+                // Wait for this download to complete before moving to next
+                semaphore.wait()
+
+                // Log if there was an error but continue to next video
+                if let error = downloadError {
+                    print("VideoService: Continuing to next video after error: \(error.localizedDescription)")
+                }
+            }
+
+            print("VideoService: Finished sequential download batch")
+        }
+    }
+
+    /// Clear all cached videos
+    func clearCache() -> Result<Int, Error> {
+        print("VideoService: Clearing video cache at \(cacheDirectory.path)")
+
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey])
+            let videoFiles = files.filter { $0.pathExtension == "mp4" }
+
+            var deletedCount = 0
+            var totalSize: Int64 = 0
+
+            for file in videoFiles {
+                if let attributes = try? fileManager.attributesOfItem(atPath: file.path),
+                   let fileSize = attributes[.size] as? Int64 {
+                    totalSize += fileSize
+                }
+
+                try fileManager.removeItem(at: file)
+                deletedCount += 1
+            }
+
+            print("✓ VideoService: Cleared \(deletedCount) videos (\(totalSize / 1024 / 1024) MB)")
+            return .success(deletedCount)
+
+        } catch {
+            print("❌ VideoService: Failed to clear cache: \(error.localizedDescription)")
+            return .failure(error)
+        }
+    }
+
+    /// Get current cache size and file count
+    func getCacheInfo() -> (fileCount: Int, sizeBytes: Int64) {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey])
+            let videoFiles = files.filter { $0.pathExtension == "mp4" }
+
+            var totalSize: Int64 = 0
+            for file in videoFiles {
+                if let attributes = try? fileManager.attributesOfItem(atPath: file.path),
+                   let fileSize = attributes[.size] as? Int64 {
+                    totalSize += fileSize
+                }
+            }
+
+            return (videoFiles.count, totalSize)
+        } catch {
+            return (0, 0)
         }
     }
 
@@ -137,7 +210,9 @@ class VideoService {
 
         // Build URL
         let videoURL = URL(string: "\(baseURL)/v3/videos/\(videoId)")!
-        print("VideoService: Fetching from \(videoURL)")
+        print("📥 VideoService: Starting download for video \(videoId)")
+        print("   URL: \(videoURL)")
+        print("   Base URL: \(baseURL)")
 
         // Create download task
         let task = URLSession.shared.downloadTask(with: videoURL) { [weak self] tempURL, response, error in
@@ -148,23 +223,41 @@ class VideoService {
 
             // Handle errors
             if let error = error {
+                print("❌ VideoService: Network error for video \(videoId)")
+                print("   Error: \(error.localizedDescription)")
+                print("   Domain: \((error as NSError).domain)")
+                print("   Code: \((error as NSError).code)")
                 subject.send(completion: .failure(error))
                 return
             }
 
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ VideoService: Invalid response for video \(videoId)")
                 subject.send(completion: .failure(NSError(domain: "VideoService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])))
                 return
             }
 
+            print("📡 VideoService: Got HTTP response for video \(videoId)")
+            print("   Status code: \(httpResponse.statusCode)")
+            print("   Headers: \(httpResponse.allHeaderFields)")
+
             guard httpResponse.statusCode == 200 else {
+                print("❌ VideoService: Bad status code \(httpResponse.statusCode) for video \(videoId)")
                 subject.send(completion: .failure(NSError(domain: "VideoService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode)"])))
                 return
             }
 
             guard let tempURL = tempURL else {
+                print("❌ VideoService: No temp file for video \(videoId)")
                 subject.send(completion: .failure(NSError(domain: "VideoService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No temp file"])))
                 return
+            }
+
+            // Check temp file
+            if let tempAttributes = try? FileManager.default.attributesOfItem(atPath: tempURL.path),
+               let tempSize = tempAttributes[.size] as? Int64 {
+                print("✓ VideoService: Downloaded to temp file - \(tempSize) bytes")
+                print("   Temp path: \(tempURL.path)")
             }
 
             // Move to cache directory
@@ -173,13 +266,21 @@ class VideoService {
             do {
                 // Remove old file if exists
                 if self.fileManager.fileExists(atPath: cacheURL.path) {
+                    print("   Removing old cached file at \(cacheURL.path)")
                     try self.fileManager.removeItem(at: cacheURL)
                 }
 
                 // Move temp file to cache
                 try self.fileManager.moveItem(at: tempURL, to: cacheURL)
 
-                print("VideoService: Cached video \(videoId) at \(cacheURL.lastPathComponent)")
+                // Verify final file
+                if let cacheAttributes = try? self.fileManager.attributesOfItem(atPath: cacheURL.path),
+                   let cacheSize = cacheAttributes[.size] as? Int64 {
+                    print("✓ VideoService: Successfully cached video \(videoId) - \(cacheSize) bytes")
+                    print("   Cache path: \(cacheURL.path)")
+                } else {
+                    print("⚠️ VideoService: Cached but can't read attributes for video \(videoId)")
+                }
 
                 // Check cache size and cleanup if needed
                 self.enforceMaxCacheSize()
@@ -188,6 +289,8 @@ class VideoService {
                 subject.send(completion: .finished)
 
             } catch {
+                print("❌ VideoService: Failed to cache video \(videoId)")
+                print("   Error: \(error.localizedDescription)")
                 subject.send(completion: .failure(error))
             }
         }

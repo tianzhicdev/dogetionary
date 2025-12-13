@@ -17,7 +17,6 @@ struct VideoQuestionView: View {
     @State private var isLoading = true
     @State private var loadError: String?
     @State private var showWord = false
-    @State private var selectedAnswer: String?
     @State private var player: AVPlayer?
     @State private var cancellables = Set<AnyCancellable>()
 
@@ -98,41 +97,19 @@ struct VideoQuestionView: View {
                 .foregroundStyle(AppTheme.bodyText)
 
             // Multiple choice options
-            VStack(spacing: 12) {
-                ForEach(question.options ?? [], id: \.id) { option in
-                    Button(action: {
-                        handleAnswer(option.id)
-                    }) {
-                        HStack {
-                            // Option ID (A, B, C, D) matching MultipleChoiceQuestionView
-                            Text(option.id)
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppTheme.selectableTint)
-                                .frame(width: 32, height: 32)
-
-                            // Option text
-                            Text(option.text)
-                                .font(.body)
-                                .fontWeight(.medium)
-                                .foregroundColor(AppTheme.smallTitleText)
-                                .multilineTextAlignment(.leading)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            // Selection indicator
-                            if selectedAnswer == option.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppTheme.selectableTint)
-                                    .font(.title3)
-                                    .shadow(color: AppTheme.black.opacity(0.6), radius: 2, y: 1)
-                            }
-                        }
-                        .padding()
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .disabled(selectedAnswer != nil)  // Disable after selection
-                }
-            }
+            MultipleChoiceOptionsView(
+                options: question.options ?? [],
+                correctAnswer: question.correct_answer,
+                feedbackDelay: 0.5,
+                optionButtonStyle: .idBadgeAndText,
+                onImmediateFeedback: { answerId in
+                    // Show word after answering
+                    showWord = true
+                    // Pause video after selection
+                    player?.pause()
+                },
+                onAnswer: onAnswer
+            )
             .padding(.horizontal)
 
             Spacer()
@@ -150,19 +127,6 @@ struct VideoQuestionView: View {
 
     // MARK: - Helper Methods
 
-    private func handleAnswer(_ answerId: String) {
-        selectedAnswer = answerId
-        showWord = true  // Reveal word after answering
-
-        // Pause video after selection
-        player?.pause()
-
-        // Delay to show selection, then submit answer
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            onAnswer(answerId)
-        }
-    }
-
     private func loadVideo() {
         guard let videoId = question.video_id else {
             loadError = "No video ID provided"
@@ -170,6 +134,7 @@ struct VideoQuestionView: View {
             return
         }
 
+        // Fetch video (will use cache if available, or wait for sequential download)
         VideoService.shared.fetchVideo(videoId: videoId)
             .receive(on: DispatchQueue.main)
             .sink(
@@ -177,14 +142,71 @@ struct VideoQuestionView: View {
                     if case .failure(let error) = completion {
                         loadError = error.localizedDescription
                         isLoading = false
-                        print("VideoQuestionView: Error loading video \(videoId): \(error)")
+                        print("❌ VideoQuestionView: Error loading video \(videoId): \(error)")
+                        print("   Error domain: \((error as NSError).domain)")
+                        print("   Error code: \((error as NSError).code)")
+                        print("   Error userInfo: \((error as NSError).userInfo)")
                     }
                 },
                 receiveValue: { [self] url in
                     videoURL = url
-                    player = AVPlayer(url: url)
+
+                    // Verify file exists and check size
+                    let fileManager = FileManager.default
+                    if fileManager.fileExists(atPath: url.path) {
+                        if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+                           let fileSize = attributes[.size] as? Int64 {
+                            print("✓ VideoQuestionView: Video file exists - \(fileSize) bytes at \(url.path)")
+                        } else {
+                            print("⚠️ VideoQuestionView: Video file exists but can't read attributes at \(url.path)")
+                        }
+                    } else {
+                        print("❌ VideoQuestionView: Video file does NOT exist at \(url.path)")
+                    }
+
+                    // Create player
+                    let newPlayer = AVPlayer(url: url)
+                    player = newPlayer
                     isLoading = false
-                    print("VideoQuestionView: Loaded video \(videoId) from \(url.lastPathComponent)")
+
+                    print("✓ VideoQuestionView: Created AVPlayer for video \(videoId)")
+                    print("   File: \(url.lastPathComponent)")
+                    print("   Full path: \(url.path)")
+                    print("   Player status: \(newPlayer.status.rawValue) (0=unknown, 1=ready, 2=failed)")
+
+                    // Observe player status changes
+                    newPlayer.publisher(for: \.status)
+                        .sink { status in
+                            print("   Player status changed to: \(status.rawValue)")
+                            if status == .failed {
+                                if let error = newPlayer.error {
+                                    print("   ❌ AVPlayer failed with error: \(error)")
+                                    print("      Error domain: \((error as NSError).domain)")
+                                    print("      Error code: \((error as NSError).code)")
+                                    print("      Error description: \(error.localizedDescription)")
+                                }
+                            } else if status == .readyToPlay {
+                                print("   ✓ AVPlayer ready to play")
+                            }
+                        }
+                        .store(in: &cancellables)
+
+                    // Observe current item status
+                    if let currentItem = newPlayer.currentItem {
+                        currentItem.publisher(for: \.status)
+                            .sink { itemStatus in
+                                print("   Player item status changed to: \(itemStatus.rawValue)")
+                                if itemStatus == .failed {
+                                    if let error = currentItem.error {
+                                        print("   ❌ AVPlayerItem failed with error: \(error)")
+                                        print("      Error domain: \((error as NSError).domain)")
+                                        print("      Error code: \((error as NSError).code)")
+                                        print("      Error description: \(error.localizedDescription)")
+                                    }
+                                }
+                            }
+                            .store(in: &cancellables)
+                    }
                 }
             )
             .store(in: &cancellables)

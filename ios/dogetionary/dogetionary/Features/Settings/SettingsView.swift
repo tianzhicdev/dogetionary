@@ -22,6 +22,9 @@ struct SettingsView: View {
     @State private var feedbackAlertMessage = ""
     @ObservedObject private var userManager = UserManager.shared
     @State private var developerModeEnabled = DebugConfig.isDeveloperModeEnabled
+    @State private var videoCacheInfo: String = ""
+    @State private var showCacheClearAlert = false
+    @State private var cacheClearMessage = ""
 
     var body: some View {
         ZStack {
@@ -34,6 +37,7 @@ struct SettingsView: View {
                 profileSection
                 languagePreferencesSection
                 notificationsSection
+                videoCacheSection
                 feedbackSection
                 debugAPIConfigSection
                 developerOptionsSection
@@ -57,6 +61,14 @@ struct SettingsView: View {
             }
         } message: {
             Text(feedbackAlertMessage.uppercased())
+        }
+        .alert("VIDEO CACHE", isPresented: $showCacheClearAlert) {
+            Button("OK") { }
+        } message: {
+            Text(cacheClearMessage.uppercased())
+        }
+        .onAppear {
+            updateVideoCacheInfo()
         }
     }
 
@@ -422,6 +434,42 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
+    private var videoCacheSection: some View {
+        Section(header:
+            HStack {
+                Text("VIDEO CACHE")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                if !videoCacheInfo.isEmpty {
+                    HStack {
+                        Image(systemName: "video.fill")
+                            .foregroundColor(AppTheme.selectableTint)
+                        Text(videoCacheInfo)
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.smallTitleText)
+                    }
+                }
+
+                Button(action: {
+                    clearVideoCache()
+                }) {
+                    Label("CLEAR ALL VIDEOS", systemImage: "trash.fill")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(8)
+                        .background(AppTheme.errorColor)
+                        .cornerRadius(10)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }.listRowBackground(Color.clear)
+    }
+
+    @ViewBuilder
     private var developerOptionsSection: some View {
         Section(header:
             HStack {
@@ -439,7 +487,7 @@ struct SettingsView: View {
                         "enabled": newValue
                     ])
                 }
-            
+
         }.listRowBackground(Color.clear)
     }
 
@@ -483,12 +531,12 @@ struct SettingsView: View {
     private func testConnection() {
         isTestingConnection = true
         connectionTestResult = ""
-        
+
         // Test with a simple word search
         DictionaryService.shared.searchWord("test") { result in
             DispatchQueue.main.async {
                 isTestingConnection = false
-                
+
                 switch result {
                 case .success(let definitions):
                     if !definitions.isEmpty {
@@ -501,6 +549,40 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func updateVideoCacheInfo() {
+        let (fileCount, sizeBytes) = VideoService.shared.getCacheInfo()
+
+        if fileCount == 0 {
+            videoCacheInfo = "NO CACHED VIDEOS"
+        } else {
+            let sizeMB = Double(sizeBytes) / 1024.0 / 1024.0
+            videoCacheInfo = String(format: "%d VIDEO%@ (%.1f MB)", fileCount, fileCount == 1 ? "" : "S", sizeMB)
+        }
+    }
+
+    private func clearVideoCache() {
+        print("SettingsView: clearVideoCache() called")
+        let result = VideoService.shared.clearCache()
+
+        switch result {
+        case .success(let count):
+            print("SettingsView: Successfully cleared \(count) videos")
+            if count == 0 {
+                cacheClearMessage = "Cache was already empty"
+            } else {
+                cacheClearMessage = "Successfully cleared \(count) video\(count == 1 ? "" : "s")"
+            }
+            updateVideoCacheInfo()
+
+        case .failure(let error):
+            print("SettingsView: Failed to clear cache: \(error)")
+            cacheClearMessage = "Failed to clear cache: \(error.localizedDescription)"
+        }
+
+        print("SettingsView: Showing alert with message: \(cacheClearMessage)")
+        showCacheClearAlert = true
     }
 
 }

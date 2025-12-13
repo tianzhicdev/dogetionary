@@ -308,10 +308,6 @@ use a new domain;
 3. graph theme not done
 4. system color affects wheel text color
 5. badge should not include due soon; 
-
--- done --
-
-
 1. videos multi select theme: it should be almost identical to other multi secletion themes; 
 
 it should look like
@@ -326,21 +322,59 @@ D
 UI 
 
 
+3. prepopulate all the test words
+
+
+
+
+
+
+
+
 2.Pipeline: 
 some of the videos do not actually contain the word; lets do a clean up, remove word_to_video records where the transcript does not actually contain the word;
+2. more video - high quality
+
 
 3. prepopulate all the test words
+zh done
+spanish and others next
+
 4. more test prep categories
 
 
 3. cloudflare cache;
-4. more video 
 
 
 
 
 
 -- 
+
+bugfix: 
+user timezone;
+streak calculation;
+
+vocab:
+
+1. word list
+2. more types
+
+
+-- done --
+1. merge multi choice questions
+2. dictionary card for all words
+3. video queue 
+
+UI: 
+4. swipe up
+
+refactoring:
+5. backend code refactor
+
+6.word family problem
+
+
 6. names
 
 
