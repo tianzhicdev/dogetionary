@@ -378,6 +378,7 @@ struct ReviewSessionView: View {
                         }
                         .padding(.horizontal)
                     }
+                    .scrollIndicators(.hidden)
                     .frame(maxHeight: 300)
                 }
             }
@@ -723,6 +724,7 @@ struct DefinitionSheetView: View {
                 }
                 .padding(.top)
             }
+            .scrollIndicators(.hidden)
             .navigationTitle("Word Definition")
             .navigationBarTitleDisplayMode(.inline)
         }
