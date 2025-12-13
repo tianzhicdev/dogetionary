@@ -170,6 +170,7 @@ class QuestionQueueManager: ObservableObject {
     }
 
     private func prefetchVideosFromQueue(_ questions: [BatchReviewQuestion]) {
+        // Extract video IDs in order from the question queue
         let videoIds = questions.compactMap { question -> Int? in
             guard question.question.question_type == "video_mc",
                   let videoId = question.question.video_id else {
@@ -179,7 +180,8 @@ class QuestionQueueManager: ObservableObject {
         }
 
         if !videoIds.isEmpty {
-            logger.info("Prefetching \(videoIds.count) videos in background")
+            logger.info("Prefetching \(videoIds.count) videos sequentially in background")
+            // Videos will download in order - first question's video downloads first
             VideoService.shared.preloadVideos(videoIds: videoIds)
         }
     }

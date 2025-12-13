@@ -27,6 +27,7 @@ from static.privacy import PRIVACY_POLICY
 from static.support import SUPPORT_HTML
 from utils.database import validate_language, get_db_connection, db_fetch_one
 from services.user_service import generate_user_profile, get_user_preferences
+from utils.timezone_utils import get_user_timezone
 
 # Get logger
 import logging
@@ -52,7 +53,11 @@ def get_next_review_word_v2():
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
 
+        # Get user's timezone for correct "today" calculation
+        user_timezone = get_user_timezone(user_id)
+
         # Find word with earliest next review date (due now or overdue)
+        # FIXED: Use user's timezone instead of UTC for "due" check
         word = db_fetch_one("""
             SELECT
                 sw.id,
@@ -88,10 +93,11 @@ def get_next_review_word_v2():
             -- Exclude words reviewed in the past 24 hours
             AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
             -- ONLY include words that are actually DUE (overdue or due now)
-            AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
+            -- FIXED: Use user timezone instead of UTC
+            AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= (NOW() AT TIME ZONE %s)::date
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
             LIMIT 1
-        """, (user_id,))
+        """, (user_id, user_timezone))
 
         if not word:
             return jsonify({

@@ -315,13 +315,13 @@ def get_review_words_batch():
                     WHERE sw.user_id = %s
                       AND (sw.is_known IS NULL OR sw.is_known = FALSE)
                       AND latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours'
-                      AND COALESCE(latest_review.next_review_date, NOW() + INTERVAL '1 day') > NOW()
+                      AND COALESCE(latest_review.next_review_date, (NOW() AT TIME ZONE %s)::date + INTERVAL '1 day') > (NOW() AT TIME ZONE %s)::date
                       {exclude_clause}
                     ORDER BY sw.word ASC
                     LIMIT %s
                 """
 
-                cur.execute(not_due_yet_query, (user_id, *exclude_params, count - len(words_fetched)))
+                cur.execute(not_due_yet_query, (user_id, user_tz, user_tz, *exclude_params, count - len(words_fetched)))
                 rows = cur.fetchall()
 
                 for row in rows:
@@ -377,9 +377,9 @@ def get_review_words_batch():
                 WHERE sw.user_id = %s
                   AND (sw.is_known IS NULL OR sw.is_known = FALSE)
                   AND latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours'
-                  AND COALESCE(latest_review.next_review_date, NOW() + INTERVAL '1 day') > NOW()
+                  AND COALESCE(latest_review.next_review_date, (NOW() AT TIME ZONE %s)::date + INTERVAL '1 day') > (NOW() AT TIME ZONE %s)::date
                   {exclude_clause}
-            """, (user_id, *exclude_params))
+            """, (user_id, user_tz, user_tz, *exclude_params))
             not_due_yet_remaining = cur.fetchone()
             if not_due_yet_remaining:
                 total_available += not_due_yet_remaining['cnt']

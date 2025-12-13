@@ -15,11 +15,6 @@ struct NothingToPracticeView: View {
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(AppTheme.bigTitleText)
-
-                Text("You have no words to practice right now.\nAdd more words or check back later!")
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.bodyText)
-                    .multilineTextAlignment(.center)
             }
         }
         .padding()

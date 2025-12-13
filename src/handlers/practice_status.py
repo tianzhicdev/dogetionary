@@ -75,6 +75,7 @@ def get_practice_status():
             reviewed_today = {row['word'] for row in reviewed_today_row} if reviewed_today_row else set()
 
             # Calculate non_test_practice_count (always, regardless of test settings)
+            # FIXED: Use user timezone instead of UTC for "due" check
             non_test_due_row = db_fetch_all("""
                 SELECT sw.word
                 FROM saved_words sw
@@ -87,8 +88,8 @@ def get_practice_status():
                 ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
                 WHERE sw.user_id = %s
                   AND (sw.is_known IS NULL OR sw.is_known = FALSE)
-                  AND COALESCE(latest_review.next_review_date, NOW()) <= NOW()
-            """, (user_id,))
+                  AND COALESCE(latest_review.next_review_date, (NOW() AT TIME ZONE %s)::date) <= (NOW() AT TIME ZONE %s)::date
+            """, (user_id, user_tz, user_tz))
 
             if non_test_due_row:
                 non_test_due_words = {row['word'] for row in non_test_due_row}
@@ -147,6 +148,7 @@ def get_practice_status():
             logger.debug(f"Could not calculate schedule: {e}")
 
         # Get not-due-yet count (reviewed before, last review > 24h ago, not due yet)
+        # FIXED: Use user timezone for "not due yet" check
         not_due_yet_row = db_fetch_one("""
             SELECT COUNT(*) as cnt
             FROM saved_words sw
@@ -161,8 +163,8 @@ def get_practice_status():
             WHERE sw.user_id = %s
               AND (sw.is_known IS NULL OR sw.is_known = FALSE)
               AND latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours'
-              AND COALESCE(latest_review.next_review_date, NOW() + INTERVAL '1 day') > NOW()
-        """, (user_id,))
+              AND COALESCE(latest_review.next_review_date, (NOW() AT TIME ZONE %s)::date + INTERVAL '1 day') > (NOW() AT TIME ZONE %s)::date
+        """, (user_id, user_tz, user_tz))
         not_due_yet_count = not_due_yet_row['cnt'] if not_due_yet_row else 0
 
         # Get score using utility function
