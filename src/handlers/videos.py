@@ -58,17 +58,25 @@ def get_video(video_id: int):
 
         logger.info(f"Serving video: id={video_id}, format={format_type}, size={len(video['video_data'])} bytes")
 
-        # Return binary data with CDN-friendly cache headers
+        # Return binary data with Cloudflare-optimized cache headers
         return Response(
             video['video_data'],
             mimetype=mime_type,
             headers={
-                # CDN caching: cache for 1 year (videos are immutable)
+                # Browser caching: cache for 1 year (videos are immutable)
                 'Cache-Control': 'public, max-age=31536000, immutable',
+                # Cloudflare-specific: cache everything for 1 year
+                'CDN-Cache-Control': 'public, max-age=31536000, immutable',
+                # Alternative Cloudflare header (redundancy)
+                'Cloudflare-CDN-Cache-Control': 'public, max-age=31536000',
+                # ETag for cache validation
+                'ETag': f'"{video_id}"',
                 # Security headers
                 'X-Content-Type-Options': 'nosniff',
-                # Optional: Add content length
-                'Content-Length': str(len(video['video_data']))
+                # Content length for better caching
+                'Content-Length': str(len(video['video_data'])),
+                # Accept range requests for video seeking
+                'Accept-Ranges': 'bytes'
             }
         )
 
