@@ -25,6 +25,8 @@ struct QuestionCardView: View {
     @State private var showToast = false
     @State private var toastMessage = ""
     @State private var isAtBottom = false  // Track if scrolled to bottom
+    @State private var indicatorOffset: CGFloat = 0  // Independent indicator animation
+    @State private var indicatorOpacity: Double = 1.0  // Indicator fade animation
 
     private let swipeThreshold: CGFloat = 100  // Vertical swipe threshold
 
@@ -95,6 +97,7 @@ struct QuestionCardView: View {
             }
             .padding(.vertical, 20)
         }
+        .scrollIndicators(.hidden)
         .coordinateSpace(name: "scrollView")
         .background(Color.clear)
         .padding(.horizontal, 16)
@@ -121,6 +124,12 @@ struct QuestionCardView: View {
                         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
 
+                        // Animate indicator upward and fade out independently
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            indicatorOffset = -100  // Move up 100pt
+                            indicatorOpacity = 0.0  // Fade out
+                        }
+
                         // Animate card sliding up off screen
                         withAnimation(.easeInOut(duration: 0.3)) {
                             dragOffset = -UIScreen.main.bounds.height
@@ -134,6 +143,8 @@ struct QuestionCardView: View {
                         // Not past threshold, spring back to original position
                         withAnimation(.spring()) {
                             dragOffset = 0
+                            indicatorOffset = 0
+                            indicatorOpacity = 1.0
                         }
                     }
                 }
@@ -157,7 +168,8 @@ struct QuestionCardView: View {
             // Pull-to-advance indicator - show when at bottom
             if isAnswered && isAtBottom {
                 PullToAdvanceIndicator(dragOffset: dragOffset, threshold: swipeThreshold)
-                    // Don't use separate offset - let it move with the card
+                    .offset(y: indicatorOffset)  // Independent upward animation
+                    .opacity(indicatorOpacity)   // Fade out animation
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
