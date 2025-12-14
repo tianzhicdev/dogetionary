@@ -39,32 +39,32 @@ http_requests_in_flight = Gauge(
 llm_calls_total = Counter(
     'llm_calls_total',
     'Total LLM API calls',
-    ['provider', 'model', 'status']  # status: success|error
+    ['provider', 'model', 'use_case', 'status']  # status: success|error
 )
 
 llm_request_duration_seconds = Histogram(
     'llm_request_duration_seconds',
     'LLM request duration in seconds',
-    ['provider', 'model'],
+    ['provider', 'model', 'use_case'],
     buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0)
 )
 
 llm_tokens_total = Counter(
     'llm_tokens_total',
     'Total LLM tokens used',
-    ['provider', 'model', 'type']  # type: prompt|completion
+    ['provider', 'model', 'use_case', 'type']  # type: prompt|completion
 )
 
 llm_cost_usd_total = Counter(
     'llm_cost_usd_total',
     'Estimated LLM cost in USD',
-    ['provider', 'model']
+    ['provider', 'model', 'use_case']
 )
 
 llm_errors_total = Counter(
     'llm_errors_total',
     'Total LLM errors',
-    ['provider', 'model', 'error_type']
+    ['provider', 'model', 'use_case', 'error_type']
 )
 
 # ============================================================================
@@ -164,7 +164,8 @@ def track_llm_call(provider, model):
 
 def estimate_cost(provider, model, usage):
     """Estimate LLM API cost in USD."""
-    # Rough pricing (as of Nov 2025, update as needed)
+    # Pricing as of Dec 2025 (update as needed)
+    # Source: OpenRouter pricing page, OpenAI pricing page, Groq pricing page
     PRICING = {
         'openai': {
             'gpt-4o': {'prompt': 0.000005, 'completion': 0.000015},  # $5/$15 per 1M tokens
@@ -174,6 +175,17 @@ def estimate_cost(provider, model, usage):
         'groq': {
             'llama-3.1-70b-versatile': {'prompt': 0.00000059, 'completion': 0.00000079},
             'llama-3.1-8b-instant': {'prompt': 0.00000005, 'completion': 0.00000008},
+            'llama-3.3-70b-versatile': {'prompt': 0.00000059, 'completion': 0.00000079},
+        },
+        'openrouter': {
+            # DeepSeek V3 - cheapest, fastest
+            'deepseek/deepseek-chat': {'prompt': 0.00000014, 'completion': 0.00000028},  # $0.14/$0.28 per 1M
+            # Qwen 2.5 7B - cheap and fast
+            'qwen/qwen-2.5-7b-instruct': {'prompt': 0.00000018, 'completion': 0.00000036},  # $0.18/$0.36 per 1M
+            # Mistral Small - good quality
+            'mistralai/mistral-small': {'prompt': 0.000001, 'completion': 0.000003},  # $1/$3 per 1M
+            # GPT-4o via OpenRouter (slightly higher than direct)
+            'openai/gpt-4o': {'prompt': 0.0000055, 'completion': 0.0000165},  # $5.50/$16.50 per 1M
         }
     }
 

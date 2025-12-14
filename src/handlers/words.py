@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from typing import Optional, Dict, Any
 import json
-from utils.llm import llm_completion
+from utils.llm import llm_completion_with_fallback
 import openai
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -717,13 +717,14 @@ def get_illustration():
 
         logger.info(f"Generating scene description for word: {word}")
 
-        scene_description = llm_completion(
+        # Uses fallback chain: DeepSeek V3 -> Mistral Small -> GPT-4o
+        scene_description = llm_completion_with_fallback(
             messages=[
                 {"role": "system", "content": "You are a creative director helping create visual scenes for language learning illustrations."},
                 {"role": "user", "content": scene_prompt}
             ],
-            model_name=COMPLETION_MODEL_NAME_ADVANCED,
-            max_completion_tokens=200  # Increased for reasoning models (gpt-5-nano uses reasoning tokens)
+            use_case="scene_description",
+            max_completion_tokens=200  # Increased for reasoning models
         )
 
         if not scene_description:

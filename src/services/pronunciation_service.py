@@ -8,9 +8,9 @@ import logging
 import tempfile
 import os
 from utils.database import get_db_connection
-from utils.llm import llm_completion
+from utils.llm import llm_completion_with_fallback
 from typing import Dict, Any
-from config.config import COMPLETION_MODEL_NAME, WHISPER_MODEL_NAME
+from config.config import WHISPER_MODEL_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,8 @@ Examples:
 
 Respond with valid JSON only."""
 
-            content = llm_completion(
+            # Uses fallback chain: DeepSeek V3 -> Mistral Small -> GPT-4o
+            content = llm_completion_with_fallback(
                 messages=[
                     {
                         "role": "system",
@@ -145,7 +146,7 @@ Respond with valid JSON only."""
                         "content": prompt
                     }
                 ],
-                model_name=COMPLETION_MODEL_NAME,
+                use_case="pronunciation",
                 response_format={"type": "json_object"}
             )
 

@@ -347,6 +347,7 @@ spanish and others next
 
 
 
+swipe button no animation;
 
 
 -- 
@@ -360,37 +361,48 @@ vocab:
 1. word list
 2. more types
 
-
--- done --
 1. merge multi choice questions
-2. dictionary card for all words
 3. video queue 
 
-UI: 
-4. swipe up
-
-refactoring:
-5. backend code refactor
-
-6.word family problem
-
-
-6. names
-
-
-answered, not moving;
-
-1. change back to groq but use chatgpt to prepopulate
-
-
-
-llm quality assurance;
 1. questions: some times all the choices are valid;
 2. no difficult words in the question;
 we need to monitor this prorcess;
 
 
-swipe button no animation;
+answered, not moving;
+
+
+1. change back to groq but use chatgpt to prepopulate
+
+
+
+UI: 
+4. swipe up
+
+movie name;
+
+2. dictionary card for all words
+
+refactoring:
+5. backend code refactor
+
+
+-- done --
+
+
+
+
+6. 
+
+names
+snapshot
+pipeline + human verification;
+debug mode more details;
+
+
+
+
+
 
 
 
@@ -410,9 +422,10 @@ branding
 grafana -- finetune, perhaps expose to the internet
 
 
-1. run the fixer
-2. deploy with backward compatibility
+1. populate words;
+2. background open ai fixer
 3. test a few days
+4. 
 
 ads:
 
@@ -431,6 +444,8 @@ sound?
 
 --- future --- 
 
+
+6. word family problem
 no word specific lang;
 we should only support one type of learning lange and native language 
 
@@ -459,3 +474,44 @@ Complete the Analogy -> multi choice -> multi choice "Happy : Ecstatic :: Sad :
 
 
 
+--- refactoring --
+
+
+  Sprint 1 (Immediate - 40-60 hours)
+
+  1. ✅ Fix test configuration (1 hour)
+    - Change video_mc weight from 0.90 → 0.10
+  2. ✅ Consolidate app entry points (4-8 hours)
+    - Remove app_refactored.py
+    - Document which file is canonical
+  3. ✅ Add error path tests (20-30 hours)
+    - Test invalid inputs for top 10 endpoints
+    - Focus on authentication endpoints first
+  4. ✅ Centralize database URL (1 hour)
+    - Remove duplicate definitions
+
+  Sprint 2-3 (Short Term - 60-80 hours)
+
+  5. 📝 Standardize database access (12-20 hours)
+    - Refactor top 5 handlers to use db_* utilities
+    - Remove direct connection management
+  6. 📝 Standardize error responses (6-10 hours)
+    - Define single error schema
+    - Create helper function
+    - Refactor all endpoints
+  7. 📝 Add input validation (8-12 hours)
+    - Create validation decorators
+    - Apply to user-facing endpoints
+
+  Sprint 4-6 (Medium Term - 80-120 hours)
+
+  8. 📚 Split large handler files (8-16 hours)
+    - words.py → 4 focused modules
+    - schedule.py, test_vocabulary.py
+  9. 📚 Add type hints (12-16 hours)
+    - Services: 80% coverage
+    - Utilities: 100% coverage
+    - Handlers: 50% coverage
+  10. 📚 Improve documentation (8-12 hours)
+    - Docstrings for all public functions
+    - API documentation (Swagger)

@@ -293,6 +293,149 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Use Case"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max Response Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 9,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "fields": ""
+        },
+        "frameIndex": 0,
+        "sortBy": [
+          {
+            "displayName": "Max Response Time",
+            "desc": true
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (use_case, model) (\n  rate(llm_request_duration_seconds_sum{use_case!=\"\"}[5m]) /\n  rate(llm_request_duration_seconds_count{use_case!=\"\"}[5m])\n)",
+          "refId": "A",
+          "legendFormat": "__auto",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "title": "Highest Response Time by Use Case",
+      "type": "table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "use_case": 0,
+              "model": 1,
+              "Value": 2
+            },
+            "renameByName": {
+              "use_case": "Use Case",
+              "model": "Model",
+              "Value": "Max Response Time"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -337,9 +480,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 8
       },
       "id": 5,
@@ -362,12 +505,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (provider, model) (rate(llm_calls_total[5m]))",
-          "legendFormat": "{{provider}}/{{model}}",
+          "expr": "sum by (use_case, model) (rate(llm_calls_total[5m]))",
+          "legendFormat": "{{use_case}}.{{model}}",
           "refId": "A"
         }
       ],
-      "title": "LLM Calls by Provider/Model",
+      "title": "LLM Calls by Use Case & Model",
       "type": "timeseries"
     },
     {
@@ -427,8 +570,8 @@
       "gridPos": {
         "h": 9,
         "w": 12,
-        "x": 12,
-        "y": 8
+        "x": 0,
+        "y": 18
       },
       "id": 6,
       "options": {
@@ -450,8 +593,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.50, sum by (provider, model, le) (rate(llm_request_duration_seconds_bucket[5m])))",
-          "legendFormat": "p50 - {{provider}}/{{model}}",
+          "expr": "histogram_quantile(0.50, sum by (use_case, model, le) (rate(llm_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50 - {{use_case}}.{{model}}",
           "refId": "A"
         },
         {
@@ -459,12 +602,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (provider, model, le) (rate(llm_request_duration_seconds_bucket[5m])))",
-          "legendFormat": "p95 - {{provider}}/{{model}}",
+          "expr": "histogram_quantile(0.95, sum by (use_case, model, le) (rate(llm_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95 - {{use_case}}.{{model}}",
           "refId": "B"
         }
       ],
-      "title": "LLM Latency by Provider (p50, p95)",
+      "title": "LLM Latency by Use Case (p50, p95)",
       "type": "timeseries"
     },
     {
@@ -522,10 +665,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 12,
-        "x": 0,
-        "y": 17
+        "x": 12,
+        "y": 18
       },
       "id": 7,
       "options": {
@@ -547,12 +690,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (provider, model, type) (increase(llm_tokens_total[1h]))",
-          "legendFormat": "{{provider}}/{{model}} - {{type}}",
+          "expr": "sum by (use_case, model, type) (increase(llm_tokens_total[1h]))",
+          "legendFormat": "{{use_case}}.{{model}} - {{type}}",
           "refId": "A"
         }
       ],
-      "title": "Token Usage (Hourly)",
+      "title": "Token Usage by Use Case (Hourly)",
       "type": "timeseries"
     },
     {
@@ -611,9 +754,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 17
+        "w": 24,
+        "x": 0,
+        "y": 27
       },
       "id": 8,
       "options": {
@@ -635,19 +778,19 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (provider, model, error_type) (rate(llm_errors_total[5m]))",
-          "legendFormat": "{{provider}}/{{model}} - {{error_type}}",
+          "expr": "sum by (use_case, model, error_type) (rate(llm_errors_total[5m]))",
+          "legendFormat": "{{use_case}}.{{model}} - {{error_type}}",
           "refId": "A"
         }
       ],
-      "title": "LLM Errors by Type",
+      "title": "LLM Errors by Use Case & Type",
       "type": "timeseries"
     }
   ],
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["llm", "dogetionary", "ai"],
+  "tags": ["llm", "dogetionary", "ai", "openrouter"],
   "templating": {
     "list": []
   },
@@ -657,7 +800,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Dogetionary LLM Metrics",
+  "title": "Dogetionary LLM Metrics - Multi-Model Fallback",
   "uid": "dogetionary-llm",
   "version": 0,
   "weekStart": ""
