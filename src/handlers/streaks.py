@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.database import get_db_connection, db_execute, db_fetch_all, db_fetch_one
 from services.schedule_service import get_user_timezone, get_today_in_timezone
+from middleware.logging import log_error
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def create_streak_date(user_id: str) -> bool:
 
         return True
     except Exception as e:
-        logger.error(f"Error creating streak date for user {user_id}: {str(e)}")
+        log_error(logger, "Error creating streak date", user_id=user_id)
         return False
 
 
@@ -103,7 +104,7 @@ def calculate_streak_days(user_id: str) -> int:
         return streak
 
     except Exception as e:
-        logger.error(f"Error calculating streak days for user {user_id}: {str(e)}")
+        log_error(logger, "Error calculating streak days", user_id=user_id)
         return 0
 
 
@@ -138,5 +139,5 @@ def get_streak_days():
         }), 200
 
     except Exception as e:
-        logger.error(f"Error in get_streak_days: {str(e)}")
+        log_error(logger, "Error in get_streak_days", user_id=request.args.get('user_id'))
         return jsonify({"error": "Internal server error"}), 500

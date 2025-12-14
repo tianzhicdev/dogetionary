@@ -64,7 +64,7 @@ def check_app_version():
             min_ver = version.parse(IOS_MIN_VERSION)
             latest_ver = version.parse(IOS_LATEST_VERSION)
         except Exception as e:
-            logger.error(f"Error parsing version strings: {e}")
+            logger.error(f"Error parsing version strings: {e}", exc_info=True)
             return jsonify({"error": f"Invalid version format: {app_version}"}), 400
 
         # Determine status

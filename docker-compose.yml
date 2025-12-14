@@ -12,6 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./logs/postgres:/var/log/postgresql
     command:
       - "postgres"
       - "-c"
@@ -40,6 +41,16 @@ services:
       - "log_checkpoints=on"
       - "-c"
       - "log_lock_waits=on"
+      - "-c"
+      - "logging_collector=on"
+      - "-c"
+      - "log_directory=/var/log/postgresql"
+      - "-c"
+      - "log_filename=postgresql-%Y-%m-%d_%H%M%S.log"
+      - "-c"
+      - "log_rotation_age=1d"
+      - "-c"
+      - "log_rotation_size=100MB"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dogeuser -d dogetionary"]
       interval: 30s
@@ -57,6 +68,7 @@ services:
     build: ./src
     environment:
       - DATABASE_URL=postgresql://dogeuser:dogepass@postgres:5432/dogetionary
+      - LOG_FILE=/app/logs/app.log
     depends_on:
       postgres:
         condition: service_healthy

@@ -270,7 +270,7 @@ def get_today_schedule():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error getting today's schedule: {e}")
+        logger.error(f"Error getting today's schedule: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -353,7 +353,7 @@ def review_new_word():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error reviewing new word: {e}")
+        logger.error(f"Error reviewing new word: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -573,7 +573,7 @@ def get_schedule_range():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error getting schedule range: {e}")
+        logger.error(f"Error getting schedule range: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -640,7 +640,7 @@ def update_timezone():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error updating timezone: {e}")
+        logger.error(f"Error updating timezone: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -799,7 +799,7 @@ def get_next_review_word_with_scheduled_new_words():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error getting next review word with scheduled new words: {str(e)}")
+        logger.error(f"Error getting next review word with scheduled new words: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
 
 
@@ -931,5 +931,5 @@ def get_test_progress(): # chen vetted
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error getting test progress: {e}")
+        logger.error(f"Error getting test progress: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500

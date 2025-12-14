@@ -104,7 +104,7 @@ class AnalyticsService:
             return True
 
         except Exception as e:
-            logger.error(f"Error tracking action {action}: {str(e)}")
+            logger.error(f"Error tracking action {action}: {str(e, exc_info=True)}")
             return False
 
     def get_daily_action_counts(self, days: int = 7):
@@ -134,7 +134,7 @@ class AnalyticsService:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting daily action counts: {str(e)}")
+            logger.error(f"Error getting daily action counts: {str(e, exc_info=True)}")
             return []
 
     def get_action_analytics(self, days: int = 7):
@@ -166,7 +166,7 @@ class AnalyticsService:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting action analytics: {str(e)}")
+            logger.error(f"Error getting action analytics: {str(e, exc_info=True)}")
             return []
 
     def get_action_summary(self, days: int = 7):
@@ -196,7 +196,7 @@ class AnalyticsService:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting action summary: {str(e)}")
+            logger.error(f"Error getting action summary: {str(e, exc_info=True)}")
             return []
 
     def get_user_actions(self, user_id: str, limit: int = 100):
@@ -229,7 +229,7 @@ class AnalyticsService:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting user actions: {str(e)}")
+            logger.error(f"Error getting user actions: {str(e, exc_info=True)}")
             return []
 
     def get_all_users(self):
@@ -258,7 +258,7 @@ class AnalyticsService:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting users: {str(e)}")
+            logger.error(f"Error getting users: {str(e, exc_info=True)}")
             return []
 
     def get_time_based_analytics(self, days: int = 7):
@@ -310,7 +310,7 @@ class AnalyticsService:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting time-based analytics: {str(e)}")
+            logger.error(f"Error getting time-based analytics: {str(e, exc_info=True)}")
             return []
 
     def get_monthly_daily_metrics(self, days: int = 30):
@@ -360,7 +360,7 @@ class AnalyticsService:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting monthly daily metrics: {str(e)}")
+            logger.error(f"Error getting monthly daily metrics: {str(e, exc_info=True)}")
             return []
 
 # Global instance

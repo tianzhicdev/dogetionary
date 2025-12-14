@@ -187,5 +187,5 @@ def get_practice_status():
 
     except Exception as e:
         import traceback
-        logger.error(f"Error in get_practice_status: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"Error in get_practice_status: {str(e, exc_info=True)}\n{traceback.format_exc()}")
         return jsonify({"error": "Internal server error"}), 500

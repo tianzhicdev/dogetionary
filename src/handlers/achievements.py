@@ -364,7 +364,7 @@ def get_achievement_progress():
         }), 200
 
     except Exception as e:
-        logger.error(f"Error in get_achievement_progress: {str(e)}")
+        logger.error(f"Error in get_achievement_progress: {str(e, exc_info=True)}")
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -416,5 +416,5 @@ def get_test_vocabulary_awards():
         return jsonify(result), 200
 
     except Exception as e:
-        logger.error(f"Error in get_test_vocabulary_awards: {str(e)}")
+        logger.error(f"Error in get_test_vocabulary_awards: {str(e, exc_info=True)}")
         return jsonify({"error": "Internal server error"}), 500

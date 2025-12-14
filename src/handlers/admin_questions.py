@@ -217,7 +217,7 @@ def get_words_from_source(source: str, learning_lang: str, max_words: Optional[i
 
     column = source_column_map.get(source)
     if not column:
-        logger.error(f"Unknown source: {source}")
+        logger.error(f"Unknown source: {source}", exc_info=True)
         return []
 
     limit_clause = f"LIMIT {max_words}" if max_words else ""

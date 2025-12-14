@@ -130,7 +130,7 @@ def llm_completion(
         # Select provider and initialize client
         if provider == "groq":
             if not GROQ_AVAILABLE:
-                logger.error("Groq SDK not available. Install with: pip install groq")
+                logger.error("Groq SDK not available. Install with: pip install groq", exc_info=True)
                 # Track error
                 llm_calls_total.labels(provider='groq', model=model_name, status='error').inc()
                 llm_errors_total.labels(provider='groq', model=model_name, error_type='sdk_unavailable').inc()
@@ -169,7 +169,7 @@ def llm_completion(
         content = response.choices[0].message.content
 
         if not content:
-            logger.error(f"{provider.upper()} returned empty content. Model: {model_name}, Response: {response}")
+            logger.error(f"{provider.upper(, exc_info=True)} returned empty content. Model: {model_name}, Response: {response}")
             # Track as error - empty response
             llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
             llm_errors_total.labels(provider=provider, model=model_name, error_type='empty_response').inc()
@@ -213,7 +213,7 @@ def llm_completion(
     except Exception as e:
         duration = time.time() - start_time
         error_type = type(e).__name__
-        logger.error(f"Unexpected error in llm_completion (provider={provider}): {e}", exc_info=True)
+        logger.error(f"Unexpected error in llm_completion (provider={provider}, exc_info=True): {e}", exc_info=True)
 
         # Track error metrics
         if provider:

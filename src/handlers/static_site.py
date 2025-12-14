@@ -165,12 +165,12 @@ def get_all_words():
         return jsonify(response)
 
     except ValueError as e:
-        logger.error(f"Invalid parameter: {e}")
+        logger.error(f"Invalid parameter: {e}", exc_info=True)
         return jsonify({"error": f"Invalid parameter: {str(e)}"}), 400
     except Exception as e:
         import traceback
-        logger.error(f"Error fetching words: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Error fetching words: {e}", exc_info=True)
+        logger.error(f"Traceback: {traceback.format_exc(, exc_info=True)}")
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
@@ -261,8 +261,8 @@ def get_words_summary():
 
     except Exception as e:
         import traceback
-        logger.error(f"Error fetching words summary: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Error fetching words summary: {e}", exc_info=True)
+        logger.error(f"Traceback: {traceback.format_exc(, exc_info=True)}")
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
@@ -357,10 +357,10 @@ def get_featured_words():
         return jsonify(response)
 
     except ValueError as e:
-        logger.error(f"Invalid parameter: {e}")
+        logger.error(f"Invalid parameter: {e}", exc_info=True)
         return jsonify({"error": f"Invalid parameter: {str(e)}"}), 400
     except Exception as e:
         import traceback
-        logger.error(f"Error fetching featured words: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Error fetching featured words: {e}", exc_info=True)
+        logger.error(f"Traceback: {traceback.format_exc(, exc_info=True)}")
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
