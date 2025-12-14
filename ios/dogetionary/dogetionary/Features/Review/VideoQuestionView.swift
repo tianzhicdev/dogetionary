@@ -22,13 +22,6 @@ struct VideoQuestionView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            // Word display (conditional based on show_word_before_video and answer state)
-            if (question.show_word_before_video == true || showWord) {
-                Text(question.word)
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.primary)
-                    .padding(.top)
-            }
 
             // Video player or loading state
             ZStack {
@@ -78,7 +71,7 @@ struct VideoQuestionView: View {
             // Video metadata (if available)
             if let metadata = question.video_metadata {
                 VideoMetadataView(metadata: metadata)
-                    .padding(.top, 8)
+//                    .padding(.top, 8)
             }
 
             // Audio transcript display (if available)
@@ -93,15 +86,14 @@ struct VideoQuestionView: View {
                 .padding(.horizontal)
             }
 
-            // Question text with clickable words
-            ClickableTextView(
-                text: question.question_text,
-                font: .title3.weight(.medium),
-                foregroundColor: AppTheme.bodyText,
-                alignment: .center
-            )
-            .padding(.horizontal)
-            .padding(.top, 8)
+            // Question text
+            Text(question.question_text)
+                .font(.title3)
+                .fontWeight(.medium)
+                .multilineTextAlignment(.center)
+                .foregroundColor(AppTheme.smallTitleText)
+                .padding(.horizontal)
+                .padding(.top, 8)
 
             // Multiple choice options
             MultipleChoiceOptionsView(
@@ -266,7 +258,6 @@ struct HighlightedTranscriptText: View {
                             }
                         }
                     }
-                    .navigationTitle(selectedWord?.capitalized ?? "")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
@@ -292,6 +283,9 @@ struct HighlightedTranscriptText: View {
         for token in tokens {
             var tokenAttr = AttributedString(token.text)
 
+            // Set default color to bodyText
+            tokenAttr.foregroundColor = AppTheme.bodyText
+
             // Make word-tokens clickable and check if they should be highlighted
             if token.isWord {
                 let cleanWord = token.text.trimmingCharacters(in: .punctuationCharacters)
@@ -301,9 +295,6 @@ struct HighlightedTranscriptText: View {
                 if cleanWord.lowercased() == lowercaseWord {
                     tokenAttr.foregroundColor = AppTheme.selectableTint
                     tokenAttr.font = .body.weight(.bold)
-                } else {
-                    // Subtle underline for other clickable words
-                    tokenAttr.underlineStyle = .single
                 }
             }
 

@@ -21,6 +21,8 @@ struct FillInBlankQuestionView: View {
                     .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.bigTitleText)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding()
             }
 

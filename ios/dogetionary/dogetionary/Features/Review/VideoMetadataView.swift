@@ -21,21 +21,16 @@ struct VideoMetadataView: View {
                 Text(title)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.smallTitleText)
+                    .foregroundColor(AppTheme.bodyText)
 
                 if let year = metadata.movie_year {
                     Text("(\(year))")
                         .font(.subheadline)
-                        .foregroundColor(AppTheme.bodyText)
+                        .foregroundColor(AppTheme.smallTitleText)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(AppTheme.panelFill.opacity(0.5))
-            )
-            .padding(.horizontal)
         }
     }
 }
