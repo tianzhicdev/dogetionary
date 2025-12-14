@@ -9,55 +9,86 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  # Scrape all logs from the app log files
+  # Scrape JSON logs from app
   - job_name: dogetionary_app
     static_configs:
       - targets:
           - localhost
         labels:
           job: dogetionary
-          app: flask
-          log_type: all
-          __path__: /logs/app/app.log*
+          # Only scrape current log file, NOT rotated logs (app.log.1, app.log.2, etc)
+          __path__: /logs/app/app.log
     pipeline_stages:
-      # Multiline aggregation - combine lines until we see a new timestamp
-      - multiline:
-          # First line of a log entry starts with YYYY-MM-DD timestamp
-          firstline: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
-          max_wait_time: 3s
-      # Extract timestamp and log level
-      - regex:
-          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (?P<logger>\S+) - (?P<level>\w+) - (?P<message>.*)'
-      # Parse timestamp
+      # Parse JSON logs
+      - json:
+          expressions:
+            timestamp: asctime
+            app: app
+            service: service
+            level: level
+            logger: logger
+            file: file
+            line: line
+            message: message
+            request_id: request_id
+            user_id: user_id
+            endpoint: endpoint
+            method: method
+            path: path
+            error_type: error_type
+
+      # Extract timestamp
       - timestamp:
           source: timestamp
           format: '2006-01-02 15:04:05,000'
-      # Add level as label
-      - labels:
-          level:
 
-  # Scrape error logs separately for easier filtering
+      # Add labels from JSON fields
+      - labels:
+          app:
+          service:
+          level:
+          logger:
+          endpoint:
+
+  # Scrape JSON error logs separately
   - job_name: dogetionary_errors
     static_configs:
       - targets:
           - localhost
         labels:
-          job: dogetionary
-          app: flask
+          job: dogetionary_errors
           log_type: error
-          __path__: /logs/app/error.log*
+          # Only current error log, not rotated
+          __path__: /logs/app/error.log
     pipeline_stages:
-      # Multiline aggregation for error logs
-      - multiline:
-          firstline: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
-          max_wait_time: 3s
-      - regex:
-          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (?P<logger>\S+) - (?P<level>\w+) - (?P<message>.*)'
+      # Parse JSON logs
+      - json:
+          expressions:
+            timestamp: asctime
+            app: app
+            service: service
+            level: level
+            logger: logger
+            file: file
+            line: line
+            message: message
+            request_id: request_id
+            user_id: user_id
+            endpoint: endpoint
+            error_type: error_type
+
+      # Extract timestamp
       - timestamp:
           source: timestamp
           format: '2006-01-02 15:04:05,000'
+
+      # Add labels
       - labels:
+          app:
+          service:
           level:
+          logger:
+          error_type:
 
   # Scrape nginx access logs
   - job_name: nginx_access
