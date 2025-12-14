@@ -12,6 +12,4 @@ services:
     environment:
       - LOG_FILE=/app/logs/app.log
 
-  nginx:
-    volumes:
-      - ./logs/nginx:/var/log/nginx
+  # Nginx log volume moved to main docker-compose.yml for production compatibility
