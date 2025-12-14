@@ -29,7 +29,7 @@ def get_review_stats():
         # For backward compatibility, return the progress stats
         return get_review_progress_stats()
     except Exception as e:
-        logger.error(f"Error in compatibility review stats: {str(e, exc_info=True)}")
+        logger.error(f"Error in compatibility review stats: {str(e)}", exc_info=True)
         # Return minimal compatible response
         return jsonify({
             "total_reviews": 0,

@@ -67,7 +67,7 @@ class PronunciationService:
             }
 
         except Exception as e:
-            logger.error(f"Error evaluating pronunciation: {str(e, exc_info=True)}")
+            logger.error(f"Error evaluating pronunciation: {str(e)}", exc_info=True)
             return {
                 'success': False,
                 'error': f'Failed to process pronunciation: {str(e)}'
@@ -104,7 +104,7 @@ class PronunciationService:
             return recognized_text
 
         except Exception as e:
-            logger.error(f"Speech-to-text error: {str(e, exc_info=True)}")
+            logger.error(f"Speech-to-text error: {str(e)}", exc_info=True)
             return ""
 
     def _compare_pronunciation(self, original: str, spoken: str) -> Dict[str, Any]:
@@ -166,7 +166,7 @@ Respond with valid JSON only."""
             }
 
         except Exception as e:
-            logger.error(f"Pronunciation comparison error: {str(e, exc_info=True)}")
+            logger.error(f"Pronunciation comparison error: {str(e)}", exc_info=True)
             # Default to lenient comparison if GPT-4 fails
             similar = original.lower().replace(" ", "") == spoken.lower().replace(" ", "")
             return {
@@ -208,4 +208,4 @@ Respond with valid JSON only."""
             logger.info(f"Stored pronunciation practice for user {user_id}: {result}")
 
         except Exception as e:
-            logger.error(f"Failed to store pronunciation record: {str(e, exc_info=True)}")
+            logger.error(f"Failed to store pronunciation record: {str(e)}", exc_info=True)

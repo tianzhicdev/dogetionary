@@ -54,7 +54,7 @@ class NotificationService:
             return users
 
         except Exception as e:
-            self.logger.error(f"Error getting users for notification: {str(e, exc_info=True)}")
+            self.logger.error(f"Error getting users for notification: {str(e)}", exc_info=True)
             return []
 
     def get_overdue_words_count(self, user_id: str) -> int:
@@ -117,7 +117,7 @@ class NotificationService:
             return count
 
         except Exception as e:
-            self.logger.error(f"Error getting overdue words count for user {user_id}: {str(e, exc_info=True)}")
+            self.logger.error(f"Error getting overdue words count for user {user_id}: {str(e)}", exc_info=True)
             return 0
 
     def should_send_notification(self, user_data: Dict, current_utc: datetime) -> bool:
@@ -151,7 +151,7 @@ class NotificationService:
             return True
 
         except Exception as e:
-            self.logger.error(f"Error checking notification timing for user: {str(e, exc_info=True)}")
+            self.logger.error(f"Error checking notification timing for user: {str(e)}", exc_info=True)
             return False
 
     def send_notification(self, user_id: str, user_name: str, overdue_count: int) -> bool:
@@ -194,7 +194,7 @@ class NotificationService:
             return True
 
         except Exception as e:
-            self.logger.error(f"Error sending notification to user {user_id}: {str(e, exc_info=True)}")
+            self.logger.error(f"Error sending notification to user {user_id}: {str(e)}", exc_info=True)
             return False
 
     def process_daily_notifications(self) -> Dict[str, int]:
@@ -238,7 +238,7 @@ class NotificationService:
             return stats
 
         except Exception as e:
-            self.logger.error(f"Error processing daily notifications: {str(e, exc_info=True)}")
+            self.logger.error(f"Error processing daily notifications: {str(e)}", exc_info=True)
             return {'error': str(e)}
 
 # Global instance

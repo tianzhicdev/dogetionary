@@ -141,7 +141,7 @@ def get_review_stats():
         })
         
     except Exception as e:
-        logger.error(f"Error getting review stats: {str(e, exc_info=True)}")
+        logger.error(f"Error getting review stats: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get review stats: {str(e)}"}), 500
 
 
@@ -288,7 +288,7 @@ def get_forgetting_curve(word_id):
         })
         
     except Exception as e:
-        logger.error(f"Error getting forgetting curve: {str(e, exc_info=True)}")
+        logger.error(f"Error getting forgetting curve: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get forgetting curve: {str(e)}"}), 500
 
 
@@ -350,7 +350,7 @@ def get_word_details(word_id):
         })
         
     except Exception as e:
-        logger.error(f"Error getting word details: {str(e, exc_info=True)}")
+        logger.error(f"Error getting word details: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get word details: {str(e)}"}), 500
 
 
@@ -395,7 +395,7 @@ def get_leaderboard():
         })
         
     except Exception as e:
-        logger.error(f"Error getting leaderboard: {str(e, exc_info=True)}")
+        logger.error(f"Error getting leaderboard: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get leaderboard: {str(e)}"}), 500
 
 
@@ -442,7 +442,7 @@ def get_leaderboard_v2():
         })
 
     except Exception as e:
-        logger.error(f"Error getting leaderboard v2: {str(e, exc_info=True)}")
+        logger.error(f"Error getting leaderboard v2: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get leaderboard: {str(e)}"}), 500
 
 
@@ -520,7 +520,7 @@ def get_review_progress_stats():
         })
 
     except Exception as e:
-        logger.error(f"Error getting review progress stats: {str(e, exc_info=True)}")
+        logger.error(f"Error getting review progress stats: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get review progress stats: {str(e)}"}), 500
 
 def get_due_counts():
@@ -540,7 +540,7 @@ def get_due_counts():
         })
 
     except Exception as e:
-        logger.error(f"Error getting due counts: {str(e, exc_info=True)}")
+        logger.error(f"Error getting due counts: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get due counts: {str(e)}"}), 500
 
 
@@ -616,5 +616,5 @@ def get_combined_metrics():
         })
 
     except Exception as e:
-        logger.error(f"Error getting combined metrics: {str(e, exc_info=True)}")
+        logger.error(f"Error getting combined metrics: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get combined metrics: {str(e)}"}), 500

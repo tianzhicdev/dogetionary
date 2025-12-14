@@ -46,7 +46,7 @@ def track_user_action():
             return jsonify({'error': 'Failed to track action'}), 500
 
     except Exception as e:
-        logger.error(f"Error in track_user_action: {str(e, exc_info=True)}")
+        logger.error(f"Error in track_user_action: {str(e)}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
 
 def get_analytics_data():
@@ -146,5 +146,5 @@ def get_analytics_data():
         return jsonify(response)
 
     except Exception as e:
-        logger.error(f"Error in get_analytics_data: {str(e, exc_info=True)}")
+        logger.error(f"Error in get_analytics_data: {str(e)}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500

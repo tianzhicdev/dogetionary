@@ -85,7 +85,7 @@ def save_word():
         }), 201
     
     except Exception as e:
-        logger.error(f"Error saving word: {str(e, exc_info=True)}")
+        logger.error(f"Error saving word: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to save word: {str(e)}"}), 500
 
 def delete_saved_word():
@@ -152,7 +152,7 @@ def delete_saved_word():
             }), 404
 
     except Exception as e:
-        logger.error(f"Error deleting saved word: {str(e, exc_info=True)}")
+        logger.error(f"Error deleting saved word: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to delete saved word: {str(e)}"}), 500
 
 def delete_saved_word_v2():
@@ -205,7 +205,7 @@ def delete_saved_word_v2():
             }), 404
 
     except Exception as e:
-        logger.error(f"Error deleting saved word: {str(e, exc_info=True)}")
+        logger.error(f"Error deleting saved word: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to delete saved word: {str(e)}"}), 500
 
 def get_next_review_word():
@@ -272,7 +272,7 @@ def get_next_review_word():
         })
         
     except Exception as e:
-        logger.error(f"Error getting next review word: {str(e, exc_info=True)}")
+        logger.error(f"Error getting next review word: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
 
 def submit_review():
@@ -443,7 +443,7 @@ def submit_review():
         })
 
     except Exception as e:
-        logger.error(f"Error submitting review: {str(e, exc_info=True)}")
+        logger.error(f"Error submitting review: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to submit review: {str(e)}"}), 500
 
 
@@ -489,5 +489,5 @@ def submit_feedback():
         }), 201
 
     except Exception as e:
-        logger.error(f"Error submitting feedback: {str(e, exc_info=True)}")
+        logger.error(f"Error submitting feedback: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to submit feedback: {str(e)}"}), 500

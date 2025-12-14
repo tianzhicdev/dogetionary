@@ -799,7 +799,7 @@ def get_next_review_word_with_scheduled_new_words():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error getting next review word with scheduled new words: {str(e, exc_info=True)}")
+        logger.error(f"Error getting next review word with scheduled new words: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
 
 

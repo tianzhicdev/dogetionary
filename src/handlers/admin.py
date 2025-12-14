@@ -169,7 +169,7 @@ def test_review_intervals():
         })
         
     except Exception as e:
-        logger.error(f"Error testing review intervals: {str(e, exc_info=True)}")
+        logger.error(f"Error testing review intervals: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to test review intervals: {str(e)}"}), 500
 
 
@@ -300,7 +300,7 @@ def fix_next_review_dates():
                     print("here 5")
             except Exception as e:
                 stats['error_records'] += 1
-                logger.error(f"Error processing record {record_id}: {str(e, exc_info=True)}")
+                logger.error(f"Error processing record {record_id}: {str(e)}", exc_info=True)
                 
                 stats['details'].append({
                     'record_id': record_id,
@@ -335,7 +335,7 @@ def fix_next_review_dates():
         return jsonify(response)
         
     except Exception as e:
-        logger.error(f"Error in fix_next_review_dates: {str(e, exc_info=True)}")
+        logger.error(f"Error in fix_next_review_dates: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
             'error': str(e)
