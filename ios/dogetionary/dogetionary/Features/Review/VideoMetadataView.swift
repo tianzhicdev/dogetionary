@@ -24,7 +24,7 @@ struct VideoMetadataView: View {
                     .foregroundColor(AppTheme.bodyText)
 
                 if let year = metadata.movie_year {
-                    Text("(\(year))")
+                    Text("(\(String(year)))")
                         .font(.subheadline)
                         .foregroundColor(AppTheme.smallTitleText)
                 }

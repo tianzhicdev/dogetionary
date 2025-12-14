@@ -291,6 +291,7 @@ struct SavedWordRow: View {
                 Text(savedWord.word)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(AppTheme.bodyText)
+                    .strikethrough(savedWord.is_known, color: AppTheme.bodyText)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 

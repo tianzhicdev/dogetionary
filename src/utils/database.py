@@ -98,8 +98,8 @@ def _initialize_connection_pool():
         user, password, host, port, dbname = match.groups()
 
         _connection_pool = pool.ThreadedConnectionPool(
-            minconn=5,      # Minimum connections to maintain
-            maxconn=20,     # Maximum connections allowed
+            minconn=10,     # Minimum connections to maintain (increased from 5)
+            maxconn=50,     # Maximum connections allowed (increased from 20 for 100+ users)
             user=user,
             password=password,
             host=host,
@@ -108,7 +108,7 @@ def _initialize_connection_pool():
             cursor_factory=RealDictCursor
         )
 
-        logger.info("✅ Database connection pool initialized (min=5, max=20)")
+        logger.info("✅ Database connection pool initialized (min=10, max=50)")
 
         # Register cleanup on exit
         atexit.register(_close_connection_pool)

@@ -100,7 +100,7 @@ struct VideoQuestionView: View {
                 options: question.options ?? [],
                 correctAnswer: question.correct_answer,
                 feedbackDelay: 0.5,
-                optionButtonStyle: .idBadgeAndText,
+                optionButtonStyle: .textOnly,
                 onImmediateFeedback: { answerId in
                     // Show word after answering
                     showWord = true

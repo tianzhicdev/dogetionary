@@ -238,7 +238,7 @@ Return ONLY a JSON object with this structure:
         'word': word,
         'video_id': video_id,
         'audio_transcript': audio_transcript,  # Use audio_transcript field
-        'question_text': f"Which best describes the meaning of'{word}'?",
+        'question_text': f"Which best describes the meaning of '{word}' in this scene?",
         'show_word_before_video': False,  # Hide word initially, reveal after answer
         'video_metadata': {
             'movie_title': movie_title,
