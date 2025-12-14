@@ -170,7 +170,7 @@ def get_all_words():
     except Exception as e:
         import traceback
         logger.error(f"Error fetching words: {e}", exc_info=True)
-        logger.error(f"Traceback: {traceback.format_exc(, exc_info=True)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
@@ -262,7 +262,7 @@ def get_words_summary():
     except Exception as e:
         import traceback
         logger.error(f"Error fetching words summary: {e}", exc_info=True)
-        logger.error(f"Traceback: {traceback.format_exc(, exc_info=True)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
@@ -362,5 +362,5 @@ def get_featured_words():
     except Exception as e:
         import traceback
         logger.error(f"Error fetching featured words: {e}", exc_info=True)
-        logger.error(f"Traceback: {traceback.format_exc(, exc_info=True)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
