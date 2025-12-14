@@ -266,24 +266,27 @@ def start_background_workers():
 # APPLICATION ENTRY POINT
 # =================================================================
 
-if __name__ == '__main__':
-    # Create application
-    app = create_app()
+# Create application instance at module level (required for Gunicorn)
+app = create_app()
 
-    # Start background workers
-    start_background_workers()
+# Start background workers when app is loaded
+start_background_workers()
+
+if __name__ == '__main__':
+    # This block is only executed when running with `python app.py` (development mode)
+    # In production, Gunicorn will import the 'app' object directly
 
     # Get port from environment or default to 5000
     port = int(os.environ.get('PORT', 5000))
 
     app.logger.info("=" * 60)
-    app.logger.info(f"Starting Dogetionary API on port {port}")
-    app.logger.info("Environment: Development" if app.debug else "Environment: Production")
+    app.logger.info(f"Starting Dogetionary API on port {port} (Development Mode)")
+    app.logger.info("⚠️  WARNING: Using Flask development server - NOT for production!")
     app.logger.info("=" * 60)
 
     # Start Flask development server
     app.run(
         host='0.0.0.0',
         port=port,
-        debug=True  # Set to False in production via environment variable
+        debug=True  # Development mode only
     )

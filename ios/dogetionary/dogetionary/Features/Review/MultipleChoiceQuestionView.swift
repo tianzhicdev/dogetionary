@@ -29,7 +29,7 @@ struct MultipleChoiceQuestionView: View {
                 options: question.options ?? [],
                 correctAnswer: question.correct_answer,
                 feedbackDelay: 1.2,
-                optionButtonStyle: .idBadgeAndText,
+                optionButtonStyle: .textOnly,
                 onImmediateFeedback: onImmediateFeedback,
                 onAnswer: onAnswer
             )
