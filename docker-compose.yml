@@ -12,45 +12,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgresql.conf:/var/lib/postgresql/data/postgresql.conf
       - ./logs/postgres:/var/log/postgresql
-    command:
-      - "postgres"
-      - "-c"
-      - "max_connections=100"
-      - "-c"
-      - "shared_buffers=4GB"
-      - "-c"
-      - "effective_cache_size=12GB"
-      - "-c"
-      - "work_mem=40MB"
-      - "-c"
-      - "maintenance_work_mem=1GB"
-      - "-c"
-      - "random_page_cost=1.1"
-      - "-c"
-      - "effective_io_concurrency=200"
-      - "-c"
-      - "checkpoint_completion_target=0.9"
-      - "-c"
-      - "min_wal_size=1GB"
-      - "-c"
-      - "max_wal_size=4GB"
-      - "-c"
-      - "log_min_duration_statement=1000"
-      - "-c"
-      - "log_checkpoints=on"
-      - "-c"
-      - "log_lock_waits=on"
-      - "-c"
-      - "logging_collector=on"
-      - "-c"
-      - "log_directory=/var/log/postgresql"
-      - "-c"
-      - "log_filename=postgresql-%Y-%m-%d_%H%M%S.log"
-      - "-c"
-      - "log_rotation_age=1d"
-      - "-c"
-      - "log_rotation_size=100MB"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dogeuser -d dogetionary"]
       interval: 30s
