@@ -67,6 +67,8 @@ def generate_user_profile() -> tuple[str, str]:
         return "LearningExplorer", "Every word is a new adventure!"
 
 def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -78,8 +80,6 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
         """, (user_id,))
 
         result = cur.fetchone()
-        cur.close()
-        conn.close()
 
         if result:
             return (result['learning_language'], result['native_language'],
@@ -88,21 +88,25 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
             # Generate AI profile for new user
             username, motto = generate_user_profile()
 
-            conn = get_db_connection()
-            cur = conn.cursor()
             cur.execute("""
                 INSERT INTO user_preferences (user_id, learning_language, native_language, user_name, user_motto)
                 VALUES (%s, 'en', 'zh', %s, %s)
                 ON CONFLICT (user_id) DO NOTHING
             """, (user_id, username, motto))
             conn.commit()
-            conn.close()
             return 'en', 'zh', username, motto
 
     except Exception as e:
+        if conn:
+            conn.rollback()
         # Note: app.logger reference will need to be handled
         print(f"Error getting user preferences: {str(e)}")
         return 'en', 'zh', 'LearningExplorer', 'Every word is a new adventure!'
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 def toggle_word_exclusion(user_id: str, word: str, excluded: bool, learning_language: str = None, native_language: str = None) -> dict:
     """
@@ -119,6 +123,8 @@ def toggle_word_exclusion(user_id: str, word: str, excluded: bool, learning_lang
     Returns:
         dict with success status, word info, and message
     """
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -154,8 +160,6 @@ def toggle_word_exclusion(user_id: str, word: str, excluded: bool, learning_lang
 
                 prefs = cur.fetchone()
                 if not prefs:
-                    cur.close()
-                    conn.close()
                     return {
                         "success": False,
                         "error": "User preferences not found",
@@ -197,9 +201,6 @@ def toggle_word_exclusion(user_id: str, word: str, excluded: bool, learning_lang
 
             message = "Word excluded from practice" if excluded else "Word included in practice"
 
-        cur.close()
-        conn.close()
-
         return {
             "success": True,
             "word_id": str(word_id),
@@ -210,9 +211,16 @@ def toggle_word_exclusion(user_id: str, word: str, excluded: bool, learning_lang
         }
 
     except Exception as e:
+        if conn:
+            conn.rollback()
         print(f"Error toggling word exclusion: {str(e)}")
         return {
             "success": False,
             "error": str(e),
             "message": "Failed to update word exclusion status"
         }
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()

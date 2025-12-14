@@ -97,12 +97,12 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
         learning_lang: Language of the word
 
     Returns:
-        Dict with video_id and audio_transcript if videos exist, None otherwise
+        Dict with video_id, audio_transcript, and metadata if videos exist, None otherwise
     """
     try:
         # Only select videos under 5MB (5242880 bytes) for better performance
         result = db_fetch_one("""
-            SELECT v.id, v.audio_transcript
+            SELECT v.id, v.audio_transcript, v.metadata, v.name
             FROM word_to_video wtv
             JOIN videos v ON v.id = wtv.video_id
             WHERE LOWER(wtv.word) = LOWER(%s)
@@ -113,10 +113,14 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
         """, (word, learning_lang))
 
         if result:
+            metadata = result.get('metadata', {}) or {}
             logger.info(f"Found video for word '{word}': video_id={result['id']}, has_audio_transcript={result['audio_transcript'] is not None}")
             return {
                 'video_id': result['id'],
-                'audio_transcript': result['audio_transcript']
+                'audio_transcript': result['audio_transcript'],
+                'movie_title': metadata.get('movie_title'),
+                'movie_year': metadata.get('movie_year'),
+                'title': result.get('name')  # Fallback to video name
             }
 
         return None
@@ -151,6 +155,9 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
 
     video_id = video_info['video_id']
     audio_transcript = video_info.get('audio_transcript')
+    movie_title = video_info.get('movie_title')
+    movie_year = video_info.get('movie_year')
+    title = video_info.get('title')
 
     # If no transcript available, fallback to mc_definition
     if not audio_transcript:
@@ -233,6 +240,11 @@ Return ONLY a JSON object with this structure:
         'audio_transcript': audio_transcript,  # Use audio_transcript field
         'question_text': f"What does '{word}' mean?",
         'show_word_before_video': False,  # Hide word initially, reveal after answer
+        'video_metadata': {
+            'movie_title': movie_title,
+            'movie_year': movie_year,
+            'title': title  # Fallback if movie_title is not available
+        },
         'options': [
             {'id': 'A', 'text': correct_meaning, 'is_correct': True},
             {'id': 'B', 'text': distractors[0], 'is_correct': False},
@@ -242,7 +254,7 @@ Return ONLY a JSON object with this structure:
         'correct_answer': 'A'
     }
 
-    logger.info(f"Generated video_mc question for word '{word}' with video_id={video_id}, has_audio_transcript={audio_transcript is not None}")
+    logger.info(f"Generated video_mc question for word '{word}' with video_id={video_id}, movie_title={movie_title}, has_audio_transcript={audio_transcript is not None}")
 
     return question_data
 

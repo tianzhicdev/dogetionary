@@ -75,6 +75,12 @@ struct VideoQuestionView: View {
                 }
             }
 
+            // Video metadata (if available)
+            if let metadata = question.video_metadata {
+                VideoMetadataView(metadata: metadata)
+                    .padding(.top, 8)
+            }
+
             // Audio transcript display (if available)
             if let audio_transcript = question.audio_transcript, !audio_transcript.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
@@ -289,7 +295,12 @@ struct VideoQuestionView_Previews: PreviewProvider {
                     evaluation_threshold: nil,
                     video_id: 1,
                     show_word_before_video: false,
-                    audio_transcript: "After reviewing the patient's symptoms and test results, the doctor was able to make an accurate diagnosis of the condition. Early diagnosis is crucial for effective treatment and better outcomes."
+                    audio_transcript: "After reviewing the patient's symptoms and test results, the doctor was able to make an accurate diagnosis of the condition. Early diagnosis is crucial for effective treatment and better outcomes.",
+                    video_metadata: VideoMetadata(
+                        movie_title: "Medical Drama",
+                        movie_year: 2024,
+                        title: nil
+                    )
                 ),
                 onAnswer: { answer in
                     print("Selected: \(answer)")

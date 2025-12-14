@@ -296,7 +296,8 @@ private struct PullToAdvanceIndicator: View {
         evaluation_threshold: nil,
         video_id: nil,
         show_word_before_video: nil,
-        audio_transcript: nil
+        audio_transcript: nil,
+        video_metadata: nil
     )
 
     ZStack {
@@ -341,7 +342,8 @@ private struct PullToAdvanceIndicator: View {
         evaluation_threshold: nil,
         video_id: nil,
         show_word_before_video: nil,
-        audio_transcript: nil
+        audio_transcript: nil,
+        video_metadata: nil
     )
 
     ZStack {
