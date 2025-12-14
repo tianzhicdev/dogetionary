@@ -58,6 +58,7 @@ services:
       - /etc/ssl/cloudflare/origin.pem:/etc/nginx/ssl/fullchain.pem:ro
       - /etc/ssl/cloudflare/origin-key.pem:/etc/nginx/ssl/privkey.pem:ro
       - ./nginx/index.html:/usr/share/nginx/html/index.html:ro
+      - ./logs/nginx:/var/log/nginx
     networks:
       - dogetionary-network
     restart: unless-stopped
@@ -138,8 +139,8 @@ services:
     container_name: dogetionary-promtail
     volumes:
       - ./promtail/promtail-config.yml:/etc/promtail/config.yml
-      - ./logs/app:/logs
-      - /var/log:/var/log
+      - ./logs/app:/logs/app
+      - ./logs/nginx:/logs/nginx
     command: -config.file=/etc/promtail/config.yml
     networks:
       - dogetionary-network

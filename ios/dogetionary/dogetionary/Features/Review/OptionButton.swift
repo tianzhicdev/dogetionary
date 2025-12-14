@@ -57,14 +57,13 @@ struct OptionButton: View {
 
     var body: some View {
         HStack {
-            // Checkbox button for selection
-            Button(action: onTap) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? AppTheme.selectableTint : AppTheme.smallTitleText.opacity(0.3))
-                    .font(.title2)
+            // Feedback icons (after answer submission)
+            if showFeedback && (isSelected || shouldShowAsCorrect) {
+                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(isCorrect ? AppTheme.successColor : AppTheme.errorColor)
+                    .font(.title3)
+                    .shadow(color: AppTheme.black.opacity(0.6), radius: 2, y: 1)
             }
-            .buttonStyle(PlainButtonStyle())
-            .disabled(showFeedback)
 
             switch style {
             case .idBadgeAndText:
@@ -97,13 +96,14 @@ struct OptionButton: View {
                 .frame(maxWidth: .infinity)
             }
 
-            // Feedback icons (after answer submission)
-            if showFeedback && (isSelected || shouldShowAsCorrect) {
-                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundColor(isCorrect ? AppTheme.successColor : AppTheme.errorColor)
-                    .font(.title3)
-                    .shadow(color: AppTheme.black.opacity(0.6), radius: 2, y: 1)
+            // Checkbox button for selection
+            Button(action: onTap) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isSelected ? AppTheme.selectableTint : AppTheme.smallTitleText.opacity(0.3))
+                    .font(.title2)
             }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(showFeedback)
         }
         .padding()
     }
