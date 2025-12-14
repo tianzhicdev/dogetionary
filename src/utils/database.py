@@ -1,21 +1,131 @@
 import os
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from config.config import SUPPORTED_LANGUAGES
 from contextlib import contextmanager
 from typing import Optional, List, Dict, Any, Union
 import logging
+import atexit
 
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://dogeuser:dogepass@localhost:5432/dogetionary')
+
+# =============================================================================
+# CONNECTION POOL CONFIGURATION
+# =============================================================================
+
+# Global connection pool instance
+_connection_pool = None
+
+def _initialize_connection_pool():
+    """
+    Initialize the database connection pool.
+
+    Uses ThreadedConnectionPool for thread-safe connection management.
+    Pool size: 5 min connections, 20 max connections
+
+    This is called lazily on first connection request.
+    """
+    global _connection_pool
+
+    if _connection_pool is not None:
+        return
+
+    try:
+        # Extract connection parameters from DATABASE_URL
+        # Format: postgresql://user:pass@host:port/dbname
+        import re
+        match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', DATABASE_URL)
+
+        if not match:
+            logger.error(f"Invalid DATABASE_URL format: {DATABASE_URL}")
+            raise ValueError("Invalid DATABASE_URL format")
+
+        user, password, host, port, dbname = match.groups()
+
+        _connection_pool = pool.ThreadedConnectionPool(
+            minconn=5,      # Minimum connections to maintain
+            maxconn=20,     # Maximum connections allowed
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            database=dbname,
+            cursor_factory=RealDictCursor
+        )
+
+        logger.info("✅ Database connection pool initialized (min=5, max=20)")
+
+        # Register cleanup on exit
+        atexit.register(_close_connection_pool)
+
+    except Exception as e:
+        logger.error(f"Failed to initialize connection pool: {str(e)}")
+        raise
+
+def _close_connection_pool():
+    """Close all connections in the pool on application shutdown."""
+    global _connection_pool
+    if _connection_pool is not None:
+        _connection_pool.closeall()
+        logger.info("✅ Database connection pool closed")
+        _connection_pool = None
+
+def _return_connection_to_pool(conn):
+    """
+    Return a connection to the pool.
+
+    Args:
+        conn: Database connection to return
+
+    Note:
+        This is called automatically by context managers.
+        For manual connection management, call conn.close() which will
+        trigger putconn() via the pool's connection wrapper.
+    """
+    global _connection_pool
+    if _connection_pool is not None and conn is not None:
+        try:
+            _connection_pool.putconn(conn)
+        except Exception as e:
+            logger.error(f"Failed to return connection to pool: {str(e)}")
+            # Fallback: close the connection directly
+            try:
+                conn.close()
+            except:
+                pass
 
 def validate_language(lang: str) -> bool:
     """Validate if language code is supported"""
     return lang in SUPPORTED_LANGUAGES
 
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    """
+    Get a database connection from the connection pool.
+
+    Returns:
+        psycopg2 connection with RealDictCursor
+
+    Note:
+        Connections must be returned to the pool by calling conn.close()
+        Use context managers (db_cursor, with statements) for automatic cleanup.
+    """
+    global _connection_pool
+
+    # Lazy initialization of connection pool
+    if _connection_pool is None:
+        _initialize_connection_pool()
+
+    try:
+        return _connection_pool.getconn()
+    except pool.PoolError as e:
+        logger.error(f"Connection pool exhausted: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get connection from pool: {str(e)}")
+        raise
 
 @contextmanager
 def db_cursor(commit: bool = False):
@@ -30,6 +140,9 @@ def db_cursor(commit: bool = False):
     Example:
         with db_cursor(commit=True) as cur:
             cur.execute("INSERT INTO ...")
+
+    Note:
+        Automatically returns connection to pool on exit (via conn.close())
     """
     conn = None
     cur = None
@@ -48,7 +161,8 @@ def db_cursor(commit: bool = False):
         if cur:
             cur.close()
         if conn:
-            conn.close()
+            # Return connection to pool (not closing the actual connection)
+            _return_connection_to_pool(conn)
 
 def db_execute(query: str, params: Optional[tuple] = None, commit: bool = False) -> int:
     """Execute a query without returning results (INSERT, UPDATE, DELETE).

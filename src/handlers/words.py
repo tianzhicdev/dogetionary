@@ -154,6 +154,8 @@ def get_word_review_data(user_id: str, word_id: int):
     """Get review history data for a specific word using real spaced repetition algorithm"""
     from services.spaced_repetition_service import get_next_review_date_new
 
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -166,8 +168,6 @@ def get_word_review_data(user_id: str, word_id: int):
 
         word_row = cur.fetchone()
         if not word_row:
-            cur.close()
-            conn.close()
             return 0, 1, datetime.now() + timedelta(days=1), None
 
         created_at = word_row['created_at']
@@ -180,8 +180,6 @@ def get_word_review_data(user_id: str, word_id: int):
         """, (user_id, word_id))
 
         reviews = [{"response": row['response'], "reviewed_at": row['reviewed_at']} for row in cur.fetchall()]
-        cur.close()
-        conn.close()
 
         # Calculate next review date using the real algorithm
         next_review_date = get_next_review_date_new(reviews, created_at)
@@ -200,26 +198,36 @@ def get_word_review_data(user_id: str, word_id: int):
     except Exception as e:
         logger.error(f"Error getting review data: {str(e)}")
         return 0, 1, datetime.now() + timedelta(days=1), None
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def audio_exists(text: str, language: str) -> bool:
     """Check if audio exists for text+language"""
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
         cur.execute("""
-            SELECT 1 FROM audio 
+            SELECT 1 FROM audio
             WHERE text_content = %s AND language = %s
         """, (text, language))
-        
+
         result = cur.fetchone()
-        conn.close()
-        
         return result is not None
     except Exception as e:
         logger.error(f"Error checking audio existence: {str(e)}")
         return False
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 def collect_audio_references(definition_data: dict, learning_lang: str) -> dict:
     """Collect all audio references for a definition - now just returns available texts"""
@@ -357,13 +365,15 @@ def get_word_definition_v4():
 
 def get_saved_words():
     """Get user's saved words with calculated review data"""
+    conn = None
+    cur = None
     try:
         user_id = request.args.get('user_id')
         due_only = request.args.get('due_only', 'false').lower() == 'true'
-        
+
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
-        
+
         try:
             uuid.UUID(user_id)
         except ValueError:
@@ -489,20 +499,22 @@ def get_saved_words():
                 "is_ielts": row['is_ielts'],
                 "is_known": row['is_known'] or False
             })
-        
-        cur.close()
-        conn.close()
-        
+
         return jsonify({
             "user_id": user_id,
             "saved_words": saved_words,
             "count": len(saved_words),
             "due_only": due_only
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting saved words for user {user_id}: {str(e)}")
         return jsonify({"error": f"Failed to get saved words: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 
@@ -525,90 +537,105 @@ def generate_audio_for_text(text: str) -> bytes:
 
 def store_audio(text: str, language: str, audio_data: bytes) -> str:
     """Store audio, return the created_at timestamp"""
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
         # First try to insert
         cur.execute("""
             INSERT INTO audio (text_content, language, audio_data, content_type)
             VALUES (%s, %s, %s, 'audio/mpeg')
-            ON CONFLICT (text_content, language) 
+            ON CONFLICT (text_content, language)
             DO UPDATE SET audio_data = EXCLUDED.audio_data, content_type = EXCLUDED.content_type
         """, (text, language, audio_data))
-        
+
         # Then get the actual timestamp from database
         cur.execute("""
-            SELECT created_at FROM audio 
+            SELECT created_at FROM audio
             WHERE text_content = %s AND language = %s
         """, (text, language))
-        
+
         result = cur.fetchone()
         conn.commit()
-        conn.close()
-        
+
         return result['created_at'].isoformat() if result else datetime.now().isoformat()
-        
+
     except Exception as e:
+        if conn:
+            conn.rollback()
         logger.error(f"Error storing audio: {str(e)}")
         raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 def get_audio(text, language):
     """Get or generate audio for text+language"""
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
         # Try to get existing audio
         cur.execute("""
             SELECT audio_data, content_type, created_at
-            FROM audio 
+            FROM audio
             WHERE text_content = %s AND language = %s
         """, (text, language))
-        
+
         result = cur.fetchone()
-        
+
         if result:
             # Return existing audio
-            conn.close()
             audio_base64 = base64.b64encode(result['audio_data']).decode('utf-8')
-            
+
             return jsonify({
                 "audio_data": audio_base64,
                 "content_type": result['content_type'],
                 "created_at": result['created_at'].isoformat() if result['created_at'] else None,
                 "generated": False
             })
-        
+
         # Audio doesn't exist, generate it
-        conn.close()
         logger.info(f"Generating audio on-demand for text: '{text}' in {language}")
-        
+
         try:
             audio_data = generate_audio_for_text(text)
             created_at = store_audio(text, language, audio_data)
-            
+
             # Return the generated audio
             audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-            
+
             return jsonify({
                 "audio_data": audio_base64,
                 "content_type": "audio/mpeg",
                 "created_at": created_at,
                 "generated": True
             })
-            
+
         except Exception as audio_error:
             logger.error(f"Failed to generate audio: {str(audio_error)}")
             return jsonify({"error": "Failed to generate audio"}), 500
-        
+
     except Exception as e:
         logger.error(f"Error getting audio: {str(e)}")
         return jsonify({"error": f"Failed to get audio: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def get_illustration():
     """Get AI illustration for a word - returns cached if exists, generates if not"""
+    conn = None
+    cur = None
     try:
         # Support both GET parameters and POST JSON body
         if request.method == 'GET':
@@ -638,8 +665,6 @@ def get_illustration():
 
         existing = cur.fetchone()
         if existing:
-            cur.close()
-            conn.close()
             return jsonify({
                 "word": word_normalized,
                 "language": language,
@@ -737,8 +762,6 @@ def get_illustration():
         """, (word_normalized, language, scene_description, image_data, content_type))
 
         conn.commit()
-        cur.close()
-        conn.close()
 
         logger.info(f"Successfully generated and cached illustration for: {word}")
 
@@ -753,19 +776,28 @@ def get_illustration():
         })
 
     except Exception as e:
+        if conn:
+            conn.rollback()
         logger.error(f"Error getting/generating illustration: {str(e)}")
         return jsonify({"error": f"Failed to get/generate illustration: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 
 def get_word_details(word_id):
     """Get detailed information about a saved word"""
+    conn = None
+    cur = None
     try:
         user_id = request.args.get('user_id')
-        
+
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
         
@@ -798,10 +830,7 @@ def get_word_details(word_id):
         
         # Calculate review data
         review_count, interval_days, next_review_date, last_reviewed_at = get_word_review_data(user_id, word_id)
-        
-        cur.close()
-        conn.close()
-        
+
         return jsonify({
             "id": word['id'],
             "word": word['word'],
@@ -815,10 +844,15 @@ def get_word_details(word_id):
             "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
             "review_history": review_history
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting word details: {str(e)}")
         return jsonify({"error": f"Failed to get word details: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def generate_word_definition():
@@ -894,6 +928,8 @@ def is_word_saved():
             "saved_word_id": 123 or null
         }
     """
+    conn = None
+    cur = None
     try:
         user_id = request.args.get('user_id')
         word = request.args.get('word')
@@ -931,8 +967,6 @@ def is_word_saved():
             """, (user_id, word_normalized))
 
         result = cur.fetchone()
-        cur.close()
-        conn.close()
 
         if result:
             return jsonify({
@@ -948,6 +982,11 @@ def is_word_saved():
     except Exception as e:
         logger.error(f"Error checking if word is saved: {str(e)}")
         return jsonify({"error": f"Failed to check word status: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def get_all_words_for_language_pair(learning_lang, native_lang):
@@ -963,6 +1002,8 @@ def get_all_words_for_language_pair(learning_lang, native_lang):
     Returns:
         JSON array of word strings
     """
+    conn = None
+    cur = None
     try:
         # Validate language codes
         if not validate_language(learning_lang) or not validate_language(native_lang):
@@ -981,9 +1022,6 @@ def get_all_words_for_language_pair(learning_lang, native_lang):
 
         words = [row['word'] for row in cur.fetchall()]
 
-        cur.close()
-        conn.close()
-
         logger.info(f"Retrieved {len(words)} words for {learning_lang}->{native_lang}")
 
         return jsonify(words)
@@ -991,6 +1029,11 @@ def get_all_words_for_language_pair(learning_lang, native_lang):
     except Exception as e:
         logger.error(f"Error getting all words for {learning_lang}->{native_lang}: {str(e)}")
         return jsonify({"error": f"Failed to get words: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 def toggle_exclude_from_practice():
     """

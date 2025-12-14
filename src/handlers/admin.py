@@ -179,7 +179,7 @@ def fix_next_review_dates():
     Reports statistics on correct vs incorrect records
     """
     try:
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        conn = get_db_connection()
         cur = conn.cursor()
         
         logger.info("Starting next_review_date fix process...")

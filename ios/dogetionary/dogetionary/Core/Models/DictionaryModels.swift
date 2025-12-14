@@ -1032,6 +1032,17 @@ struct QuestionOption: Codable, Identifiable {
     }
 }
 
+/// Video metadata for video questions
+struct VideoMetadata: Codable {
+    let movie_title: String?
+    let movie_year: Int?
+    let title: String?  // Fallback if movie_title is not available
+
+    private enum CodingKeys: String, CodingKey {
+        case movie_title, movie_year, title
+    }
+}
+
 /// Enhanced review question data
 struct ReviewQuestion: Codable {
     let question_type: String  // "recognition", "mc_definition", "mc_word", "fill_blank", "pronounce_sentence", "video_mc"
@@ -1049,9 +1060,10 @@ struct ReviewQuestion: Codable {
     let video_id: Int?  // For video_mc type - ID of the video to display
     let show_word_before_video: Bool?  // For video_mc type - whether to show word before playing video
     let audio_transcript: String?  // For video_mc type - Whisper-generated transcript from video audio
+    let video_metadata: VideoMetadata?  // For video_mc type - Movie title and year
 
     private enum CodingKeys: String, CodingKey {
-        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video, audio_transcript
+        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video, audio_transcript, video_metadata
     }
 }
 
