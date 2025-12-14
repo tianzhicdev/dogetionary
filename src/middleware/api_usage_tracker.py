@@ -47,6 +47,8 @@ def extract_api_version(endpoint):
 def log_api_usage_async(endpoint, method, user_id, status_code, duration_ms, user_agent, api_version):
     """Log API usage to database asynchronously (non-blocking)"""
     def log_to_db():
+        conn = None
+        cur = None
         try:
             conn = get_db_connection()
             cur = conn.cursor()
@@ -58,11 +60,14 @@ def log_api_usage_async(endpoint, method, user_id, status_code, duration_ms, use
             """, (endpoint, method, user_id, status_code, duration_ms, user_agent, api_version))
 
             conn.commit()
-            cur.close()
-            conn.close()
         except Exception as e:
             # Log error but don't crash the app
             logger.error(f"Failed to log API usage: {str(e)}")
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()  # Wrapper automatically returns to pool
 
     # Run in background thread to not block request
     thread = threading.Thread(target=log_to_db, daemon=True)

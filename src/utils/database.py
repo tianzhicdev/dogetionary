@@ -19,6 +19,58 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://dogeuser:dogepass@localho
 # Global connection pool instance
 _connection_pool = None
 
+class PooledConnectionWrapper:
+    """
+    Wrapper for database connections that automatically returns them to the pool.
+
+    When close() is called, returns the connection to the pool instead of closing it.
+    """
+    def __init__(self, conn, pool):
+        self._conn = conn
+        self._pool = pool
+        self._closed = False
+
+    def close(self):
+        """Return connection to pool instead of closing"""
+        if not self._closed and self._pool is not None and self._conn is not None:
+            try:
+                self._pool.putconn(self._conn)
+                self._closed = True
+            except Exception as e:
+                logger.error(f"Failed to return connection to pool: {str(e)}")
+                try:
+                    self._conn.close()
+                except:
+                    pass
+
+    def cursor(self, *args, **kwargs):
+        """Forward cursor creation to underlying connection"""
+        return self._conn.cursor(*args, **kwargs)
+
+    def commit(self):
+        """Forward commit to underlying connection"""
+        return self._conn.commit()
+
+    def rollback(self):
+        """Forward rollback to underlying connection"""
+        return self._conn.rollback()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            try:
+                self._conn.rollback()
+            except:
+                pass
+        self.close()
+        return False
+
+    def __getattr__(self, name):
+        """Forward all other attributes to underlying connection"""
+        return getattr(self._conn, name)
+
 def _initialize_connection_pool():
     """
     Initialize the database connection pool.
@@ -106,7 +158,7 @@ def get_db_connection():
     Get a database connection from the connection pool.
 
     Returns:
-        psycopg2 connection with RealDictCursor
+        PooledConnectionWrapper: A wrapped connection that automatically returns to pool on close()
 
     Note:
         Connections must be returned to the pool by calling conn.close()
@@ -119,7 +171,9 @@ def get_db_connection():
         _initialize_connection_pool()
 
     try:
-        return _connection_pool.getconn()
+        raw_conn = _connection_pool.getconn()
+        # Wrap connection so close() returns it to the pool
+        return PooledConnectionWrapper(raw_conn, _connection_pool)
     except pool.PoolError as e:
         logger.error(f"Connection pool exhausted: {str(e)}")
         raise
@@ -142,7 +196,7 @@ def db_cursor(commit: bool = False):
             cur.execute("INSERT INTO ...")
 
     Note:
-        Automatically returns connection to pool on exit (via conn.close())
+        Automatically returns connection to pool on exit
     """
     conn = None
     cur = None
@@ -161,8 +215,7 @@ def db_cursor(commit: bool = False):
         if cur:
             cur.close()
         if conn:
-            # Return connection to pool (not closing the actual connection)
-            _return_connection_to_pool(conn)
+            conn.close()  # Wrapper automatically returns to pool
 
 def db_execute(query: str, params: Optional[tuple] = None, commit: bool = False) -> int:
     """Execute a query without returning results (INSERT, UPDATE, DELETE).

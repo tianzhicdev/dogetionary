@@ -90,6 +90,12 @@ docker volume rm dogetionary_postgres_data
 docker-compose up -d
 ```
 
+Sync database from production:
+```bash
+./scripts/sync_db_from_remote.sh
+```
+See [Database Sync Guide](docs/database-sync-guide.md) for detailed instructions.
+
 Run integration tests:
 ```bash
 python scripts/integration_test.py

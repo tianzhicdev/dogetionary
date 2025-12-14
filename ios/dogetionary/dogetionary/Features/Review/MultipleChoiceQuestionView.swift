@@ -14,14 +14,15 @@ struct MultipleChoiceQuestionView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // Question Text with gradient
-            Text(question.question_text)
-                .font(.title2)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(AppTheme.gradient1)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
+            // Question Text with clickable words
+            ClickableTextView(
+                text: question.question_text,
+                font: .title2.weight(.bold),
+                foregroundColor: AppTheme.smallTitleText,
+                alignment: .center
+            )
+            .padding(.horizontal)
+            .padding(.vertical, 8)
 
             // Options
             MultipleChoiceOptionsView(

@@ -21,6 +21,7 @@ struct MultipleChoiceOptionsView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            // Options
             ForEach(options) { option in
                 OptionButton(
                     option: option,
@@ -35,23 +36,49 @@ struct MultipleChoiceOptionsView: View {
                 )
                 .disabled(showFeedback)
             }
+
+            // Submit button (only show when answer is selected but not yet submitted)
+            if selectedAnswer != nil && !showFeedback {
+                Button(action: {
+                    submitAnswer()
+                }) {
+                    Text("Submit Answer")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(AppTheme.selectableTint)
+                        )
+                }
+                .padding(.top, 8)
+            }
         }
     }
 
     // MARK: - Helper Methods
 
     private func handleOptionTap(_ answerId: String) {
+        // Just select the option, don't submit yet
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             selectedAnswer = answerId
+        }
+    }
+
+    private func submitAnswer() {
+        guard let answer = selectedAnswer else { return }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             showFeedback = true
         }
 
         // Call immediate feedback callback right away
-        onImmediateFeedback?(answerId)
+        onImmediateFeedback?(answer)
 
         // Delay before calling onAnswer to show feedback and correct answer
         DispatchQueue.main.asyncAfter(deadline: .now() + feedbackDelay) {
-            onAnswer(answerId)
+            onAnswer(answer)
         }
     }
 }

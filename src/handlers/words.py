@@ -723,7 +723,7 @@ def get_illustration():
                 {"role": "user", "content": scene_prompt}
             ],
             model_name=COMPLETION_MODEL_NAME_ADVANCED,
-            max_completion_tokens=200
+            max_completion_tokens=200  # Increased for reasoning models (gpt-5-nano uses reasoning tokens)
         )
 
         if not scene_description:
