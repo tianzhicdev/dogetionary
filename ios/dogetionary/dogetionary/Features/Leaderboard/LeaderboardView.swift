@@ -130,7 +130,8 @@ struct LeaderboardRowView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(AppTheme.bodyText
                         )
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     if isCurrentUser {
                         Text("YOU")
@@ -147,7 +148,8 @@ struct LeaderboardRowView: View {
                     Text(entry.user_motto)
                         .font(.system(size: 12))
                         .foregroundColor(AppTheme.smallTextColor1)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 

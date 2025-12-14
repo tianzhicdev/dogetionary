@@ -291,7 +291,8 @@ struct SavedWordRow: View {
                 Text(savedWord.word)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(AppTheme.bodyText)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 // Show test labels only if user has enabled tests
                 testLabels

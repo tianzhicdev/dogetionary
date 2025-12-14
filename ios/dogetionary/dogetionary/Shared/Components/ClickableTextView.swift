@@ -91,13 +91,13 @@ struct ClickableTextView: View {
         for token in tokens {
             var tokenAttr = AttributedString(token.text)
 
+            // Set default foreground color
+            tokenAttr.foregroundColor = foregroundColor
+
             // Make word-tokens tappable with custom URL scheme
             if token.isWord {
                 let cleanWord = token.text.trimmingCharacters(in: .punctuationCharacters)
                 tokenAttr.link = URL(string: "word://\(cleanWord)")
-
-                // Style tappable words slightly to indicate they're interactive
-                tokenAttr.underlineStyle = .single
             }
 
             result.append(tokenAttr)

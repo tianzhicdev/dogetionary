@@ -20,7 +20,7 @@ struct MultipleChoiceOptionsView: View {
     @State private var showFeedback = false
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
             // Options
             ForEach(options) { option in
                 OptionButton(

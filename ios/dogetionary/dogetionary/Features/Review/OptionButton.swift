@@ -79,9 +79,10 @@ struct OptionButton: View {
                 ClickableTextView(
                     text: option.text,
                     font: .body.weight(.medium),
-                    foregroundColor: AppTheme.smallTitleText,
+                    foregroundColor: AppTheme.bodyText,
                     alignment: .leading
                 )
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             case .textOnly:
@@ -89,9 +90,10 @@ struct OptionButton: View {
                 ClickableTextView(
                     text: option.text,
                     font: .headline.weight(.semibold),
-                    foregroundColor: AppTheme.smallTitleText,
+                    foregroundColor: AppTheme.bodyText,
                     alignment: .center
                 )
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
             }
 
