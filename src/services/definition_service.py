@@ -269,7 +269,7 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
 
         # Check if content is None or empty
         if not definition_content:
-            logger.error(f"LLM completion returned empty content for word '{word}'")
+            logger.error(f"LLM completion returned empty content for word '{word}'", exc_info=True)
             return None
 
         # Parse the JSON response from OpenAI
@@ -294,7 +294,7 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
         return definition_data
 
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse OpenAI response for word '{word}': {e}")
+        logger.error(f"Failed to parse OpenAI response for word '{word}': {e}", exc_info=True)
         return None
     except Exception as e:
         logger.error(f"Error generating definition for word '{word}': {e}", exc_info=True)

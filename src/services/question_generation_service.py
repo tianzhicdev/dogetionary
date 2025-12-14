@@ -66,7 +66,7 @@ def get_cached_question(word: str, learning_lang: str, native_lang: str, questio
         return None
 
     except Exception as e:
-        logger.error(f"Error checking question cache: {e}")
+        logger.error(f"Error checking question cache: {e}", exc_info=True)
         return None
 
 
@@ -85,7 +85,7 @@ def cache_question(word: str, learning_lang: str, native_lang: str, question_typ
         logger.info(f"Cached question for: {word} ({question_type})")
 
     except Exception as e:
-        logger.error(f"Error caching question: {e}")
+        logger.error(f"Error caching question: {e}", exc_info=True)
 
 
 def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
@@ -126,7 +126,7 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
         return None
 
     except Exception as e:
-        logger.error(f"Error checking videos for word '{word}': {e}")
+        logger.error(f"Error checking videos for word '{word}': {e}", exc_info=True)
         return None
 
 
@@ -218,7 +218,7 @@ Return ONLY a JSON object with this structure:
             raise ValueError("LLM did not return exactly 3 distractors")
 
     except Exception as e:
-        logger.error(f"Error generating video question with LLM: {e}, using fallback")
+        logger.error(f"Error generating video question with LLM: {e}, using fallback", exc_info=True)
         # Fallback to basic definition-based approach
         definitions = definition.get('definitions', [])
         if definitions:
@@ -505,7 +505,7 @@ def call_openai_for_question(prompt: str) -> Dict:
         return question_data
 
     except Exception as e:
-        logger.error(f"Error calling LLM API: {e}")
+        logger.error(f"Error calling LLM API: {e}", exc_info=True)
         raise
 
 

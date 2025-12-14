@@ -50,7 +50,7 @@ def practice_pronunciation():
         try:
             audio_data = base64.b64decode(audio_data_base64)
         except Exception as e:
-            logger.error(f"Failed to decode audio data: {str(e)}")
+            logger.error(f"Failed to decode audio data: {str(e, exc_info=True)}")
             return jsonify({'error': 'Invalid audio data encoding'}), 400
 
         # Get user's learning language from database
@@ -92,7 +92,7 @@ def practice_pronunciation():
             }), 500
 
     except Exception as e:
-        logger.error(f"Error in practice_pronunciation: {str(e)}")
+        logger.error(f"Error in practice_pronunciation: {str(e, exc_info=True)}")
         return jsonify({'error': 'Internal server error'}), 500
 
 def get_pronunciation_history():
@@ -153,7 +153,7 @@ def get_pronunciation_history():
         })
 
     except Exception as e:
-        logger.error(f"Error in get_pronunciation_history: {str(e)}")
+        logger.error(f"Error in get_pronunciation_history: {str(e, exc_info=True)}")
         return jsonify({'error': 'Internal server error'}), 500
 
 def get_pronunciation_stats():
@@ -226,7 +226,7 @@ def get_pronunciation_stats():
         })
 
     except Exception as e:
-        logger.error(f"Error in get_pronunciation_stats: {str(e)}")
+        logger.error(f"Error in get_pronunciation_stats: {str(e, exc_info=True)}")
         return jsonify({'error': 'Internal server error'}), 500
 
 
@@ -274,7 +274,7 @@ def submit_pronunciation_review():
         try:
             audio_data = base64.b64decode(audio_data_base64)
         except Exception as e:
-            logger.error(f"Failed to decode audio data: {str(e)}")
+            logger.error(f"Failed to decode audio data: {str(e, exc_info=True)}")
             return jsonify({'error': 'Invalid audio data encoding'}), 400
 
         # Evaluate pronunciation
@@ -378,7 +378,7 @@ def submit_pronunciation_review():
 
         except Exception as db_error:
             conn.rollback()
-            logger.error(f"Database error in pronunciation review: {db_error}")
+            logger.error(f"Database error in pronunciation review: {db_error}", exc_info=True)
             raise
 
         finally:
@@ -398,5 +398,5 @@ def submit_pronunciation_review():
         }), 200
 
     except Exception as e:
-        logger.error(f"Error in submit_pronunciation_review: {str(e)}", exc_info=True)
+        logger.error(f"Error in submit_pronunciation_review: {str(e, exc_info=True)}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500

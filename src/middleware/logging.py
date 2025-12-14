@@ -3,8 +3,36 @@ import sys
 import json
 import time
 import os
+import uuid
 from flask import request, g, current_app
 from logging.handlers import RotatingFileHandler
+from pythonjsonlogger import jsonlogger
+
+
+class LokiJsonFormatter(jsonlogger.JsonFormatter):
+    """Custom JSON formatter with Loki-friendly labels"""
+
+    def add_fields(self, log_record, record, message_dict):
+        super(LokiJsonFormatter, self).add_fields(log_record, record, message_dict)
+
+        # Add Loki labels
+        log_record['app'] = 'dogetionary'
+        log_record['service'] = 'backend'
+        log_record['level'] = record.levelname
+        log_record['logger'] = record.name
+        log_record['file'] = record.pathname
+        log_record['line'] = record.lineno
+
+        # Add request context if available
+        if hasattr(g, 'request_id'):
+            log_record['request_id'] = g.request_id
+        if hasattr(g, 'user_id'):
+            log_record['user_id'] = g.user_id
+        if request and request.endpoint:
+            log_record['endpoint'] = request.endpoint
+            log_record['method'] = request.method
+            log_record['path'] = request.path
+
 
 def setup_logging(app):
     """Configure application logging"""
@@ -15,9 +43,14 @@ def setup_logging(app):
 
     app.logger.setLevel(logging.INFO)
 
+    # Create JSON formatter for all handlers
+    json_formatter = LokiJsonFormatter(
+        '%(asctime)s %(name)s %(levelname)s %(pathname)s %(lineno)d %(message)s'
+    )
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    console_handler.setFormatter(json_formatter)
     app.logger.addHandler(console_handler)
 
     # File handler
@@ -39,7 +72,7 @@ def setup_logging(app):
             backupCount=50  # 50 backups × 100MB = 5GB total
         )
         file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        file_handler.setFormatter(json_formatter)
         app.logger.addHandler(file_handler)
 
         # Add separate rotating file handler for ERRORS ONLY
@@ -49,9 +82,7 @@ def setup_logging(app):
             backupCount=20  # 20 backups × 50MB = 1GB total
         )
         error_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
-        error_handler.setFormatter(logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - [%(pathname)s:%(lineno)d] - %(message)s'
-        ))
+        error_handler.setFormatter(json_formatter)
         app.logger.addHandler(error_handler)
 
         # Force a log entry to test file handler
@@ -66,9 +97,11 @@ def setup_logging(app):
 def log_request_info():
     """Log all incoming requests with full details"""
     g.start_time = time.time()
+    g.request_id = str(uuid.uuid4())
 
     # Log request details
     request_data = {
+        'request_id': g.request_id,
         'method': request.method,
         'url': request.url,
         'remote_addr': request.remote_addr,
@@ -98,6 +131,7 @@ def log_response_info(response):
     duration = time.time() - getattr(g, 'start_time', time.time())
 
     response_data = {
+        'request_id': getattr(g, 'request_id', 'unknown'),
         'status_code': response.status_code,
         'status': response.status,
         'content_type': response.content_type,
@@ -119,3 +153,36 @@ def log_response_info(response):
     current_app.logger.info(f"RESPONSE: {json.dumps(response_data, default=str, indent=2)}")
 
     return response
+
+
+def log_error(logger, message, **context):
+    """
+    Consistently log errors with full context and stack trace.
+
+    Args:
+        logger: The logger instance to use
+        message: Human-readable error message
+        **context: Additional context fields (user_id, word, endpoint, etc.)
+
+    Usage:
+        from middleware.logging import log_error
+        log_error(logger, "Failed to save word", user_id=user_id, word=word, language=language)
+    """
+    # Merge context with request context if available
+    extra = dict(context)
+
+    # Add request context automatically
+    if hasattr(g, 'request_id'):
+        extra['request_id'] = g.request_id
+    if hasattr(g, 'user_id'):
+        extra['user_id'] = g.user_id
+
+    # Add current exception type if we're in an exception handler
+    import sys
+    exc_info = sys.exc_info()
+    if exc_info[0] is not None:
+        extra['error_type'] = exc_info[0].__name__
+        extra['error_message'] = str(exc_info[1])
+
+    # Log with full stack trace
+    logger.error(message, extra=extra, exc_info=True)

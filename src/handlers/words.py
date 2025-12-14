@@ -118,7 +118,7 @@ def get_next_review_word_v2():
         })
 
     except Exception as e:
-        logger.error(f"Error getting next review word (v2): {str(e)}")
+        logger.error(f"Error getting next review word (v2, exc_info=True): {str(e)}")
         return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
 
 def audio_generation_worker():
@@ -137,14 +137,14 @@ def audio_generation_worker():
                 store_audio(text, language, audio_data)
                 logger.info(f"Successfully generated audio for: '{text}'")
             except Exception as e:
-                logger.error(f"Failed to generate audio for '{text}': {str(e)}")
+                logger.error(f"Failed to generate audio for '{text}': {str(e, exc_info=True)}")
                 
             audio_generation_queue.task_done()
             
         except queue.Empty:
             continue
         except Exception as e:
-            logger.error(f"Error in audio generation worker: {str(e)}")
+            logger.error(f"Error in audio generation worker: {str(e, exc_info=True)}")
 
 # Old schemas and helper functions removed - now using centralized services/definition_service.py
 
@@ -196,7 +196,7 @@ def get_word_review_data(user_id: str, word_id: int):
         return review_count, interval_days, next_review_date, last_reviewed_at
 
     except Exception as e:
-        logger.error(f"Error getting review data: {str(e)}")
+        logger.error(f"Error getting review data: {str(e, exc_info=True)}")
         return 0, 1, datetime.now() + timedelta(days=1), None
     finally:
         if cur:
@@ -221,7 +221,7 @@ def audio_exists(text: str, language: str) -> bool:
         result = cur.fetchone()
         return result is not None
     except Exception as e:
-        logger.error(f"Error checking audio existence: {str(e)}")
+        logger.error(f"Error checking audio existence: {str(e, exc_info=True)}")
         return False
     finally:
         if cur:
@@ -359,7 +359,7 @@ def get_word_definition_v4():
         })
 
     except Exception as e:
-        logger.error(f"V4: Error getting definition for word '{word}': {str(e)}")
+        logger.error(f"V4: Error getting definition for word '{word}': {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to get definition: {str(e)}"}), 500
 
 
@@ -508,7 +508,7 @@ def get_saved_words():
         })
 
     except Exception as e:
-        logger.error(f"Error getting saved words for user {user_id}: {str(e)}")
+        logger.error(f"Error getting saved words for user {user_id}: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to get saved words: {str(e)}"}), 500
     finally:
         if cur:
@@ -532,7 +532,7 @@ def generate_audio_for_text(text: str) -> bytes:
         return response.content
 
     except Exception as e:
-        logger.error(f"Failed to generate audio: {str(e)}")
+        logger.error(f"Failed to generate audio: {str(e, exc_info=True)}")
         raise
 
 def store_audio(text: str, language: str, audio_data: bytes) -> str:
@@ -565,7 +565,7 @@ def store_audio(text: str, language: str, audio_data: bytes) -> str:
     except Exception as e:
         if conn:
             conn.rollback()
-        logger.error(f"Error storing audio: {str(e)}")
+        logger.error(f"Error storing audio: {str(e, exc_info=True)}")
         raise
     finally:
         if cur:
@@ -619,11 +619,11 @@ def get_audio(text, language):
             })
 
         except Exception as audio_error:
-            logger.error(f"Failed to generate audio: {str(audio_error)}")
+            logger.error(f"Failed to generate audio: {str(audio_error, exc_info=True)}")
             return jsonify({"error": "Failed to generate audio"}), 500
 
     except Exception as e:
-        logger.error(f"Error getting audio: {str(e)}")
+        logger.error(f"Error getting audio: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to get audio: {str(e)}"}), 500
     finally:
         if cur:
@@ -778,7 +778,7 @@ def get_illustration():
     except Exception as e:
         if conn:
             conn.rollback()
-        logger.error(f"Error getting/generating illustration: {str(e)}")
+        logger.error(f"Error getting/generating illustration: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to get/generate illustration: {str(e)}"}), 500
     finally:
         if cur:
@@ -846,7 +846,7 @@ def get_word_details(word_id):
         })
 
     except Exception as e:
-        logger.error(f"Error getting word details: {str(e)}")
+        logger.error(f"Error getting word details: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to get word details: {str(e)}"}), 500
     finally:
         if cur:
@@ -913,7 +913,7 @@ def generate_word_definition():
         }), 201
 
     except Exception as e:
-        logger.error(f"Error generating word definition: {str(e)}")
+        logger.error(f"Error generating word definition: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to generate definition: {str(e)}"}), 500
 
 
@@ -980,7 +980,7 @@ def is_word_saved():
             })
 
     except Exception as e:
-        logger.error(f"Error checking if word is saved: {str(e)}")
+        logger.error(f"Error checking if word is saved: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to check word status: {str(e)}"}), 500
     finally:
         if cur:
@@ -1027,7 +1027,7 @@ def get_all_words_for_language_pair(learning_lang, native_lang):
         return jsonify(words)
 
     except Exception as e:
-        logger.error(f"Error getting all words for {learning_lang}->{native_lang}: {str(e)}")
+        logger.error(f"Error getting all words for {learning_lang}->{native_lang}: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to get words: {str(e)}"}), 500
     finally:
         if cur:
@@ -1100,7 +1100,7 @@ def toggle_exclude_from_practice():
         return jsonify(result), 200
 
     except Exception as e:
-        logger.error(f"Error in toggle_exclude_from_practice: {str(e)}", exc_info=True)
+        logger.error(f"Error in toggle_exclude_from_practice: {str(e, exc_info=True)}", exc_info=True)
         return jsonify({
             "error": "Internal server error",
             "message": str(e)

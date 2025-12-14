@@ -159,7 +159,7 @@ def update_test_settings():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error updating test settings: {e}")
+        logger.error(f"Error updating test settings: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -394,7 +394,7 @@ def get_test_settings():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error getting test settings: {e}")
+        logger.error(f"Error getting test settings: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -537,7 +537,7 @@ def add_daily_test_words():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error adding daily test words: {e}")
+        logger.error(f"Error adding daily test words: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -579,7 +579,7 @@ def get_test_vocabulary_stats():
             conn.close()
 
     except Exception as e:
-        logger.error(f"Error getting test vocabulary stats: {e}")
+        logger.error(f"Error getting test vocabulary stats: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -630,7 +630,7 @@ def get_test_vocabulary_count():
         }), 200
 
     except Exception as e:
-        logger.error(f"Error getting test vocabulary count: {e}")
+        logger.error(f"Error getting test vocabulary count: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -645,7 +645,7 @@ def manual_daily_job():
         add_daily_test_words_for_all_users()
         return jsonify({"success": True, "message": "Daily job completed successfully"}), 200
     except Exception as e:
-        logger.error(f"Manual daily job failed: {e}")
+        logger.error(f"Manual daily job failed: {e}", exc_info=True)
         return jsonify({"error": "Failed to run daily job"}), 500
 
 
@@ -713,7 +713,7 @@ def get_test_config():
         return jsonify({"config": config}), 200
 
     except Exception as e:
-        logger.error(f"Error getting test config: {e}")
+        logger.error(f"Error getting test config: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -763,7 +763,7 @@ def get_test_vocabulary_count():
         # Validate all test types
         for test_type in test_types:
             if test_type not in TEST_TYPE_MAPPING:
-                logger.error(f"Invalid test type requested: {test_type}")
+                logger.error(f"Invalid test type requested: {test_type}", exc_info=True)
                 return jsonify({"error": f"Invalid test type: {test_type}"}), 400
 
         conn = get_db_connection()

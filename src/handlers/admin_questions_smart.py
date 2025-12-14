@@ -136,7 +136,7 @@ def smart_batch_generate_questions():
                 if not has_definition:
                     definition_data = generate_definition_with_llm(word, learning_lang, native_lang)
                     if not definition_data:
-                        logger.error(f"Failed to generate definition for '{word}'")
+                        logger.error(f"Failed to generate definition for '{word}'", exc_info=True)
                         stats['errors'] += 1
                         stats['error_details'].append(f"Definition generation failed for '{word}'")
                         continue
@@ -195,7 +195,7 @@ def smart_batch_generate_questions():
                         stats['errors'] += 1
                         error_msg = f"Question generation failed for '{word}' ({question_type}): {str(e)}"
                         stats['error_details'].append(error_msg)
-                        logger.error(error_msg)
+                        logger.error(error_msg, exc_info=True)
                         continue
 
                 stats['words_processed'] += 1
@@ -274,7 +274,7 @@ def find_incomplete_words(
 
     column = source_column_map.get(source)
     if not column:
-        logger.error(f"Unknown source: {source}")
+        logger.error(f"Unknown source: {source}", exc_info=True)
         return []
 
     # Build WHERE clause based on strategy

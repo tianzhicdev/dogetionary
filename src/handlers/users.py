@@ -96,7 +96,7 @@ def get_user_preferences(user_id: str) -> dict:
             }
 
     except Exception as e:
-        logger.error(f"Error getting user preferences: {str(e)}")
+        logger.error(f"Error getting user preferences: {str(e, exc_info=True)}")
         return {
             'learning_language': 'en',
             'native_language': 'zh',
@@ -260,7 +260,7 @@ def handle_user_preferences(user_id):
             return jsonify(response_data)
     
     except Exception as e:
-        logger.error(f"Error handling user preferences: {str(e)}")
+        logger.error(f"Error handling user preferences: {str(e, exc_info=True)}")
         return jsonify({"error": f"Failed to handle user preferences: {str(e)}"}), 500
 
 

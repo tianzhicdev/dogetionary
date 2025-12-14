@@ -37,7 +37,7 @@ class PooledConnectionWrapper:
                 self._pool.putconn(self._conn)
                 self._closed = True
             except Exception as e:
-                logger.error(f"Failed to return connection to pool: {str(e)}")
+                logger.error(f"Failed to return connection to pool: {str(e, exc_info=True)}")
                 try:
                     self._conn.close()
                 except:
@@ -92,7 +92,7 @@ def _initialize_connection_pool():
         match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', DATABASE_URL)
 
         if not match:
-            logger.error(f"Invalid DATABASE_URL format: {DATABASE_URL}")
+            logger.error(f"Invalid DATABASE_URL format: {DATABASE_URL}", exc_info=True)
             raise ValueError("Invalid DATABASE_URL format")
 
         user, password, host, port, dbname = match.groups()
@@ -114,7 +114,7 @@ def _initialize_connection_pool():
         atexit.register(_close_connection_pool)
 
     except Exception as e:
-        logger.error(f"Failed to initialize connection pool: {str(e)}")
+        logger.error(f"Failed to initialize connection pool: {str(e, exc_info=True)}")
         raise
 
 def _close_connection_pool():
@@ -142,7 +142,7 @@ def _return_connection_to_pool(conn):
         try:
             _connection_pool.putconn(conn)
         except Exception as e:
-            logger.error(f"Failed to return connection to pool: {str(e)}")
+            logger.error(f"Failed to return connection to pool: {str(e, exc_info=True)}")
             # Fallback: close the connection directly
             try:
                 conn.close()
@@ -175,10 +175,10 @@ def get_db_connection():
         # Wrap connection so close() returns it to the pool
         return PooledConnectionWrapper(raw_conn, _connection_pool)
     except pool.PoolError as e:
-        logger.error(f"Connection pool exhausted: {str(e)}")
+        logger.error(f"Connection pool exhausted: {str(e, exc_info=True)}")
         raise
     except Exception as e:
-        logger.error(f"Failed to get connection from pool: {str(e)}")
+        logger.error(f"Failed to get connection from pool: {str(e, exc_info=True)}")
         raise
 
 @contextmanager
@@ -209,7 +209,7 @@ def db_cursor(commit: bool = False):
     except Exception as e:
         if conn and commit:
             conn.rollback()
-        logger.error(f"Database error: {str(e)}")
+        logger.error(f"Database error: {str(e, exc_info=True)}")
         raise
     finally:
         if cur:
