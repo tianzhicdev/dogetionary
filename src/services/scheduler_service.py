@@ -53,7 +53,7 @@ class SchedulerService:
                 time.sleep(60)
 
             except Exception as e:
-                self.logger.error(f"Error in scheduler loop: {str(e, exc_info=True)}")
+                self.logger.error(f"Error in scheduler loop: {str(e)}", exc_info=True)
                 time.sleep(60)  # Wait before retrying
 
     def _run_notification_check(self):
@@ -66,7 +66,7 @@ class SchedulerService:
                 self.logger.info(f"📱 Sent {stats['notifications_sent']} notifications to users with {stats['total_overdue_words']} overdue words")
 
         except Exception as e:
-            self.logger.error(f"Error in notification check: {str(e, exc_info=True)}")
+            self.logger.error(f"Error in notification check: {str(e)}", exc_info=True)
 
     def run_notification_check_now(self):
         """Manually trigger notification check (for testing/admin purposes)"""

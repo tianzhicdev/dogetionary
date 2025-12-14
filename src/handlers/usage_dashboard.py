@@ -172,7 +172,7 @@ def get_usage_dashboard():
         return Response(html, mimetype='text/html')
 
     except Exception as e:
-        logger.error(f"Error generating usage dashboard: {str(e, exc_info=True)}")
+        logger.error(f"Error generating usage dashboard: {str(e)}", exc_info=True)
         error_html = f"""
         <html>
         <head><title>Error</title></head>

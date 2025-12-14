@@ -129,5 +129,5 @@ def get_api_usage_analytics():
         })
 
     except Exception as e:
-        logger.error(f"Error getting API usage analytics: {str(e, exc_info=True)}")
+        logger.error(f"Error getting API usage analytics: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get API usage analytics: {str(e)}"}), 500
