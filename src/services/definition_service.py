@@ -10,8 +10,7 @@ import logging
 from typing import Optional, Dict
 from datetime import datetime
 from utils.database import get_db_connection
-from utils.llm import llm_completion
-from config.config import COMPLETION_MODEL_WORD_SEARCH
+from utils.llm import llm_completion_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -244,8 +243,8 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
         prompt = build_v4_definition_prompt(word, learning_lang, native_lang)
 
         # Call LLM API with V4 schema using utility function
-        # Uses Groq (llama-4-scout) for fast word search responses
-        definition_content = llm_completion(
+        # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
+        definition_content = llm_completion_with_fallback(
             messages=[
                 {
                     "role": "system",
@@ -256,7 +255,7 @@ def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str
                     "content": prompt
                 }
             ],
-            model_name=COMPLETION_MODEL_WORD_SEARCH,
+            use_case="definition",
             response_format={
                 "type": "json_schema",
                 "json_schema": {

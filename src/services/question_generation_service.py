@@ -10,8 +10,7 @@ import random
 import logging
 from typing import Dict, Any, Optional, List
 from utils.database import db_fetch_one, db_execute
-from utils.llm import llm_completion
-from config.config import COMPLETION_MODEL_NAME
+from utils.llm import llm_completion_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +189,8 @@ Return ONLY a JSON object with this structure:
 
     try:
         # Generate meaning and distractors with LLM
-        response_json = llm_completion(
+        # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
+        response_json = llm_completion_with_fallback(
             messages=[
                 {
                     "role": "system",
@@ -201,7 +201,7 @@ Return ONLY a JSON object with this structure:
                     "content": prompt
                 }
             ],
-            model_name=COMPLETION_MODEL_NAME,
+            use_case="question",
             response_format={"type": "json_object"}
         )
 
@@ -481,7 +481,8 @@ def call_openai_for_question(prompt: str) -> Dict:
         Dict containing the generated question data
     """
     try:
-        content = llm_completion(
+        # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
+        content = llm_completion_with_fallback(
             messages=[
                 {
                     "role": "system",
@@ -492,7 +493,7 @@ def call_openai_for_question(prompt: str) -> Dict:
                     "content": prompt
                 }
             ],
-            model_name=COMPLETION_MODEL_NAME,
+            use_case="question",
             response_format={"type": "json_object"}  # Ensure JSON response
         )
 

@@ -18,7 +18,7 @@ from middleware.metrics import (
     llm_errors_total,
     estimate_cost
 )
-from config.config import GROQ_TO_OPENAI_FALLBACK
+from config.config import GROQ_TO_OPENAI_FALLBACK, FALLBACK_CHAINS
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,12 @@ MODEL_PROVIDER_MAP = {
     "gemma2-9b-it": "groq",
     "meta-llama/llama-4-scout-17b-16e-instruct": "groq",
 
+    # OpenRouter models
+    "deepseek/deepseek-chat": "openrouter",
+    "qwen/qwen-2.5-7b-instruct": "openrouter",
+    "mistralai/mistral-small": "openrouter",
+    "openai/gpt-4o": "openrouter",
+
     # OpenAI models (default)
     "gpt-5-nano": "openai",
     "gpt-4o": "openai",
@@ -47,6 +53,35 @@ MODEL_PROVIDER_MAP = {
     "gpt-4-turbo": "openai",
     "gpt-3.5-turbo": "openai",
 }
+
+
+def normalize_model_name(model_name: str) -> str:
+    """
+    Normalize model name for Prometheus labels.
+    Converts slashes and hyphens to underscores and uses short names.
+
+    Examples:
+        "deepseek/deepseek-chat" -> "deepseek_v3"
+        "qwen/qwen-2.5-7b-instruct" -> "qwen25_7b"
+        "gpt-4o-mini" -> "gpt4o_mini"
+    """
+    # Map full model names to short, normalized versions
+    model_map = {
+        "deepseek/deepseek-chat": "deepseek_v3",
+        "qwen/qwen-2.5-7b-instruct": "qwen25_7b",
+        "mistralai/mistral-small": "mistral_small",
+        "openai/gpt-4o": "gpt4o",
+        "llama-3.3-70b-versatile": "llama33_70b",
+        "llama-3.1-70b-versatile": "llama31_70b",
+        "mixtral-8x7b-32768": "mixtral_8x7b",
+        "gpt-4o": "gpt4o",
+        "gpt-4o-mini": "gpt4o_mini",
+        "gpt-4-turbo": "gpt4_turbo",
+        "gpt-3.5-turbo": "gpt35_turbo",
+    }
+
+    # Return mapped name or fallback to replacing special chars
+    return model_map.get(model_name, model_name.replace("/", "_").replace("-", "_").replace(".", "_"))
 
 def get_provider_for_model(model_name: str) -> str:
     """
@@ -64,9 +99,86 @@ def get_fallback_model(groq_model: str) -> Optional[str]:
     return GROQ_TO_OPENAI_FALLBACK.get(groq_model)
 
 
+def get_fallback_chain(use_case: str) -> List[str]:
+    """
+    Get fallback chain for a specific use case.
+    Returns list of model names to try in order.
+    Falls back to 'general' chain if use_case not found.
+    """
+    return FALLBACK_CHAINS.get(use_case, FALLBACK_CHAINS.get('general', []))
+
+
+def llm_completion_with_fallback(
+    messages: List[Dict[str, str]],
+    use_case: str,
+    response_format: Optional[Dict[str, Any]] = None,
+    temperature: float = 1.0,
+    max_tokens: Optional[int] = None,
+    max_completion_tokens: Optional[int] = None
+) -> Optional[str]:
+    """
+    Make an LLM completion API call with multi-level fallback chain.
+    Tries models in order defined by FALLBACK_CHAINS for the given use_case.
+
+    Args:
+        messages: List of message dicts with 'role' and 'content' keys
+        use_case: Use case identifier (definition, question, pronunciation, etc.)
+        response_format: Optional response format specification
+        temperature: Sampling temperature (default: 1.0)
+        max_tokens: Maximum tokens in response (deprecated, use max_completion_tokens)
+        max_completion_tokens: Maximum tokens in completion
+
+    Returns:
+        Response content as string, or None if all models in chain fail
+
+    Example:
+        >>> messages = [{"role": "user", "content": "Define 'hello'"}]
+        >>> response = llm_completion_with_fallback(messages, use_case="definition")
+        # Tries: deepseek -> qwen -> mistral -> gpt-4o until one succeeds
+    """
+    chain = get_fallback_chain(use_case)
+
+    if not chain:
+        logger.error(f"No fallback chain configured for use_case={use_case}")
+        return None
+
+    logger.info(f"Starting fallback chain for use_case={use_case}, models={chain}")
+
+    for i, model_name in enumerate(chain):
+        try:
+            logger.debug(f"Attempting model {i+1}/{len(chain)}: {model_name}")
+
+            result = llm_completion(
+                messages=messages,
+                model_name=model_name,
+                use_case=use_case,
+                response_format=response_format,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                max_completion_tokens=max_completion_tokens,
+                _is_fallback_attempt=True  # Prevent nested fallback loops
+            )
+
+            if result:
+                if i > 0:
+                    logger.info(f"Fallback successful: {model_name} (level {i})")
+                return result
+            else:
+                logger.warning(f"Model {model_name} returned None, trying next in chain")
+
+        except Exception as e:
+            logger.warning(f"Model {model_name} failed with {type(e).__name__}: {e}, trying next in chain")
+            continue
+
+    # All models failed
+    logger.error(f"All models in fallback chain failed for use_case={use_case}, chain={chain}")
+    return None
+
+
 def llm_completion(
     messages: List[Dict[str, str]],
     model_name: str,
+    use_case: str = "general",
     response_format: Optional[Dict[str, Any]] = None,
     temperature: float = 1.0,
     max_tokens: Optional[int] = None,
@@ -75,13 +187,15 @@ def llm_completion(
 ) -> Optional[str]:
     """
     Make an LLM completion API call with standardized error handling.
-    Supports multiple providers: OpenAI and Groq (auto-detected based on model name).
+    Supports multiple providers: OpenAI, Groq, and OpenRouter (auto-detected based on model name).
 
     Args:
         messages: List of message dicts with 'role' and 'content' keys
         model_name: Model to use - provider is auto-detected from MODEL_PROVIDER_MAP
             - OpenAI: 'gpt-5-nano', 'gpt-4o-mini', etc.
             - Groq: 'llama-4-scout', 'mixtral-8x7b-32768', etc.
+            - OpenRouter: 'deepseek/deepseek-chat', 'qwen/qwen-2.5-7b-instruct', etc.
+        use_case: Use case identifier for metrics tracking (e.g., 'definition', 'question', 'pronunciation')
         response_format: Optional response format specification:
             - {"type": "json_object"} for flexible JSON mode
             - {"type": "json_schema", "json_schema": {...}} for strict schema validation
@@ -127,16 +241,26 @@ def llm_completion(
         # Auto-detect provider based on model name
         provider = get_provider_for_model(model_name)
 
+        # Normalize model name for metrics
+        normalized_model = normalize_model_name(model_name)
+
         # Select provider and initialize client
         if provider == "groq":
             if not GROQ_AVAILABLE:
                 logger.error("Groq SDK not available. Install with: pip install groq", exc_info=True)
                 # Track error
-                llm_calls_total.labels(provider='groq', model=model_name, status='error').inc()
-                llm_errors_total.labels(provider='groq', model=model_name, error_type='sdk_unavailable').inc()
+                llm_calls_total.labels(provider='groq', model=normalized_model, use_case=use_case, status='error').inc()
+                llm_errors_total.labels(provider='groq', model=normalized_model, use_case=use_case, error_type='sdk_unavailable').inc()
                 return None
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             logger.debug(f"Auto-detected Groq provider for model={model_name}")
+        elif provider == "openrouter":
+            # OpenRouter is OpenAI API-compatible, just different base URL
+            client = openai.OpenAI(
+                api_key=os.getenv("OPEN_ROUTER_KEY"),
+                base_url="https://openrouter.ai/api/v1"
+            )
+            logger.debug(f"Auto-detected OpenRouter provider for model={model_name}")
         else:  # default to openai
             client = openai.OpenAI()
             logger.debug(f"Auto-detected OpenAI provider for model={model_name}")
@@ -171,14 +295,14 @@ def llm_completion(
         if not content:
             logger.error(f"{provider.upper()} returned empty content. Model: {model_name}, Response: {response}", exc_info=True)
             # Track as error - empty response
-            llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
-            llm_errors_total.labels(provider=provider, model=model_name, error_type='empty_response').inc()
-            llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
+            llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='error').inc()
+            llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type='empty_response').inc()
+            llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
             return None
 
         # Track successful call metrics
-        llm_calls_total.labels(provider=provider, model=model_name, status='success').inc()
-        llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
+        llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='success').inc()
+        llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
 
         # Track token usage if available
         if hasattr(response, 'usage') and response.usage:
@@ -186,15 +310,15 @@ def llm_completion(
             completion_tokens = getattr(response.usage, 'completion_tokens', 0)
 
             if prompt_tokens > 0:
-                llm_tokens_total.labels(provider=provider, model=model_name, type='prompt').inc(prompt_tokens)
+                llm_tokens_total.labels(provider=provider, model=normalized_model, use_case=use_case, type='prompt').inc(prompt_tokens)
             if completion_tokens > 0:
-                llm_tokens_total.labels(provider=provider, model=model_name, type='completion').inc(completion_tokens)
+                llm_tokens_total.labels(provider=provider, model=normalized_model, use_case=use_case, type='completion').inc(completion_tokens)
 
             # Estimate and track cost
             cost = estimate_cost(provider, model_name, response.usage)
             if cost > 0:
-                llm_cost_usd_total.labels(provider=provider, model=model_name).inc(cost)
-                logger.debug(f"LLM call cost: ${cost:.6f} (provider={provider}, model={model_name}, prompt={prompt_tokens}, completion={completion_tokens})")
+                llm_cost_usd_total.labels(provider=provider, model=normalized_model, use_case=use_case).inc(cost)
+                logger.debug(f"LLM call cost: ${cost:.6f} (provider={provider}, model={normalized_model}, use_case={use_case}, prompt={prompt_tokens}, completion={completion_tokens})")
 
         return content.strip()
 
@@ -205,9 +329,10 @@ def llm_completion(
 
         # Track error metrics
         if provider:
-            llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
-            llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
-            llm_errors_total.labels(provider=provider, model=model_name, error_type=error_type).inc()
+            normalized_model = normalize_model_name(model_name)
+            llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='error').inc()
+            llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
+            llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type=error_type).inc()
 
         return None
     except Exception as e:
@@ -217,9 +342,10 @@ def llm_completion(
 
         # Track error metrics
         if provider:
-            llm_calls_total.labels(provider=provider, model=model_name, status='error').inc()
-            llm_request_duration_seconds.labels(provider=provider, model=model_name).observe(duration)
-            llm_errors_total.labels(provider=provider, model=model_name, error_type=error_type).inc()
+            normalized_model = normalize_model_name(model_name)
+            llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='error').inc()
+            llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
+            llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type=error_type).inc()
 
         # Attempt fallback to OpenAI if this is a Groq over-capacity error
         if (provider == "groq" and
@@ -233,6 +359,7 @@ def llm_completion(
                 return llm_completion(
                     messages=messages,
                     model_name=fallback_model,
+                    use_case=use_case,
                     response_format=response_format,
                     temperature=temperature,
                     max_tokens=max_tokens,

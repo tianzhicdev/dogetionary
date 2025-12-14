@@ -1,12 +1,12 @@
 import json
 from utils.database import get_db_connection
-from utils.llm import llm_completion
-from config.config import COMPLETION_MODEL_NAME
+from utils.llm import llm_completion_with_fallback
 
 def generate_user_profile() -> tuple[str, str]:
-    """Generate a proper, civil user name and motto using OpenAI with structured output"""
+    """Generate a proper, civil user name and motto using LLM with fallback chain"""
     try:
-        content = llm_completion(
+        # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
+        content = llm_completion_with_fallback(
             messages=[
                 {
                     "role": "system",
@@ -17,7 +17,7 @@ def generate_user_profile() -> tuple[str, str]:
                     "content": "Generate a friendly, appropriate username and motivational motto for a language learning app user. The username should be suitable for all ages, contain no real names, and avoid numbers/special characters. The motto should be positive, motivational, related to learning or personal growth, and under 50 characters. Both should be completely appropriate, civil, and encouraging."
                 }
             ],
-            model_name=COMPLETION_MODEL_NAME,
+            use_case="user_profile",
             response_format={
                 "type": "json_schema",
                 "json_schema": {

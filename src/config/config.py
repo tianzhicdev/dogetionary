@@ -1,21 +1,58 @@
 # OpenAI Model Configuration
 # Text completion models
 
-# Word search (user-facing, speed critical) - uses Groq for instant responses
+# Legacy model configs (deprecated - use FALLBACK_CHAINS instead)
 COMPLETION_MODEL_WORD_SEARCH = "llama-3.3-70b-versatile"  # Groq: Ultra-fast word definition lookup (200-500ms)
-
-# All other operations (async/cached, quality critical) - uses OpenAI GPT-5
-COMPLETION_MODEL_NAME = "gpt-5-nano"  # OpenAI: High-quality for questions, profiles, feedback
-COMPLETION_MODEL_NAME_ADVANCED = "gpt-5-nano"  # OpenAI: Advanced tasks (currently unused)
-
+COMPLETION_MODEL_NAME = "gpt-4o-mini"  # OpenAI: High-quality for questions, profiles, feedback
+COMPLETION_MODEL_NAME_ADVANCED = "gpt-4o"  # OpenAI: Advanced tasks like scene generation
 
 # Fallback mappings: Groq model -> OpenAI model (when Groq is over capacity)
+# Note: This is legacy fallback, new code should use FALLBACK_CHAINS
 GROQ_TO_OPENAI_FALLBACK = {
     "meta-llama/llama-4-scout-17b-16e-instruct": "gpt-4o-mini",
     "llama-4-scout": "gpt-4o-mini",
     "llama-3.3-70b-versatile": "gpt-4o",
     "llama-3.1-70b-versatile": "gpt-4o",
     "mixtral-8x7b-32768": "gpt-4o-mini",
+}
+
+# Multi-level fallback chains per use case
+# Chain tries models in order: DeepSeek V3 -> Qwen 2.5 7B -> Mistral Small -> GPT-4o
+FALLBACK_CHAINS = {
+    "definition": [
+        "deepseek/deepseek-chat",        # Fastest, cheapest (~$0.14/M tokens)
+        "qwen/qwen-2.5-7b-instruct",     # Fast, cheap (~$0.18/M tokens)
+        "mistralai/mistral-small",       # Good quality (~$1.00/M tokens)
+        "openai/gpt-4o"                  # Most reliable (~$2.50/M tokens)
+    ],
+    "question": [
+        "deepseek/deepseek-chat",
+        "qwen/qwen-2.5-7b-instruct",
+        "mistralai/mistral-small",
+        "openai/gpt-4o"
+    ],
+    "user_profile": [
+        "deepseek/deepseek-chat",
+        "qwen/qwen-2.5-7b-instruct",
+        "mistralai/mistral-small",
+        "openai/gpt-4o"
+    ],
+    "pronunciation": [
+        "deepseek/deepseek-chat",
+        "mistralai/mistral-small",
+        "openai/gpt-4o"
+    ],
+    "scene_description": [
+        "deepseek/deepseek-chat",
+        "mistralai/mistral-small",
+        "openai/gpt-4o"
+    ],
+    "general": [
+        "deepseek/deepseek-chat",
+        "qwen/qwen-2.5-7b-instruct",
+        "mistralai/mistral-small",
+        "openai/gpt-4o"
+    ]
 }
 
 # Image generation models
