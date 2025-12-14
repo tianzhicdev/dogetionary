@@ -56,46 +56,54 @@ struct OptionButton: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            HStack {
-                switch style {
-                case .idBadgeAndText:
-                    // Option ID (A, B, C, D) with gradient circle
-                    Text(option.id)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(AppTheme.selectableTint)
-                        .frame(width: 32, height: 32)
-
-                    // Option Text
-                    Text(option.text)
-                        .font(.body)
-                        .fontWeight(.medium)
-                        .foregroundColor(AppTheme.smallTitleText)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                case .textOnly:
-                    // Option Text (word) - centered
-                    Text(option.text)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.smallTitleText)
-                        .frame(maxWidth: .infinity)
-                        .background(AppTheme.clear)
-                }
-
-                // Check mark for selected or correct answer
-                if showFeedback && (isSelected || shouldShowAsCorrect) {
-                    Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(AppTheme.selectableTint)
-                        .font(.title3)
-                        .shadow(color: AppTheme.black.opacity(0.6), radius: 2, y: 1)
-                }
+        HStack {
+            // Checkbox button for selection
+            Button(action: onTap) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isSelected ? AppTheme.selectableTint : AppTheme.smallTitleText.opacity(0.3))
+                    .font(.title2)
             }
-            .padding()
+            .buttonStyle(PlainButtonStyle())
+            .disabled(showFeedback)
+
+            switch style {
+            case .idBadgeAndText:
+                // Option ID (A, B, C, D)
+                Text(option.id)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppTheme.selectableTint)
+                    .frame(width: 32, height: 32)
+
+                // Option Text - clickable for word lookup
+                ClickableTextView(
+                    text: option.text,
+                    font: .body.weight(.medium),
+                    foregroundColor: AppTheme.smallTitleText,
+                    alignment: .leading
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            case .textOnly:
+                // Option Text (word) - clickable for word lookup
+                ClickableTextView(
+                    text: option.text,
+                    font: .headline.weight(.semibold),
+                    foregroundColor: AppTheme.smallTitleText,
+                    alignment: .center
+                )
+                .frame(maxWidth: .infinity)
+            }
+
+            // Feedback icons (after answer submission)
+            if showFeedback && (isSelected || shouldShowAsCorrect) {
+                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(isCorrect ? AppTheme.successColor : AppTheme.errorColor)
+                    .font(.title3)
+                    .shadow(color: AppTheme.black.opacity(0.6), radius: 2, y: 1)
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding()
     }
 }
 

@@ -93,14 +93,15 @@ struct VideoQuestionView: View {
                 .padding(.horizontal)
             }
 
-            // Question text
-            Text(question.question_text)
-                .font(.title3)
-                .fontWeight(.medium)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-                .padding(.top, 8)
-                .foregroundStyle(AppTheme.bodyText)
+            // Question text with clickable words
+            ClickableTextView(
+                text: question.question_text,
+                font: .title3.weight(.medium),
+                foregroundColor: AppTheme.bodyText,
+                alignment: .center
+            )
+            .padding(.horizontal)
+            .padding(.top, 8)
 
             // Multiple choice options
             MultipleChoiceOptionsView(
@@ -225,47 +226,149 @@ struct HighlightedTranscriptText: View {
     let transcript: String
     let word: String
 
+    @State private var selectedWord: String?
+    @State private var showDefinition = false
+    @State private var definition: Definition?
+    @State private var isLoadingDefinition = false
+
     var body: some View {
         Text(highlightedText())
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
+            .environment(\.openURL, OpenURLAction { url in
+                handleWordTap(url: url)
+                return .handled
+            })
+            .sheet(isPresented: $showDefinition) {
+                NavigationView {
+                    ZStack {
+                        AppTheme.verticalGradient2.ignoresSafeArea()
+
+                        if isLoadingDefinition {
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .scaleEffect(1.5)
+                                Text("Loading...")
+                                    .foregroundColor(AppTheme.bodyText)
+                            }
+                        } else if let definition = definition {
+                            ScrollView {
+                                DefinitionCard(definition: definition)
+                                    .padding()
+                            }
+                        } else {
+                            VStack(spacing: 16) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.secondary)
+                                Text("No definition found")
+                                    .foregroundColor(AppTheme.bodyText)
+                            }
+                        }
+                    }
+                    .navigationTitle(selectedWord?.capitalized ?? "")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Close") {
+                                showDefinition = false
+                            }
+                            .foregroundColor(AppTheme.selectableTint)
+                        }
+                    }
+                }
+            }
     }
 
     private func highlightedText() -> AttributedString {
-        var attributedString = AttributedString(transcript)
+        var attributedString = AttributedString()
 
-        // Case-insensitive search for the word in the transcript
-        let lowercaseTranscript = transcript.lowercased()
+        // Tokenize the transcript into words and non-words
+        let tokens = tokenize(text: transcript)
+
+        // Case-insensitive word to highlight
         let lowercaseWord = word.lowercased()
 
-        // Find all occurrences of the word (whole word match)
-        var searchRange = lowercaseTranscript.startIndex
+        for token in tokens {
+            var tokenAttr = AttributedString(token.text)
 
-        while let range = lowercaseTranscript.range(of: lowercaseWord, range: searchRange..<lowercaseTranscript.endIndex) {
-            // Check if it's a whole word match (not part of another word)
-            let beforeChar = range.lowerBound > lowercaseTranscript.startIndex ?
-                lowercaseTranscript[lowercaseTranscript.index(before: range.lowerBound)] : " "
-            let afterChar = range.upperBound < lowercaseTranscript.endIndex ?
-                lowercaseTranscript[range.upperBound] : " "
+            // Make word-tokens clickable and check if they should be highlighted
+            if token.isWord {
+                let cleanWord = token.text.trimmingCharacters(in: .punctuationCharacters)
+                tokenAttr.link = URL(string: "word://\(cleanWord)")
 
-            let isWholeWord = !beforeChar.isLetter && !beforeChar.isNumber &&
-                              !afterChar.isLetter && !afterChar.isNumber
-
-            if isWholeWord {
-                // Highlight this occurrence
-                let startIndex = attributedString.index(attributedString.startIndex, offsetByCharacters: lowercaseTranscript.distance(from: lowercaseTranscript.startIndex, to: range.lowerBound))
-                let endIndex = attributedString.index(attributedString.startIndex, offsetByCharacters: lowercaseTranscript.distance(from: lowercaseTranscript.startIndex, to: range.upperBound))
-
-                let attributedRange = startIndex..<endIndex
-                attributedString[attributedRange].foregroundColor = AppTheme.selectableTint
-                attributedString[attributedRange].font = .body.weight(.bold)
+                // Check if this is the target word to highlight
+                if cleanWord.lowercased() == lowercaseWord {
+                    tokenAttr.foregroundColor = AppTheme.selectableTint
+                    tokenAttr.font = .body.weight(.bold)
+                } else {
+                    // Subtle underline for other clickable words
+                    tokenAttr.underlineStyle = .single
+                }
             }
 
-            // Move to next position
-            searchRange = range.upperBound
+            attributedString.append(tokenAttr)
         }
 
         return attributedString
+    }
+
+    private func tokenize(text: String) -> [Token] {
+        var tokens: [Token] = []
+        var currentWord = ""
+
+        for char in text {
+            if char.isLetter || char.isNumber || char == "-" || char == "'" {
+                currentWord.append(char)
+            } else {
+                if !currentWord.isEmpty {
+                    tokens.append(Token(text: currentWord, isWord: true))
+                    currentWord = ""
+                }
+                tokens.append(Token(text: String(char), isWord: false))
+            }
+        }
+
+        if !currentWord.isEmpty {
+            tokens.append(Token(text: currentWord, isWord: true))
+        }
+
+        return tokens
+    }
+
+    private func handleWordTap(url: URL) {
+        guard url.scheme == "word",
+              let word = url.host else {
+            return
+        }
+
+        let cleanWord = word.trimmingCharacters(in: .punctuationCharacters)
+        selectedWord = cleanWord
+        isLoadingDefinition = true
+        definition = nil
+        showDefinition = true
+
+        // Load definition from API
+        DictionaryService.shared.searchWord(
+            cleanWord,
+            learningLanguage: "en",
+            nativeLanguage: "zh"
+        ) { result in
+            DispatchQueue.main.async {
+                isLoadingDefinition = false
+                switch result {
+                case .success(let defs):
+                    definition = defs.first
+                case .failure:
+                    definition = nil
+                }
+            }
+        }
+    }
+
+    private struct Token {
+        let text: String
+        let isWord: Bool
     }
 }
 
