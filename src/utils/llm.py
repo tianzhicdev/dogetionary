@@ -41,7 +41,7 @@ MODEL_PROVIDER_MAP = {
     "meta-llama/llama-4-scout-17b-16e-instruct": "groq",
 
     # OpenRouter models
-    "deepseek/deepseek-chat": "openrouter",
+    "deepseek/deepseek-chat-v3.1": "openrouter",
     "qwen/qwen-2.5-7b-instruct": "openrouter",
     "mistralai/mistral-small": "openrouter",
     "openai/gpt-4o": "openrouter",
@@ -61,13 +61,13 @@ def normalize_model_name(model_name: str) -> str:
     Converts slashes and hyphens to underscores and uses short names.
 
     Examples:
-        "deepseek/deepseek-chat" -> "deepseek_v3"
+        "deepseek/deepseek-chat-v3.1" -> "deepseek_v3"
         "qwen/qwen-2.5-7b-instruct" -> "qwen25_7b"
         "gpt-4o-mini" -> "gpt4o_mini"
     """
     # Map full model names to short, normalized versions
     model_map = {
-        "deepseek/deepseek-chat": "deepseek_v3",
+        "deepseek/deepseek-chat-v3.1": "deepseek_v3",
         "qwen/qwen-2.5-7b-instruct": "qwen25_7b",
         "mistralai/mistral-small": "mistral_small",
         "openai/gpt-4o": "gpt4o",
@@ -134,7 +134,7 @@ def llm_completion_with_fallback(
     Example:
         >>> messages = [{"role": "user", "content": "Define 'hello'"}]
         >>> response = llm_completion_with_fallback(messages, use_case="definition")
-        # Tries: deepseek -> qwen -> mistral -> gpt-4o until one succeeds
+        # Tries: deepseek-v3.1 -> qwen -> mistral -> gpt-4o until one succeeds
     """
     chain = get_fallback_chain(use_case)
 
@@ -194,7 +194,7 @@ def llm_completion(
         model_name: Model to use - provider is auto-detected from MODEL_PROVIDER_MAP
             - OpenAI: 'gpt-5-nano', 'gpt-4o-mini', etc.
             - Groq: 'llama-4-scout', 'mixtral-8x7b-32768', etc.
-            - OpenRouter: 'deepseek/deepseek-chat', 'qwen/qwen-2.5-7b-instruct', etc.
+            - OpenRouter: 'deepseek/deepseek-chat-v3.1', 'qwen/qwen-2.5-7b-instruct', etc.
         use_case: Use case identifier for metrics tracking (e.g., 'definition', 'question', 'pronunciation')
         response_format: Optional response format specification:
             - {"type": "json_object"} for flexible JSON mode

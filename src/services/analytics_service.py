@@ -61,26 +61,47 @@ class AnalyticsService:
             'app_foreground': 'app_lifecycle'
         }
 
+    def _get_category(self, action: str) -> str:
+        """
+        Get category for an action. Uses known mapping if available,
+        otherwise derives from action name pattern.
+
+        Args:
+            action: Action string (e.g., "review_start")
+
+        Returns:
+            Category string
+        """
+        # First try known mapping
+        if action in self.categories:
+            return self.categories[action]
+
+        # Derive from action prefix pattern (e.g., "review_start" -> "review")
+        prefix = action.split('_')[0] if '_' in action else action
+
+        logger.info(f"New/unknown action tracked: {action}, derived category: {prefix}")
+
+        return prefix if prefix else "uncategorized"
+
     def track_action(self, user_id: str, action: str, metadata: dict = None,
                      session_id: str = None, platform: str = 'ios', app_version: str = None):
         """
         Track a user action with metadata
 
+        No validation - accepts any action string for forward compatibility.
+        Category is derived from known mappings or action name pattern.
+
         Args:
             user_id: UUID of the user
-            action: Action enum string
+            action: Action string (can be any value)
             metadata: Additional data about the action
             session_id: Session identifier
             platform: Platform (ios, web, etc.)
             app_version: App version string
         """
         try:
-            # Validate action
-            if action not in self.categories:
-                logger.warning(f"Unknown action: {action}")
-                return False
-
-            category = self.categories[action]
+            # Get category (no validation - always succeeds)
+            category = self._get_category(action)
             metadata_json = json.dumps(metadata or {})
 
             conn = get_db_connection()
@@ -100,7 +121,7 @@ class AnalyticsService:
             cur.close()
             conn.close()
 
-            logger.info(f"Tracked action: {action} for user {user_id}")
+            logger.debug(f"Tracked action: {action} (category: {category}) for user {user_id}")
             return True
 
         except Exception as e:

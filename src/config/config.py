@@ -20,38 +20,38 @@ GROQ_TO_OPENAI_FALLBACK = {
 # Chain tries models in order: DeepSeek V3 -> Qwen 2.5 7B -> Mistral Small -> GPT-4o
 FALLBACK_CHAINS = {
     "definition": [
-        "deepseek/deepseek-chat",        # Fastest, cheapest (~$0.14/M tokens)
-        "qwen/qwen-2.5-7b-instruct",     # Fast, cheap (~$0.18/M tokens)
-        "mistralai/mistral-small",       # Good quality (~$1.00/M tokens)
-        "openai/gpt-4o"                  # Most reliable (~$2.50/M tokens)
+        "google/gemini-2.0-flash-lite-001",   # Fastest TTFT, excellent multilingual ($0.10/$0.40/M)
+        "deepseek/deepseek-chat",             # Great Chinese, cheap ($0.14-0.28/M with caching)
+        "qwen/qwen-2.5-7b-instruct",          # Best Chinese+JSON quality ($0.15/$0.17/M)
+        "openai/gpt-4o-mini"                  # Most reliable fallback ($0.15/$0.60/M)
     ],
     "question": [
+        "google/gemini-2.0-flash-lite-001",
         "deepseek/deepseek-chat",
         "qwen/qwen-2.5-7b-instruct",
-        "mistralai/mistral-small",
-        "openai/gpt-4o"
+        "openai/gpt-4o-mini"
     ],
     "user_profile": [
+        "google/gemini-2.0-flash-lite-001",
         "deepseek/deepseek-chat",
         "qwen/qwen-2.5-7b-instruct",
-        "mistralai/mistral-small",
-        "openai/gpt-4o"
+        "openai/gpt-4o-mini"
     ],
     "pronunciation": [
+        "google/gemini-2.0-flash-lite-001",
         "deepseek/deepseek-chat",
-        "mistralai/mistral-small",
-        "openai/gpt-4o"
+        "openai/gpt-4o-mini"
     ],
     "scene_description": [
+        "google/gemini-2.0-flash-lite-001",
         "deepseek/deepseek-chat",
-        "mistralai/mistral-small",
-        "openai/gpt-4o"
+        "openai/gpt-4o-mini"
     ],
     "general": [
+        "google/gemini-2.0-flash-lite-001",
         "deepseek/deepseek-chat",
         "qwen/qwen-2.5-7b-instruct",
-        "mistralai/mistral-small",
-        "openai/gpt-4o"
+        "openai/gpt-4o-mini"
     ]
 }
 
