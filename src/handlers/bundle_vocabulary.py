@@ -583,57 +583,6 @@ def get_test_vocabulary_stats():
         return jsonify({"error": "Internal server error"}), 500
 
 
-def get_test_vocabulary_count():
-    """
-    Get test vocabulary count and calculate study plans.
-    V3 API endpoint for onboarding.
-
-    Supports level-based test types:
-    - TOEFL_BEGINNER, TOEFL_INTERMEDIATE, TOEFL_ADVANCED
-    - IELTS_BEGINNER, IELTS_INTERMEDIATE, IELTS_ADVANCED
-    - DEMO
-    - Legacy: TOEFL, IELTS (mapped to ADVANCED)
-    """
-    try:
-        test_type = request.args.get('test_type')
-
-        if not test_type:
-            return jsonify({"error": "test_type parameter is required"}), 400
-
-        if test_type not in TEST_TYPE_MAPPING:
-            valid_types = ', '.join(TEST_TYPE_MAPPING.keys())
-            return jsonify({"error": f"Invalid test_type. Must be one of: {valid_types}"}), 400
-
-        # Get vocab column for this test type
-        _, _, vocab_column = TEST_TYPE_MAPPING[test_type]
-
-        # Get total count of words for the specified test
-        total_words = db_fetch_scalar(f"""
-            SELECT COUNT(DISTINCT word)
-            FROM bundle_vocabularies
-            WHERE language = 'en' AND {vocab_column} = TRUE
-        """) or 0
-
-        # Calculate study plans for 5 durations
-        study_plans = []
-        for days in [70, 60, 50, 40, 30]:
-            words_per_day = (total_words + days - 1) // days  # Ceiling division
-            study_plans.append({
-                "days": days,
-                "words_per_day": words_per_day
-            })
-
-        return jsonify({
-            "test_type": test_type,
-            "total_words": total_words,
-            "study_plans": study_plans
-        }), 200
-
-    except Exception as e:
-        logger.error(f"Error getting test vocabulary count: {e}", exc_info=True)
-        return jsonify({"error": "Internal server error"}), 500
-
-
 def manual_daily_job():
     """
     Manual trigger for daily test vocabulary job (for testing/admin use)

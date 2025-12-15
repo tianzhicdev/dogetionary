@@ -18,7 +18,8 @@ from handlers.admin_questions import batch_generate_questions
 from handlers.admin_questions_smart import smart_batch_generate_questions
 from handlers.bundle_vocabulary import (
     get_test_vocabulary_count, update_test_settings, get_test_settings,
-    add_daily_test_words, get_test_vocabulary_stats, batch_populate_test_vocabulary
+    add_daily_test_words, get_test_vocabulary_stats, batch_populate_test_vocabulary,
+    get_test_config
 )
 from workers.bundle_vocabulary_worker import add_daily_test_words_for_all_users
 from handlers.schedule import get_today_schedule, get_schedule_range, get_test_progress
@@ -121,55 +122,7 @@ v3_api.route('/test-prep/add-words', methods=['POST'])(add_daily_test_words)
 v3_api.route('/test-prep/stats', methods=['GET'])(get_test_vocabulary_stats)
 v3_api.route('/test-prep/vocabulary-count', methods=['GET'])(get_test_vocabulary_count)
 v3_api.route('/test-prep/batch-populate', methods=['POST'])(batch_populate_test_vocabulary)
-
-@v3_api.route('/test-prep/config', methods=['GET'])
-def get_test_config_endpoint():
-    """
-    Get test vocabulary configuration mapping languages to available tests.
-    Returns which tests are available for each learning language.
-    """
-    try:
-        # Static configuration - in the future this could be database-driven
-        config = {
-            "en": {
-                "tests": [
-                    {
-                        "code": "TOEFL",
-                        "name": "TOEFL Preparation",
-                        "description": "Test of English as a Foreign Language",
-                        "testing_only": False
-                    },
-                    {
-                        "code": "IELTS",
-                        "name": "IELTS Preparation",
-                        "description": "International English Language Testing System",
-                        "testing_only": False
-                    },
-                    {
-                        "code": "DEMO",
-                        "name": "Demo Bundle",
-                        "description": "Testing vocabulary list (20 words)",
-                        "testing_only": True  # Only visible in developer mode
-                    }
-                ]
-            },
-            # Future language support
-            "fr": {"tests": []},
-            "es": {"tests": []},
-            "de": {"tests": []},
-            "it": {"tests": []},
-            "pt": {"tests": []},
-            "ja": {"tests": []},
-            "ko": {"tests": []},
-            "zh": {"tests": []}
-        }
-
-        logging.info("Test configuration fetched successfully")
-        return jsonify({"config": config}), 200
-
-    except Exception as e:
-        logging.error(f"Error getting test config: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+v3_api.route('/test-prep/config', methods=['GET'])(get_test_config)
 
 @v3_api.route('/test-prep/run-daily-job', methods=['POST'])
 def manual_daily_job():
