@@ -1,11 +1,26 @@
 #!/bin/bash
 
-echo "Stopping app and nginx services (keeping database running)..."
-docker-compose stop app nginx
-docker-compose rm -f app nginx
+echo "Stopping all services..."
+docker-compose down
 
-echo "Building and starting app and nginx services..."
-docker-compose up --build -d app nginx
+echo "Removing Python cache files..."
+find src -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find src -name "*.pyc" -delete
 
-echo "Dictionary app is now running on http://localhost:5000"
-echo "Test with: curl 'http://localhost:5000/word?w=hello'"
+echo "Rebuilding all containers (this may take a few minutes)..."
+docker-compose build --no-cache
+
+echo "Starting all services..."
+docker-compose up -d
+
+echo ""
+echo "✅ All services rebuilt and restarted successfully!"
+echo ""
+echo "Services running:"
+echo "  - Backend API: http://localhost:5001"
+echo "  - Nginx: http://localhost:80"
+echo "  - Grafana: http://localhost:3000"
+echo "  - Prometheus: http://localhost:9090"
+echo "  - Loki: http://localhost:3100"
+echo ""
+echo "Test backend: curl http://localhost:5001/health"
