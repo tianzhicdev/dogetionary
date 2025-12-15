@@ -193,6 +193,11 @@ class VideoService {
         print("VideoService: Cleared all cache")
     }
 
+    /// Check if a video is downloaded and cached
+    func isVideoDownloaded(videoId: Int) -> Bool {
+        return getCachedVideoURL(videoId: videoId) != nil
+    }
+
     // MARK: - Private Helpers
 
     private func getCachedVideoURL(videoId: Int) -> URL? {

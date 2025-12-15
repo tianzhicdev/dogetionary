@@ -26,55 +26,64 @@ struct ContentView: View {
                 message: appVersionManager.upgradeMessage
             )
         } else {
-        ZStack(alignment: .bottomTrailing) {
-            AppTheme.verticalGradient2
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // App banner at the top
-//                AppBanner()
+        ZStack {
+            // Main app content
+            ZStack(alignment: .bottomTrailing) {
+                AppTheme.verticalGradient2
+                    .ignoresSafeArea()
 
-                // View switcher
-                Group {
-                    switch selectedView {
-                    case 0:
-                        SearchView(showProgressBar: true)
-                    case 1:
-                        ScheduleView()
-                    case 2:
-                        ReviewView()
-                    case 3:
-                        SavedWordsView()
-                    case 4:
-                        LeaderboardView()
-                    case 5:
-                        SettingsView()
-                    default:
-                        SearchView(showProgressBar: true)
+                VStack(spacing: 0) {
+                    // App banner at the top
+    //                AppBanner()
+
+                    // View switcher
+                    Group {
+                        switch selectedView {
+                        case 0:
+                            SearchView(showProgressBar: true)
+                        case 1:
+                            ScheduleView()
+                        case 2:
+                            ReviewView()
+                        case 3:
+                            SavedWordsView()
+                        case 4:
+                            LeaderboardView()
+                        case 5:
+                            SettingsView()
+                        default:
+                            SearchView(showProgressBar: true)
+                        }
                     }
                 }
+
+                // Floating Action Menu (overlay)
+                FloatingActionMenu(
+                    isExpanded: $isMenuExpanded,
+                    selectedView: $selectedView,
+                    practiceCount: userManager.practiceCount,
+                    onItemTapped: { tag in
+                        selectedView = tag
+
+                        // Track navigation analytics
+                        let action: AnalyticsAction = switch tag {
+                        case 1: .navTabSaved  // Schedule
+                        case 2: .navTabReview  // Practice
+                        case 3: .navTabSaved  // Saved Words
+                        case 4: .navTabLeaderboard
+                        case 5: .navTabSettings
+                        default: .navTabDictionary
+                        }
+                        AnalyticsManager.shared.track(action: action)
+                    }
+                )
             }
 
-            // Floating Action Menu (overlay)
-            FloatingActionMenu(
-                isExpanded: $isMenuExpanded,
-                selectedView: $selectedView,
-                practiceCount: userManager.practiceCount,
-                onItemTapped: { tag in
-                    selectedView = tag
-
-                    // Track navigation analytics
-                    let action: AnalyticsAction = switch tag {
-                    case 1: .navTabSaved  // Schedule
-                    case 2: .navTabReview  // Practice
-                    case 3: .navTabSaved  // Saved Words
-                    case 4: .navTabLeaderboard
-                    case 5: .navTabSettings
-                    default: .navTabDictionary
-                    }
-                    AnalyticsManager.shared.track(action: action)
-                }
-            )
+            // Debug overlay (always on top, only visible when debug mode enabled)
+            if DebugConfig.isDeveloperModeEnabled {
+                DebugOverlayView()
+                    .zIndex(999)
+            }
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()

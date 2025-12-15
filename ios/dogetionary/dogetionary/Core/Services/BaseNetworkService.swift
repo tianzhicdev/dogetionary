@@ -34,26 +34,41 @@ class BaseNetworkService {
             request.httpBody = body
         }
 
-        // Log request details
+        // Log request details to console
         logger.info("REQUEST: \(method) \(url.absoluteString)")
         if let body = body, let bodyString = String(data: body, encoding: .utf8) {
             logger.info("REQUEST BODY: \(bodyString)")
         }
 
+        // Log request to NetworkLogger for debug UI
+        let startTime = Date()
+        let logId = NetworkLogger.shared.logRequest(url: url.absoluteString, method: method, body: body)
+
         URLSession.shared.dataTask(with: request) { data, response, error in
+            // Log response to NetworkLogger
+            let httpResponse = response as? HTTPURLResponse
+            NetworkLogger.shared.logResponse(
+                id: logId,
+                status: httpResponse?.statusCode,
+                data: data,
+                headers: httpResponse?.allHeaderFields,
+                error: error,
+                startTime: startTime
+            )
+
             if let error = error {
                 self.logger.error("Network error: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
+            guard let httpResponse = httpResponse else {
                 self.logger.error("Invalid response type")
                 completion(.failure(DictionaryError.invalidResponse))
                 return
             }
 
-            // Log response status and headers
+            // Log response status and headers to console
             self.logger.info("RESPONSE STATUS: \(httpResponse.statusCode)")
             self.logger.info("RESPONSE HEADERS: \(httpResponse.allHeaderFields)")
 
