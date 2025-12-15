@@ -133,6 +133,11 @@ class NetworkLogger: ObservableObject {
             } else {
                 bodyString = "<binary data: \(data.count) bytes>"
             }
+        } else {
+            // Data is nil - likely a download task where data is saved directly to file
+            if status == 200 {
+                bodyString = "<download task - data saved to file>"
+            }
         }
 
         // Convert headers to string dictionary

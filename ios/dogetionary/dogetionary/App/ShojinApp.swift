@@ -16,6 +16,9 @@ struct ShojinApp: App {
         // Initialize debug configuration
         DebugConfig.setupDefaults()
 
+        // Register network interceptor for debug logging (only if debug mode enabled)
+        NetworkInterceptor.register()
+
         // Set up notification center delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
 

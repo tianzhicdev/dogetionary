@@ -219,12 +219,32 @@ class VideoService {
         print("   URL: \(videoURL)")
         print("   Base URL: \(baseURL)")
 
+        // Log request to NetworkLogger (manual logging for downloadTask)
+        let startTime = Date()
+        let logId = NetworkLogger.shared.logRequest(
+            url: videoURL.absoluteString,
+            method: "GET",
+            body: nil
+        )
+
         // Create download task
         let task = URLSession.shared.downloadTask(with: videoURL) { [weak self] tempURL, response, error in
             guard let self = self else { return }
 
             // Remove from active tasks
             self.downloadTasks.removeValue(forKey: videoId)
+
+            // Log response to NetworkLogger
+            let httpResponse = response as? HTTPURLResponse
+            // For download tasks, we don't have the data directly, so pass nil
+            NetworkLogger.shared.logResponse(
+                id: logId,
+                status: httpResponse?.statusCode,
+                data: nil, // Video data is saved to file, not available here
+                headers: httpResponse?.allHeaderFields,
+                error: error,
+                startTime: startTime
+            )
 
             // Handle errors
             if let error = error {

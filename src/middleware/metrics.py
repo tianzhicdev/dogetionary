@@ -179,7 +179,7 @@ def estimate_cost(provider, model, usage):
         },
         'openrouter': {
             # DeepSeek V3 - cheapest, fastest
-            'deepseek/deepseek-chat': {'prompt': 0.00000014, 'completion': 0.00000028},  # $0.14/$0.28 per 1M
+            'deepseek/deepseek-chat-v3.1': {'prompt': 0.00000014, 'completion': 0.00000028},  # $0.14/$0.28 per 1M
             # Qwen 2.5 7B - cheap and fast
             'qwen/qwen-2.5-7b-instruct': {'prompt': 0.00000018, 'completion': 0.00000036},  # $0.18/$0.36 per 1M
             # Mistral Small - good quality
