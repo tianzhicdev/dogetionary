@@ -94,7 +94,7 @@ def import_bundle_vocabularies(conn):
     # Read annotated CSV files
     toefl_file = project_root / 'resources' / 'toefl-4889-annotated.csv'
     ielts_file = project_root / 'resources' / 'ielts-4323-annotated.csv'
-    tianz_file = project_root / 'resources' / 'demo.csv'  # No levels for tianz
+    demo_file = project_root / 'resources' / 'demo.csv'  # No levels for tianz
 
     print(f"Reading TOEFL words from {toefl_file}")
     toefl_word_levels = read_annotated_csv(toefl_file)
@@ -104,10 +104,10 @@ def import_bundle_vocabularies(conn):
     ielts_word_levels = read_annotated_csv(ielts_file)
     print(f"Found {len(ielts_word_levels)} IELTS words")
 
-    # Read TIANZ words (no levels, just a simple list)
+    # Read DEMO words (no levels, just a simple list)
     demo_words = set()
-    if tianz_file.exists():
-        with open(tianz_file, 'r', encoding='utf-8') as f:
+    if demo_file.exists():
+        with open(demo_file, 'r', encoding='utf-8') as f:
             # Try to read as CSV first
             first_line = f.readline().strip()
             f.seek(0)
@@ -125,8 +125,8 @@ def import_bundle_vocabularies(conn):
                     if word:
                         demo_words.add(word)
 
-    print(f"Reading TIANZ words from {tianz_file}")
-    print(f"Found {len(demo_words)} TIANZ words")
+    print(f"Reading DEMO words from {demo_file}")
+    print(f"Found {len(demo_words)} DEMO words")
 
     # Get all unique words across all tests
     all_words = set(toefl_word_levels.keys()) | set(ielts_word_levels.keys()) | demo_words
@@ -134,7 +134,7 @@ def import_bundle_vocabularies(conn):
     print(f"\nTotal unique words: {len(all_words)}")
     print(f"TOEFL words: {len(toefl_word_levels)}")
     print(f"IELTS words: {len(ielts_word_levels)}")
-    print(f"TIANZ words: {len(demo_words)}")
+    print(f"DEMO words: {len(demo_words)}")
 
     # Prepare data for insertion with level flags
     data = []
@@ -147,7 +147,7 @@ def import_bundle_vocabularies(conn):
         ielts_level = ielts_word_levels.get(word)
         ielts_beginner, ielts_intermediate, ielts_advanced = compute_cumulative_flags(ielts_level)
 
-        # TIANZ is simple boolean
+        # DEMO is simple boolean
         is_demo = word in demo_words
 
         # For backward compatibility, also set old boolean flags
@@ -200,7 +200,7 @@ def import_bundle_vocabularies(conn):
                 COUNT(CASE WHEN is_ielts_beginner THEN 1 END) as ielts_beginner,
                 COUNT(CASE WHEN is_ielts_intermediate THEN 1 END) as ielts_intermediate,
                 COUNT(CASE WHEN is_ielts_advanced THEN 1 END) as ielts_advanced,
-                COUNT(CASE WHEN is_demo THEN 1 END) as tianz_count
+                COUNT(CASE WHEN is_demo THEN 1 END) as demo_count
             FROM bundle_vocabularies
             WHERE language = 'en'
         """)
@@ -218,7 +218,7 @@ def import_bundle_vocabularies(conn):
         print(f"  Beginner level:     {stats[4]:5d} words (beginner only)")
         print(f"  Intermediate level: {stats[5]:5d} words (beginner + intermediate)")
         print(f"  Advanced level:     {stats[6]:5d} words (all IELTS words)")
-        print(f"\nTIANZ: {stats[7]} words")
+        print(f"\nDEMO: {stats[7]} words")
 
         # Verify cumulative logic
         print("\n" + "="*60)
@@ -300,8 +300,8 @@ def verify_import(conn):
     for row in cur.fetchall():
         print(f"  - {row[0]}")
 
-    # TIANZ words
-    print("\nTIANZ words:")
+    # DEMO words
+    print("\nDEMO words:")
     cur.execute("""
         SELECT word FROM bundle_vocabularies
         WHERE language = 'en' AND is_demo = TRUE

@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.schedule_service import initiate_schedule, refresh_schedule, get_user_timezone, get_today_in_timezone, get_words_reviewed_on_date
 from utils.database import get_db_connection
 from services.spaced_repetition_service import get_next_review_date_new
-from handlers.test_vocabulary import TEST_TYPE_MAPPING
+from handlers.bundle_vocabulary import TEST_TYPE_MAPPING
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ def get_today_schedule():
             user_name = prefs.get('user_name')
 
             # Determine test_type from enabled flags
-            from handlers.test_vocabulary import get_active_test_type
+            from handlers.bundle_vocabulary import get_active_test_type
             test_type = get_active_test_type(prefs)
 
             # User has schedule if test prep is enabled AND target_end_date is set
@@ -434,7 +434,7 @@ def get_schedule_range():
             user_name = prefs.get('user_name')
 
             # Determine test_type from enabled flags
-            from handlers.test_vocabulary import get_active_test_type
+            from handlers.bundle_vocabulary import get_active_test_type
             test_type = get_active_test_type(prefs)
 
             logger.info(f"Schedule range check: user_id={user_id}, test_prep_enabled={test_prep_enabled}, target_end_date={target_end_date}, test_type={test_type}")

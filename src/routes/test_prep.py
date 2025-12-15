@@ -1,10 +1,10 @@
 from flask import Blueprint, jsonify
-from handlers.test_vocabulary import (
+from handlers.bundle_vocabulary import (
     update_test_settings, get_test_settings,
     add_daily_test_words, get_test_vocabulary_stats,
     get_test_vocabulary_count, batch_populate_test_vocabulary
 )
-from workers.test_vocabulary_worker import add_daily_test_words_for_all_users
+from workers.bundle_vocabulary_worker import add_daily_test_words_for_all_users
 import logging
 
 test_prep_bp = Blueprint('test_prep', __name__)
@@ -41,7 +41,7 @@ def get_test_config_endpoint():
                     },
                     {
                         "code": "DEMO",
-                        "name": "Tianz Test",
+                        "name": "Demo Bundle",
                         "description": "Testing vocabulary list (20 words)",
                         "testing_only": True  # Only visible in developer mode
                     }

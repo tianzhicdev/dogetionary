@@ -27,7 +27,7 @@ struct TestProgressBar: View {
         "IELTS_BEGINNER": ("IELTS Beginner", "graduationcap.fill"),
         "IELTS_INTERMEDIATE": ("IELTS Intermediate", "graduationcap.circle.fill"),
         "IELTS_ADVANCED": ("IELTS Advanced", "brain.head.profile"),
-        "DEMO": ("Tianz", "star.circle.fill")
+        "DEMO": ("Demo", "star.circle.fill")
     ]
 
     var body: some View {

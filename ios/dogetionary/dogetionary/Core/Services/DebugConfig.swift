@@ -63,8 +63,8 @@ class DebugConfig {
         isDeveloperModeEnabled
     }
 
-    /// Show Tianz test (testing-only vocabulary)
-    static var showTianzTest: Bool {
+    /// Show Demo test (testing-only vocabulary)
+    static var showDemoTest: Bool {
         isDeveloperModeEnabled
     }
 

@@ -24,10 +24,10 @@ class UserManager: ObservableObject {
     // Legacy keys (kept for backward compatibility during transition)
     private let toeflEnabledKey = "DogetionaryToeflEnabled"
     private let ieltsEnabledKey = "DogetionaryIeltsEnabled"
-    private let demoEnabledKey = "DogetionaryTianzEnabled"
+    private let demoEnabledKey = "DogetionaryDemoEnabled"
     private let toeflTargetDaysKey = "DogetionaryToeflTargetDays"
     private let ieltsTargetDaysKey = "DogetionaryIeltsTargetDays"
-    private let demoTargetDaysKey = "DogetionaryTianzTargetDays"
+    private let demoTargetDaysKey = "DogetionaryDemoTargetDays"
     private let hasCompletedOnboardingKey = "DogetionaryHasCompletedOnboarding"
     private let reminderTimeKey = "DogetionaryReminderTime"
     // Practice status cache key
@@ -278,8 +278,8 @@ class UserManager: ObservableObject {
         self.toeflTargetDays = savedToeflTargetDays > 0 ? savedToeflTargetDays : 30
         let savedIeltsTargetDays = UserDefaults.standard.integer(forKey: ieltsTargetDaysKey)
         self.ieltsTargetDays = savedIeltsTargetDays > 0 ? savedIeltsTargetDays : 30
-        let savedTianzTargetDays = UserDefaults.standard.integer(forKey: demoTargetDaysKey)
-        self.demoTargetDays = savedTianzTargetDays > 0 ? savedTianzTargetDays : 30
+        let savedDemoTargetDays = UserDefaults.standard.integer(forKey: demoTargetDaysKey)
+        self.demoTargetDays = savedDemoTargetDays > 0 ? savedDemoTargetDays : 30
 
         // If no V3 settings but have legacy settings, migrate from legacy
         if self.activeTestType == nil && (self.toeflEnabled || self.ieltsEnabled || self.demoEnabled) {

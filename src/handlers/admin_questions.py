@@ -204,7 +204,7 @@ def get_words_from_source(source: str, learning_lang: str, max_words: Optional[i
     # Map source to column name
     source_column_map = {
         'demo_bundle': 'is_demo',
-        'tianz': 'is_demo',
+        'demo': 'is_demo',
         'toefl': 'is_toefl',
         'ielts': 'is_ielts',
         'toefl_beginner': 'is_toefl_beginner',

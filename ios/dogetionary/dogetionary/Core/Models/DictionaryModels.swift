@@ -381,8 +381,8 @@ struct ReviewSubmissionResponse: Codable {
 // Badge earned from review (ultra-minimal structure)
 struct NewBadge: Codable {
     let badge_id: String      // "score_100" or "DEMO" or "TOEFL_BEGINNER"
-    let title: String         // "First Steps" or "TIANZ Master"
-    let description: String   // "100 points reached" or "TIANZ vocabulary completed!"
+    let title: String         // "First Steps" or "Demo Master"
+    let description: String   // "100 points reached" or "Demo vocabulary completed!"
 }
 
 // Toggle exclude from practice response
@@ -634,11 +634,11 @@ enum TestType: String, Codable, CaseIterable {
         case .ieltsBeginner: return "IELTS Beginner"
         case .ieltsIntermediate: return "IELTS Intermediate"
         case .ieltsAdvanced: return "IELTS Advanced"
-        case .demo: return "Tianz Test"
+        case .demo: return "Demo Bundle"
         }
     }
 
-    /// Base test name (TOEFL, IELTS, or TIANZ)
+    /// Base test name (TOEFL, IELTS, or DEMO)
     var baseTest: String {
         switch self {
         case .toeflBeginner, .toeflIntermediate, .toeflAdvanced:
@@ -650,7 +650,7 @@ enum TestType: String, Codable, CaseIterable {
         }
     }
 
-    /// Level name (Beginner, Intermediate, Advanced, or nil for TIANZ)
+    /// Level name (Beginner, Intermediate, Advanced, or nil for DEMO)
     var level: String? {
         switch self {
         case .toeflBeginner, .ieltsBeginner:
@@ -752,11 +752,11 @@ struct TestProgressData: Codable {
     // Legacy: individual progress for each test
     let toefl: TestProgress?
     let ielts: TestProgress?
-    let tianz: TestProgress?
+    let demo: TestProgress?
 
     private enum CodingKeys: String, CodingKey {
         case progress
-        case toefl, ielts, tianz
+        case toefl, ielts, demo
     }
 
     /// Get progress for a specific test type
@@ -773,7 +773,7 @@ struct TestProgressData: Codable {
         case .ieltsBeginner, .ieltsIntermediate, .ieltsAdvanced:
             return ielts
         case .demo:
-            return tianz
+            return demo
         }
     }
 }
@@ -873,10 +873,10 @@ struct TestVocabularyStatistics: Codable {
     let total_unique_words: Int
     let toefl_words: Int
     let ielts_words: Int
-    let tianz_words: Int?
+    let demo_words: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case total_unique_words, toefl_words, ielts_words, tianz_words
+        case total_unique_words, toefl_words, ielts_words, demo_words
     }
 }
 

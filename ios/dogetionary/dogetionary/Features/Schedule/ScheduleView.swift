@@ -291,11 +291,11 @@ struct SimpleScheduleListView: View {
                                         }
                                     }
                                 }
-                                if DebugConfig.showTianzTest {
+                                if DebugConfig.showDemoTest {
                                     Divider()
                                     Button(action: { activeTestType = .demo }) {
                                         HStack {
-                                            Text("TIANZ TEST")
+                                            Text("DEMO BUNDLE")
                                             if activeTestType == .demo {
                                                 Spacer()
                                                 Image(systemName: "checkmark")
@@ -465,7 +465,7 @@ struct SimpleScheduleListView: View {
         case .ieltsBeginner: return "IELTS Beginner"
         case .ieltsIntermediate: return "IELTS Intermediate"
         case .ieltsAdvanced: return "IELTS Advanced"
-        case .demo: return "Tianz Test"
+        case .demo: return "Demo Bundle"
         }
     }
 }

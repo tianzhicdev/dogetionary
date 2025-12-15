@@ -167,15 +167,15 @@ struct BadgeCelebrationView: View {
     }
 }
 
-#Preview("Badge Celebration - TIANZ Test") {
+#Preview("Badge Celebration - Demo Bundle") {
     @Previewable @State var showBadge = true
 
     if showBadge {
         BadgeCelebrationView(
             badge: NewBadge(
                 badge_id: "DEMO",
-                title: "TIANZ Master",
-                description: "TIANZ vocabulary completed!"
+                title: "Demo Master",
+                description: "Demo vocabulary completed!"
             ),
             onDismiss: {
                 showBadge = false

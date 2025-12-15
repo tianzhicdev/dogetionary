@@ -261,7 +261,7 @@ def find_incomplete_words(
     # Map source to column name
     source_column_map = {
         'demo_bundle': 'is_demo',
-        'tianz': 'is_demo',
+        'demo': 'is_demo',
         'toefl': 'is_toefl',
         'ielts': 'is_ielts',
         'toefl_beginner': 'is_toefl_beginner',
@@ -403,7 +403,7 @@ def get_total_words_count(source: str, learning_lang: str) -> int:
     """
     source_column_map = {
         'demo_bundle': 'is_demo',
-        'tianz': 'is_demo',
+        'demo': 'is_demo',
         'toefl': 'is_toefl',
         'ielts': 'is_ielts',
         'toefl_beginner': 'is_toefl_beginner',

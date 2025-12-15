@@ -202,7 +202,7 @@ Examples:
     parser.add_argument(
         '--source',
         required=True,
-        choices=['demo_bundle', 'tianz', 'toefl', 'ielts',
+        choices=['demo_bundle', 'demo', 'toefl', 'ielts',
                  'toefl_beginner', 'toefl_intermediate', 'toefl_advanced',
                  'ielts_beginner', 'ielts_intermediate', 'ielts_advanced'],
         help='Test vocabulary source (required)'

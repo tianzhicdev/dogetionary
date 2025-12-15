@@ -16,11 +16,11 @@ from handlers.videos import get_video
 from handlers.admin_videos import batch_upload_videos
 from handlers.admin_questions import batch_generate_questions
 from handlers.admin_questions_smart import smart_batch_generate_questions
-from handlers.test_vocabulary import (
+from handlers.bundle_vocabulary import (
     get_test_vocabulary_count, update_test_settings, get_test_settings,
     add_daily_test_words, get_test_vocabulary_stats, batch_populate_test_vocabulary
 )
-from workers.test_vocabulary_worker import add_daily_test_words_for_all_users
+from workers.bundle_vocabulary_worker import add_daily_test_words_for_all_users
 from handlers.schedule import get_today_schedule, get_schedule_range, get_test_progress
 from handlers.review_batch import get_review_words_batch
 from handlers.streaks import get_streak_days
@@ -109,7 +109,7 @@ v3_api.route('/feedback', methods=['POST'])(submit_feedback)
 v3_api.route('/app-version', methods=['GET'])(check_app_version)
 
 # ============================================================================
-# TEST PREP ENDPOINTS (V3) - TOEFL/IELTS/TIANZ vocabulary preparation
+# TEST PREP ENDPOINTS (V3) - TOEFL/IELTS/DEMO vocabulary preparation
 # ============================================================================
 
 # Test prep settings
@@ -147,7 +147,7 @@ def get_test_config_endpoint():
                     },
                     {
                         "code": "DEMO",
-                        "name": "Tianz Test",
+                        "name": "Demo Bundle",
                         "description": "Testing vocabulary list (20 words)",
                         "testing_only": True  # Only visible in developer mode
                     }

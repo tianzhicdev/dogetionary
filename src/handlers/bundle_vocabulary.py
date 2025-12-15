@@ -1,5 +1,5 @@
 """
-Test vocabulary handlers for TOEFL/IELTS/TIANZ preparation features
+Test vocabulary handlers for TOEFL/IELTS/DEMO preparation features
 """
 
 from flask import jsonify, request
@@ -379,7 +379,7 @@ def get_test_settings():
                             "total": result['total_ielts'],
                             "percentage": round(100 * result['ielts_saved'] / result['total_ielts'], 1) if result['total_ielts'] > 0 else 0
                         },
-                        "tianz": {
+                        "demo": {
                             "saved": result['demo_saved'],
                             "total": result['total_demo'],
                             "percentage": round(100 * result['demo_saved'] / result['total_demo'], 1) if result['total_demo'] > 0 else 0
@@ -524,7 +524,7 @@ def add_daily_test_words():
                         "total": progress[4],
                         "percentage": round(100 * progress[1] / progress[4], 1) if progress[4] > 0 else 0
                     } if ielts_enabled else None,
-                    "tianz": {
+                    "demo": {
                         "saved": progress[2],
                         "total": progress[5],
                         "percentage": round(100 * progress[2] / progress[5], 1) if progress[5] > 0 else 0
@@ -591,7 +591,7 @@ def get_test_vocabulary_count():
     Supports level-based test types:
     - TOEFL_BEGINNER, TOEFL_INTERMEDIATE, TOEFL_ADVANCED
     - IELTS_BEGINNER, IELTS_INTERMEDIATE, IELTS_ADVANCED
-    - TIANZ
+    - DEMO
     - Legacy: TOEFL, IELTS (mapped to ADVANCED)
     """
     try:
@@ -639,7 +639,7 @@ def manual_daily_job():
     Manual trigger for daily test vocabulary job (for testing/admin use)
     """
     try:
-        from workers.test_vocabulary_worker import add_daily_test_words_for_all_users
+        from workers.bundle_vocabulary_worker import add_daily_test_words_for_all_users
 
         logger.info("Manual trigger of daily test vocabulary job")
         add_daily_test_words_for_all_users()
@@ -661,7 +661,7 @@ def get_test_config():
                 "tests": [
                     {"code": "TOEFL", "name": "TOEFL Preparation", "description": "Test of English as a Foreign Language"},
                     {"code": "IELTS", "name": "IELTS Preparation", "description": "International English Language Testing System"},
-                    {"code": "DEMO", "name": "Tianz Test", "description": "Testing vocabulary list (20 words)", "testing_only": true}
+                    {"code": "DEMO", "name": "Demo Bundle", "description": "Testing vocabulary list (20 words)", "testing_only": true}
                 ]
             },
             "fr": {
@@ -692,7 +692,7 @@ def get_test_config():
                     },
                     {
                         "code": "DEMO",
-                        "name": "Tianz Test",
+                        "name": "Demo Bundle",
                         "description": "Testing vocabulary list (20 words)",
                         "testing_only": True  # Only visible in developer mode
                     }

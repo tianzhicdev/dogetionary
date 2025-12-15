@@ -26,7 +26,7 @@ from static.privacy import PRIVACY_POLICY
 from static.support import SUPPORT_HTML
 from utils.database import validate_language, get_db_connection
 from services.user_service import generate_user_profile
-from handlers.test_vocabulary import TEST_TYPE_MAPPING, ALL_TEST_ENABLE_COLUMNS
+from handlers.bundle_vocabulary import TEST_TYPE_MAPPING, ALL_TEST_ENABLE_COLUMNS
 
 # Get logger
 import logging

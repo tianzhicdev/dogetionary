@@ -106,7 +106,7 @@ def get_practice_status():
             """, (user_id,))
 
             if prefs:
-                from handlers.test_vocabulary import get_active_test_type
+                from handlers.bundle_vocabulary import get_active_test_type
                 test_type = get_active_test_type(prefs)
                 target_end_date = prefs.get('target_end_date')
 

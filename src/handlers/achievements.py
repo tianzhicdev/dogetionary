@@ -94,8 +94,8 @@ TEST_TYPES_MAPPING = {
     'DEMO': {
         'vocab_column': 'is_demo',
         'pref_column': 'demo_enabled',
-        'title': 'Tianz Master',
-        'description': 'TIANZ vocabulary completed!'
+        'title': 'Demo Master',
+        'description': 'Demo vocabulary completed!'
     }
 }
 
@@ -254,7 +254,7 @@ def check_test_completion_badges(
 
     Returns:
         List of completion badge dictionaries:
-        [{"badge_id": "DEMO", "title": "Tianz Master", "description": "TIANZ vocabulary completed!"}]
+        [{"badge_id": "DEMO", "title": "Demo Master", "description": "Demo vocabulary completed!"}]
     """
     completion_badges = []
 
