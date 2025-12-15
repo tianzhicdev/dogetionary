@@ -513,6 +513,8 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
         'IELTS_INTERMEDIATE': 'is_ielts_intermediate',
         'IELTS_ADVANCED': 'is_ielts_advanced',
         'DEMO': 'is_demo',
+        'BUSINESS_ENGLISH': 'business_english',
+        'EVERYDAY_ENGLISH': 'everyday_english',
         # Legacy mappings
         'TOEFL': 'is_toefl_advanced',
         'IELTS': 'is_ielts_advanced',
