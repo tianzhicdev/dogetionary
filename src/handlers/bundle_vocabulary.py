@@ -560,7 +560,9 @@ def get_test_vocabulary_stats():
                     COUNT(DISTINCT word) as total_words,
                     COUNT(DISTINCT CASE WHEN is_toefl THEN word END) as toefl_words,
                     COUNT(DISTINCT CASE WHEN is_ielts THEN word END) as ielts_words,
-                    COUNT(DISTINCT CASE WHEN is_demo THEN word END) as demo_words
+                    COUNT(DISTINCT CASE WHEN is_demo THEN word END) as demo_words,
+                    COUNT(DISTINCT CASE WHEN business_english THEN word END) as business_english_words,
+                    COUNT(DISTINCT CASE WHEN everyday_english THEN word END) as everyday_english_words
                 FROM bundle_vocabularies
                 WHERE language = %s
             """, (language,))
@@ -573,7 +575,9 @@ def get_test_vocabulary_stats():
                     "total_unique_words": stats['total_words'],
                     "toefl_words": stats['toefl_words'],
                     "ielts_words": stats['ielts_words'],
-                    "demo_words": stats['demo_words']
+                    "demo_words": stats['demo_words'],
+                    "business_english_words": stats['business_english_words'],
+                    "everyday_english_words": stats['everyday_english_words']
                 }
             }), 200
 
