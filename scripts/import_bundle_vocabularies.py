@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Import TOEFL and IELTS vocabulary words with level annotations into test_vocabularies table.
+Import TOEFL and IELTS vocabulary words with level annotations into bundle_vocabularies table.
 Reads from annotated CSV files (word,level format) and populates the database with cumulative level flags.
 
 Cumulative Logic:
@@ -84,7 +84,7 @@ def compute_cumulative_flags(level: str) -> Tuple[bool, bool, bool]:
         return (False, False, False)  # Not in this test
 
 
-def import_test_vocabularies(conn):
+def import_bundle_vocabularies(conn):
     """Import TOEFL and IELTS vocabulary words with level support"""
     cur = conn.cursor()
 
@@ -94,7 +94,7 @@ def import_test_vocabularies(conn):
     # Read annotated CSV files
     toefl_file = project_root / 'resources' / 'toefl-4889-annotated.csv'
     ielts_file = project_root / 'resources' / 'ielts-4323-annotated.csv'
-    tianz_file = project_root / 'resources' / 'tianz.csv'  # No levels for tianz
+    tianz_file = project_root / 'resources' / 'demo.csv'  # No levels for tianz
 
     print(f"Reading TOEFL words from {toefl_file}")
     toefl_word_levels = read_annotated_csv(toefl_file)
@@ -105,7 +105,7 @@ def import_test_vocabularies(conn):
     print(f"Found {len(ielts_word_levels)} IELTS words")
 
     # Read TIANZ words (no levels, just a simple list)
-    tianz_words = set()
+    demo_words = set()
     if tianz_file.exists():
         with open(tianz_file, 'r', encoding='utf-8') as f:
             # Try to read as CSV first
@@ -117,24 +117,24 @@ def import_test_vocabularies(conn):
                 for row in reader:
                     word = row.get('word', '').strip().lower()
                     if word:
-                        tianz_words.add(word)
+                        demo_words.add(word)
             else:
                 # Plain text, one word per line
                 for line in f:
                     word = line.strip().lower()
                     if word:
-                        tianz_words.add(word)
+                        demo_words.add(word)
 
     print(f"Reading TIANZ words from {tianz_file}")
-    print(f"Found {len(tianz_words)} TIANZ words")
+    print(f"Found {len(demo_words)} TIANZ words")
 
     # Get all unique words across all tests
-    all_words = set(toefl_word_levels.keys()) | set(ielts_word_levels.keys()) | tianz_words
+    all_words = set(toefl_word_levels.keys()) | set(ielts_word_levels.keys()) | demo_words
 
     print(f"\nTotal unique words: {len(all_words)}")
     print(f"TOEFL words: {len(toefl_word_levels)}")
     print(f"IELTS words: {len(ielts_word_levels)}")
-    print(f"TIANZ words: {len(tianz_words)}")
+    print(f"TIANZ words: {len(demo_words)}")
 
     # Prepare data for insertion with level flags
     data = []
@@ -148,7 +148,7 @@ def import_test_vocabularies(conn):
         ielts_beginner, ielts_intermediate, ielts_advanced = compute_cumulative_flags(ielts_level)
 
         # TIANZ is simple boolean
-        is_tianz = word in tianz_words
+        is_demo = word in demo_words
 
         # For backward compatibility, also set old boolean flags
         is_toefl = toefl_advanced  # Old flag = advanced level
@@ -156,7 +156,7 @@ def import_test_vocabularies(conn):
 
         data.append((
             word, 'en',
-            is_toefl, is_ielts, is_tianz,  # Old columns
+            is_toefl, is_ielts, is_demo,  # Old columns
             toefl_beginner, toefl_intermediate, toefl_advanced,  # TOEFL levels
             ielts_beginner, ielts_intermediate, ielts_advanced   # IELTS levels
         ))
@@ -165,13 +165,13 @@ def import_test_vocabularies(conn):
     try:
         # Clear existing data
         print("\nClearing existing test vocabularies...")
-        cur.execute("TRUNCATE TABLE test_vocabularies RESTART IDENTITY CASCADE")
+        cur.execute("TRUNCATE TABLE bundle_vocabularies RESTART IDENTITY CASCADE")
 
         print(f"Inserting {len(data)} vocabulary entries with level information...")
         execute_batch(cur, """
-            INSERT INTO test_vocabularies (
+            INSERT INTO bundle_vocabularies (
                 word, language,
-                is_toefl, is_ielts, is_tianz,
+                is_toefl, is_ielts, is_demo,
                 is_toefl_beginner, is_toefl_intermediate, is_toefl_advanced,
                 is_ielts_beginner, is_ielts_intermediate, is_ielts_advanced
             )
@@ -179,7 +179,7 @@ def import_test_vocabularies(conn):
             ON CONFLICT (word, language) DO UPDATE SET
                 is_toefl = EXCLUDED.is_toefl,
                 is_ielts = EXCLUDED.is_ielts,
-                is_tianz = EXCLUDED.is_tianz,
+                is_demo = EXCLUDED.is_demo,
                 is_toefl_beginner = EXCLUDED.is_toefl_beginner,
                 is_toefl_intermediate = EXCLUDED.is_toefl_intermediate,
                 is_toefl_advanced = EXCLUDED.is_toefl_advanced,
@@ -200,8 +200,8 @@ def import_test_vocabularies(conn):
                 COUNT(CASE WHEN is_ielts_beginner THEN 1 END) as ielts_beginner,
                 COUNT(CASE WHEN is_ielts_intermediate THEN 1 END) as ielts_intermediate,
                 COUNT(CASE WHEN is_ielts_advanced THEN 1 END) as ielts_advanced,
-                COUNT(CASE WHEN is_tianz THEN 1 END) as tianz_count
-            FROM test_vocabularies
+                COUNT(CASE WHEN is_demo THEN 1 END) as tianz_count
+            FROM bundle_vocabularies
             WHERE language = 'en'
         """)
 
@@ -254,7 +254,7 @@ def verify_import(conn):
     # TOEFL Beginner (only beginner level words)
     print("\nTOEFL Beginner-only words (not in intermediate/advanced):")
     cur.execute("""
-        SELECT word FROM test_vocabularies
+        SELECT word FROM bundle_vocabularies
         WHERE language = 'en'
         AND is_toefl_beginner = TRUE
         AND is_toefl_intermediate = FALSE
@@ -266,7 +266,7 @@ def verify_import(conn):
     # TOEFL Intermediate-only (not beginner, not advanced-only)
     print("\nTOEFL Intermediate-only words:")
     cur.execute("""
-        SELECT word FROM test_vocabularies
+        SELECT word FROM bundle_vocabularies
         WHERE language = 'en'
         AND is_toefl_beginner = FALSE
         AND is_toefl_intermediate = TRUE
@@ -278,7 +278,7 @@ def verify_import(conn):
     # TOEFL Advanced-only (not beginner, not intermediate)
     print("\nTOEFL Advanced-only words:")
     cur.execute("""
-        SELECT word FROM test_vocabularies
+        SELECT word FROM bundle_vocabularies
         WHERE language = 'en'
         AND is_toefl_beginner = FALSE
         AND is_toefl_intermediate = FALSE
@@ -291,7 +291,7 @@ def verify_import(conn):
     # IELTS samples
     print("\nIELTS Beginner-only words:")
     cur.execute("""
-        SELECT word FROM test_vocabularies
+        SELECT word FROM bundle_vocabularies
         WHERE language = 'en'
         AND is_ielts_beginner = TRUE
         AND is_ielts_intermediate = FALSE
@@ -303,8 +303,8 @@ def verify_import(conn):
     # TIANZ words
     print("\nTIANZ words:")
     cur.execute("""
-        SELECT word FROM test_vocabularies
-        WHERE language = 'en' AND is_tianz = TRUE
+        SELECT word FROM bundle_vocabularies
+        WHERE language = 'en' AND is_demo = TRUE
         ORDER BY RANDOM() LIMIT 5
     """)
     for row in cur.fetchall():
@@ -322,7 +322,7 @@ def main():
 
     try:
         # Import vocabularies
-        import_test_vocabularies(conn)
+        import_bundle_vocabularies(conn)
 
         # Verify the import
         verify_import(conn)

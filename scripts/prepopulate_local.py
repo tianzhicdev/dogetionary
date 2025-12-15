@@ -8,13 +8,13 @@ Reuses all existing Flask logic without timeout issues.
 Usage:
     # Inside Docker container
     docker exec -it dogetionary-app-1 python3 /app/scripts/prepopulate_local.py \
-        --source tianz_test \
+        --source demo_bundle \
         --num-words 10 \
         --continuous
 
     # Or copy to container and run
     docker cp scripts/prepopulate_local.py dogetionary-app-1:/app/scripts/
-    docker exec -it dogetionary-app-1 python3 /app/scripts/prepopulate_local.py --source tianz_test --num-words 10
+    docker exec -it dogetionary-app-1 python3 /app/scripts/prepopulate_local.py --source demo_bundle --num-words 10
 """
 
 import sys
@@ -209,7 +209,7 @@ def process_batch(
 
 def main():
     parser = argparse.ArgumentParser(description='Local question pre-population (no HTTP/Cloudflare)')
-    parser.add_argument('--source', required=True, help='Vocabulary source (tianz_test, toefl, etc.)')
+    parser.add_argument('--source', required=True, help='Vocabulary source (demo_bundle, toefl, etc.)')
     parser.add_argument('--num-words', type=int, default=10, help='Number of words per batch')
     parser.add_argument('--learning-lang', default='en', help='Learning language')
     parser.add_argument('--native-lang', default='zh', help='Native language')

@@ -53,7 +53,7 @@ class TestHelperFunctions(unittest.TestCase):
         """Test getting TOEFL vocabulary words"""
         words = get_test_vocabulary_words('TOEFL')
         self.assertIsInstance(words, set, "Should return a set")
-        # Should have some words (assuming test_vocabularies is populated)
+        # Should have some words (assuming bundle_vocabularies is populated)
         # We won't check exact count as it depends on database state
 
     def test_get_test_vocabulary_words_ielts(self):

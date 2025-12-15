@@ -7,13 +7,13 @@ Just keep calling it with num_words until everything is complete!
 
 Usage:
     # Process 10 incomplete words at a time (localhost)
-    python3 prepopulate_smart.py --source tianz_test --num-words 10
+    python3 prepopulate_smart.py --source demo_bundle --num-words 10
 
     # Production
-    python3 prepopulate_smart.py --source tianz_test --num-words 10 --backend-url https://kwafy.com/api
+    python3 prepopulate_smart.py --source demo_bundle --num-words 10 --backend-url https://kwafy.com/api
 
     # Continuous mode: keeps running until all complete
-    python3 prepopulate_smart.py --source tianz_test --num-words 10 --continuous
+    python3 prepopulate_smart.py --source demo_bundle --num-words 10 --continuous
 """
 
 import argparse
@@ -180,16 +180,16 @@ def main():
         epilog="""
 Examples:
   # Process 10 incomplete words (localhost)
-  python3 prepopulate_smart.py --source tianz_test --num-words 10
+  python3 prepopulate_smart.py --source demo_bundle --num-words 10
 
   # Production
-  python3 prepopulate_smart.py --source tianz_test --num-words 10 --backend-url https://kwafy.com/api
+  python3 prepopulate_smart.py --source demo_bundle --num-words 10 --backend-url https://kwafy.com/api
 
   # Continuous mode (keeps running until all complete)
-  python3 prepopulate_smart.py --source tianz_test --num-words 10 --continuous
+  python3 prepopulate_smart.py --source demo_bundle --num-words 10 --continuous
 
   # Only process words missing definitions
-  python3 prepopulate_smart.py --source tianz_test --num-words 10 --strategy missing_definition
+  python3 prepopulate_smart.py --source demo_bundle --num-words 10 --strategy missing_definition
         """
     )
 
@@ -202,7 +202,7 @@ Examples:
     parser.add_argument(
         '--source',
         required=True,
-        choices=['tianz_test', 'tianz', 'toefl', 'ielts',
+        choices=['demo_bundle', 'tianz', 'toefl', 'ielts',
                  'toefl_beginner', 'toefl_intermediate', 'toefl_advanced',
                  'ielts_beginner', 'ielts_intermediate', 'ielts_advanced'],
         help='Test vocabulary source (required)'

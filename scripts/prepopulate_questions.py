@@ -6,8 +6,8 @@ Generates all question types for vocabulary words to eliminate LLM delays during
 Calls the backend batch-generate API to populate the review_questions cache.
 
 Usage:
-    # Generate for tianz_test words (615 words with videos)
-    python3 prepopulate_questions.py --source tianz_test --backend-url http://localhost:5001
+    # Generate for demo_bundle words (615 words with videos)
+    python3 prepopulate_questions.py --source demo_bundle --backend-url http://localhost:5001
 
     # Generate for TOEFL words
     python3 prepopulate_questions.py --source toefl --max-words 100
@@ -16,10 +16,10 @@ Usage:
     python3 prepopulate_questions.py --words apple,banana,cherry
 
     # Generate only specific question types
-    python3 prepopulate_questions.py --source tianz_test --question-types mc_definition,video_mc
+    python3 prepopulate_questions.py --source demo_bundle --question-types mc_definition,video_mc
 
     # Production
-    python3 prepopulate_questions.py --source tianz_test --backend-url https://kwafy.com
+    python3 prepopulate_questions.py --source demo_bundle --backend-url https://kwafy.com
 """
 
 import argparse
@@ -54,7 +54,7 @@ def prepopulate_questions(
 
     Args:
         backend_url: Backend API URL
-        source: Test vocabulary source ('tianz_test', 'toefl', etc.)
+        source: Test vocabulary source ('demo_bundle', 'toefl', etc.)
         words: Specific words to process
         learning_lang: Language being learned
         native_lang: User's native language
@@ -170,11 +170,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Generate for tianz_test (615 words with videos)
-  python3 prepopulate_questions.py --source tianz_test
+  # Generate for demo_bundle (615 words with videos)
+  python3 prepopulate_questions.py --source demo_bundle
 
   # Test with 10 words first
-  python3 prepopulate_questions.py --source tianz_test --max-words 10
+  python3 prepopulate_questions.py --source demo_bundle --max-words 10
 
   # Generate for TOEFL words
   python3 prepopulate_questions.py --source toefl --max-words 100
@@ -183,10 +183,10 @@ Examples:
   python3 prepopulate_questions.py --words apple,banana,cherry
 
   # Only generate video questions
-  python3 prepopulate_questions.py --source tianz_test --question-types video_mc
+  python3 prepopulate_questions.py --source demo_bundle --question-types video_mc
 
   # Production
-  python3 prepopulate_questions.py --source tianz_test --backend-url https://kwafy.com
+  python3 prepopulate_questions.py --source demo_bundle --backend-url https://kwafy.com
         """
     )
 
@@ -198,7 +198,7 @@ Examples:
 
     parser.add_argument(
         '--source',
-        choices=['tianz_test', 'tianz', 'toefl', 'ielts',
+        choices=['demo_bundle', 'tianz', 'toefl', 'ielts',
                  'toefl_beginner', 'toefl_intermediate', 'toefl_advanced',
                  'ielts_beginner', 'ielts_intermediate', 'ielts_advanced'],
         help='Test vocabulary source'

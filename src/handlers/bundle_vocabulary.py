@@ -27,7 +27,7 @@ TEST_TYPE_MAPPING = {
     'IELTS_BEGINNER': ('ielts_beginner_enabled', 'ielts_beginner_target_days', 'is_ielts_beginner'),
     'IELTS_INTERMEDIATE': ('ielts_intermediate_enabled', 'ielts_intermediate_target_days', 'is_ielts_intermediate'),
     'IELTS_ADVANCED': ('ielts_advanced_enabled', 'ielts_advanced_target_days', 'is_ielts_advanced'),
-    'TIANZ': ('tianz_enabled', 'tianz_target_days', 'is_tianz'),
+    'DEMO': ('demo_enabled', 'demo_target_days', 'is_demo'),
     # Legacy mappings for backward compatibility
     'TOEFL': ('toefl_advanced_enabled', 'toefl_advanced_target_days', 'is_toefl_advanced'),
     'IELTS': ('ielts_advanced_enabled', 'ielts_advanced_target_days', 'is_ielts_advanced'),
@@ -37,7 +37,7 @@ TEST_TYPE_MAPPING = {
 ALL_TEST_ENABLE_COLUMNS = [
     'toefl_beginner_enabled', 'toefl_intermediate_enabled', 'toefl_advanced_enabled',
     'ielts_beginner_enabled', 'ielts_intermediate_enabled', 'ielts_advanced_enabled',
-    'tianz_enabled'
+    'demo_enabled'
 ]
 
 
@@ -167,18 +167,18 @@ def handle_legacy_update(data, user_id, cur, conn):
     """Handle legacy update_test_settings API format"""
     toefl_enabled = data.get('toefl_enabled')
     ielts_enabled = data.get('ielts_enabled')
-    tianz_enabled = data.get('tianz_enabled')
+    demo_enabled = data.get('demo_enabled')
     toefl_target_days = data.get('toefl_target_days')
     ielts_target_days = data.get('ielts_target_days')
-    tianz_target_days = data.get('tianz_target_days')
+    demo_target_days = data.get('demo_target_days')
 
-    if all(param is None for param in [toefl_enabled, ielts_enabled, tianz_enabled,
-                                        toefl_target_days, ielts_target_days, tianz_target_days]):
+    if all(param is None for param in [toefl_enabled, ielts_enabled, demo_enabled,
+                                        toefl_target_days, ielts_target_days, demo_target_days]):
         return jsonify({"error": "At least one setting must be provided"}), 400
 
     # Get current settings
     cur.execute("""
-        SELECT toefl_enabled, ielts_enabled, tianz_enabled,
+        SELECT toefl_enabled, ielts_enabled, demo_enabled,
                toefl_advanced_enabled, ielts_advanced_enabled
         FROM user_preferences
         WHERE user_id = %s
@@ -205,18 +205,18 @@ def handle_legacy_update(data, user_id, cur, conn):
     if ielts_enabled is not None:
         update_fields.append("ielts_advanced_enabled = %s")
         params.append(ielts_enabled)
-    if tianz_enabled is not None:
-        update_fields.append("tianz_enabled = %s")
-        params.append(tianz_enabled)
+    if demo_enabled is not None:
+        update_fields.append("demo_enabled = %s")
+        params.append(demo_enabled)
     if toefl_target_days is not None:
         update_fields.append("toefl_advanced_target_days = %s")
         params.append(toefl_target_days)
     if ielts_target_days is not None:
         update_fields.append("ielts_advanced_target_days = %s")
         params.append(ielts_target_days)
-    if tianz_target_days is not None:
-        update_fields.append("tianz_target_days = %s")
-        params.append(tianz_target_days)
+    if demo_target_days is not None:
+        update_fields.append("demo_target_days = %s")
+        params.append(demo_target_days)
 
     params.append(user_id)
 
@@ -230,9 +230,9 @@ def handle_legacy_update(data, user_id, cur, conn):
 
     # Return legacy format response
     cur.execute("""
-        SELECT toefl_enabled, ielts_enabled, tianz_enabled,
+        SELECT toefl_enabled, ielts_enabled, demo_enabled,
                last_test_words_added,
-               toefl_target_days, ielts_target_days, tianz_target_days,
+               toefl_target_days, ielts_target_days, demo_target_days,
                toefl_advanced_enabled, ielts_advanced_enabled
         FROM user_preferences
         WHERE user_id = %s
@@ -244,11 +244,11 @@ def handle_legacy_update(data, user_id, cur, conn):
         "settings": {
             "toefl_enabled": result['toefl_advanced_enabled'],
             "ielts_enabled": result['ielts_advanced_enabled'],
-            "tianz_enabled": result['tianz_enabled'],
+            "demo_enabled": result['demo_enabled'],
             "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
             "toefl_target_days": result['toefl_target_days'],
             "ielts_target_days": result['ielts_target_days'],
-            "tianz_target_days": result['tianz_target_days']
+            "demo_target_days": result['demo_target_days']
         }
     }), 200
 
@@ -258,7 +258,7 @@ def get_test_settings_response(user_id, cur):
     # Get all test settings
     select_cols = ', '.join(ALL_TEST_ENABLE_COLUMNS)
     target_cols = [TEST_TYPE_MAPPING[tt][1] for tt in ['TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED',
-                                                         'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED', 'TIANZ']]
+                                                         'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED', 'DEMO']]
     select_target = ', '.join(target_cols)
 
     cur.execute(f"""
@@ -313,13 +313,13 @@ def get_test_settings():
                     SELECT
                         up.toefl_enabled,
                         up.ielts_enabled,
-                        up.tianz_enabled,
+                        up.demo_enabled,
                         up.last_test_words_added,
                         up.learning_language,
                         up.native_language,
                         up.toefl_target_days,
                         up.ielts_target_days,
-                        up.tianz_target_days
+                        up.demo_target_days
                     FROM user_preferences up
                     WHERE up.user_id = %s
                 ),
@@ -327,27 +327,27 @@ def get_test_settings():
                     SELECT
                         COUNT(DISTINCT CASE WHEN tv.is_toefl THEN sw.word END) as toefl_saved,
                         COUNT(DISTINCT CASE WHEN tv.is_ielts THEN sw.word END) as ielts_saved,
-                        COUNT(DISTINCT CASE WHEN tv.is_tianz THEN sw.word END) as tianz_saved
+                        COUNT(DISTINCT CASE WHEN tv.is_demo THEN sw.word END) as demo_saved
                     FROM saved_words sw
-                    LEFT JOIN test_vocabularies tv ON tv.word = sw.word
+                    LEFT JOIN bundle_vocabularies tv ON tv.word = sw.word
                     WHERE sw.user_id = %s
                 ),
                 totals AS (
                     SELECT
                         COUNT(DISTINCT CASE WHEN is_toefl THEN word END) as total_toefl,
                         COUNT(DISTINCT CASE WHEN is_ielts THEN word END) as total_ielts,
-                        COUNT(DISTINCT CASE WHEN is_tianz THEN word END) as total_tianz
-                    FROM test_vocabularies
+                        COUNT(DISTINCT CASE WHEN is_demo THEN word END) as total_demo
+                    FROM bundle_vocabularies
                     WHERE language = 'en'
                 )
                 SELECT
                     us.*,
                     p.toefl_saved,
                     p.ielts_saved,
-                    p.tianz_saved,
+                    p.demo_saved,
                     t.total_toefl,
                     t.total_ielts,
-                    t.total_tianz
+                    t.total_demo
                 FROM user_settings us
                 CROSS JOIN progress p
                 CROSS JOIN totals t
@@ -360,13 +360,13 @@ def get_test_settings():
                     "settings": {
                         "toefl_enabled": result['toefl_enabled'],
                         "ielts_enabled": result['ielts_enabled'],
-                        "tianz_enabled": result['tianz_enabled'],
+                        "demo_enabled": result['demo_enabled'],
                         "last_test_words_added": result['last_test_words_added'].isoformat() if result['last_test_words_added'] else None,
                         "learning_language": result['learning_language'],
                         "native_language": result['native_language'],
                         "toefl_target_days": result['toefl_target_days'],
                         "ielts_target_days": result['ielts_target_days'],
-                        "tianz_target_days": result['tianz_target_days']
+                        "demo_target_days": result['demo_target_days']
                     },
                     "progress": {
                         "toefl": {
@@ -380,9 +380,9 @@ def get_test_settings():
                             "percentage": round(100 * result['ielts_saved'] / result['total_ielts'], 1) if result['total_ielts'] > 0 else 0
                         },
                         "tianz": {
-                            "saved": result['tianz_saved'],
-                            "total": result['total_tianz'],
-                            "percentage": round(100 * result['tianz_saved'] / result['total_tianz'], 1) if result['total_tianz'] > 0 else 0
+                            "saved": result['demo_saved'],
+                            "total": result['total_demo'],
+                            "percentage": round(100 * result['demo_saved'] / result['total_demo'], 1) if result['total_demo'] > 0 else 0
                         }
                     }
                 }), 200
@@ -419,7 +419,7 @@ def add_daily_test_words():
 
             # Check if user has test mode enabled
             cur.execute("""
-                SELECT toefl_enabled, ielts_enabled, tianz_enabled, last_test_words_added
+                SELECT toefl_enabled, ielts_enabled, demo_enabled, last_test_words_added
                 FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
@@ -429,9 +429,9 @@ def add_daily_test_words():
             if not settings:
                 return jsonify({"error": "User not found"}), 404
 
-            toefl_enabled, ielts_enabled, tianz_enabled, last_added = settings
+            toefl_enabled, ielts_enabled, demo_enabled, last_added = settings
 
-            if not toefl_enabled and not ielts_enabled and not tianz_enabled:
+            if not toefl_enabled and not ielts_enabled and not demo_enabled:
                 return jsonify({"error": "Test preparation mode is not enabled"}), 400
 
             # Check if words were already added today
@@ -450,17 +450,17 @@ def add_daily_test_words():
                     AND learning_language = %s
                 )
                 SELECT DISTINCT tv.word
-                FROM test_vocabularies tv
+                FROM bundle_vocabularies tv
                 WHERE tv.language = %s
                 AND (
                     (%s = TRUE AND tv.is_toefl = TRUE) OR
                     (%s = TRUE AND tv.is_ielts = TRUE) OR
-                    (%s = TRUE AND tv.is_tianz = TRUE)
+                    (%s = TRUE AND tv.is_demo = TRUE)
                 )
                 AND tv.word NOT IN (SELECT ew.word FROM existing_words ew)
                 ORDER BY RANDOM()
                 LIMIT %s
-            """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled, tianz_enabled, DAILY_TEST_WORDS))
+            """, (user_id, learning_language, learning_language, toefl_enabled, ielts_enabled, demo_enabled, DAILY_TEST_WORDS))
 
             words_to_add = cur.fetchall()
 
@@ -498,12 +498,12 @@ def add_daily_test_words():
                 SELECT
                     COUNT(DISTINCT CASE WHEN tv.is_toefl THEN sw.word END) as toefl_saved,
                     COUNT(DISTINCT CASE WHEN tv.is_ielts THEN sw.word END) as ielts_saved,
-                    COUNT(DISTINCT CASE WHEN tv.is_tianz THEN sw.word END) as tianz_saved,
-                    (SELECT COUNT(DISTINCT word) FROM test_vocabularies WHERE is_toefl = TRUE AND language = %s) as total_toefl,
-                    (SELECT COUNT(DISTINCT word) FROM test_vocabularies WHERE is_ielts = TRUE AND language = %s) as total_ielts,
-                    (SELECT COUNT(DISTINCT word) FROM test_vocabularies WHERE is_tianz = TRUE AND language = %s) as total_tianz
+                    COUNT(DISTINCT CASE WHEN tv.is_demo THEN sw.word END) as demo_saved,
+                    (SELECT COUNT(DISTINCT word) FROM bundle_vocabularies WHERE is_toefl = TRUE AND language = %s) as total_toefl,
+                    (SELECT COUNT(DISTINCT word) FROM bundle_vocabularies WHERE is_ielts = TRUE AND language = %s) as total_ielts,
+                    (SELECT COUNT(DISTINCT word) FROM bundle_vocabularies WHERE is_demo = TRUE AND language = %s) as total_demo
                 FROM saved_words sw
-                LEFT JOIN test_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
+                LEFT JOIN bundle_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
                 WHERE sw.user_id = %s
             """, (learning_language, learning_language, learning_language, user_id))
 
@@ -528,7 +528,7 @@ def add_daily_test_words():
                         "saved": progress[2],
                         "total": progress[5],
                         "percentage": round(100 * progress[2] / progress[5], 1) if progress[5] > 0 else 0
-                    } if tianz_enabled else None
+                    } if demo_enabled else None
                 }
             }), 200
 
@@ -557,8 +557,8 @@ def get_test_vocabulary_stats():
                     COUNT(DISTINCT word) as total_words,
                     COUNT(DISTINCT CASE WHEN is_toefl THEN word END) as toefl_words,
                     COUNT(DISTINCT CASE WHEN is_ielts THEN word END) as ielts_words,
-                    COUNT(DISTINCT CASE WHEN is_tianz THEN word END) as tianz_words
-                FROM test_vocabularies
+                    COUNT(DISTINCT CASE WHEN is_demo THEN word END) as demo_words
+                FROM bundle_vocabularies
                 WHERE language = %s
             """, (language,))
 
@@ -570,7 +570,7 @@ def get_test_vocabulary_stats():
                     "total_unique_words": stats['total_words'],
                     "toefl_words": stats['toefl_words'],
                     "ielts_words": stats['ielts_words'],
-                    "tianz_words": stats['tianz_words']
+                    "demo_words": stats['demo_words']
                 }
             }), 200
 
@@ -610,7 +610,7 @@ def get_test_vocabulary_count():
         # Get total count of words for the specified test
         total_words = db_fetch_scalar(f"""
             SELECT COUNT(DISTINCT word)
-            FROM test_vocabularies
+            FROM bundle_vocabularies
             WHERE language = 'en' AND {vocab_column} = TRUE
         """) or 0
 
@@ -661,7 +661,7 @@ def get_test_config():
                 "tests": [
                     {"code": "TOEFL", "name": "TOEFL Preparation", "description": "Test of English as a Foreign Language"},
                     {"code": "IELTS", "name": "IELTS Preparation", "description": "International English Language Testing System"},
-                    {"code": "TIANZ", "name": "Tianz Test", "description": "Testing vocabulary list (20 words)", "testing_only": true}
+                    {"code": "DEMO", "name": "Tianz Test", "description": "Testing vocabulary list (20 words)", "testing_only": true}
                 ]
             },
             "fr": {
@@ -691,7 +691,7 @@ def get_test_config():
                         "testing_only": False
                     },
                     {
-                        "code": "TIANZ",
+                        "code": "DEMO",
                         "name": "Tianz Test",
                         "description": "Testing vocabulary list (20 words)",
                         "testing_only": True  # Only visible in developer mode
@@ -757,7 +757,7 @@ def get_test_vocabulary_count():
             test_types = [
                 'TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED',
                 'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED',
-                'TIANZ'
+                'DEMO'
             ]
 
         # Validate all test types
@@ -777,7 +777,7 @@ def get_test_vocabulary_count():
                 f"COUNT(*) FILTER (WHERE {vocab_column} = TRUE) as \"{test_type.lower()}\""
             )
 
-        query = f"SELECT {', '.join(filter_clauses)} FROM test_vocabularies"
+        query = f"SELECT {', '.join(filter_clauses)} FROM bundle_vocabularies"
         logger.info(f"Fetching vocabulary counts for test types: {test_types}")
 
         with db_cursor(conn) as cur:

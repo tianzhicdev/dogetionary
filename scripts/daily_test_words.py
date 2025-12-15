@@ -69,7 +69,7 @@ def add_words_for_user(conn, user_info: Dict) -> int:
                 AND learning_language = %(learning_language)s
             )
             SELECT DISTINCT tv.word
-            FROM test_vocabularies tv
+            FROM bundle_vocabularies tv
             WHERE tv.language = %(learning_language)s
             AND (
                 (%(toefl_enabled)s = TRUE AND tv.is_toefl = TRUE) OR
@@ -142,7 +142,7 @@ def get_daily_stats(conn) -> Dict:
             COUNT(*) as total_words_added
         FROM saved_words
         WHERE DATE(saved_at) = CURRENT_DATE
-        AND word IN (SELECT word FROM test_vocabularies)
+        AND word IN (SELECT word FROM bundle_vocabularies)
     """)
 
     stats = cur.fetchone()

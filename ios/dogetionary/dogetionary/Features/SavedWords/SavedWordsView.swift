@@ -383,8 +383,8 @@ struct SavedWordRow: View {
                     .cornerRadius(4)
             }
 
-            if userManager.tianzEnabled && (savedWord.is_tianz == true) {
-                Text("TIANZ")
+            if userManager.demoEnabled && (savedWord.is_demo == true) {
+                Text("DEMO")
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundColor(AppTheme.bgPrimary)
                     .padding(.horizontal, 4)

@@ -110,7 +110,7 @@ def get_today_schedule():
             # Get user preferences including test settings and target_end_date
             cur.execute("""
                 SELECT
-                    toefl_enabled, ielts_enabled, tianz_enabled,
+                    toefl_enabled, ielts_enabled, demo_enabled,
                     toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                     ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
                     user_name, target_end_date
@@ -132,7 +132,7 @@ def get_today_schedule():
 
             # Check if any test prep is enabled
             test_prep_enabled = (
-                prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('tianz_enabled') or
+                prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('demo_enabled') or
                 prefs.get('toefl_beginner_enabled') or prefs.get('toefl_intermediate_enabled') or prefs.get('toefl_advanced_enabled') or
                 prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled')
             )
@@ -406,7 +406,7 @@ def get_schedule_range():
             # Get user preferences including test settings and target_end_date
             cur.execute("""
                 SELECT
-                    toefl_enabled, ielts_enabled, tianz_enabled,
+                    toefl_enabled, ielts_enabled, demo_enabled,
                     toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                     ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
                     user_name, target_end_date
@@ -425,7 +425,7 @@ def get_schedule_range():
 
             # Check if any test prep is enabled
             test_prep_enabled = (
-                prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('tianz_enabled') or
+                prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('demo_enabled') or
                 prefs.get('toefl_beginner_enabled') or prefs.get('toefl_intermediate_enabled') or prefs.get('toefl_advanced_enabled') or
                 prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled')
             )
@@ -811,7 +811,7 @@ def get_test_progress(): # chen vetted
     Response:
         {
             "has_schedule": true,
-            "test_type": "TOEFL" | "IELTS" | "TIANZ" | "BOTH",
+            "test_type": "TOEFL" | "IELTS" | "DEMO" | "BOTH",
             "total_words": 3500,
             "saved_words": 150,
             "progress": 0.043  // saved_words / total_words
@@ -832,7 +832,7 @@ def get_test_progress(): # chen vetted
                 SELECT
                     toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                     ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
-                    tianz_enabled
+                    demo_enabled
                 FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
@@ -872,10 +872,10 @@ def get_test_progress(): # chen vetted
                 enabled_level = 'IELTS_ADVANCED'
                 vocab_column = 'is_ielts_advanced'
                 test_type = 'IELTS ADVANCED'
-            elif prefs['tianz_enabled']:
-                enabled_level = 'TIANZ'
-                vocab_column = 'is_tianz'
-                test_type = 'TIANZ'
+            elif prefs['demo_enabled']:
+                enabled_level = 'DEMO'
+                vocab_column = 'is_demo'
+                test_type = 'DEMO'
 
             # If no test level is enabled, return empty progress
             if not enabled_level:
@@ -891,7 +891,7 @@ def get_test_progress(): # chen vetted
             # Get total words in enabled test level using the specific vocab column
             cur.execute(f"""
                 SELECT COUNT(DISTINCT word) as total
-                FROM test_vocabularies
+                FROM bundle_vocabularies
                 WHERE {vocab_column} = TRUE
             """)
 
@@ -902,7 +902,7 @@ def get_test_progress(): # chen vetted
             cur.execute(f"""
                 SELECT COUNT(DISTINCT sw.word) as saved
                 FROM saved_words sw
-                INNER JOIN test_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
+                INNER JOIN bundle_vocabularies tv ON sw.word = tv.word AND sw.learning_language = tv.language
                 WHERE sw.user_id = %s
                     AND tv.{vocab_column} = TRUE
             """, (user_id,))

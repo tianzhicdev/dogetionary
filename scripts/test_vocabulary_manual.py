@@ -28,7 +28,7 @@ def test_vocabulary_stats():
             COUNT(DISTINCT CASE WHEN is_toefl THEN word END) as toefl_words,
             COUNT(DISTINCT CASE WHEN is_ielts THEN word END) as ielts_words,
             COUNT(DISTINCT CASE WHEN is_toefl AND is_ielts THEN word END) as both_tests
-        FROM test_vocabularies
+        FROM bundle_vocabularies
         WHERE language = %s
     """, ('en',))
 
@@ -99,7 +99,7 @@ def test_add_daily_words(test_user_id):
     cur.execute("""
         SELECT sw.word, tv.is_toefl, tv.is_ielts
         FROM saved_words sw
-        JOIN test_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
+        JOIN bundle_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
         WHERE sw.user_id = %s
         ORDER BY sw.word
         LIMIT 5
@@ -143,13 +143,13 @@ def test_user_progress(test_user_id):
             SELECT COUNT(DISTINCT CASE WHEN tv.is_toefl THEN sw.word END) as toefl_saved,
                    COUNT(DISTINCT CASE WHEN tv.is_ielts THEN sw.word END) as ielts_saved
             FROM saved_words sw
-            LEFT JOIN test_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
+            LEFT JOIN bundle_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
             WHERE sw.user_id = %s
         ),
         totals AS (
             SELECT COUNT(DISTINCT CASE WHEN is_toefl THEN word END) as total_toefl,
                    COUNT(DISTINCT CASE WHEN is_ielts THEN word END) as total_ielts
-            FROM test_vocabularies
+            FROM bundle_vocabularies
             WHERE language = 'en'
         )
         SELECT

@@ -410,7 +410,7 @@ struct AppTheme {
             startPoint: .leading,
             endPoint: .trailing
         ),
-        .tianz: LinearGradient(
+        .demo: LinearGradient(
             colors: [systemIndigo, systemPurple],
             startPoint: .leading,
             endPoint: .trailing

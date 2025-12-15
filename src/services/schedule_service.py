@@ -495,7 +495,7 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
         test_type: One of the level-based types:
                    - 'TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED'
                    - 'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED'
-                   - 'TIANZ'
+                   - 'DEMO'
                    - Legacy: 'TOEFL', 'IELTS', 'BOTH'
 
     Returns:
@@ -512,7 +512,7 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
         'IELTS_BEGINNER': 'is_ielts_beginner',
         'IELTS_INTERMEDIATE': 'is_ielts_intermediate',
         'IELTS_ADVANCED': 'is_ielts_advanced',
-        'TIANZ': 'is_tianz',
+        'DEMO': 'is_demo',
         # Legacy mappings
         'TOEFL': 'is_toefl_advanced',
         'IELTS': 'is_ielts_advanced',
@@ -525,7 +525,7 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
             # Legacy: both TOEFL and IELTS advanced
             cur.execute("""
                 SELECT DISTINCT word
-                FROM test_vocabularies
+                FROM bundle_vocabularies
                 WHERE language = 'en'
                 AND (is_toefl_advanced = TRUE OR is_ielts_advanced = TRUE)
             """)
@@ -534,7 +534,7 @@ def get_test_vocabulary_words(test_type: str) -> Set[str]:
             vocab_column = VOCAB_COLUMN_MAPPING[test_type]
             cur.execute(f"""
                 SELECT DISTINCT word
-                FROM test_vocabularies
+                FROM bundle_vocabularies
                 WHERE language = 'en'
                 AND {vocab_column} = TRUE
             """)
@@ -564,7 +564,7 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
         timezone: Required if exclude_date is provided - user's IANA timezone string
         exclude_only_test_words: If True, only exclude test vocabulary words saved on exclude_date
                                  (non-test words saved on that date will still be included)
-        test_type: Required if exclude_only_test_words is True - 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'
+        test_type: Required if exclude_only_test_words is True - 'TOEFL', 'IELTS', 'DEMO', or 'BOTH'
 
     Returns:
         Dictionary mapping word -> {id, created_at, is_known}
@@ -585,7 +585,7 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
                 cur.execute("""
                     SELECT sw.id, sw.word, sw.created_at, sw.is_known
                     FROM saved_words sw
-                    LEFT JOIN test_vocabularies tv ON sw.word = tv.word
+                    LEFT JOIN bundle_vocabularies tv ON sw.word = tv.word
                     WHERE sw.user_id = %s
                       AND sw.learning_language = %s
                       AND sw.is_known = FALSE
@@ -595,7 +595,7 @@ def get_user_saved_words(user_id: str, learning_language: str = 'en',
                           OR NOT COALESCE(
                               (%s = 'TOEFL' AND tv.is_toefl = TRUE)
                               OR (%s = 'IELTS' AND tv.is_ielts = TRUE)
-                              OR (%s = 'TIANZ' AND tv.is_tianz = TRUE)
+                              OR (%s = 'DEMO' AND tv.is_demo = TRUE)
                               OR (%s = 'BOTH' AND (tv.is_toefl = TRUE OR tv.is_ielts = TRUE)),
                               FALSE
                           )
@@ -743,7 +743,7 @@ def initiate_schedule(user_id: str, test_type: str, target_end_date: date) -> Di
 
     Args:
         user_id: UUID of the user
-        test_type: 'TOEFL', 'IELTS', 'TIANZ', or 'BOTH'
+        test_type: 'TOEFL', 'IELTS', 'DEMO', or 'BOTH'
         target_end_date: The date user wants to complete preparation by
 
     Returns:

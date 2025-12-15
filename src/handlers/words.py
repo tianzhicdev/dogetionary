@@ -455,7 +455,7 @@ def get_saved_words():
                 GROUP BY word_id
             ) review_counts ON sw.id = review_counts.word_id
             LEFT JOIN recent_reviews rr ON sw.id = rr.word_id
-            LEFT JOIN test_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
+            LEFT JOIN bundle_vocabularies tv ON tv.word = sw.word AND tv.language = sw.learning_language
             WHERE sw.user_id = %s
             ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
         """, (user_id,))

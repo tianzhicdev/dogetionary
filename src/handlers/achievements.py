@@ -91,9 +91,9 @@ TEST_TYPES_MAPPING = {
         'title': 'IELTS Advanced Master',
         'description': 'IELTS Advanced vocabulary completed!'
     },
-    'TIANZ': {
-        'vocab_column': 'is_tianz',
-        'pref_column': 'tianz_enabled',
+    'DEMO': {
+        'vocab_column': 'is_demo',
+        'pref_column': 'demo_enabled',
         'title': 'Tianz Master',
         'description': 'TIANZ vocabulary completed!'
     }
@@ -133,7 +133,7 @@ def count_test_vocabulary_progress(user_id: str, vocab_column: str, language: st
 
     Args:
         user_id: User UUID string
-        vocab_column: Column name like 'is_toefl_beginner', 'is_tianz', etc.
+        vocab_column: Column name like 'is_toefl_beginner', 'is_demo', etc.
         language: Language code (default: 'en')
 
     Returns:
@@ -144,7 +144,7 @@ def count_test_vocabulary_progress(user_id: str, vocab_column: str, language: st
     # Count total words in test vocabulary
     total_words_result = db_fetch_one(f"""
         SELECT COUNT(*) as total
-        FROM test_vocabularies
+        FROM bundle_vocabularies
         WHERE {vocab_column} = TRUE AND language = %s
     """, (language,))
     total_words = total_words_result['total'] if total_words_result else 0
@@ -153,7 +153,7 @@ def count_test_vocabulary_progress(user_id: str, vocab_column: str, language: st
     saved_words_result = db_fetch_one(f"""
         SELECT COUNT(DISTINCT sw.word) as saved
         FROM saved_words sw
-        INNER JOIN test_vocabularies tv ON
+        INNER JOIN bundle_vocabularies tv ON
             LOWER(sw.word) = LOWER(tv.word) AND
             sw.learning_language = tv.language
         WHERE sw.user_id = %s AND tv.{vocab_column} = TRUE
@@ -215,7 +215,7 @@ def get_user_test_preferences(user_id: str) -> dict:
     prefs = db_fetch_one("""
         SELECT toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
-               tianz_enabled
+               demo_enabled
         FROM user_preferences
         WHERE user_id = %s
     """, (user_id,))
@@ -254,7 +254,7 @@ def check_test_completion_badges(
 
     Returns:
         List of completion badge dictionaries:
-        [{"badge_id": "TIANZ", "title": "Tianz Master", "description": "TIANZ vocabulary completed!"}]
+        [{"badge_id": "DEMO", "title": "Tianz Master", "description": "TIANZ vocabulary completed!"}]
     """
     completion_badges = []
 
@@ -279,7 +279,7 @@ def check_test_completion_badges(
             # Check if current word is part of this test vocabulary
             is_test_word_result = db_fetch_one(f"""
                 SELECT COUNT(*) as is_test_word
-                FROM test_vocabularies
+                FROM bundle_vocabularies
                 WHERE LOWER(word) = LOWER(%s)
                   AND language = %s
                   AND {vocab_column} = TRUE

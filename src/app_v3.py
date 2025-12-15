@@ -146,7 +146,7 @@ def get_test_config_endpoint():
                         "testing_only": False
                     },
                     {
-                        "code": "TIANZ",
+                        "code": "DEMO",
                         "name": "Tianz Test",
                         "description": "Testing vocabulary list (20 words)",
                         "testing_only": True  # Only visible in developer mode

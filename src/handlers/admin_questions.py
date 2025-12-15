@@ -27,7 +27,7 @@ def batch_generate_questions():
 
     Request JSON:
     {
-        "source": "tianz_test",  // or "toefl", "ielts", "toefl_beginner", etc.
+        "source": "demo_bundle",  // or "toefl", "ielts", "toefl_beginner", etc.
         "words": ["apple", "banana"],  // optional: specific words (overrides source)
         "learning_language": "en",  // required
         "native_language": "zh",    // required
@@ -62,7 +62,7 @@ def batch_generate_questions():
             return jsonify({"error": "learning_language and native_language are required"}), 400
 
         # Optional fields
-        source = data.get('source')  # 'tianz_test', 'toefl', 'ielts', etc.
+        source = data.get('source')  # 'demo_bundle', 'toefl', 'ielts', etc.
         specific_words = data.get('words', [])
         question_types = data.get('question_types', ALL_QUESTION_TYPES)
         max_words = data.get('max_words')
@@ -191,10 +191,10 @@ def batch_generate_questions():
 
 def get_words_from_source(source: str, learning_lang: str, max_words: Optional[int] = None) -> List[str]:
     """
-    Get word list from test_vocabularies table based on source.
+    Get word list from bundle_vocabularies table based on source.
 
     Args:
-        source: 'tianz_test', 'toefl', 'ielts', 'toefl_beginner', etc.
+        source: 'demo_bundle', 'toefl', 'ielts', 'toefl_beginner', etc.
         learning_lang: Language of words
         max_words: Optional limit
 
@@ -203,8 +203,8 @@ def get_words_from_source(source: str, learning_lang: str, max_words: Optional[i
     """
     # Map source to column name
     source_column_map = {
-        'tianz_test': 'is_tianz',
-        'tianz': 'is_tianz',
+        'demo_bundle': 'is_demo',
+        'tianz': 'is_demo',
         'toefl': 'is_toefl',
         'ielts': 'is_ielts',
         'toefl_beginner': 'is_toefl_beginner',
@@ -224,7 +224,7 @@ def get_words_from_source(source: str, learning_lang: str, max_words: Optional[i
 
     words = db_fetch_all(f"""
         SELECT word
-        FROM test_vocabularies
+        FROM bundle_vocabularies
         WHERE {column} = true
         AND language = %s
         ORDER BY word

@@ -24,10 +24,10 @@ class UserManager: ObservableObject {
     // Legacy keys (kept for backward compatibility during transition)
     private let toeflEnabledKey = "DogetionaryToeflEnabled"
     private let ieltsEnabledKey = "DogetionaryIeltsEnabled"
-    private let tianzEnabledKey = "DogetionaryTianzEnabled"
+    private let demoEnabledKey = "DogetionaryTianzEnabled"
     private let toeflTargetDaysKey = "DogetionaryToeflTargetDays"
     private let ieltsTargetDaysKey = "DogetionaryIeltsTargetDays"
-    private let tianzTargetDaysKey = "DogetionaryTianzTargetDays"
+    private let demoTargetDaysKey = "DogetionaryTianzTargetDays"
     private let hasCompletedOnboardingKey = "DogetionaryHasCompletedOnboarding"
     private let reminderTimeKey = "DogetionaryReminderTime"
     // Practice status cache key
@@ -139,17 +139,17 @@ class UserManager: ObservableObject {
             }
         }
     }
-    @Published var tianzEnabled: Bool {
+    @Published var demoEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(tianzEnabled, forKey: tianzEnabledKey)
+            UserDefaults.standard.set(demoEnabled, forKey: demoEnabledKey)
             if !isSyncingFromServer {
                 updateActiveFromLegacyProperties()
             }
         }
     }
-    @Published var tianzTargetDays: Int {
+    @Published var demoTargetDays: Int {
         didSet {
-            UserDefaults.standard.set(tianzTargetDays, forKey: tianzTargetDaysKey)
+            UserDefaults.standard.set(demoTargetDays, forKey: demoTargetDaysKey)
             if !isSyncingFromServer {
                 updateActiveFromLegacyProperties()
             }
@@ -179,23 +179,23 @@ class UserManager: ObservableObject {
             case .toeflBeginner, .toeflIntermediate, .toeflAdvanced:
                 toeflEnabled = true
                 ieltsEnabled = false
-                tianzEnabled = false
+                demoEnabled = false
                 toeflTargetDays = targetDays
             case .ieltsBeginner, .ieltsIntermediate, .ieltsAdvanced:
                 toeflEnabled = false
                 ieltsEnabled = true
-                tianzEnabled = false
+                demoEnabled = false
                 ieltsTargetDays = targetDays
-            case .tianz:
+            case .demo:
                 toeflEnabled = false
                 ieltsEnabled = false
-                tianzEnabled = true
-                tianzTargetDays = targetDays
+                demoEnabled = true
+                demoTargetDays = targetDays
             }
         } else {
             toeflEnabled = false
             ieltsEnabled = false
-            tianzEnabled = false
+            demoEnabled = false
         }
     }
 
@@ -213,9 +213,9 @@ class UserManager: ObservableObject {
         } else if ieltsEnabled {
             activeTestType = .ieltsAdvanced
             targetDays = ieltsTargetDays
-        } else if tianzEnabled {
-            activeTestType = .tianz
-            targetDays = tianzTargetDays
+        } else if demoEnabled {
+            activeTestType = .demo
+            targetDays = demoTargetDays
         } else {
             activeTestType = nil
         }
@@ -271,27 +271,27 @@ class UserManager: ObservableObject {
         // Load legacy test preparation settings (for backward compatibility)
         self.toeflEnabled = UserDefaults.standard.bool(forKey: toeflEnabledKey)
         self.ieltsEnabled = UserDefaults.standard.bool(forKey: ieltsEnabledKey)
-        self.tianzEnabled = UserDefaults.standard.bool(forKey: tianzEnabledKey)
+        self.demoEnabled = UserDefaults.standard.bool(forKey: demoEnabledKey)
 
         // Load legacy target days with default of 30 days
         let savedToeflTargetDays = UserDefaults.standard.integer(forKey: toeflTargetDaysKey)
         self.toeflTargetDays = savedToeflTargetDays > 0 ? savedToeflTargetDays : 30
         let savedIeltsTargetDays = UserDefaults.standard.integer(forKey: ieltsTargetDaysKey)
         self.ieltsTargetDays = savedIeltsTargetDays > 0 ? savedIeltsTargetDays : 30
-        let savedTianzTargetDays = UserDefaults.standard.integer(forKey: tianzTargetDaysKey)
-        self.tianzTargetDays = savedTianzTargetDays > 0 ? savedTianzTargetDays : 30
+        let savedTianzTargetDays = UserDefaults.standard.integer(forKey: demoTargetDaysKey)
+        self.demoTargetDays = savedTianzTargetDays > 0 ? savedTianzTargetDays : 30
 
         // If no V3 settings but have legacy settings, migrate from legacy
-        if self.activeTestType == nil && (self.toeflEnabled || self.ieltsEnabled || self.tianzEnabled) {
+        if self.activeTestType == nil && (self.toeflEnabled || self.ieltsEnabled || self.demoEnabled) {
             if self.toeflEnabled {
                 self.activeTestType = .toeflAdvanced
                 self.targetDays = self.toeflTargetDays
             } else if self.ieltsEnabled {
                 self.activeTestType = .ieltsAdvanced
                 self.targetDays = self.ieltsTargetDays
-            } else if self.tianzEnabled {
-                self.activeTestType = .tianz
-                self.targetDays = self.tianzTargetDays
+            } else if self.demoEnabled {
+                self.activeTestType = .demo
+                self.targetDays = self.demoTargetDays
             }
         }
 

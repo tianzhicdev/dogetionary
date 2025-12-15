@@ -100,7 +100,7 @@ def get_practice_status():
                 SELECT
                     toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                     ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
-                    tianz_enabled, target_end_date
+                    demo_enabled, target_end_date
                 FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))

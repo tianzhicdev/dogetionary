@@ -28,7 +28,7 @@ def smart_batch_generate_questions():
 
     Request JSON:
     {
-        "source": "tianz_test",          // or "toefl", "ielts", etc.
+        "source": "demo_bundle",          // or "toefl", "ielts", etc.
         "num_words": 10,                  // number of incomplete words to process
         "learning_language": "en",        // required
         "native_language": "zh",          // required
@@ -249,7 +249,7 @@ def find_incomplete_words(
     Find words that need definitions or questions generated.
 
     Args:
-        source: Test vocabulary source ('tianz_test', 'toefl', etc.)
+        source: Test vocabulary source ('demo_bundle', 'toefl', etc.)
         num_words: Number of incomplete words to return
         learning_lang: Language being learned
         native_lang: User's native language
@@ -260,8 +260,8 @@ def find_incomplete_words(
     """
     # Map source to column name
     source_column_map = {
-        'tianz_test': 'is_tianz',
-        'tianz': 'is_tianz',
+        'demo_bundle': 'is_demo',
+        'tianz': 'is_demo',
         'toefl': 'is_toefl',
         'ielts': 'is_ielts',
         'toefl_beginner': 'is_toefl_beginner',
@@ -318,7 +318,7 @@ def find_incomplete_words(
                     WHERE w2v.word = tv.word
                     AND w2v.learning_language = tv.language
                 ) AS has_video
-            FROM test_vocabularies tv
+            FROM bundle_vocabularies tv
             WHERE tv.{column} = true
             AND tv.language = %s
         )
@@ -402,8 +402,8 @@ def get_total_words_count(source: str, learning_lang: str) -> int:
         Total word count
     """
     source_column_map = {
-        'tianz_test': 'is_tianz',
-        'tianz': 'is_tianz',
+        'demo_bundle': 'is_demo',
+        'tianz': 'is_demo',
         'toefl': 'is_toefl',
         'ielts': 'is_ielts',
         'toefl_beginner': 'is_toefl_beginner',
@@ -420,7 +420,7 @@ def get_total_words_count(source: str, learning_lang: str) -> int:
 
     result = db_fetch_one(f"""
         SELECT COUNT(*) as count
-        FROM test_vocabularies
+        FROM bundle_vocabularies
         WHERE {column} = true
         AND language = %s
     """, (learning_lang,))

@@ -302,11 +302,11 @@ struct SavedWord: Identifiable, Codable {
     let last_reviewed_at: String?
     let is_toefl: Bool?
     let is_ielts: Bool?
-    let is_tianz: Bool?
+    let is_demo: Bool?
     var is_known: Bool  // Whether user has marked this word as known
 
     private enum CodingKeys: String, CodingKey {
-        case id, word, learning_language, native_language, created_at, review_count, correct_reviews, incorrect_reviews, word_progress_level, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts, is_tianz, is_known
+        case id, word, learning_language, native_language, created_at, review_count, correct_reviews, incorrect_reviews, word_progress_level, interval_days, next_review_date, last_reviewed_at, is_toefl, is_ielts, is_demo, is_known
     }
 
     init(from decoder: Decoder) throws {
@@ -325,13 +325,13 @@ struct SavedWord: Identifiable, Codable {
         last_reviewed_at = try container.decodeIfPresent(String.self, forKey: .last_reviewed_at)
         is_toefl = try container.decodeIfPresent(Bool.self, forKey: .is_toefl)
         is_ielts = try container.decodeIfPresent(Bool.self, forKey: .is_ielts)
-        is_tianz = try container.decodeIfPresent(Bool.self, forKey: .is_tianz)
+        is_demo = try container.decodeIfPresent(Bool.self, forKey: .is_demo)
         is_known = try container.decodeIfPresent(Bool.self, forKey: .is_known) ?? false
         metadata = nil // We'll skip decoding metadata for now
     }
 
     // Convenience initializer for testing
-    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, correct_reviews: Int, incorrect_reviews: Int, word_progress_level: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil, is_tianz: Bool? = nil, is_known: Bool = false) {
+    init(id: Int, word: String, learning_language: String, native_language: String, metadata: [String: Any]?, created_at: String, review_count: Int, correct_reviews: Int, incorrect_reviews: Int, word_progress_level: Int, interval_days: Int, next_review_date: String?, last_reviewed_at: String?, is_toefl: Bool? = nil, is_ielts: Bool? = nil, is_demo: Bool? = nil, is_known: Bool = false) {
         self.id = id
         self.word = word
         self.learning_language = learning_language
@@ -347,7 +347,7 @@ struct SavedWord: Identifiable, Codable {
         self.last_reviewed_at = last_reviewed_at
         self.is_toefl = is_toefl
         self.is_ielts = is_ielts
-        self.is_tianz = is_tianz
+        self.is_demo = is_demo
         self.is_known = is_known
     }
 }
@@ -380,7 +380,7 @@ struct ReviewSubmissionResponse: Codable {
 
 // Badge earned from review (ultra-minimal structure)
 struct NewBadge: Codable {
-    let badge_id: String      // "score_100" or "TIANZ" or "TOEFL_BEGINNER"
+    let badge_id: String      // "score_100" or "DEMO" or "TOEFL_BEGINNER"
     let title: String         // "First Steps" or "TIANZ Master"
     let description: String   // "100 points reached" or "TIANZ vocabulary completed!"
 }
@@ -623,7 +623,7 @@ enum TestType: String, Codable, CaseIterable {
     case ieltsBeginner = "IELTS_BEGINNER"
     case ieltsIntermediate = "IELTS_INTERMEDIATE"
     case ieltsAdvanced = "IELTS_ADVANCED"
-    case tianz = "TIANZ"
+    case demo = "DEMO"
 
     /// Display name for UI
     var displayName: String {
@@ -634,7 +634,7 @@ enum TestType: String, Codable, CaseIterable {
         case .ieltsBeginner: return "IELTS Beginner"
         case .ieltsIntermediate: return "IELTS Intermediate"
         case .ieltsAdvanced: return "IELTS Advanced"
-        case .tianz: return "Tianz Test"
+        case .demo: return "Tianz Test"
         }
     }
 
@@ -645,8 +645,8 @@ enum TestType: String, Codable, CaseIterable {
             return "TOEFL"
         case .ieltsBeginner, .ieltsIntermediate, .ieltsAdvanced:
             return "IELTS"
-        case .tianz:
-            return "TIANZ"
+        case .demo:
+            return "DEMO"
         }
     }
 
@@ -659,7 +659,7 @@ enum TestType: String, Codable, CaseIterable {
             return "Intermediate"
         case .toeflAdvanced, .ieltsAdvanced:
             return "Advanced"
-        case .tianz:
+        case .demo:
             return nil
         }
     }
@@ -673,10 +673,10 @@ struct TestSettings: Codable {
     // Legacy fields for backward compatibility
     let toefl_enabled: Bool?
     let ielts_enabled: Bool?
-    let tianz_enabled: Bool?
+    let demo_enabled: Bool?
     let toefl_target_days: Int?
     let ielts_target_days: Int?
-    let tianz_target_days: Int?
+    let demo_target_days: Int?
 
     let last_test_words_added: String?
     let learning_language: String
@@ -684,8 +684,8 @@ struct TestSettings: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case active_test, target_days
-        case toefl_enabled, ielts_enabled, tianz_enabled
-        case toefl_target_days, ielts_target_days, tianz_target_days
+        case toefl_enabled, ielts_enabled, demo_enabled
+        case toefl_target_days, ielts_target_days, demo_target_days
         case last_test_words_added, learning_language, native_language
     }
 
@@ -701,8 +701,8 @@ struct TestSettings: Codable {
         if ielts_enabled == true {
             return .ieltsAdvanced
         }
-        if tianz_enabled == true {
-            return .tianz
+        if demo_enabled == true {
+            return .demo
         }
         return nil
     }
@@ -719,7 +719,7 @@ struct TestSettings: Codable {
         if ielts_enabled == true, let days = ielts_target_days {
             return days
         }
-        if tianz_enabled == true, let days = tianz_target_days {
+        if demo_enabled == true, let days = demo_target_days {
             return days
         }
         return 30  // Default
@@ -772,7 +772,7 @@ struct TestProgressData: Codable {
             return toefl
         case .ieltsBeginner, .ieltsIntermediate, .ieltsAdvanced:
             return ielts
-        case .tianz:
+        case .demo:
             return tianz
         }
     }
@@ -788,16 +788,16 @@ struct TestSettingsUpdateRequest: Codable {
     // Legacy API format for backward compatibility
     let toefl_enabled: Bool?
     let ielts_enabled: Bool?
-    let tianz_enabled: Bool?
+    let demo_enabled: Bool?
     let toefl_target_days: Int?
     let ielts_target_days: Int?
-    let tianz_target_days: Int?
+    let demo_target_days: Int?
 
     private enum CodingKeys: String, CodingKey {
         case user_id
         case test_type, target_days
-        case toefl_enabled, ielts_enabled, tianz_enabled
-        case toefl_target_days, ielts_target_days, tianz_target_days
+        case toefl_enabled, ielts_enabled, demo_enabled
+        case toefl_target_days, ielts_target_days, demo_target_days
     }
 
     /// Create request using new V3 API format
@@ -808,23 +808,23 @@ struct TestSettingsUpdateRequest: Codable {
         // Legacy fields set to nil
         self.toefl_enabled = nil
         self.ielts_enabled = nil
-        self.tianz_enabled = nil
+        self.demo_enabled = nil
         self.toefl_target_days = nil
         self.ielts_target_days = nil
-        self.tianz_target_days = nil
+        self.demo_target_days = nil
     }
 
     /// Create request using legacy API format (for backward compatibility)
-    init(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, tianzEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, tianzTargetDays: Int?) {
+    init(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, demoEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, demoTargetDays: Int?) {
         self.user_id = userID
         self.test_type = nil
         self.target_days = nil
         self.toefl_enabled = toeflEnabled
         self.ielts_enabled = ieltsEnabled
-        self.tianz_enabled = tianzEnabled
+        self.demo_enabled = demoEnabled
         self.toefl_target_days = toeflTargetDays
         self.ielts_target_days = ieltsTargetDays
-        self.tianz_target_days = tianzTargetDays
+        self.demo_target_days = demoTargetDays
     }
 
     /// Custom encoding to ensure test_type field is always included (even when nil)
@@ -844,10 +844,10 @@ struct TestSettingsUpdateRequest: Codable {
         // Legacy API fields - only encode if they're not nil
         try container.encodeIfPresent(toefl_enabled, forKey: .toefl_enabled)
         try container.encodeIfPresent(ielts_enabled, forKey: .ielts_enabled)
-        try container.encodeIfPresent(tianz_enabled, forKey: .tianz_enabled)
+        try container.encodeIfPresent(demo_enabled, forKey: .demo_enabled)
         try container.encodeIfPresent(toefl_target_days, forKey: .toefl_target_days)
         try container.encodeIfPresent(ielts_target_days, forKey: .ielts_target_days)
-        try container.encodeIfPresent(tianz_target_days, forKey: .tianz_target_days)
+        try container.encodeIfPresent(demo_target_days, forKey: .demo_target_days)
     }
 }
 

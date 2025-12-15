@@ -41,8 +41,8 @@ def get_user_preferences(user_id: str) -> dict:
 
         cur.execute("""
             SELECT learning_language, native_language, user_name, user_motto,
-                   toefl_enabled, ielts_enabled, tianz_enabled,
-                   toefl_target_days, ielts_target_days, tianz_target_days
+                   toefl_enabled, ielts_enabled, demo_enabled,
+                   toefl_target_days, ielts_target_days, demo_target_days
             FROM user_preferences
             WHERE user_id = %s
         """, (user_id,))
@@ -61,9 +61,9 @@ def get_user_preferences(user_id: str) -> dict:
             elif result['ielts_enabled']:
                 test_prep = 'IELTS_ADVANCED'  # Default to advanced level
                 target_days = result['ielts_target_days'] or 30
-            elif result['tianz_enabled']:
-                test_prep = 'TIANZ'
-                target_days = result['tianz_target_days'] or 30
+            elif result['demo_enabled']:
+                test_prep = 'DEMO'
+                target_days = result['demo_target_days'] or 30
 
             return {
                 'learning_language': result['learning_language'],

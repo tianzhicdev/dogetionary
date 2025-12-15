@@ -173,7 +173,7 @@ struct BadgeCelebrationView: View {
     if showBadge {
         BadgeCelebrationView(
             badge: NewBadge(
-                badge_id: "TIANZ",
+                badge_id: "DEMO",
                 title: "TIANZ Master",
                 description: "TIANZ vocabulary completed!"
             ),

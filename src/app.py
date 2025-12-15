@@ -131,7 +131,7 @@ def register_legacy_routes(app):
         get_word_details, get_audio, get_illustration, generate_word_definition
     )
     from handlers.static_site import get_all_words, get_words_summary, get_featured_words
-    from handlers.test_vocabulary import (
+    from handlers.bundle_vocabulary import (
         update_test_settings, get_test_settings, add_daily_test_words,
         get_test_vocabulary_stats, get_test_vocabulary_count,
         manual_daily_job, get_test_config, batch_populate_test_vocabulary
@@ -250,7 +250,7 @@ def start_background_workers():
     logging.info("✅ Audio generation worker started")
 
     # Daily test vocabulary scheduler
-    from workers.test_vocabulary_worker import daily_test_words_worker
+    from workers.bundle_vocabulary_worker import daily_test_words_worker
     test_words_worker = threading.Thread(
         target=daily_test_words_worker,
         daemon=True,
