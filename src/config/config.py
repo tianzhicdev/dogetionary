@@ -21,35 +21,35 @@ GROQ_TO_OPENAI_FALLBACK = {
 FALLBACK_CHAINS = {
     "definition": [
         "google/gemini-2.0-flash-lite-001",   # Fastest TTFT, excellent multilingual ($0.10/$0.40/M)
-        "deepseek/deepseek-chat",             # Great Chinese, cheap ($0.14-0.28/M with caching)
+        "deepseek/deepseek-chat-v3.1",        # Great Chinese, cheap ($0.14-0.28/M with caching)
         "qwen/qwen-2.5-7b-instruct",          # Best Chinese+JSON quality ($0.15/$0.17/M)
         "openai/gpt-4o-mini"                  # Most reliable fallback ($0.15/$0.60/M)
     ],
     "question": [
         "google/gemini-2.0-flash-lite-001",
-        "deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1",
         "qwen/qwen-2.5-7b-instruct",
         "openai/gpt-4o-mini"
     ],
     "user_profile": [
         "google/gemini-2.0-flash-lite-001",
-        "deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1",
         "qwen/qwen-2.5-7b-instruct",
         "openai/gpt-4o-mini"
     ],
     "pronunciation": [
         "google/gemini-2.0-flash-lite-001",
-        "deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1",
         "openai/gpt-4o-mini"
     ],
     "scene_description": [
         "google/gemini-2.0-flash-lite-001",
-        "deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1",
         "openai/gpt-4o-mini"
     ],
     "general": [
         "google/gemini-2.0-flash-lite-001",
-        "deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1",
         "qwen/qwen-2.5-7b-instruct",
         "openai/gpt-4o-mini"
     ]

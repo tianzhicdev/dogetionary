@@ -41,6 +41,7 @@ MODEL_PROVIDER_MAP = {
     "meta-llama/llama-4-scout-17b-16e-instruct": "groq",
 
     # OpenRouter models
+    "google/gemini-2.0-flash-lite-001": "openrouter",
     "deepseek/deepseek-chat-v3.1": "openrouter",
     "qwen/qwen-2.5-7b-instruct": "openrouter",
     "mistralai/mistral-small": "openrouter",
@@ -67,6 +68,7 @@ def normalize_model_name(model_name: str) -> str:
     """
     # Map full model names to short, normalized versions
     model_map = {
+        "google/gemini-2.0-flash-lite-001": "gemini_2_0_flash_lite",
         "deepseek/deepseek-chat-v3.1": "deepseek_v3",
         "qwen/qwen-2.5-7b-instruct": "qwen25_7b",
         "mistralai/mistral-small": "mistral_small",

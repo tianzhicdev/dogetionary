@@ -25,7 +25,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "LOKI001"
       },
       "fieldConfig": {
         "defaults": {
@@ -103,7 +103,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "LOKI001"
           },
           "editorMode": "code",
           "expr": "sum(rate({level=\"ERROR\"}[5m]))",
@@ -118,7 +118,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "LOKI001"
       },
       "fieldConfig": {
         "defaults": {
@@ -169,7 +169,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "LOKI001"
           },
           "editorMode": "code",
           "expr": "sum(count_over_time({level=\"ERROR\"}[$__range]))",
@@ -183,7 +183,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "LOKI001"
       },
       "fieldConfig": {
         "defaults": {
@@ -226,7 +226,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "LOKI001"
           },
           "editorMode": "code",
           "expr": "sum(count_over_time({level=\"ERROR\"}[5m]))",
@@ -240,7 +240,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "LOKI001"
       },
       "fieldConfig": {
         "defaults": {
@@ -317,7 +317,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "LOKI001"
           },
           "editorMode": "code",
           "expr": "sum by (endpoint) (count_over_time({level=\"ERROR\"}[5m]))",
@@ -331,7 +331,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "LOKI001"
       },
       "fieldConfig": {
         "defaults": {
@@ -373,7 +373,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "LOKI001"
           },
           "editorMode": "code",
           "expr": "sum by (error_type) (count_over_time({level=\"ERROR\"}[$__range]))",
@@ -387,7 +387,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "LOKI001"
       },
       "fieldConfig": {
         "defaults": {
@@ -460,7 +460,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "LOKI001"
           },
           "editorMode": "code",
           "expr": "sum by (logger) (count_over_time({level=\"ERROR\"}[5m]))",
@@ -474,7 +474,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "LOKI001"
       },
       "gridPos": {
         "h": 12,
@@ -497,7 +497,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "LOKI001"
           },
           "editorMode": "code",
           "expr": "{level=\"ERROR\"}",
