@@ -291,6 +291,25 @@ struct SimpleScheduleListView: View {
                                         }
                                     }
                                 }
+                                Divider()
+                                Button(action: { activeTestType = .businessEnglish }) {
+                                    HStack {
+                                        Text("BUSINESS ENGLISH")
+                                        if activeTestType == .businessEnglish {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                                Button(action: { activeTestType = .everydayEnglish }) {
+                                    HStack {
+                                        Text("EVERYDAY ENGLISH")
+                                        if activeTestType == .everydayEnglish {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                                 if DebugConfig.showDemoTest {
                                     Divider()
                                     Button(action: { activeTestType = .demo }) {
@@ -466,6 +485,8 @@ struct SimpleScheduleListView: View {
         case .ieltsIntermediate: return "IELTS Intermediate"
         case .ieltsAdvanced: return "IELTS Advanced"
         case .demo: return "Demo Bundle"
+        case .businessEnglish: return "Business English"
+        case .everydayEnglish: return "Everyday English"
         }
     }
 }

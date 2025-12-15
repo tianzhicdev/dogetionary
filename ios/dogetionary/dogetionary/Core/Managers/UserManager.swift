@@ -191,6 +191,11 @@ class UserManager: ObservableObject {
                 ieltsEnabled = false
                 demoEnabled = true
                 demoTargetDays = targetDays
+            case .businessEnglish, .everydayEnglish:
+                // New bundle types - no legacy flags
+                toeflEnabled = false
+                ieltsEnabled = false
+                demoEnabled = false
             }
         } else {
             toeflEnabled = false

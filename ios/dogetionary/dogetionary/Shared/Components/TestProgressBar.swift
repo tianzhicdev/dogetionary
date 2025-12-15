@@ -27,7 +27,9 @@ struct TestProgressBar: View {
         "IELTS_BEGINNER": ("IELTS Beginner", "graduationcap.fill"),
         "IELTS_INTERMEDIATE": ("IELTS Intermediate", "graduationcap.circle.fill"),
         "IELTS_ADVANCED": ("IELTS Advanced", "brain.head.profile"),
-        "DEMO": ("Demo", "star.circle.fill")
+        "DEMO": ("Demo", "star.circle.fill"),
+        "BUSINESS_ENGLISH": ("Business", "briefcase.fill"),
+        "EVERYDAY_ENGLISH": ("Everyday", "house.fill")
     ]
 
     var body: some View {
@@ -226,6 +228,10 @@ struct TestProgressBar: View {
                 return [AppTheme.neonPurple, AppTheme.accentPink]
             case "DEMO":
                 return [AppTheme.electricYellow, AppTheme.accentCyan]
+            case "BUSINESS_ENGLISH":
+                return [AppTheme.accentCyan, AppTheme.electricYellow]
+            case "EVERYDAY_ENGLISH":
+                return [AppTheme.accentPink, AppTheme.neonPurple]
             case "BOTH":
                 return [AppTheme.accentCyan, AppTheme.neonPurple, AppTheme.accentPink]
             default:

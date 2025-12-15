@@ -28,6 +28,8 @@ TEST_TYPE_MAPPING = {
     'IELTS_INTERMEDIATE': ('ielts_intermediate_enabled', 'ielts_intermediate_target_days', 'is_ielts_intermediate'),
     'IELTS_ADVANCED': ('ielts_advanced_enabled', 'ielts_advanced_target_days', 'is_ielts_advanced'),
     'DEMO': ('demo_enabled', 'demo_target_days', 'is_demo'),
+    'BUSINESS_ENGLISH': ('business_english_enabled', 'business_english_target_days', 'business_english'),
+    'EVERYDAY_ENGLISH': ('everyday_english_enabled', 'everyday_english_target_days', 'everyday_english'),
     # Legacy mappings for backward compatibility
     'TOEFL': ('toefl_advanced_enabled', 'toefl_advanced_target_days', 'is_toefl_advanced'),
     'IELTS': ('ielts_advanced_enabled', 'ielts_advanced_target_days', 'is_ielts_advanced'),
@@ -37,7 +39,8 @@ TEST_TYPE_MAPPING = {
 ALL_TEST_ENABLE_COLUMNS = [
     'toefl_beginner_enabled', 'toefl_intermediate_enabled', 'toefl_advanced_enabled',
     'ielts_beginner_enabled', 'ielts_intermediate_enabled', 'ielts_advanced_enabled',
-    'demo_enabled'
+    'demo_enabled',
+    'business_english_enabled', 'everyday_english_enabled'
 ]
 
 
@@ -640,6 +643,18 @@ def get_test_config():
                         "testing_only": False
                     },
                     {
+                        "code": "BUSINESS_ENGLISH",
+                        "name": "Business English",
+                        "description": "Professional and workplace vocabulary (1,621 words)",
+                        "testing_only": False
+                    },
+                    {
+                        "code": "EVERYDAY_ENGLISH",
+                        "name": "Everyday English",
+                        "description": "Common daily conversation vocabulary (2,084 words)",
+                        "testing_only": False
+                    },
+                    {
                         "code": "DEMO",
                         "name": "Demo Bundle",
                         "description": "Testing vocabulary list (20 words)",
@@ -706,7 +721,8 @@ def get_test_vocabulary_count():
             test_types = [
                 'TOEFL_BEGINNER', 'TOEFL_INTERMEDIATE', 'TOEFL_ADVANCED',
                 'IELTS_BEGINNER', 'IELTS_INTERMEDIATE', 'IELTS_ADVANCED',
-                'DEMO'
+                'DEMO',
+                'BUSINESS_ENGLISH', 'EVERYDAY_ENGLISH'
             ]
 
         # Validate all test types

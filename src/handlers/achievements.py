@@ -96,6 +96,18 @@ TEST_TYPES_MAPPING = {
         'pref_column': 'demo_enabled',
         'title': 'Demo Master',
         'description': 'Demo vocabulary completed!'
+    },
+    'BUSINESS_ENGLISH': {
+        'vocab_column': 'business_english',
+        'pref_column': 'business_english_enabled',
+        'title': 'Business English Master',
+        'description': 'Business English vocabulary completed!'
+    },
+    'EVERYDAY_ENGLISH': {
+        'vocab_column': 'everyday_english',
+        'pref_column': 'everyday_english_enabled',
+        'title': 'Everyday English Master',
+        'description': 'Everyday English vocabulary completed!'
     }
 }
 

@@ -624,6 +624,8 @@ enum TestType: String, Codable, CaseIterable {
     case ieltsIntermediate = "IELTS_INTERMEDIATE"
     case ieltsAdvanced = "IELTS_ADVANCED"
     case demo = "DEMO"
+    case businessEnglish = "BUSINESS_ENGLISH"
+    case everydayEnglish = "EVERYDAY_ENGLISH"
 
     /// Display name for UI
     var displayName: String {
@@ -635,6 +637,8 @@ enum TestType: String, Codable, CaseIterable {
         case .ieltsIntermediate: return "IELTS Intermediate"
         case .ieltsAdvanced: return "IELTS Advanced"
         case .demo: return "Demo Bundle"
+        case .businessEnglish: return "Business English"
+        case .everydayEnglish: return "Everyday English"
         }
     }
 
@@ -647,6 +651,10 @@ enum TestType: String, Codable, CaseIterable {
             return "IELTS"
         case .demo:
             return "DEMO"
+        case .businessEnglish:
+            return "BUSINESS_ENGLISH"
+        case .everydayEnglish:
+            return "EVERYDAY_ENGLISH"
         }
     }
 
@@ -659,7 +667,7 @@ enum TestType: String, Codable, CaseIterable {
             return "Intermediate"
         case .toeflAdvanced, .ieltsAdvanced:
             return "Advanced"
-        case .demo:
+        case .demo, .businessEnglish, .everydayEnglish:
             return nil
         }
     }
@@ -774,6 +782,9 @@ struct TestProgressData: Codable {
             return ielts
         case .demo:
             return demo
+        case .businessEnglish, .everydayEnglish:
+            // New bundle types - no legacy format
+            return nil
         }
     }
 }
