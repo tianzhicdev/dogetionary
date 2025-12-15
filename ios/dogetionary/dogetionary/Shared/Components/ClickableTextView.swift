@@ -17,6 +17,7 @@ struct ClickableTextView: View {
     @State private var showDefinition = false
     @State private var definition: Definition?
     @State private var isLoadingDefinition = false
+    @State private var hasLoaded = false
 
     init(
         text: String,
@@ -44,17 +45,17 @@ struct ClickableTextView: View {
                     ZStack {
                         AppTheme.verticalGradient2.ignoresSafeArea()
 
-                        if isLoadingDefinition {
+                        if let definition = definition {
+                            ScrollView {
+                                DefinitionCard(definition: definition)
+                                    .padding()
+                            }
+                        } else if !hasLoaded {
                             VStack(spacing: 16) {
                                 ProgressView()
                                     .scaleEffect(1.5)
                                 Text("Loading...")
                                     .foregroundColor(AppTheme.bodyText)
-                            }
-                        } else if let definition = definition {
-                            ScrollView {
-                                DefinitionCard(definition: definition)
-                                    .padding()
                             }
                         } else {
                             VStack(spacing: 16) {
@@ -144,6 +145,7 @@ struct ClickableTextView: View {
         selectedWord = cleanWord
         isLoadingDefinition = true
         definition = nil
+        hasLoaded = false
         showDefinition = true
 
         // Load definition from API
@@ -154,6 +156,7 @@ struct ClickableTextView: View {
         ) { result in
             DispatchQueue.main.async {
                 isLoadingDefinition = false
+                hasLoaded = true
                 switch result {
                 case .success(let defs):
                     definition = defs.first

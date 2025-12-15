@@ -49,6 +49,7 @@ scrape_configs:
           level:
           logger:
           endpoint:
+          error_type:
 
   # Scrape JSON error logs separately
   - job_name: dogetionary_errors
