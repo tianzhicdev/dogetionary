@@ -387,6 +387,8 @@ refactoring:
 5. backend code refactor
 
 
+notification and cache clear
+
 -- done --
 
 
@@ -394,10 +396,58 @@ refactoring:
 
 6. 
 
+badge png
+learning english only, chinese/spanish/...
+demo test
+aggregate config
+
+
+pipeline + human verification;
+  i need to build an automatic video download/upload pipeline; I
+  think this is the plan:
+  1. we query an endpoint to get 1 word that is in test_vocabularies
+  (it will be renamed to bundle_vocabularies) and has no video
+  associated with it in word_To_video
+  2. we query clip.cafe to get some videos (search criteria: popular
+  movie scene, contains procisely this word) hopefully we get 10+
+  videos metadata; here we do not download videos yet;
+  3. we send those metadata (we can batch multiple) to ask LLM to
+  score each video based 2 criteria (does this video illustrate the
+  meaning of the word well? does the video kinda independent and
+  provide sufficient context for audience to understand the
+  situation);
+  4. then we rank the results and set 0.6 for education and 0.6 (the
+  threshold should be easily configureable);
+  5. then we download the videos
+  6. generate mp3 and then audio transcripts in metadata_v3.json for
+  those videos (reference existing script to see what v3 does -- at
+  least it should have movie_title, movie_year, linked words,
+  audio_transcripts and others)
+  6. then we upload the videos and word_to_video using existing
+  backend endpoints
+
+  let's do some planning given this is a big task, there are lots of
+  scripts ready in scripts dir for reference;
+
+  requirements: end result is a video_pipeline.sh --backend
+  https://kwafy.com/api (or localhost:5001) --staging_dir
+  /Volumns/databank/shortfilms (in fact we should use this dir to
+  stage videos)
+
+  videos/mp3/metadata_v3 creation should be idenpotent, meaning if
+  they are present we should not make them again;
+
+  do you have more questions? let's do a research on how this can be
+  done;
+
+
+
+debug mode more details;
+
 names
 snapshot
-pipeline + human verification;
-debug mode more details;
+
+
 
 
 
