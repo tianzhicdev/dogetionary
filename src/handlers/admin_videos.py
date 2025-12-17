@@ -7,10 +7,84 @@ Provides endpoint for batch uploading videos with word mappings from the find_vi
 import logging
 import base64
 from flask import request, jsonify
-from utils.database import db_fetch_one, db_execute, get_db_connection
+from utils.database import db_fetch_one, db_fetch_all, db_execute, get_db_connection
 import psycopg2.extras
 
 logger = logging.getLogger(__name__)
+
+
+# Mapping of bundle names to database column names
+BUNDLE_COLUMN_MAP = {
+    "toefl_beginner": "is_toefl_beginner",
+    "toefl_intermediate": "is_toefl_intermediate",
+    "toefl_advanced": "is_toefl_advanced",
+    "ielts_beginner": "is_ielts_beginner",
+    "ielts_intermediate": "is_ielts_intermediate",
+    "ielts_advanced": "is_ielts_advanced",
+    "demo": "is_demo",
+    "business_english": "business_english",
+    "everyday_english": "everyday_english",
+}
+
+
+def get_bundle_words_needing_videos(bundle_name):
+    """
+    Get words from a bundle that don't have any videos yet.
+
+    URL: GET /v3/admin/bundles/{bundle_name}/words-needing-videos
+
+    Args:
+        bundle_name: Bundle identifier (e.g., 'toefl_beginner', 'ielts_advanced')
+
+    Returns:
+        JSON response with list of words needing videos:
+        {
+            "bundle": "toefl_beginner",
+            "words": ["abandon", "ability", ...],
+            "total_count": 150
+        }
+    """
+    try:
+        # Validate bundle name
+        if bundle_name not in BUNDLE_COLUMN_MAP:
+            valid_bundles = ", ".join(BUNDLE_COLUMN_MAP.keys())
+            return jsonify({
+                "error": f"Invalid bundle name '{bundle_name}'. Valid bundles: {valid_bundles}"
+            }), 400
+
+        column_name = BUNDLE_COLUMN_MAP[bundle_name]
+
+        # Query words from bundle that don't have videos
+        # Use parameterized query with format for column name (safe since we validated it)
+        query = f"""
+            SELECT bv.word
+            FROM bundle_vocabularies bv
+            WHERE bv.{column_name} = TRUE
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM word_to_video wtv
+                  WHERE wtv.word = bv.word
+                    AND wtv.learning_language = bv.language
+              )
+            ORDER BY bv.word
+        """
+
+        rows = db_fetch_all(query)
+
+        # Extract words from rows
+        words = [row['word'] for row in rows]
+
+        logger.info(f"Found {len(words)} words needing videos for bundle '{bundle_name}'")
+
+        return jsonify({
+            "bundle": bundle_name,
+            "words": words,
+            "total_count": len(words)
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error in get_bundle_words_needing_videos: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 
 def batch_upload_videos():

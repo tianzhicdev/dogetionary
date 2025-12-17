@@ -13,7 +13,7 @@ from handlers.analytics import track_user_action
 from handlers.pronunciation import practice_pronunciation, submit_pronunciation_review
 from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice, is_word_saved
 from handlers.videos import get_video
-from handlers.admin_videos import batch_upload_videos
+from handlers.admin_videos import batch_upload_videos, get_bundle_words_needing_videos
 from handlers.admin_questions import batch_generate_questions
 from handlers.admin_questions_smart import smart_batch_generate_questions
 from handlers.bundle_vocabulary import (
@@ -87,6 +87,7 @@ v3_api.route('/support', methods=['GET'])(support_page)
 v3_api.route('/health', methods=['GET'])(health_check)
 v3_api.route('/usage', methods=['GET'])(get_usage_dashboard)
 v3_api.route('/admin/videos/batch-upload', methods=['POST'])(batch_upload_videos)
+v3_api.route('/admin/bundles/<bundle_name>/words-needing-videos', methods=['GET'])(get_bundle_words_needing_videos)
 v3_api.route('/admin/questions/batch-generate', methods=['POST'])(batch_generate_questions)
 v3_api.route('/admin/questions/smart-batch-generate', methods=['POST'])(smart_batch_generate_questions)
 

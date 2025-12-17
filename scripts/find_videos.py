@@ -45,22 +45,24 @@ class VideoFinder:
         self,
         storage_dir: str,
         backend_url: str,
-        word_list_path: str,
+        word_list_path: Optional[str],
         clipcafe_api_key: str,
         openai_api_key: str,
         max_videos_per_word: int = 100,
-        min_relevance_score: float = 0.6,
+        education_min_score: float = 0.6,  # Dual-criteria: education score threshold
+        context_min_score: float = 0.6,     # Dual-criteria: context score threshold
         max_mappings_per_video: int = 5,
         download_only: bool = False,
         output_dir: Optional[str] = None
     ):
         self.storage_dir = Path(storage_dir)
         self.backend_url = backend_url.rstrip('/') if backend_url else ''
-        self.word_list_path = Path(word_list_path)
+        self.word_list_path = Path(word_list_path) if word_list_path else None
         self.clipcafe_api_key = clipcafe_api_key
         self.openai_api_key = openai_api_key
         self.max_videos_per_word = max_videos_per_word
-        self.min_relevance_score = min_relevance_score
+        self.education_min_score = education_min_score
+        self.context_min_score = context_min_score
         self.max_mappings_per_video = max_mappings_per_video
         self.download_only = download_only
 
@@ -131,6 +133,25 @@ class VideoFinder:
         self.failed_uploads.append(entry)
         with open(self.state_dir / "failed_uploads.jsonl", 'a') as f:
             f.write(json.dumps(entry) + "\n")
+
+    def fetch_bundle_words(self, bundle_name: str) -> List[str]:
+        """Fetch words from bundle via backend API that need videos"""
+        try:
+            url = f"{self.backend_url}/v3/admin/bundles/{bundle_name}/words-needing-videos"
+            logger.info(f"Fetching words from bundle '{bundle_name}' via API: {url}")
+
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            data = response.json()
+            words = data.get('words', [])
+
+            logger.info(f"Fetched {len(words)} words needing videos from bundle '{bundle_name}'")
+            return words
+
+        except Exception as e:
+            logger.error(f"Failed to fetch bundle words: {e}")
+            raise
 
     def load_words(self) -> List[str]:
         """Load words from CSV file"""
@@ -279,21 +300,27 @@ class VideoFinder:
         validated_mappings = []
         for mapping in llm_response.get('mappings', []):
             word = mapping.get('word', '').strip()
-            score = mapping.get('relevance_score', 0.0)
+            education_score = mapping.get('education_score', 0.0)
+            context_score = mapping.get('context_score', 0.0)
 
             # Validate word is in transcript (prevent LLM hallucination)
             if not re.search(r'\b' + re.escape(word.lower()) + r'\b', transcript.lower()):
                 logger.warning(f"    Rejecting '{word}' - not in transcript (LLM hallucination)")
                 continue
 
-            # Quality threshold
-            if score < self.min_relevance_score:
-                logger.debug(f"    Rejecting '{word}' - score too low ({score:.2f})")
+            # Dual-criteria threshold check
+            if education_score < self.education_min_score:
+                logger.debug(f"    Rejecting '{word}' - education score too low ({education_score:.2f} < {self.education_min_score})")
+                continue
+
+            if context_score < self.context_min_score:
+                logger.debug(f"    Rejecting '{word}' - context score too low ({context_score:.2f} < {self.context_min_score})")
                 continue
 
             validated_mappings.append({
                 "word": word.lower(),
-                "relevance_score": round(score, 2),
+                "education_score": round(education_score, 2),
+                "context_score": round(context_score, 2),
                 "reason": mapping.get('reason', '')
             })
 
@@ -301,8 +328,8 @@ class VideoFinder:
             logger.info(f"    No quality mappings found for {slug}")
             return None
 
-        # Limit mappings per video
-        validated_mappings = sorted(validated_mappings, key=lambda x: x['relevance_score'], reverse=True)
+        # Limit mappings per video (sort by average of education + context scores)
+        validated_mappings = sorted(validated_mappings, key=lambda x: (x['education_score'] + x['context_score']) / 2, reverse=True)
         validated_mappings = validated_mappings[:self.max_mappings_per_video]
 
         # Cache result
@@ -343,18 +370,26 @@ TRANSCRIPT:
 
 TASK:
 Analyze this video and determine which of the following vocabulary words it effectively teaches.
-A word should be scored highly if:
-1. The word appears clearly in the transcript (spoken)
-2. The context makes the meaning clear
-3. The scene likely has visual cues that reinforce the word's meaning
-4. The usage is natural and memorable
+
+Evaluate each word on TWO separate criteria:
+
+1. EDUCATION SCORE (0.0-1.0): How well does this video illustrate the word's meaning?
+   - Does the word appear clearly in the transcript?
+   - Are there likely visual cues that reinforce the meaning?
+   - Is the usage natural and memorable for learning?
+
+2. CONTEXT SCORE (0.0-1.0): Can this scene stand alone without watching the full movie?
+   - Does the scene have sufficient context to be understood independently?
+   - Would a learner understand what's happening without prior movie knowledge?
+   - Is the emotional/narrative context clear from the clip alone?
 
 CANDIDATE WORDS (only suggest words from this list):
 {candidate_words_str}
 
 For each word you recommend, provide:
 - word: the vocabulary word
-- relevance_score: 0.0-1.0 (how well this video teaches the word)
+- education_score: 0.0-1.0 (how well the video illustrates the word's meaning)
+- context_score: 0.0-1.0 (how well the scene stands alone)
 - reason: brief explanation (1-2 sentences)
 
 Return ONLY valid JSON (no markdown, no extra text):
@@ -362,8 +397,9 @@ Return ONLY valid JSON (no markdown, no extra text):
   "mappings": [
     {{
       "word": "example",
-      "relevance_score": 0.85,
-      "reason": "Word used clearly in context with visual reinforcement"
+      "education_score": 0.85,
+      "context_score": 0.70,
+      "reason": "Word used clearly with visual cues. Scene needs some movie context to fully understand."
     }}
   ]
 }}
@@ -371,7 +407,8 @@ Return ONLY valid JSON (no markdown, no extra text):
 IMPORTANT RULES:
 - Only suggest words from the candidate list above
 - Only suggest words that actually appear in the transcript
-- Minimum relevance_score: {self.min_relevance_score}
+- Minimum education_score: {self.education_min_score}
+- Minimum context_score: {self.context_min_score}
 - Maximum {self.max_mappings_per_video} mappings per video (focus on best matches)
 """
         return prompt
@@ -531,21 +568,27 @@ IMPORTANT RULES:
         validated_mappings = []
         for mapping in llm_response.get('mappings', []):
             word = mapping.get('word', '').strip()
-            score = mapping.get('relevance_score', 0.0)
+            education_score = mapping.get('education_score', 0.0)
+            context_score = mapping.get('context_score', 0.0)
 
             # Validate word is in clean audio transcript
             if not re.search(r'\b' + re.escape(word.lower()) + r'\b', clean_transcript.lower()):
                 logger.warning(f"      Rejecting '{word}' - not in audio transcript")
                 continue
 
-            # Quality threshold
-            if score < self.min_relevance_score:
-                logger.debug(f"      Rejecting '{word}' - score too low ({score:.2f})")
+            # Dual-criteria threshold check
+            if education_score < self.education_min_score:
+                logger.debug(f"      Rejecting '{word}' - education score too low ({education_score:.2f} < {self.education_min_score})")
+                continue
+
+            if context_score < self.context_min_score:
+                logger.debug(f"      Rejecting '{word}' - context score too low ({context_score:.2f} < {self.context_min_score})")
                 continue
 
             validated_mappings.append({
                 "word": word.lower(),
-                "relevance_score": round(score, 2),
+                "education_score": round(education_score, 2),
+                "context_score": round(context_score, 2),
                 "reason": mapping.get('reason', ''),
                 "timestamp": self._find_word_timestamp(word, audio_transcript.get('words', []))
             })
@@ -554,8 +597,8 @@ IMPORTANT RULES:
             logger.info(f"      No quality mappings found in final analysis for {slug}")
             return None
 
-        # Limit mappings per video
-        validated_mappings = sorted(validated_mappings, key=lambda x: x['relevance_score'], reverse=True)
+        # Limit mappings per video (sort by average of education + context scores)
+        validated_mappings = sorted(validated_mappings, key=lambda x: (x['education_score'] + x['context_score']) / 2, reverse=True)
         validated_mappings = validated_mappings[:self.max_mappings_per_video]
 
         # Cache result
@@ -598,18 +641,26 @@ CLEAN AUDIO TRANSCRIPT (from Whisper API):
 
 TASK:
 Analyze this video and determine which of the following vocabulary words it effectively teaches.
-A word should be scored highly if:
-1. The word appears clearly in the audio transcript (actually spoken)
-2. The context makes the meaning clear
-3. The scene likely has visual cues that reinforce the word's meaning
-4. The usage is natural and memorable
+
+Evaluate each word on TWO separate criteria:
+
+1. EDUCATION SCORE (0.0-1.0): How well does this video illustrate the word's meaning?
+   - Does the word appear clearly in the audio transcript?
+   - Are there likely visual cues that reinforce the meaning?
+   - Is the usage natural and memorable for learning?
+
+2. CONTEXT SCORE (0.0-1.0): Can this scene stand alone without watching the full movie?
+   - Does the scene have sufficient context to be understood independently?
+   - Would a learner understand what's happening without prior movie knowledge?
+   - Is the emotional/narrative context clear from the clip alone?
 
 CANDIDATE WORDS (only suggest words from this list):
 {candidate_words_str}
 
 For each word you recommend, provide:
 - word: the vocabulary word
-- relevance_score: 0.0-1.0 (how well this video teaches the word)
+- education_score: 0.0-1.0 (how well the video illustrates the word's meaning)
+- context_score: 0.0-1.0 (how well the scene stands alone)
 - reason: brief explanation (1-2 sentences)
 
 Return ONLY valid JSON (no markdown, no extra text):
@@ -617,8 +668,9 @@ Return ONLY valid JSON (no markdown, no extra text):
   "mappings": [
     {{
       "word": "example",
-      "relevance_score": 0.85,
-      "reason": "Word used clearly in context with visual reinforcement"
+      "education_score": 0.85,
+      "context_score": 0.70,
+      "reason": "Word used clearly with visual cues. Scene needs some movie context to fully understand."
     }}
   ]
 }}
@@ -627,7 +679,8 @@ IMPORTANT RULES:
 - Only suggest words from the candidate list above
 - Only suggest words that actually appear in the clean audio transcript
 - This is a VERIFIED audio transcript - be more confident in your assessments
-- Minimum relevance_score: {self.min_relevance_score}
+- Minimum education_score: {self.education_min_score}
+- Minimum context_score: {self.context_min_score}
 - Maximum {self.max_mappings_per_video} mappings per video (focus on best matches)
 """
         return prompt
@@ -750,7 +803,8 @@ IMPORTANT RULES:
                         {
                             "word": m['word'],
                             "learning_language": "en",
-                            "relevance_score": m['relevance_score'],
+                            "education_score": m['education_score'],
+                            "context_score": m['context_score'],
                             "transcript_source": "audio" if analysis.get('audio_verified') else "metadata",
                             "timestamp": m.get('timestamp')
                         }
@@ -872,7 +926,8 @@ IMPORTANT RULES:
                 {
                     "word": m['word'],
                     "learning_language": "en",
-                    "relevance_score": m['relevance_score'],
+                    "education_score": m['education_score'],
+                    "context_score": m['context_score'],
                     "transcript_source": "audio" if analysis.get('audio_verified') else "metadata",
                     "timestamp": m.get('timestamp')
                 }
@@ -1000,7 +1055,7 @@ IMPORTANT RULES:
                         'audio_verified': True
                     })
                     word_stats['mappings_created'].extend([
-                        {'word': m['word'], 'score': m['relevance_score'], 'source': 'audio'}
+                        {'word': m['word'], 'edu_score': m['education_score'], 'ctx_score': m['context_score'], 'source': 'audio'}
                         for m in final_analysis['mappings']
                     ])
             else:
@@ -1014,7 +1069,7 @@ IMPORTANT RULES:
                         'audio_verified': True
                     })
                     word_stats['mappings_created'].extend([
-                        {'word': m['word'], 'score': m['relevance_score'], 'source': 'audio'}
+                        {'word': m['word'], 'edu_score': m['education_score'], 'ctx_score': m['context_score'], 'source': 'audio'}
                         for m in final_analysis['mappings']
                     ])
 
@@ -1044,14 +1099,19 @@ IMPORTANT RULES:
         if word_stats['mappings_created']:
             logger.info(f"\nMappings created (from audio transcripts):")
             for m in word_stats['mappings_created']:
-                logger.info(f"  - {m['word']} (score={m['score']:.2f}, source={m['source']})")
+                logger.info(f"  - {m['word']} (edu={m['edu_score']:.2f}, ctx={m['ctx_score']:.2f}, source={m['source']})")
 
         logger.info(f"{'='*60}\n")
 
         return word_stats
 
-    def run(self):
-        """Run the complete pipeline"""
+    def run(self, words: Optional[List[str]] = None, source_name: Optional[str] = None):
+        """Run the complete pipeline
+
+        Args:
+            words: Optional list of words to process (if None, loads from file)
+            source_name: Optional source name for logging (bundle name or CSV path)
+        """
         logger.info(f"\n{'='*80}")
         logger.info(f"STARTING VIDEO DISCOVERY PIPELINE")
         logger.info(f"{'='*80}")
@@ -1062,13 +1122,15 @@ IMPORTANT RULES:
             logger.info(f"Output Dir: {self.output_dir}")
         else:
             logger.info(f"Backend URL: {self.backend_url}")
-        logger.info(f"Word List: {self.word_list_path}")
+        logger.info(f"Word Source: {source_name or self.word_list_path}")
         logger.info(f"Max Videos per Word: {self.max_videos_per_word}")
-        logger.info(f"Min Relevance Score: {self.min_relevance_score}")
+        logger.info(f"Min Education Score: {self.education_min_score}")
+        logger.info(f"Min Context Score: {self.context_min_score}")
         logger.info(f"{'='*80}\n")
 
-        # Load words
-        words = self.load_words()
+        # Load words if not provided
+        if words is None:
+            words = self.load_words()
         vocab_list = words  # Full vocab list for LLM analysis
 
         # Process each word
@@ -1111,10 +1173,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
-    parser.add_argument(
+    # Word source: either CSV file or bundle name (mutually exclusive)
+    word_source = parser.add_mutually_exclusive_group(required=True)
+    word_source.add_argument(
         '--csv',
-        required=True,
         help='Path to CSV file with word list'
+    )
+    word_source.add_argument(
+        '--bundle',
+        help='Bundle name to fetch words from (e.g., toefl_beginner, ielts_advanced)'
     )
 
     parser.add_argument(
@@ -1137,10 +1204,17 @@ def main():
     )
 
     parser.add_argument(
-        '--min-score',
+        '--education-min-score',
         type=float,
         default=0.6,
-        help='Minimum relevance score (default: 0.6)'
+        help='Minimum education score - how well video illustrates word meaning (default: 0.6)'
+    )
+
+    parser.add_argument(
+        '--context-min-score',
+        type=float,
+        default=0.6,
+        help='Minimum context score - how well scene stands alone (default: 0.6)'
     )
 
     parser.add_argument(
@@ -1174,18 +1248,25 @@ def main():
     # Create pipeline
     finder = VideoFinder(
         storage_dir=args.storage_dir,
-        backend_url=args.backend_url if not args.download_only else '',
-        word_list_path=args.csv,
+        backend_url=args.backend_url,
+        word_list_path=args.csv if args.csv else None,
         clipcafe_api_key=clipcafe_api_key,
         openai_api_key=openai_api_key,
         max_videos_per_word=args.max_videos,
-        min_relevance_score=args.min_score,
+        education_min_score=args.education_min_score,
+        context_min_score=args.context_min_score,
         download_only=args.download_only,
         output_dir=args.output_dir
     )
 
-    # Run pipeline
-    finder.run()
+    # Get words from either bundle or CSV
+    if args.bundle:
+        words = finder.fetch_bundle_words(args.bundle)
+    else:
+        words = finder.load_words()
+
+    # Run pipeline with words
+    finder.run(words=words, source_name=args.bundle or args.csv)
 
 
 if __name__ == '__main__':

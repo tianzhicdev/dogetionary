@@ -1,5 +1,12 @@
-ios/dogetionary/dogetionary.xcodeproj/project.xcworkspace/xcuserdata/biubiu.xcuserdatad/UserInterfaceState.xcuserstate
+# iOS specific
+*.xcuserstate
+**/xcuserdata/
+*.app/
 ios/.DS_Store
+
+# Database backups
+backup_*.sql
+**/backup_*.sql
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
