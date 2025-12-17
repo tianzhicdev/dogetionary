@@ -14,8 +14,7 @@ class QuestionQueueManager: ObservableObject {
     static let shared = QuestionQueueManager()
 
     // MARK: - Configuration
-    private let initialLoadCount = 3
-    private let targetQueueSize = 10
+    private let targetQueueSize = 10  // Always maintain 10 questions
     private let logger = Logger(subsystem: "com.dogetionary", category: "QuestionQueue")
 
     // MARK: - Published State
@@ -66,22 +65,23 @@ class QuestionQueueManager: ObservableObject {
 
     // MARK: - Fetching
 
-    /// Initial load on app launch - fetch 3 questions quickly
+    /// Initial load on app launch - fetch ONE-BY-ONE until target size
     func preloadQuestions() {
         guard questionQueue.isEmpty else {
             logger.info("Queue already has questions, skipping preload")
             return
         }
 
-        logger.info("Preloading \(self.initialLoadCount) questions on app launch")
-        fetchBatch(count: initialLoadCount) { [weak self] success in
+        logger.info("Preloading questions ONE-BY-ONE on app launch")
+        // Fetch first question, then continue in refillIfNeeded
+        fetchNextQuestion { [weak self] success in
             guard let self = self, success else { return }
-            // After initial load, fetch more in background
+            // After first question loads, fetch more in background
             self.refillIfNeeded()
         }
     }
 
-    /// Background refill to maintain target queue size
+    /// Background refill to maintain target queue size - ONE-BY-ONE
     func refillIfNeeded() {
         guard !isFetching else {
             logger.debug("Already fetching, skipping refill")
@@ -99,7 +99,14 @@ class QuestionQueueManager: ObservableObject {
         }
 
         logger.info("Refilling queue: current=\(self.questionQueue.count), target=\(self.targetQueueSize)")
-        fetchBatch(count: targetQueueSize)
+        // Fetch ONE question at a time
+        fetchNextQuestion { [weak self] success in
+            guard let self = self, success else { return }
+            // Continue fetching until target size
+            if self.questionQueue.count < self.targetQueueSize && self.hasMore {
+                self.refillIfNeeded()
+            }
+        }
     }
 
     /// Clear the queue (e.g., when user logs out or data changes)
@@ -120,7 +127,8 @@ class QuestionQueueManager: ObservableObject {
 
     // MARK: - Private Methods
 
-    private func fetchBatch(count: Int, completion: ((Bool) -> Void)? = nil) {
+    /// Fetch the next single question (cache-first, then API)
+    private func fetchNextQuestion(completion: ((Bool) -> Void)? = nil) {
         guard !isFetching else {
             completion?(false)
             return
@@ -132,23 +140,38 @@ class QuestionQueueManager: ObservableObject {
         }
 
         let excludeWords = Array(queuedWords)
+        let userManager = UserManager.shared
+        let learningLang = userManager.learningLanguage
+        let nativeLang = userManager.nativeLanguage
 
-        DictionaryService.shared.getReviewWordsBatch(count: count, excludeWords: excludeWords) { [weak self] result in
+        // Always fetch from API with count=1 to get deterministic ordering
+        // (Cache lookup would break ordering since we don't know which word is next)
+        DictionaryService.shared.getReviewWordsBatch(count: 1, excludeWords: excludeWords) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isFetching = false
 
                 switch result {
                 case .success(let response):
+                    // Save fetched question to cache for future use
+                    for question in response.questions {
+                        QuestionCacheManager.shared.saveQuestion(
+                            word: question.word,
+                            learningLang: learningLang,
+                            nativeLang: nativeLang,
+                            question: question
+                        )
+                    }
+
                     self.addToQueue(response.questions)
                     self.hasMore = response.has_more
                     self.totalAvailable = response.total_available
-                    self.logger.info("Fetched \(response.questions.count) questions, queue size: \(self.questionQueue.count), has_more: \(response.has_more)")
+                    self.logger.info("Fetched 1 question, queue size: \(self.questionQueue.count), has_more: \(response.has_more)")
                     completion?(true)
 
                 case .failure(let error):
                     self.lastError = error.localizedDescription
-                    self.logger.error("Failed to fetch batch: \(error.localizedDescription)")
+                    self.logger.error("Failed to fetch question: \(error.localizedDescription)")
                     completion?(false)
                 }
             }

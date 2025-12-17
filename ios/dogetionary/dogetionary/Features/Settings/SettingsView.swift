@@ -23,6 +23,7 @@ struct SettingsView: View {
     @ObservedObject private var userManager = UserManager.shared
     @State private var developerModeEnabled = DebugConfig.isDeveloperModeEnabled
     @State private var videoCacheInfo: String = ""
+    @State private var questionCacheInfo: String = ""
     @State private var showCacheClearAlert = false
     @State private var cacheClearMessage = ""
 
@@ -37,7 +38,7 @@ struct SettingsView: View {
                 profileSection
                 languagePreferencesSection
                 notificationsSection
-                videoCacheSection
+                cacheSection
                 feedbackSection
                 debugAPIConfigSection
                 developerOptionsSection
@@ -62,13 +63,13 @@ struct SettingsView: View {
         } message: {
             Text(feedbackAlertMessage.uppercased())
         }
-        .alert("VIDEO CACHE", isPresented: $showCacheClearAlert) {
+        .alert("CACHE", isPresented: $showCacheClearAlert) {
             Button("OK") { }
         } message: {
             Text(cacheClearMessage.uppercased())
         }
         .onAppear {
-            updateVideoCacheInfo()
+            updateCacheInfo()
         }
     }
 
@@ -434,10 +435,10 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var videoCacheSection: some View {
+    private var cacheSection: some View {
         Section(header:
             HStack {
-                Text("VIDEO CACHE")
+                Text("CACHE")
                     .foregroundStyle(AppTheme.gradient1)
                     .fontWeight(.semibold)
             }
@@ -453,10 +454,20 @@ struct SettingsView: View {
                     }
                 }
 
+                if !questionCacheInfo.isEmpty {
+                    HStack {
+                        Image(systemName: "questionmark.circle.fill")
+                            .foregroundColor(AppTheme.selectableTint)
+                        Text(questionCacheInfo)
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.smallTitleText)
+                    }
+                }
+
                 Button(action: {
-                    clearVideoCache()
+                    clearAllCache()
                 }) {
-                    Label("CLEAR ALL VIDEOS", systemImage: "trash.fill")
+                    Label("CLEAR ALL CACHE", systemImage: "trash.fill")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -551,34 +562,64 @@ struct SettingsView: View {
         }
     }
 
-    private func updateVideoCacheInfo() {
-        let (fileCount, sizeBytes) = VideoService.shared.getCacheInfo()
-
-        if fileCount == 0 {
+    private func updateCacheInfo() {
+        // Update video cache info
+        let (videoFileCount, videoSizeBytes) = VideoService.shared.getCacheInfo()
+        if videoFileCount == 0 {
             videoCacheInfo = "NO CACHED VIDEOS"
         } else {
-            let sizeMB = Double(sizeBytes) / 1024.0 / 1024.0
-            videoCacheInfo = String(format: "%d VIDEO%@ (%.1f MB)", fileCount, fileCount == 1 ? "" : "S", sizeMB)
+            let sizeMB = Double(videoSizeBytes) / 1024.0 / 1024.0
+            videoCacheInfo = String(format: "%d VIDEO%@ (%.1f MB)", videoFileCount, videoFileCount == 1 ? "" : "S", sizeMB)
+        }
+
+        // Update question cache info
+        let (questionFileCount, questionSizeBytes) = QuestionCacheManager.shared.getCacheInfo()
+        if questionFileCount == 0 {
+            questionCacheInfo = "NO CACHED QUESTIONS"
+        } else {
+            let sizeMB = Double(questionSizeBytes) / 1024.0 / 1024.0
+            questionCacheInfo = String(format: "%d QUESTION%@ (%.1f MB)", questionFileCount, questionFileCount == 1 ? "" : "S", sizeMB)
         }
     }
 
-    private func clearVideoCache() {
-        print("SettingsView: clearVideoCache() called")
-        let result = VideoService.shared.clearCache()
+    private func clearAllCache() {
+        print("SettingsView: clearAllCache() called")
 
-        switch result {
+        var totalCleared = 0
+        var errors: [String] = []
+
+        // Clear video cache
+        let videoResult = VideoService.shared.clearCache()
+        switch videoResult {
         case .success(let count):
             print("SettingsView: Successfully cleared \(count) videos")
-            if count == 0 {
-                cacheClearMessage = "Cache was already empty"
-            } else {
-                cacheClearMessage = "Successfully cleared \(count) video\(count == 1 ? "" : "s")"
-            }
-            updateVideoCacheInfo()
-
+            totalCleared += count
         case .failure(let error):
-            print("SettingsView: Failed to clear cache: \(error)")
-            cacheClearMessage = "Failed to clear cache: \(error.localizedDescription)"
+            print("SettingsView: Failed to clear video cache: \(error)")
+            errors.append("Videos: \(error.localizedDescription)")
+        }
+
+        // Clear question cache
+        let questionResult = QuestionCacheManager.shared.clearCache()
+        switch questionResult {
+        case .success(let count):
+            print("SettingsView: Successfully cleared \(count) questions")
+            totalCleared += count
+        case .failure(let error):
+            print("SettingsView: Failed to clear question cache: \(error)")
+            errors.append("Questions: \(error.localizedDescription)")
+        }
+
+        // Update cache info display
+        updateCacheInfo()
+
+        // Show result message
+        if !errors.isEmpty {
+            cacheClearMessage = "Failed to clear some caches: \(errors.joined(separator: ", "))"
+        } else if totalCleared == 0 {
+            cacheClearMessage = "Cache was already empty"
+        } else {
+            cacheClearMessage = "Successfully cleared \(totalCleared) cached item\(totalCleared == 1 ? "" : "s")"
         }
 
         print("SettingsView: Showing alert with message: \(cacheClearMessage)")

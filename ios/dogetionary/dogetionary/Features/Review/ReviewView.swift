@@ -52,13 +52,8 @@ struct ReviewView: View {
 
                 // Main content area (fills remaining space)
                 ZStack {
-                    if viewModel.isLoadingStatus {
-                        ProgressView("Loading practice...")
-                    } else if let status = viewModel.practiceStatus, !status.has_practice, !queueManager.hasQuestions {
-                        NothingToPracticeView()
-                    } else if queueManager.isFetching && currentQuestion == nil {
-                        ProgressView("Loading question...")
-                    } else if let question = currentQuestion {
+                    // PRIORITY 1: Show question immediately if available (don't wait for loading states)
+                    if let question = currentQuestion {
                         // Question card with definition below
                         QuestionCardView(
                             question: question.question,
@@ -77,6 +72,12 @@ struct ReviewView: View {
                         .id(question.word)
                         .offset(x: viewModel.cardOffset)
                         .opacity(viewModel.cardOpacity)
+                    } else if viewModel.isLoadingStatus {
+                        ProgressView("Loading practice...")
+                    } else if let status = viewModel.practiceStatus, !status.has_practice, !queueManager.hasQuestions {
+                        NothingToPracticeView()
+                    } else if queueManager.isFetching && currentQuestion == nil {
+                        ProgressView("Loading question...")
                     } else if !queueManager.hasMore && !queueManager.hasQuestions {
                         NothingToPracticeView()
                     } else {
