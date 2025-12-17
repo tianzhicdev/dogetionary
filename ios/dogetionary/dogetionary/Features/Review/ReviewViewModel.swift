@@ -123,24 +123,34 @@ class ReviewViewModel: ObservableObject {
             cardOpacity = 0
         }
 
-        // Submit and load next after animation
+        // Advance to next question immediately (optimistic UI)
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: AppConstants.Animation.standardDuration) // 0.3 seconds
 
-            if let submission = pendingSubmission {
-                await submitReview(
-                    question: currentQuestion,
-                    response: submission.response,
-                    questionType: submission.questionType
-                )
-            }
+            // Pop question from queue IMMEDIATELY (don't wait for network)
+            _ = questionQueue.popQuestion()
 
             // Reset card state for next question
             cardOffset = 0
             cardOpacity = 1
             isAnswered = false
             wasCorrect = nil
+
+            // Submit review in background (fire-and-forget, don't await)
+            if let submission = pendingSubmission {
+                Task.detached {
+                    await self.submitReview(
+                        question: currentQuestion,
+                        response: submission.response,
+                        questionType: submission.questionType
+                    )
+                }
+            }
+
             pendingSubmission = nil
+
+            // Trigger background refill
+            questionQueue.refillIfNeeded()
         }
     }
 
@@ -199,8 +209,7 @@ class ReviewViewModel: ObservableObject {
                             self.showBadgeCelebration = true
                         }
 
-                        // Advance to next question
-                        self.advanceToNextQuestion()
+                        // Refresh status after successful submission
                         self.refreshStatusAfterCompletion()
 
                         // Refresh practice status
@@ -213,21 +222,6 @@ class ReviewViewModel: ObservableObject {
                     continuation.resume()
                 }
             }
-        }
-    }
-
-    private func advanceToNextQuestion() {
-        // Remove the current question from queue
-        _ = questionQueue.popQuestion()
-
-        // Reset review start time for next question
-        reviewStartTime = Date()
-
-        // Trigger refill if needed
-        if !questionQueue.hasQuestions && !questionQueue.hasMore {
-            refreshStatusAfterCompletion()
-        } else {
-            questionQueue.refillIfNeeded()
         }
     }
 
