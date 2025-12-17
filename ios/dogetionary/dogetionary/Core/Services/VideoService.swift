@@ -447,7 +447,13 @@ class VideoService: ObservableObject {
     private func downloadVideoWithRetry(videoId: Int, attempt: Int) -> AnyPublisher<URL, Error> {
         // Check if already cached (might have been downloaded by another call)
         if let cachedURL = getCachedVideoURL(videoId: videoId) {
-            updateState(videoId: videoId, state: .cached(url: cachedURL))
+            // Get file size
+            let fileSize = (try? fileManager.attributesOfItem(atPath: cachedURL.path)[.size] as? Int64) ?? 0
+            updateState(videoId: videoId, state: .cached(
+                url: cachedURL,
+                downloadDuration: 0.0,  // Unknown for pre-existing/race-condition files
+                fileSize: fileSize
+            ))
             return Just(cachedURL)
                 .setFailureType(to: Error.self)
                 .eraseToAnyPublisher()
@@ -465,8 +471,12 @@ class VideoService: ObservableObject {
                     let delay = self.retryDelays[min(attempt, self.retryDelays.count - 1)]
                     print("VideoService: Retrying video \(videoId) in \(delay)s (attempt \(attempt + 1)/\(self.maxRetries))")
 
-                    // Update state to show retry count
-                    self.updateState(videoId: videoId, state: .failed(error: error.localizedDescription, retryCount: attempt))
+                    // Update state to show retry count (duration unknown during retry)
+                    self.updateState(videoId: videoId, state: .failed(
+                        error: error.localizedDescription,
+                        retryCount: attempt,
+                        duration: nil
+                    ))
 
                     // Retry after delay
                     return Just(())
@@ -476,9 +486,13 @@ class VideoService: ObservableObject {
                         }
                         .eraseToAnyPublisher()
                 } else {
-                    // Max retries exceeded
+                    // Max retries exceeded (duration unknown)
                     print("VideoService: Max retries exceeded for video \(videoId)")
-                    self.updateState(videoId: videoId, state: .failed(error: error.localizedDescription, retryCount: attempt))
+                    self.updateState(videoId: videoId, state: .failed(
+                        error: error.localizedDescription,
+                        retryCount: attempt,
+                        duration: nil
+                    ))
                     return Fail(error: error).eraseToAnyPublisher()
                 }
             }
