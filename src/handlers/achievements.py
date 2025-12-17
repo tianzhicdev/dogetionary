@@ -139,6 +139,58 @@ def calculate_user_score(user_id: str) -> int:
     return result['score'] if result else 0
 
 
+def has_user_earned_badge(user_id: str, badge_id: str) -> bool:
+    """
+    Check if user has already earned a specific badge.
+
+    Args:
+        user_id: User UUID string
+        badge_id: Badge identifier (e.g., 'DEMO', 'score_1000')
+
+    Returns:
+        True if badge exists in user_badges table, False otherwise
+    """
+    result = db_fetch_one("""
+        SELECT COUNT(*) as count
+        FROM user_badges
+        WHERE user_id = %s AND badge_id = %s
+    """, (user_id, badge_id))
+
+    return (result['count'] > 0) if result else False
+
+
+def record_earned_badge(user_id: str, badge_id: str, badge_type: str) -> None:
+    """
+    Record a newly earned badge in the user_badges table.
+
+    Args:
+        user_id: User UUID string
+        badge_id: Badge identifier (e.g., 'DEMO', 'score_1000')
+        badge_type: Type of badge ('test_completion' or 'score_milestone')
+
+    Note: Uses ON CONFLICT DO NOTHING to handle concurrent badge earning gracefully
+    """
+    from utils.database import get_db_connection
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            INSERT INTO user_badges (user_id, badge_id, badge_type)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (user_id, badge_id) DO NOTHING
+        """, (user_id, badge_id, badge_type))
+        conn.commit()
+        logger.info(f"Recorded badge {badge_id} for user {user_id}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error recording badge {badge_id} for user {user_id}: {e}", exc_info=True)
+    finally:
+        cur.close()
+        conn.close()
+
+
 def count_test_vocabulary_progress(user_id: str, vocab_column: str, language: str = 'en') -> dict:
     """
     Count total and saved words for a specific test vocabulary.
@@ -178,15 +230,18 @@ def count_test_vocabulary_progress(user_id: str, vocab_column: str, language: st
     }
 
 
-def get_newly_earned_score_badges(old_score: int, new_score: int) -> list:
+def get_newly_earned_score_badges(old_score: int, new_score: int, user_id: str) -> list:
     """
     Determine which score-based badges were newly earned.
 
-    A badge is newly earned if: old_score < milestone <= new_score
+    A badge is newly earned if:
+    1. old_score < milestone <= new_score
+    2. Badge has NOT been previously earned (checked against user_badges table)
 
     Args:
         old_score: Score before the review
         new_score: Score after the review
+        user_id: User UUID string (to check for existing badges)
 
     Returns:
         List of badge dictionaries with ultra-minimal structure:
@@ -196,13 +251,17 @@ def get_newly_earned_score_badges(old_score: int, new_score: int) -> list:
 
     for achievement in ACHIEVEMENTS:
         milestone = achievement['milestone']
+        badge_id = f"score_{milestone}"
+
         # Badge is newly earned if old_score < milestone <= new_score
+        # AND user hasn't already earned it
         if old_score < milestone <= new_score:
-            new_badges.append({
-                "badge_id": f"score_{milestone}",
-                "title": achievement['title'],
-                "description": f"{milestone} points reached"
-            })
+            if not has_user_earned_badge(user_id, badge_id):
+                new_badges.append({
+                    "badge_id": badge_id,
+                    "title": achievement['title'],
+                    "description": f"{milestone} points reached"
+                })
 
     return new_badges
 
@@ -227,7 +286,7 @@ def get_user_test_preferences(user_id: str) -> dict:
     prefs = db_fetch_one("""
         SELECT toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
-               demo_enabled
+               demo_enabled, business_english_enabled, everyday_english_enabled
         FROM user_preferences
         WHERE user_id = %s
     """, (user_id,))
@@ -257,6 +316,7 @@ def check_test_completion_badges(
     1. User has saved all words in the test vocabulary
     2. The current word being reviewed is part of that test
     3. The test is enabled (if enabled_tests_only=True)
+    4. The badge has NOT been previously earned (checked against user_badges table)
 
     Args:
         user_id: User UUID string
@@ -279,6 +339,10 @@ def check_test_completion_badges(
     for test_name, metadata in TEST_TYPES_MAPPING.items():
         # Skip if checking enabled tests only and this test is not enabled
         if enabled_tests_only and not enabled_tests.get(test_name, False):
+            continue
+
+        # Skip if user has already earned this badge
+        if has_user_earned_badge(user_id, test_name):
             continue
 
         vocab_column = metadata['vocab_column']

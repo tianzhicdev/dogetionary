@@ -167,7 +167,8 @@ def get_review_words_batch():
                     SELECT
                         toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                         ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
-                        demo_enabled, target_end_date
+                        demo_enabled, business_english_enabled, everyday_english_enabled,
+                        target_end_date
                     FROM user_preferences
                     WHERE user_id = %s
                 """, (user_id,))

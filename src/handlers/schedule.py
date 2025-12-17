@@ -113,6 +113,7 @@ def get_today_schedule():
                     toefl_enabled, ielts_enabled, demo_enabled,
                     toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                     ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
+                    business_english_enabled, everyday_english_enabled,
                     user_name, target_end_date
                 FROM user_preferences
                 WHERE user_id = %s
@@ -134,7 +135,8 @@ def get_today_schedule():
             test_prep_enabled = (
                 prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('demo_enabled') or
                 prefs.get('toefl_beginner_enabled') or prefs.get('toefl_intermediate_enabled') or prefs.get('toefl_advanced_enabled') or
-                prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled')
+                prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled') or
+                prefs.get('business_english_enabled') or prefs.get('everyday_english_enabled')
             )
 
             target_end_date = prefs.get('target_end_date')
@@ -409,6 +411,7 @@ def get_schedule_range():
                     toefl_enabled, ielts_enabled, demo_enabled,
                     toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                     ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
+                    business_english_enabled, everyday_english_enabled,
                     user_name, target_end_date
                 FROM user_preferences
                 WHERE user_id = %s
@@ -427,7 +430,8 @@ def get_schedule_range():
             test_prep_enabled = (
                 prefs.get('toefl_enabled') or prefs.get('ielts_enabled') or prefs.get('demo_enabled') or
                 prefs.get('toefl_beginner_enabled') or prefs.get('toefl_intermediate_enabled') or prefs.get('toefl_advanced_enabled') or
-                prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled')
+                prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled') or
+                prefs.get('business_english_enabled') or prefs.get('everyday_english_enabled')
             )
 
             target_end_date = prefs.get('target_end_date')

@@ -203,9 +203,13 @@ class QuestionQueueManager: ObservableObject {
         }
 
         if !videoIds.isEmpty {
-            logger.info("Prefetching \(videoIds.count) videos sequentially in background")
-            // Videos will download in order - first question's video downloads first
+            logger.info("Prefetching \(videoIds.count) videos + preparing AVPlayers in background")
+
+            // Download videos (non-blocking, parallel, returns immediately)
             VideoService.shared.preloadVideos(videoIds: videoIds)
+
+            // Prepare AVPlayers (non-blocking, will create players when videos are cached)
+            AVPlayerManager.shared.preparePlayers(videoIds: videoIds)
         }
     }
 }

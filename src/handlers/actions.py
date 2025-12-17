@@ -375,7 +375,7 @@ def submit_review():
         new_badges = []
 
         # Check score-based achievements
-        score_badges = get_newly_earned_score_badges(old_score, new_score)
+        score_badges = get_newly_earned_score_badges(old_score, new_score, user_id)
         new_badges.extend(score_badges)
 
         # Check for test vocabulary completion badges
@@ -386,6 +386,14 @@ def submit_review():
             enabled_tests_only=True
         )
         new_badges.extend(completion_badges)
+
+        # Record all new badges in user_badges table
+        if new_badges:
+            from handlers.achievements import record_earned_badge
+            for badge in new_badges:
+                # Determine badge type from badge_id
+                badge_type = 'score_milestone' if badge['badge_id'].startswith('score_') else 'test_completion'
+                record_earned_badge(user_id, badge['badge_id'], badge_type)
 
         # Calculate simple stats for response
         review_count = len(all_reviews)

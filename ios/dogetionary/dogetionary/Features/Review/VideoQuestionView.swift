@@ -133,82 +133,107 @@ struct VideoQuestionView: View {
             return
         }
 
-        // Fetch video (will use cache if available, or wait for sequential download)
+        // STEP 1: Try to get pre-created player (instant)
+        if let cachedPlayer = AVPlayerManager.shared.getPlayer(videoId: videoId) {
+            print("✓ VideoQuestionView: Using pre-created AVPlayer for video \(videoId)")
+            player = cachedPlayer
+            isLoading = false
+            return
+        }
+
+        // STEP 2: Check video download state
+        let state = VideoService.shared.getDownloadState(videoId: videoId)
+
+        switch state {
+        case .cached(let url):
+            // Video cached but player not created yet - create it now
+            print("✓ VideoQuestionView: Video \(videoId) cached, creating player")
+            createPlayer(from: url, videoId: videoId)
+
+        case .downloading(let progress):
+            // Video downloading - show progress and wait
+            print("VideoQuestionView: Video \(videoId) downloading (\(Int(progress * 100))%), waiting...")
+            loadError = nil
+            // The fetchVideo call below will wait for download to complete
+
+        case .failed(let error, let retryCount):
+            // Download failed - show error but still try to fetch (will retry)
+            print("VideoQuestionView: Video \(videoId) download failed (\(retryCount) retries): \(error)")
+            loadError = nil
+            // fetchVideo will attempt retry
+
+        case .notStarted:
+            // Not downloaded yet - trigger download
+            print("VideoQuestionView: Video \(videoId) not started, triggering download")
+            loadError = nil
+        }
+
+        // STEP 3: Fetch video (handles downloading, waiting, retry)
         VideoService.shared.fetchVideo(videoId: videoId)
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { completion in
+                receiveCompletion: { [self] completion in
                     if case .failure(let error) = completion {
                         loadError = error.localizedDescription
                         isLoading = false
                         print("❌ VideoQuestionView: Error loading video \(videoId): \(error)")
-                        print("   Error domain: \((error as NSError).domain)")
-                        print("   Error code: \((error as NSError).code)")
-                        print("   Error userInfo: \((error as NSError).userInfo)")
                     }
                 },
                 receiveValue: { [self] url in
-                    videoURL = url
-
-                    // Verify file exists and check size
-                    let fileManager = FileManager.default
-                    if fileManager.fileExists(atPath: url.path) {
-                        if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
-                           let fileSize = attributes[.size] as? Int64 {
-                            print("✓ VideoQuestionView: Video file exists - \(fileSize) bytes at \(url.path)")
-                        } else {
-                            print("⚠️ VideoQuestionView: Video file exists but can't read attributes at \(url.path)")
-                        }
-                    } else {
-                        print("❌ VideoQuestionView: Video file does NOT exist at \(url.path)")
-                    }
-
-                    // Create player
-                    let newPlayer = AVPlayer(url: url)
-                    player = newPlayer
-                    isLoading = false
-
-                    print("✓ VideoQuestionView: Created AVPlayer for video \(videoId)")
-                    print("   File: \(url.lastPathComponent)")
-                    print("   Full path: \(url.path)")
-                    print("   Player status: \(newPlayer.status.rawValue) (0=unknown, 1=ready, 2=failed)")
-
-                    // Observe player status changes
-                    newPlayer.publisher(for: \.status)
-                        .sink { status in
-                            print("   Player status changed to: \(status.rawValue)")
-                            if status == .failed {
-                                if let error = newPlayer.error {
-                                    print("   ❌ AVPlayer failed with error: \(error)")
-                                    print("      Error domain: \((error as NSError).domain)")
-                                    print("      Error code: \((error as NSError).code)")
-                                    print("      Error description: \(error.localizedDescription)")
-                                }
-                            } else if status == .readyToPlay {
-                                print("   ✓ AVPlayer ready to play")
-                            }
-                        }
-                        .store(in: &cancellables)
-
-                    // Observe current item status
-                    if let currentItem = newPlayer.currentItem {
-                        currentItem.publisher(for: \.status)
-                            .sink { itemStatus in
-                                print("   Player item status changed to: \(itemStatus.rawValue)")
-                                if itemStatus == .failed {
-                                    if let error = currentItem.error {
-                                        print("   ❌ AVPlayerItem failed with error: \(error)")
-                                        print("      Error domain: \((error as NSError).domain)")
-                                        print("      Error code: \((error as NSError).code)")
-                                        print("      Error description: \(error.localizedDescription)")
-                                    }
-                                }
-                            }
-                            .store(in: &cancellables)
-                    }
+                    createPlayer(from: url, videoId: videoId)
                 }
             )
             .store(in: &cancellables)
+    }
+
+    private func createPlayer(from url: URL, videoId: Int) {
+        videoURL = url
+
+        // Verify file exists
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: url.path) {
+            if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+               let fileSize = attributes[.size] as? Int64 {
+                print("✓ VideoQuestionView: Video file exists - \(fileSize) bytes")
+            }
+        } else {
+            print("❌ VideoQuestionView: Video file does NOT exist at \(url.path)")
+            loadError = "Video file not found"
+            isLoading = false
+            return
+        }
+
+        // Create player
+        let newPlayer = AVPlayer(url: url)
+        player = newPlayer
+        isLoading = false
+
+        // Cache the player for future use
+        AVPlayerManager.shared.cachePlayer(videoId: videoId, player: newPlayer)
+
+        print("✓ VideoQuestionView: Created AVPlayer for video \(videoId)")
+
+        // Observe player status changes
+        newPlayer.publisher(for: \.status)
+            .sink { status in
+                if status == .failed, let error = newPlayer.error {
+                    print("❌ AVPlayer failed: \(error.localizedDescription)")
+                } else if status == .readyToPlay {
+                    print("✓ AVPlayer ready to play")
+                }
+            }
+            .store(in: &cancellables)
+
+        // Observe current item status
+        if let currentItem = newPlayer.currentItem {
+            currentItem.publisher(for: \.status)
+                .sink { itemStatus in
+                    if itemStatus == .failed, let error = currentItem.error {
+                        print("❌ AVPlayerItem failed: \(error.localizedDescription)")
+                    }
+                }
+                .store(in: &cancellables)
+        }
     }
 }
 
