@@ -56,11 +56,22 @@ def get_video(video_id: int):
 
         mime_type = mime_mapping.get(format_type, f"video/{format_type}")
 
-        logger.info(f"Serving video: id={video_id}, format={format_type}, size={len(video['video_data'])} bytes")
+        video_data = video['video_data']
+        video_size = len(video_data)
+        logger.info(f"Serving video: id={video_id}, format={format_type}, size={video_size} bytes")
+
+        # Stream video in 256KB chunks for better performance
+        # This prevents Gunicorn from using tiny default chunks (8KB)
+        def generate_video_chunks():
+            chunk_size = 256 * 1024  # 256KB chunks
+            offset = 0
+            while offset < video_size:
+                yield video_data[offset:offset + chunk_size]
+                offset += chunk_size
 
         # Return binary data with Cloudflare-optimized cache headers
         return Response(
-            video['video_data'],
+            generate_video_chunks(),  # Stream in large chunks
             mimetype=mime_type,
             headers={
                 # Browser caching: cache for 1 year (videos are immutable)
@@ -74,7 +85,7 @@ def get_video(video_id: int):
                 # Security headers
                 'X-Content-Type-Options': 'nosniff',
                 # Content length for better caching
-                'Content-Length': str(len(video['video_data'])),
+                'Content-Length': str(video_size),
                 # Accept range requests for video seeking
                 'Accept-Ranges': 'bytes'
             }
