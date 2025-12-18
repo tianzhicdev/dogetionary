@@ -102,7 +102,7 @@ if [ "$SKIP_COMMIT" = false ]; then
     echo "  2. Commit with message: '$COMMIT_MESSAGE'"
 fi
 echo "  3. Create tag: $NEW_VERSION"
-echo "  4. Push to origin with tags"
+echo "  4. Push to origin with new tag"
 echo -n "Continue? (y/n): "
 read -r response
 
@@ -134,11 +134,11 @@ $COMMIT_MESSAGE
 🤖 Generated with [Claude Code](https://claude.ai/code)"
 print_success "Tag created: $NEW_VERSION"
 
-# Push to origin with tags
+# Push to origin with the new tag only
 print_status "Pushing to origin..."
 git push origin "$CURRENT_BRANCH"
-print_status "Pushing tags..."
-git push origin --tags
+print_status "Pushing tag $NEW_VERSION..."
+git push origin "$NEW_VERSION"
 
 print_success "🎉 Successfully published $NEW_VERSION!"
 print_status "Summary:"
@@ -147,7 +147,7 @@ echo "  - Version: $NEW_VERSION"
 if [ "$SKIP_COMMIT" = false ]; then
     echo "  - Commit: $COMMIT_MESSAGE"
 fi
-echo "  - Pushed to origin with tags"
+echo "  - Pushed to origin with tag $NEW_VERSION"
 
 # Show the latest commits and tags
 print_status "Recent commits:"

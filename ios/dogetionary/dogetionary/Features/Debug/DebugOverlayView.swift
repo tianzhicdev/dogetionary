@@ -236,13 +236,14 @@ struct QuestionQueueDebugTab: View {
 struct QuestionQueueRow: View {
     let index: Int
     let question: BatchReviewQuestion
+    @ObservedObject private var videoService = VideoService.shared
 
-    private var hasVideoDownloaded: Bool {
+    private func getVideoState() -> VideoDownloadState? {
         guard question.question.question_type == "video_mc",
               let videoId = question.question.video_id else {
-            return false
+            return nil
         }
-        return VideoService.shared.isVideoDownloaded(videoId: videoId)
+        return videoService.getDownloadState(videoId: videoId)
     }
 
     var body: some View {
@@ -271,11 +272,9 @@ struct QuestionQueueRow: View {
                 .background(questionTypeColor)
                 .cornerRadius(4)
 
-            // Video download status
-            if question.question.question_type == "video_mc" {
-                Image(systemName: hasVideoDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
-                    .font(.caption)
-                    .foregroundColor(hasVideoDownloaded ? .green : .orange)
+            // Video download status with detailed badge
+            if let videoState = getVideoState() {
+                VideoStatusBadge(state: videoState)
             }
         }
         .padding(.horizontal, 12)
@@ -570,6 +569,93 @@ struct StateRow: View {
                 .font(.caption.monospaced())
                 .foregroundColor(.primary)
                 .textSelection(.enabled)
+        }
+    }
+}
+
+// MARK: - Video Status Badge
+
+struct VideoStatusBadge: View {
+    let state: VideoDownloadState
+
+    var body: some View {
+        HStack(spacing: 2) {
+            // Icon
+            Image(systemName: iconName)
+                .font(.caption2)
+                .foregroundColor(statusColor)
+
+            // Status text
+            Text(statusText)
+                .font(.caption2.monospacedDigit())
+                .foregroundColor(statusColor)
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(statusColor.opacity(0.15))
+        )
+    }
+
+    private var iconName: String {
+        switch state {
+        case .notStarted:
+            return "hourglass"
+        case .downloading:
+            return "arrow.down.circle.fill"
+        case .cached:
+            return "checkmark.circle.fill"
+        case .failed:
+            return "xmark.circle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch state {
+        case .notStarted:
+            return .gray
+        case .downloading:
+            return .blue
+        case .cached:
+            return .green
+        case .failed:
+            return .red
+        }
+    }
+
+    private var statusText: String {
+        switch state {
+        case .notStarted:
+            return "⏳"
+
+        case .downloading(let progress, let startTime, let bytesDownloaded, let totalBytes):
+            let elapsed = Date().timeIntervalSince(startTime)
+            let progressPercent = Int(progress * 100)
+
+            if let totalBytes = totalBytes, totalBytes > 0 {
+                let downloadedMB = Double(bytesDownloaded) / 1024 / 1024
+                let totalMB = Double(totalBytes) / 1024 / 1024
+                let speed = elapsed > 0 ? downloadedMB / elapsed : 0
+                return String(format: "%d%% %.1fs %.1fMB/s", progressPercent, elapsed, speed)
+            } else {
+                return String(format: "%d%% %.1fs", progressPercent, elapsed)
+            }
+
+        case .cached(_, let duration, let fileSize):
+            let sizeMB = Double(fileSize) / 1024 / 1024
+            if duration > 0 {
+                return String(format: "%.1fs %.1fMB", duration, sizeMB)
+            } else {
+                return String(format: "%.1fMB", sizeMB)
+            }
+
+        case .failed(_, let retryCount, let duration):
+            if let duration = duration {
+                return String(format: "❌×%d %.1fs", retryCount, duration)
+            } else {
+                return String(format: "❌×%d", retryCount)
+            }
         }
     }
 }

@@ -128,16 +128,15 @@ class VideoService: ObservableObject {
     private let baseURL: String
     private let cacheDirectory: URL
     private let maxCacheSizeBytes: Int = 500 * 1024 * 1024  // 500 MB
-    private let maxConcurrentDownloads = 5
+    private let maxConcurrentDownloads = 1  // Sequential download: one-by-one
     private let maxRetries = 3
     private let retryDelays: [TimeInterval] = [1.0, 2.0, 4.0]
 
     private var downloadTasks: [Int: URLSessionDownloadTask] = [:]
     @Published private(set) var downloadStates: [Int: VideoDownloadState] = [:]
     private let fileManager = FileManager.default
-    private let stateQueue = DispatchQueue(label: "com.dogetionary.video.state", attributes: .concurrent)
 
-    // Concurrent queue for parallel video downloads
+    // Background queue for sequential video downloads (semaphore limits to 1 at a time)
     private let downloadQueue = DispatchQueue(label: "com.dogetionary.video.download", qos: .utility, attributes: .concurrent)
     private let downloadSemaphore: DispatchSemaphore
 
@@ -148,6 +147,10 @@ class VideoService: ObservableObject {
     private init() {
         self.baseURL = Configuration.effectiveBaseURL
         self.downloadSemaphore = DispatchSemaphore(value: maxConcurrentDownloads)
+
+        // Create cache directory if it doesn't exist
+        let cachesDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        self.cacheDirectory = cachesDir.appendingPathComponent("videos", isDirectory: true)
 
         // Setup custom URLSession with delegate
         self.downloadDelegate = VideoDownloadDelegate()
@@ -160,21 +163,14 @@ class VideoService: ObservableObject {
             delegateQueue: nil
         )
 
-        // Initialize after self is fully constructed
-        super.init()
-
-        // Set reference to self in delegate
-        self.downloadDelegate.videoService = self
-
-        // Create cache directory if it doesn't exist
-        let cachesDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        self.cacheDirectory = cachesDir.appendingPathComponent("videos", isDirectory: true)
-
         if !fileManager.fileExists(atPath: cacheDirectory.path) {
             try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
         }
 
         print("VideoService: Cache directory: \(cacheDirectory.path)")
+
+        // Set reference to self in delegate (after all properties initialized)
+        self.downloadDelegate.videoService = self
 
         // Initialize states for cached videos
         initializeCachedStates()
@@ -210,15 +206,25 @@ class VideoService: ObservableObject {
 
     /// Get current download state for a video
     func getDownloadState(videoId: Int) -> VideoDownloadState {
-        return stateQueue.sync {
-            downloadStates[videoId] ?? .notStarted
+        // Always read on main thread to avoid race conditions
+        if Thread.isMainThread {
+            return downloadStates[videoId] ?? .notStarted
+        } else {
+            return DispatchQueue.main.sync {
+                return downloadStates[videoId] ?? .notStarted
+            }
         }
     }
 
     /// Update download state (thread-safe) - internal for delegate access
+    /// MUST be called on main thread for @Published to work correctly
     func updateState(videoId: Int, state: VideoDownloadState) {
-        stateQueue.async(flags: .barrier) { [weak self] in
-            self?.downloadStates[videoId] = state
+        if Thread.isMainThread {
+            downloadStates[videoId] = state
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.downloadStates[videoId] = state
+            }
         }
     }
 
@@ -229,7 +235,7 @@ class VideoService: ObservableObject {
         let state = getDownloadState(videoId: videoId)
 
         switch state {
-        case .cached(let url):
+        case .cached(let url, _, _):
             print("VideoService: Cache hit for video \(videoId)")
             return Just(url)
                 .setFailureType(to: Error.self)
@@ -240,7 +246,7 @@ class VideoService: ObservableObject {
             print("VideoService: Video \(videoId) already downloading, waiting...")
             return waitForDownloadCompletion(videoId: videoId)
 
-        case .failed(_, let retryCount):
+        case .failed(_, let retryCount, _):
             print("VideoService: Video \(videoId) previously failed (\(retryCount) retries), retrying...")
             return downloadVideoWithRetry(videoId: videoId, attempt: retryCount)
 
@@ -250,11 +256,11 @@ class VideoService: ObservableObject {
         }
     }
 
-    /// Preload multiple videos in background (parallel, non-blocking)
+    /// Preload multiple videos in background (sequential, non-blocking)
     func preloadVideos(videoIds: [Int]) {
         guard !videoIds.isEmpty else { return }
 
-        print("VideoService: Queuing \(videoIds.count) videos for parallel download (max \(maxConcurrentDownloads) concurrent)")
+        print("VideoService: Queuing \(videoIds.count) videos for sequential download (one-by-one)")
 
         for videoId in videoIds {
             let state = getDownloadState(videoId: videoId)
@@ -275,7 +281,7 @@ class VideoService: ObservableObject {
             downloadQueue.async { [weak self] in
                 guard let self = self else { return }
 
-                // Semaphore limits concurrent downloads
+                // Semaphore ensures downloads happen one-by-one (sequential)
                 self.downloadSemaphore.wait()
                 defer { self.downloadSemaphore.signal() }
 
@@ -316,10 +322,10 @@ class VideoService: ObservableObject {
 
                 let state = self.getDownloadState(videoId: videoId)
                 switch state {
-                case .cached(let url):
+                case .cached(let url, _, _):
                     subject.send(url)
                     subject.send(completion: .finished)
-                case .failed(let error, _):
+                case .failed(let error, _, _):
                     subject.send(completion: .failure(NSError(domain: "VideoService", code: -1, userInfo: [NSLocalizedDescriptionKey: error])))
                 case .downloading, .notStarted:
                     // Keep waiting
@@ -545,11 +551,13 @@ class VideoService: ObservableObject {
                 startTime: startTime
             )
 
-            // Cleanup delegate
-            self.downloadDelegate.cleanup(for: task)
-
             // Calculate duration
             let duration = Date().timeIntervalSince(startTime)
+
+            // Cleanup delegate (get task from downloadTasks)
+            if let completedTask = self.downloadTasks[videoId] {
+                self.downloadDelegate.cleanup(for: completedTask)
+            }
 
             // Handle errors
             if let error = error {

@@ -123,15 +123,6 @@ struct ReviewView: View {
                     }
                 }
             }
-
-            // Debug overlay (bottom-left)
-            VStack {
-                Spacer()
-                HStack {
-                    QueueDebugOverlay()
-                    Spacer()
-                }
-            }
         }
         .onAppear {
             viewModel.loadPracticeStatus()

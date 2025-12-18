@@ -13,12 +13,12 @@ struct VideoQuestionView: View {
     let question: ReviewQuestion
     let onAnswer: (String) -> Void
 
-    @State private var videoURL: URL?
     @State private var isLoading = true
     @State private var loadError: String?
     @State private var showWord = false
-    @State private var player: AVPlayer?
     @State private var cancellables = Set<AnyCancellable>()
+
+    private let playerManager = AVPlayerManager.shared
 
     var body: some View {
         VStack(spacing: 20) {
@@ -48,23 +48,11 @@ struct VideoQuestionView: View {
                     }
                     .frame(height: 250)
                     .padding()
-                } else if let player = player {
-                    VideoPlayer(player: player)
+                } else {
+                    LoopingVideoPlayer(player: playerManager.player)
                         .frame(height: 250)
                         .cornerRadius(12)
                         .shadow(radius: 5)
-                        .onAppear {
-                            // Auto-play video when it appears
-                            player.play()
-                        }
-                        .onDisappear {
-                            player.pause()
-                        }
-                } else {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 250)
-                        .cornerRadius(12)
                 }
             }
 
@@ -105,7 +93,7 @@ struct VideoQuestionView: View {
                     // Show word after answering
                     showWord = true
                     // Pause video after selection
-                    player?.pause()
+                    playerManager.pause()
                 },
                 onAnswer: onAnswer
             )
@@ -118,9 +106,9 @@ struct VideoQuestionView: View {
             loadVideo()
         }
         .onDisappear {
-            // Cleanup player
-            player?.pause()
-            player = nil
+            // Pause and reset player when leaving
+            playerManager.pause()
+            playerManager.reset()
         }
     }
 
@@ -133,42 +121,35 @@ struct VideoQuestionView: View {
             return
         }
 
-        // STEP 1: Try to get pre-created player (instant)
-        if let cachedPlayer = AVPlayerManager.shared.getPlayer(videoId: videoId) {
-            print("✓ VideoQuestionView: Using pre-created AVPlayer for video \(videoId)")
-            player = cachedPlayer
-            isLoading = false
-            return
-        }
-
-        // STEP 2: Check video download state
+        // Check video download state
         let state = VideoService.shared.getDownloadState(videoId: videoId)
 
         switch state {
-        case .cached(let url):
-            // Video cached but player not created yet - create it now
-            print("✓ VideoQuestionView: Video \(videoId) cached, creating player")
-            createPlayer(from: url, videoId: videoId)
+        case .cached(let url, _, _):
+            // Video already cached - load it into the shared player
+            print("✓ VideoQuestionView: Video \(videoId) cached, loading into player")
+            playerManager.loadVideo(url: url)
+            isLoading = false
 
-        case .downloading(let progress):
-            // Video downloading - show progress and wait
+        case .downloading(let progress, _, _, _):
+            // Video downloading - wait for it
             print("VideoQuestionView: Video \(videoId) downloading (\(Int(progress * 100))%), waiting...")
-            loadError = nil
-            // The fetchVideo call below will wait for download to complete
+            // fetchVideo will wait for download to complete
+            fetchAndLoadVideo(videoId: videoId)
 
-        case .failed(let error, let retryCount):
-            // Download failed - show error but still try to fetch (will retry)
+        case .failed(let error, let retryCount, _):
+            // Download failed - try to fetch (will retry)
             print("VideoQuestionView: Video \(videoId) download failed (\(retryCount) retries): \(error)")
-            loadError = nil
-            // fetchVideo will attempt retry
+            fetchAndLoadVideo(videoId: videoId)
 
         case .notStarted:
             // Not downloaded yet - trigger download
             print("VideoQuestionView: Video \(videoId) not started, triggering download")
-            loadError = nil
+            fetchAndLoadVideo(videoId: videoId)
         }
+    }
 
-        // STEP 3: Fetch video (handles downloading, waiting, retry)
+    private func fetchAndLoadVideo(videoId: Int) {
         VideoService.shared.fetchVideo(videoId: videoId)
             .receive(on: DispatchQueue.main)
             .sink(
@@ -180,60 +161,12 @@ struct VideoQuestionView: View {
                     }
                 },
                 receiveValue: { [self] url in
-                    createPlayer(from: url, videoId: videoId)
+                    print("✓ VideoQuestionView: Video \(videoId) downloaded, loading into player")
+                    playerManager.loadVideo(url: url)
+                    isLoading = false
                 }
             )
             .store(in: &cancellables)
-    }
-
-    private func createPlayer(from url: URL, videoId: Int) {
-        videoURL = url
-
-        // Verify file exists
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: url.path) {
-            if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
-               let fileSize = attributes[.size] as? Int64 {
-                print("✓ VideoQuestionView: Video file exists - \(fileSize) bytes")
-            }
-        } else {
-            print("❌ VideoQuestionView: Video file does NOT exist at \(url.path)")
-            loadError = "Video file not found"
-            isLoading = false
-            return
-        }
-
-        // Create player
-        let newPlayer = AVPlayer(url: url)
-        player = newPlayer
-        isLoading = false
-
-        // Cache the player for future use
-        AVPlayerManager.shared.cachePlayer(videoId: videoId, player: newPlayer)
-
-        print("✓ VideoQuestionView: Created AVPlayer for video \(videoId)")
-
-        // Observe player status changes
-        newPlayer.publisher(for: \.status)
-            .sink { status in
-                if status == .failed, let error = newPlayer.error {
-                    print("❌ AVPlayer failed: \(error.localizedDescription)")
-                } else if status == .readyToPlay {
-                    print("✓ AVPlayer ready to play")
-                }
-            }
-            .store(in: &cancellables)
-
-        // Observe current item status
-        if let currentItem = newPlayer.currentItem {
-            currentItem.publisher(for: \.status)
-                .sink { itemStatus in
-                    if itemStatus == .failed, let error = currentItem.error {
-                        print("❌ AVPlayerItem failed: \(error.localizedDescription)")
-                    }
-                }
-                .store(in: &cancellables)
-        }
     }
 }
 

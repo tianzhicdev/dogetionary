@@ -7,12 +7,16 @@
 
 import SwiftUI
 import UserNotifications
+import AVFoundation
 
 @main
 struct ShojinApp: App {
     @Environment(\.scenePhase) var scenePhase
 
     init() {
+        // Configure audio session for app (videos and audio playback)
+        configureAudioSession()
+
         // Initialize debug configuration
         DebugConfig.setupDefaults()
 
@@ -31,6 +35,17 @@ struct ShojinApp: App {
 
         // Clear and refresh question queue on app launch
         QuestionQueueManager.shared.forceRefresh()
+    }
+
+    private func configureAudioSession() {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playback, mode: .moviePlayback, options: [])
+            try audioSession.setActive(true)
+            print("✓ ShojinApp: Audio session configured for playback")
+        } catch {
+            print("❌ ShojinApp: Failed to configure audio session: \(error.localizedDescription)")
+        }
     }
     var body: some Scene {
         WindowGroup {
