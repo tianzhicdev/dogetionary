@@ -12,7 +12,7 @@ from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action
 from handlers.pronunciation import practice_pronunciation, submit_pronunciation_review
 from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice, is_word_saved
-from handlers.videos import get_video
+from handlers.videos import get_video, get_video_bytes_only, get_video_generator_memoryview
 from handlers.admin_videos import batch_upload_videos, get_bundle_words_needing_videos
 from handlers.admin_questions import batch_generate_questions
 from handlers.admin_questions_smart import smart_batch_generate_questions
@@ -56,6 +56,8 @@ v3_api.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forge
 v3_api.route('/audio/<path:text>/<language>')(get_audio)
 v3_api.route('/illustration', methods=['GET', 'POST'])(get_illustration)  # Merged cache-first logic
 v3_api.route('/videos/<int:video_id>', methods=['GET'])(get_video)  # Video binary data for practice mode
+v3_api.route('/videos/bytes-only/<int:video_id>', methods=['GET'])(get_video_bytes_only)  # TEST: bytes only, no generator
+v3_api.route('/videos/generator-with-memoryview/<int:video_id>', methods=['GET'])(get_video_generator_memoryview)  # TEST: generator with memoryview
 
 # User Management (V3)
 v3_api.route('/users/<user_id>/preferences', methods=['GET', 'POST'])(handle_user_preferences)
