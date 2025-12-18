@@ -57,6 +57,11 @@ def get_video(video_id: int):
         mime_type = mime_mapping.get(format_type, f"video/{format_type}")
 
         video_data = video['video_data']
+
+        # Convert memoryview to bytes if needed (PostgreSQL BYTEA returns memoryview)
+        if isinstance(video_data, memoryview):
+            video_data = bytes(video_data)
+
         video_size = len(video_data)
         logger.info(f"Serving video: id={video_id}, format={format_type}, size={video_size} bytes")
 
@@ -66,12 +71,13 @@ def get_video(video_id: int):
             chunk_size = 256 * 1024  # 256KB chunks
             offset = 0
             while offset < video_size:
-                yield video_data[offset:offset + chunk_size]
-                offset += chunk_size
+                end = min(offset + chunk_size, video_size)
+                yield video_data[offset:end]
+                offset = end
 
         # Return binary data with Cloudflare-optimized cache headers
         return Response(
-            generate_video_chunks(),  # Stream in large chunks
+            generate_video_chunks(),
             mimetype=mime_type,
             headers={
                 # Browser caching: cache for 1 year (videos are immutable)
