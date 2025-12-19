@@ -58,6 +58,20 @@ Every HTTP request now includes a unique request ID that appears in both iOS and
   - Falls back to server-generated UUID if missing
   - Automatically added to ALL logs via `LokiJsonFormatter`
 
+## iOS Console Logs
+
+With Developer Mode enabled, all network requests are logged to Xcode console with request ID:
+
+```
+📤 REQUEST [a1b2c3d4-e5f6-7890-abcd-ef1234567890] GET https://kwafy.com/api/v3/next-review-words-batch
+📥 RESPONSE [a1b2c3d4-e5f6-7890-abcd-ef1234567890] 200 in 165ms
+```
+
+This makes it easy to:
+- Copy request ID from console
+- Search backend logs for the same ID
+- Correlate timing between iOS and backend
+
 ## Usage
 
 ### Debugging a Failed Request
@@ -75,6 +89,8 @@ URL:        /api/v3/reviews/submit
 STATUS:     500
 DURATION:   2345ms
 ```
+
+**IMPORTANT**: The Request ID shown here is the **same ID** sent to the backend in the `X-Request-ID` header!
 
 #### 2. On Backend (Docker Logs):
 

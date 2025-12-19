@@ -131,7 +131,7 @@ def log_request_info():
 
     # Use client-provided request ID if available (for request tracing),
     # otherwise generate a new one on the server
-    g.request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
+    g.request_id = request.headers.get('X-Request-ID', "N/A")
 
     # Log request details
     request_data = {

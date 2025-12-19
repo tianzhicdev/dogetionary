@@ -527,7 +527,7 @@ class VideoService: ObservableObject {
 
         // Log request to NetworkLogger (manual logging for downloadTask)
         let requestId = UUID().uuidString
-        let logId = NetworkLogger.shared.logRequest(
+        let _ = NetworkLogger.shared.logRequest(
             url: videoURL.absoluteString,
             method: "GET",
             body: nil,
@@ -541,11 +541,11 @@ class VideoService: ObservableObject {
             // Remove from active tasks
             self.downloadTasks.removeValue(forKey: videoId)
 
-            // Log response to NetworkLogger
+            // Log response to NetworkLogger (using requestId)
             let httpResponse = response as? HTTPURLResponse
             // For download tasks, we don't have the data directly, so pass nil
             NetworkLogger.shared.logResponse(
-                id: logId,
+                id: requestId,
                 status: httpResponse?.statusCode,
                 data: nil, // Video data is saved to file, not available here
                 headers: httpResponse?.allHeaderFields,

@@ -20,12 +20,12 @@ class NetworkLogger: ObservableObject {
     // MARK: - Network Call Model
 
     struct NetworkCall: Identifiable {
-        let id: UUID
+        let id: String  // Use request ID as the identifier
         let timestamp: Date
         let url: String
         let method: String
         let requestBody: String?
-        let requestId: String  // Client-generated request ID for backend correlation
+        let requestId: String  // Same as id - kept for clarity
         var responseStatus: Int?
         var responseBody: String?
         var responseHeaders: [String: String]?
@@ -65,14 +65,13 @@ class NetworkLogger: ObservableObject {
     // MARK: - Public API
 
     /// Log the start of a network request
-    /// Returns a UUID to correlate with the response
-    func logRequest(url: String, method: String, body: Data?, requestId: String) -> UUID {
+    /// Returns the request ID string to correlate with the response
+    func logRequest(url: String, method: String, body: Data?, requestId: String) -> String {
         guard DebugConfig.isDeveloperModeEnabled else {
             // Skip logging if debug mode is disabled
-            return UUID()
+            return requestId
         }
 
-        let id = UUID()
         let timestamp = Date()
 
         // Parse body if available
@@ -87,7 +86,7 @@ class NetworkLogger: ObservableObject {
         }
 
         let call = NetworkCall(
-            id: id,
+            id: requestId,  // Use the actual request ID, not a new UUID
             timestamp: timestamp,
             url: url,
             method: method,
@@ -110,12 +109,12 @@ class NetworkLogger: ObservableObject {
             }
         }
 
-        logger.debug("Logged request: \(method) \(url)")
-        return id
+        logger.info("📤 REQUEST [\(requestId)] \(method) \(url)")
+        return requestId
     }
 
     /// Log the completion of a network request
-    func logResponse(id: UUID, status: Int?, data: Data?, headers: [AnyHashable: Any]?, error: Error?, startTime: Date) {
+    func logResponse(id: String, status: Int?, data: Data?, headers: [AnyHashable: Any]?, error: Error?, startTime: Date) {
         guard DebugConfig.isDeveloperModeEnabled else { return }
 
         let endTime = Date()
@@ -162,9 +161,14 @@ class NetworkLogger: ObservableObject {
 
                 self.recentCalls[index] = updatedCall
 
-                self.logger.debug("Logged response: \(status ?? 0) in \(duration * 1000)ms")
+                // Log response with request ID for correlation
+                if let status = status {
+                    self.logger.info("📥 RESPONSE [\(id)] \(status) in \(String(format: "%.0f", duration * 1000))ms")
+                } else if let error = error {
+                    self.logger.error("❌ RESPONSE [\(id)] ERROR: \(error.localizedDescription)")
+                }
             } else {
-                self.logger.warning("Could not find request with id \(id.uuidString)")
+                self.logger.warning("⚠️ Could not find request with id \(id)")
             }
         }
     }

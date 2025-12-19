@@ -46,7 +46,7 @@ class BaseNetworkService {
 
         // Log request to NetworkLogger for debug UI
         let startTime = Date()
-        let logId = NetworkLogger.shared.logRequest(
+        let _ = NetworkLogger.shared.logRequest(
             url: url.absoluteString,
             method: method,
             body: body,
@@ -54,10 +54,10 @@ class BaseNetworkService {
         )
 
         URLSession.shared.dataTask(with: request) { data, response, error in
-            // Log response to NetworkLogger
+            // Log response to NetworkLogger (using same requestId)
             let httpResponse = response as? HTTPURLResponse
             NetworkLogger.shared.logResponse(
-                id: logId,
+                id: requestId,
                 status: httpResponse?.statusCode,
                 data: data,
                 headers: httpResponse?.allHeaderFields,

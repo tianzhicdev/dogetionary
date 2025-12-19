@@ -15,7 +15,7 @@ class NetworkInterceptor: URLProtocol {
 
     // Thread-safe storage for request metadata
     private struct RequestMetadata {
-        let logId: UUID
+        let requestId: String
         let startTime: Date
     }
 
@@ -72,7 +72,7 @@ class NetworkInterceptor: URLProtocol {
         }
 
         // Log request to NetworkLogger
-        let logId = NetworkLogger.shared.logRequest(
+        let _ = NetworkLogger.shared.logRequest(
             url: request.url?.absoluteString ?? "",
             method: request.httpMethod ?? "GET",
             body: request.httpBody,
@@ -81,7 +81,7 @@ class NetworkInterceptor: URLProtocol {
 
         // Store metadata for this request
         Self.metadataQueue.sync {
-            Self.requestMetadata[request] = RequestMetadata(logId: logId, startTime: startTime)
+            Self.requestMetadata[request] = RequestMetadata(requestId: requestId, startTime: startTime)
         }
 
         // Create a data task to actually perform the network request
@@ -100,7 +100,7 @@ class NetworkInterceptor: URLProtocol {
             // Log response
             let httpResponse = response as? HTTPURLResponse
             NetworkLogger.shared.logResponse(
-                id: metadata.logId,
+                id: metadata.requestId,
                 status: httpResponse?.statusCode,
                 data: data,
                 headers: httpResponse?.allHeaderFields,
