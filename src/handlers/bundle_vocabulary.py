@@ -590,21 +590,6 @@ def get_test_vocabulary_stats():
         return jsonify({"error": "Internal server error"}), 500
 
 
-def manual_daily_job():
-    """
-    Manual trigger for daily test vocabulary job (for testing/admin use)
-    """
-    try:
-        from workers.bundle_vocabulary_worker import add_daily_test_words_for_all_users
-
-        logger.info("Manual trigger of daily test vocabulary job")
-        add_daily_test_words_for_all_users()
-        return jsonify({"success": True, "message": "Daily job completed successfully"}), 200
-    except Exception as e:
-        logger.error(f"Manual daily job failed: {e}", exc_info=True)
-        return jsonify({"error": "Failed to run daily job"}), 500
-
-
 def get_test_config():
     """
     Get test vocabulary configuration mapping languages to available tests.

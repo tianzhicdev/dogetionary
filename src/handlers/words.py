@@ -40,87 +40,6 @@ audio_generation_queue = queue.Queue()
 audio_generation_status = {}
 
 
-def get_next_review_word_v2():
-    """
-    Get next review word with language information for v1.0.10+ clients.
-
-    Returns ONLY overdue words (next_review_date <= NOW, not reviewed in past 24h).
-    When all overdue words are reviewed, returns empty response = "today's tasks complete".
-    """
-    try:
-        user_id = request.args.get('user_id')
-
-        if not user_id:
-            return jsonify({"error": "user_id parameter is required"}), 400
-
-        # Get user's timezone for correct "today" calculation
-        user_timezone = get_user_timezone(user_id)
-
-        # Find word with earliest next review date (due now or overdue)
-        # FIXED: Use user's timezone instead of UTC for "due" check
-        word = db_fetch_one("""
-            SELECT
-                sw.id,
-                sw.word,
-                sw.learning_language,
-                sw.native_language,
-                sw.metadata,
-                sw.created_at,
-                COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') as next_review_date,
-                COALESCE(latest_review.review_count, 0) as review_count,
-                latest_review.last_reviewed_at,
-                CASE
-                    WHEN latest_review.last_reviewed_at IS NOT NULL AND latest_review.next_review_date IS NOT NULL
-                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - latest_review.last_reviewed_at)) / 86400
-                    WHEN latest_review.next_review_date IS NOT NULL
-                    THEN EXTRACT(epoch FROM (latest_review.next_review_date - sw.created_at)) / 86400
-                    ELSE 1
-                END as interval_days
-            FROM saved_words sw
-            LEFT JOIN (
-                SELECT
-                    word_id,
-                    next_review_date,
-                    reviewed_at as last_reviewed_at,
-                    COUNT(*) as review_count,
-                    ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
-                FROM reviews
-                GROUP BY word_id, next_review_date, reviewed_at
-            ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
-            WHERE sw.user_id = %s
-            -- Exclude known words from practice
-            AND (sw.is_known IS NULL OR sw.is_known = FALSE)
-            -- Exclude words reviewed in the past 24 hours
-            AND (latest_review.last_reviewed_at IS NULL OR latest_review.last_reviewed_at <= NOW() - INTERVAL '24 hours')
-            -- ONLY include words that are actually DUE (overdue or due now)
-            -- FIXED: Use user timezone instead of UTC
-            AND COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= (NOW() AT TIME ZONE %s)::date
-            ORDER BY COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') ASC
-            LIMIT 1
-        """, (user_id, user_timezone))
-
-        if not word:
-            return jsonify({
-                "user_id": user_id,
-                "saved_words": [],
-                "count": 0
-            })
-
-        return jsonify({
-            "user_id": user_id,
-            "saved_words": [{
-                "id": word['id'],
-                "word": word['word'],
-                "learning_language": word['learning_language'],
-                "native_language": word['native_language']
-            }],
-            "count": 1
-        })
-
-    except Exception as e:
-        logger.error(f"Error getting next review word (v2, exc_info=True): {str(e)}")
-        return jsonify({"error": f"Failed to get next review word: {str(e)}"}), 500
-
 def audio_generation_worker():
     """Background worker for processing audio generation - simplified"""
     while True:
@@ -856,68 +775,6 @@ def get_word_details(word_id):
             conn.close()
 
 
-def generate_word_definition():
-    """Generate and store a word definition using V4 schema with centralized service
-
-    This endpoint generates word definitions using OpenAI and stores them in the database.
-    Perfect for bulk generating definitions for SEO content.
-
-    Expected JSON payload:
-    {
-        "word": "hello",
-        "learning_language": "en",
-        "native_language": "zh"
-    }
-
-    Returns the generated V4 definition data without audio or images.
-    """
-    try:
-        from services.definition_service import generate_definition_with_llm
-
-        # Get JSON data from request
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No JSON data provided"}), 400
-
-        # Validate required fields
-        required_fields = ['word', 'learning_language', 'native_language']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
-
-        word = data['word'].strip().lower()
-        learning_lang = data['learning_language']
-        native_lang = data['native_language']
-
-        # Validate languages
-        if not validate_language(learning_lang) or not validate_language(native_lang):
-            return jsonify({"error": "Invalid language code"}), 400
-
-        # Use centralized service to generate or retrieve definition
-        definition_data = generate_definition_with_llm(
-            word=word,
-            learning_lang=learning_lang,
-            native_lang=native_lang
-        )
-
-        if not definition_data:
-            return jsonify({"error": "Failed to generate definition"}), 500
-
-        logger.info(f"Successfully generated and stored V4 definition for word: {word} ({learning_lang}->{native_lang})")
-
-        return jsonify({
-            "message": "Definition generated and stored successfully",
-            "word": word,
-            "learning_language": learning_lang,
-            "native_language": native_lang,
-            "definition_data": definition_data
-        }), 201
-
-    except Exception as e:
-        logger.error(f"Error generating word definition: {str(e)}", exc_info=True)
-        return jsonify({"error": f"Failed to generate definition: {str(e)}"}), 500
-
-
 def is_word_saved():
     """Check if a specific word is saved for a user - efficient single-word check
 
@@ -989,52 +846,6 @@ def is_word_saved():
         if conn:
             conn.close()
 
-
-def get_all_words_for_language_pair(learning_lang, native_lang):
-    """Get all words for a specific language pair
-
-    Returns a simple list of words that have definitions in the database
-    for the given learning_language and native_language combination.
-
-    Args:
-        learning_lang: Learning language code (e.g., 'en', 'de', 'zh')
-        native_lang: Native language code (e.g., 'zh', 'en')
-
-    Returns:
-        JSON array of word strings
-    """
-    conn = None
-    cur = None
-    try:
-        # Validate language codes
-        if not validate_language(learning_lang) or not validate_language(native_lang):
-            return jsonify({"error": "Invalid language code"}), 400
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        # Get all distinct words for this language pair
-        cur.execute("""
-            SELECT DISTINCT word
-            FROM definitions
-            WHERE learning_language = %s AND native_language = %s
-            ORDER BY word ASC
-        """, (learning_lang, native_lang))
-
-        words = [row['word'] for row in cur.fetchall()]
-
-        logger.info(f"Retrieved {len(words)} words for {learning_lang}->{native_lang}")
-
-        return jsonify(words)
-
-    except Exception as e:
-        logger.error(f"Error getting all words for {learning_lang}->{native_lang}: {str(e)}", exc_info=True)
-        return jsonify({"error": f"Failed to get words: {str(e)}"}), 500
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 def toggle_exclude_from_practice():
     """

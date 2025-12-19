@@ -396,6 +396,11 @@ notification and cache clear
 
 6. 
 
+
+UI menu button 
+bundle refactoring
+schedule and practice status logic is too complicated, need a human review;
+backend code remove redundant
 badge png
 learning english only, chinese/spanish/...
 demo test
@@ -426,13 +431,13 @@ pipeline + human verification;
   6. then we upload the videos and word_to_video using existing
   backend endpoints
 
-  let's do some planning given this is a big task, there are lots of
-  scripts ready in scripts dir for reference;
-
   requirements: end result is a video_pipeline.sh --backend
   https://kwafy.com/api (or localhost:5001) --staging_dir
   /Volumns/databank/shortfilms (in fact we should use this dir to
   stage videos)
+
+  let's do some planning given this is a big task, there are lots of
+  scripts ready in scripts dir for reference;
 
   videos/mp3/metadata_v3 creation should be idenpotent, meaning if
   they are present we should not make them again;
@@ -441,8 +446,6 @@ pipeline + human verification;
   done;
 
 
-
-debug mode more details;
 
 names
 snapshot
@@ -495,6 +498,7 @@ sound?
 --- future --- 
 
 
+queue returned response not in order; -- prob ok
 6. word family problem
 no word specific lang;
 we should only support one type of learning lange and native language 
@@ -565,3 +569,53 @@ Complete the Analogy -> multi choice -> multi choice "Happy : Ecstatic :: Sad :
   10. 📚 Improve documentation (8-12 hours)
     - Docstrings for all public functions
     - API documentation (Swagger)
+
+
+
+
+    1. Nginx Proxy Buffering (PRIMARY ISSUE) 🚨
+
+  Problem: Your nginx config at nginx/default.conf:40-70 is
+  missing proxy buffering settings. By default, nginx buffers
+   the ENTIRE response from Gunicorn before sending it to the
+   client.
+
+  What's happening:
+  - Nginx default proxy buffers: 8 × 8KB = 64KB total
+  - Your video: 4.5MB (70x larger than buffer!)
+  - Nginx has to:
+    a. Read 8KB from Gunicorn → buffer fills
+    b. Write buffer to disk (slow!)
+    c. Repeat 560 times for 4.5MB
+    d. Only then send to client
+
+  This disk I/O causes the 72-second delay!
+
+  ---
+  2. Flask Response Not Streaming (SECONDARY ISSUE)
+
+  Problem: src/handlers/videos.py:63 passes the entire 4.5MB
+  as a single bytes object:
+
+  return Response(
+      video['video_data'],  # ← 4.5MB loaded into memory at
+  once
+
+  Flask doesn't stream this efficiently - it treats it as one
+   big chunk.
+
+  ---
+  3. Gunicorn Sync Workers (CONTRIBUTES TO PROBLEM)
+
+  Problem: gunicorn.conf.py:
+  worker_class = 'sync'  # Blocking workers
+  workers = 4
+  threads = 2
+  # Total capacity = 8 concurrent requests
+
+  When serving 4.5MB videos that take 72 seconds each:
+  - If 8 concurrent video requests come in → all workers
+  blocked
+  - Request #9 has to wait 72 seconds for a worker to free up
+
+  ---
