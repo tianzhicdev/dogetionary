@@ -4,7 +4,7 @@ import json
 import time
 import os
 import uuid
-from flask import request, g, current_app
+from flask import request, g, current_app, has_request_context
 from logging.handlers import RotatingFileHandler
 from pythonjsonlogger import jsonlogger
 
@@ -23,32 +23,44 @@ class LokiJsonFormatter(jsonlogger.JsonFormatter):
         log_record['file'] = record.pathname
         log_record['line'] = record.lineno
 
-        # Add request context if available
-        if hasattr(g, 'request_id'):
-            log_record['request_id'] = g.request_id
-        if hasattr(g, 'user_id'):
-            log_record['user_id'] = g.user_id
-        if request and request.endpoint:
-            log_record['endpoint'] = request.endpoint
-            log_record['method'] = request.method
-            log_record['path'] = request.path
+        # Add request context if available (only when inside a request context)
+        if has_request_context():
+            if hasattr(g, 'request_id'):
+                log_record['request_id'] = g.request_id
+            if hasattr(g, 'user_id'):
+                log_record['user_id'] = g.user_id
+            if request and request.endpoint:
+                log_record['endpoint'] = request.endpoint
+                log_record['method'] = request.method
+                log_record['path'] = request.path
 
 
 def setup_logging(app):
     """Configure application logging"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
-    app.logger.setLevel(logging.INFO)
-
     # Create JSON formatter for all handlers
     json_formatter = LokiJsonFormatter(
         '%(asctime)s %(name)s %(levelname)s %(pathname)s %(lineno)d %(message)s'
     )
 
-    # Console handler
+    # Configure ROOT logger to use JSON formatting
+    # This ensures ALL child loggers (handlers.*, services.*, etc.) also get JSON formatting
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+
+    # Remove any existing handlers from root logger (from basicConfig)
+    root_logger.handlers.clear()
+
+    # Add JSON console handler to root logger
+    root_console_handler = logging.StreamHandler(sys.stdout)
+    root_console_handler.setFormatter(json_formatter)
+    root_console_handler.setLevel(logging.INFO)
+    root_logger.addHandler(root_console_handler)
+
+    # Configure app.logger specifically
+    app.logger.setLevel(logging.INFO)
+    app.logger.propagate = False  # Don't propagate to root to avoid duplicate logs
+
+    # Console handler for app.logger
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(json_formatter)
     app.logger.addHandler(console_handler)
@@ -65,29 +77,48 @@ def setup_logging(app):
             f.write('test\n')
         os.remove(test_file)
 
-        # Add rotating file handler for ALL logs (INFO+)
-        file_handler = RotatingFileHandler(
+        # Add rotating file handler for ALL logs (INFO+) to ROOT logger
+        # This captures logs from ALL child loggers (handlers.*, services.*, etc.)
+        root_file_handler = RotatingFileHandler(
             f'{logs_dir}/app.log',
             maxBytes=100*1024*1024,  # 100MB per file
             backupCount=50  # 50 backups × 100MB = 5GB total
         )
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(json_formatter)
-        app.logger.addHandler(file_handler)
+        root_file_handler.setLevel(logging.INFO)
+        root_file_handler.setFormatter(json_formatter)
+        root_logger.addHandler(root_file_handler)
 
-        # Add separate rotating file handler for ERRORS ONLY
-        error_handler = RotatingFileHandler(
+        # Add separate rotating file handler for ERRORS ONLY to ROOT logger
+        # This captures ERROR logs from ALL child loggers
+        root_error_handler = RotatingFileHandler(
             f'{logs_dir}/error.log',
             maxBytes=50*1024*1024,  # 50MB per file
             backupCount=20  # 20 backups × 50MB = 1GB total
         )
-        error_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
-        error_handler.setFormatter(json_formatter)
-        app.logger.addHandler(error_handler)
+        root_error_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
+        root_error_handler.setFormatter(json_formatter)
+        root_logger.addHandler(root_error_handler)
+
+        # Also add file handlers to app.logger (for app-specific logs)
+        app_file_handler = RotatingFileHandler(
+            f'{logs_dir}/app.log',
+            maxBytes=100*1024*1024,
+            backupCount=50
+        )
+        app_file_handler.setLevel(logging.INFO)
+        app_file_handler.setFormatter(json_formatter)
+        app.logger.addHandler(app_file_handler)
+
+        app_error_handler = RotatingFileHandler(
+            f'{logs_dir}/error.log',
+            maxBytes=50*1024*1024,
+            backupCount=20
+        )
+        app_error_handler.setLevel(logging.ERROR)
+        app_error_handler.setFormatter(json_formatter)
+        app.logger.addHandler(app_error_handler)
 
         # Force a log entry to test file handler
-        app.logger.info("File handler test - this should appear in app.log")
-
         app.logger.info("=== DOGETIONARY LOGGING INITIALIZED (Console + File + Error File) ===")
     except Exception as e:
         app.logger.info(f"=== DOGETIONARY LOGGING INITIALIZED (Console only - File error: {e}) ===")

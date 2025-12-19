@@ -12,6 +12,13 @@ struct MultipleChoiceQuestionView: View {
     let onImmediateFeedback: ((String) -> Void)?
     let onAnswer: (String) -> Void
 
+    // MARK: - Layout Constants (adjust these to tune padding/margins)
+    private let questionHorizontalPadding: CGFloat = 16  // Question text horizontal padding
+    private let questionVerticalPadding: CGFloat = 8     // Question text vertical padding
+    private let optionsHorizontalPadding: CGFloat = 16   // Options horizontal padding
+    private let containerVerticalPadding: CGFloat = 32   // Outer container vertical padding
+    private let feedbackDelay: TimeInterval = 0          // Delay before showing definition (seconds)
+
     var body: some View {
         VStack(spacing: 24) {
             // Question Text with clickable words
@@ -21,21 +28,22 @@ struct MultipleChoiceQuestionView: View {
                 foregroundColor: AppTheme.smallTitleText,
                 alignment: .center
             )
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, questionHorizontalPadding)
+            .padding(.vertical, questionVerticalPadding)
 
             // Options
             MultipleChoiceOptionsView(
                 options: question.options ?? [],
                 correctAnswer: question.correct_answer,
-                feedbackDelay: 1.2,
+                feedbackDelay: feedbackDelay,
                 optionButtonStyle: .textOnly,
                 onImmediateFeedback: onImmediateFeedback,
                 onAnswer: onAnswer
             )
-            .padding(.horizontal)
+            .padding(.horizontal, optionsHorizontalPadding)
         }
-        .padding(.vertical, 32)
+        .padding(.vertical, containerVerticalPadding)
     }
 }
 

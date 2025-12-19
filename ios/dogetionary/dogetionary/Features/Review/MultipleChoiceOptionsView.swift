@@ -36,34 +36,18 @@ struct MultipleChoiceOptionsView: View {
                 )
                 .disabled(showFeedback)
             }
-
-            // Submit button (only show when answer is selected but not yet submitted)
-            if selectedAnswer != nil && !showFeedback {
-                Button(action: {
-                    submitAnswer()
-                }) {
-                    Text("Submit Answer")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(AppTheme.selectableTint)
-                        )
-                }
-                .padding(.top, 8)
-            }
         }
     }
 
     // MARK: - Helper Methods
 
     private func handleOptionTap(_ answerId: String) {
-        // Just select the option, don't submit yet
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            selectedAnswer = answerId
-        }
+        // Don't allow changing answer after submission
+        guard !showFeedback else { return }
+
+        // Select and immediately submit
+        selectedAnswer = answerId
+        submitAnswer()
     }
 
     private func submitAnswer() {

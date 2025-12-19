@@ -1,0 +1,10 @@
+# Virtual environment for load testing
+.venv/
+
+# Load test reports
+load_test_report_*.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

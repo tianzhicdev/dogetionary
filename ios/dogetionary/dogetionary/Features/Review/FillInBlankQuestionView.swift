@@ -12,6 +12,12 @@ struct FillInBlankQuestionView: View {
     let onImmediateFeedback: ((String) -> Void)?
     let onAnswer: (String) -> Void
 
+    // MARK: - Layout Constants (adjust these to tune padding/margins)
+    private let sentencePadding: CGFloat = 16           // Sentence text padding
+    private let optionsHorizontalPadding: CGFloat = 16  // Options horizontal padding
+    private let containerVerticalPadding: CGFloat = 32  // Outer container vertical padding
+    private let feedbackDelay: TimeInterval = 0         // Delay before showing definition (seconds)
+
     var body: some View {
         VStack(spacing: 24) {
             // Sentence with blank - enhanced with colorful gradient background
@@ -20,24 +26,25 @@ struct FillInBlankQuestionView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .foregroundStyle(AppTheme.bigTitleText)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding()
+                    .padding(sentencePadding)
             }
 
             // Options
             MultipleChoiceOptionsView(
                 options: question.options ?? [],
                 correctAnswer: question.correct_answer,
-                feedbackDelay: 1.2,
+                feedbackDelay: feedbackDelay,
                 optionButtonStyle: .textOnly,
                 onImmediateFeedback: onImmediateFeedback,
                 onAnswer: onAnswer
             )
-            .padding(.horizontal)
+            .padding(.horizontal, optionsHorizontalPadding)
         }
-        .padding(.vertical, 32)
+        .padding(.vertical, containerVerticalPadding)
     }
 }
 

@@ -12,10 +12,11 @@ import Combine
 /// Simple looping video player with tap-to-pause
 struct LoopingVideoPlayer: View {
     let player: AVPlayer
+    let videoId: Int  // Used for SwiftUI identity to detect video changes
     @State private var isPlaying = true
 
     var body: some View {
-        VideoPlayerView(player: player)
+        VideoPlayerView(player: player, videoId: videoId)
             .onTapGesture {
                 togglePlayPause()
             }
@@ -42,19 +43,28 @@ struct LoopingVideoPlayer: View {
 /// UIViewRepresentable wrapper for AVPlayerLayer
 private struct VideoPlayerView: UIViewRepresentable {
     let player: AVPlayer
+    let videoId: Int  // Forces view recreation when video changes
 
     func makeUIView(context: Context) -> PlayerUIView {
         let view = PlayerUIView()
         view.playerLayer.player = player
 
-        // Setup looping observer
+        // Setup looping observer for this video
         context.coordinator.setupLoopingObserver(for: player)
+
+        print("LoopingVideoPlayer: Created view for video \(videoId)")
 
         return view
     }
 
     func updateUIView(_ uiView: PlayerUIView, context: Context) {
+        // Update player reference
         uiView.playerLayer.player = player
+
+        // Re-setup loop observer when player changes
+        context.coordinator.setupLoopingObserver(for: player)
+
+        print("LoopingVideoPlayer: Updated view for video \(videoId)")
     }
 
     func makeCoordinator() -> Coordinator {

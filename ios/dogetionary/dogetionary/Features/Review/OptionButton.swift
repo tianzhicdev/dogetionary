@@ -90,17 +90,25 @@ struct OptionButton: View {
                     text: option.text,
                     font: .headline.weight(.semibold),
                     foregroundColor: AppTheme.bodyText,
-                    alignment: .center
+                    alignment: .leading
                 )
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            // Checkbox button for selection
+            // Square checkbox button for selection
             Button(action: onTap) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? AppTheme.selectableTint : AppTheme.smallTitleText.opacity(0.3))
-                    .font(.title2)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(AppTheme.selectableTint, lineWidth: 2)
+                        .frame(width: 24, height: 24)
+
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(AppTheme.selectableTint)
+                            .frame(width: 16, height: 16)
+                    }
+                }
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(showFeedback)

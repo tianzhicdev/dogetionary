@@ -656,6 +656,9 @@ class VideoService: ObservableObject {
                     fileSize: fileSize
                 ))
 
+                // Pre-create AVPlayer for this video
+                AVPlayerManager.shared.createPlayer(videoId: videoId, url: cacheURL)
+
                 subject.send(cacheURL)
                 subject.send(completion: .finished)
 

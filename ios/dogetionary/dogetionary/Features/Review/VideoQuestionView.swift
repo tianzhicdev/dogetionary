@@ -13,15 +13,25 @@ struct VideoQuestionView: View {
     let question: ReviewQuestion
     let onAnswer: (String) -> Void
 
+    // MARK: - Layout Constants (adjust these to tune padding/margins)
+    private let videoHeight: CGFloat = 250                // Video player height
+    private let transcriptInnerPadding: CGFloat = 0      // Transcript text padding
+    private let transcriptHorizontalPadding: CGFloat = 0 // Transcript container horizontal padding
+    private let questionHorizontalPadding: CGFloat = 0   // Question text horizontal padding
+    private let questionTopPadding: CGFloat = 0           // Question text top padding
+    private let optionsHorizontalPadding: CGFloat = 0    // Options horizontal padding
+    private let outerPadding: CGFloat = 8                // Outer container padding
+    private let vStackSpacing: CGFloat = 8                // Spacing between elements in VStack
+    private let feedbackDelay: TimeInterval = 0           // Delay before showing definition (seconds)
+
+    @State private var player: AVPlayer?
     @State private var isLoading = true
     @State private var loadError: String?
     @State private var showWord = false
     @State private var cancellables = Set<AnyCancellable>()
 
-    private let playerManager = AVPlayerManager.shared
-
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: vStackSpacing) {
 
             // Video player or loading state
             ZStack {
@@ -33,7 +43,7 @@ struct VideoQuestionView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    .frame(height: 250)
+                    .frame(height: videoHeight)
                 } else if let error = loadError {
                     VStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle")
@@ -46,20 +56,20 @@ struct VideoQuestionView: View {
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
-                    .frame(height: 250)
+                    .frame(height: videoHeight)
                     .padding()
-                } else {
-                    LoopingVideoPlayer(player: playerManager.player)
-                        .frame(height: 250)
+                } else if let player = player, let videoId = question.video_id {
+                    LoopingVideoPlayer(player: player, videoId: videoId)
+                        .frame(height: videoHeight)
                         .cornerRadius(12)
                         .shadow(radius: 5)
+                        .overlay(alignment: .bottomTrailing) {
+                            // Video metadata overlaid on bottom-right corner
+                            if let metadata = question.video_metadata {
+                                VideoMetadataView(metadata: metadata)
+                            }
+                        }
                 }
-            }
-
-            // Video metadata (if available)
-            if let metadata = question.video_metadata {
-                VideoMetadataView(metadata: metadata)
-//                    .padding(.top, 8)
             }
 
             // Audio transcript display (if available)
@@ -69,9 +79,9 @@ struct VideoQuestionView: View {
                     HighlightedTranscriptText(transcript: audio_transcript, word: question.word)
                         .font(.body)
                         .foregroundColor(AppTheme.bodyText)
-                        .padding(12)
+                        .padding(transcriptInnerPadding)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, transcriptHorizontalPadding)
             }
 
             // Question text
@@ -79,36 +89,36 @@ struct VideoQuestionView: View {
                 .font(.title3)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .foregroundColor(AppTheme.smallTitleText)
-                .padding(.horizontal)
-                .padding(.top, 8)
+                .padding(.horizontal, questionHorizontalPadding)
+                .padding(.top, questionTopPadding)
 
             // Multiple choice options
             MultipleChoiceOptionsView(
                 options: question.options ?? [],
                 correctAnswer: question.correct_answer,
-                feedbackDelay: 0.5,
+                feedbackDelay: feedbackDelay,
                 optionButtonStyle: .textOnly,
                 onImmediateFeedback: { answerId in
                     // Show word after answering
                     showWord = true
                     // Pause video after selection
-                    playerManager.pause()
+                    player?.pause()
                 },
                 onAnswer: onAnswer
             )
-            .padding(.horizontal)
+            .padding(.horizontal, optionsHorizontalPadding)
 
             Spacer()
         }
-        .padding()
+        .padding(outerPadding)
         .onAppear {
             loadVideo()
         }
         .onDisappear {
-            // Pause and reset player when leaving
-            playerManager.pause()
-            playerManager.reset()
+            // Just pause when leaving (keep player in pool for reuse)
+            player?.pause()
         }
     }
 
@@ -121,35 +131,52 @@ struct VideoQuestionView: View {
             return
         }
 
-        // Check video download state
+        // STEP 1: Check if player already pre-created (instant!)
+        if let preCreatedPlayer = AVPlayerManager.shared.getPlayer(videoId: videoId) {
+            print("✓ VideoQuestionView: Using pre-created player for video \(videoId)")
+            player = preCreatedPlayer
+            isLoading = false
+            return
+        }
+
+        // STEP 2: Player not ready yet, check video download state
         let state = VideoService.shared.getDownloadState(videoId: videoId)
 
         switch state {
         case .cached(let url, _, _):
-            // Video already cached - load it into the shared player
-            print("✓ VideoQuestionView: Video \(videoId) cached, loading into player")
-            playerManager.loadVideo(url: url)
-            isLoading = false
+            // Video cached but player not created yet - create now
+            print("✓ VideoQuestionView: Video \(videoId) cached, creating player")
+            createPlayerNow(videoId: videoId, url: url)
 
         case .downloading(let progress, _, _, _):
             // Video downloading - wait for it
             print("VideoQuestionView: Video \(videoId) downloading (\(Int(progress * 100))%), waiting...")
-            // fetchVideo will wait for download to complete
-            fetchAndLoadVideo(videoId: videoId)
+            waitForVideoAndCreatePlayer(videoId: videoId)
 
         case .failed(let error, let retryCount, _):
             // Download failed - try to fetch (will retry)
             print("VideoQuestionView: Video \(videoId) download failed (\(retryCount) retries): \(error)")
-            fetchAndLoadVideo(videoId: videoId)
+            waitForVideoAndCreatePlayer(videoId: videoId)
 
         case .notStarted:
             // Not downloaded yet - trigger download
             print("VideoQuestionView: Video \(videoId) not started, triggering download")
-            fetchAndLoadVideo(videoId: videoId)
+            waitForVideoAndCreatePlayer(videoId: videoId)
         }
     }
 
-    private func fetchAndLoadVideo(videoId: Int) {
+    private func createPlayerNow(videoId: Int, url: URL) {
+        let newPlayer = AVPlayer(url: url)
+        newPlayer.isMuted = false
+        newPlayer.automaticallyWaitsToMinimizeStalling = false
+
+        player = newPlayer
+        isLoading = false
+
+        print("✓ VideoQuestionView: Created player on-demand for video \(videoId)")
+    }
+
+    private func waitForVideoAndCreatePlayer(videoId: Int) {
         VideoService.shared.fetchVideo(videoId: videoId)
             .receive(on: DispatchQueue.main)
             .sink(
@@ -161,9 +188,8 @@ struct VideoQuestionView: View {
                     }
                 },
                 receiveValue: { [self] url in
-                    print("✓ VideoQuestionView: Video \(videoId) downloaded, loading into player")
-                    playerManager.loadVideo(url: url)
-                    isLoading = false
+                    print("✓ VideoQuestionView: Video \(videoId) downloaded, creating player")
+                    createPlayerNow(videoId: videoId, url: url)
                 }
             )
             .store(in: &cancellables)

@@ -24,13 +24,13 @@ struct VideoMetadataView: View {
                     .foregroundColor(AppTheme.bodyText)
 
                 if let year = metadata.movie_year {
-                    Text("(\(String(year)))")
+                    Text(String(year))
                         .font(.subheadline)
                         .foregroundColor(AppTheme.smallTitleText)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
     }
 }

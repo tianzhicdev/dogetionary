@@ -42,6 +42,12 @@ class QuestionQueueManager: ObservableObject {
         queuedWords.remove(question.word)
         logger.info("Popped question: \(question.word), queue size: \(self.questionQueue.count)")
 
+        // Cleanup player for video questions (after user has finished with it)
+        if question.question.question_type == "video_mc",
+           let videoId = question.question.video_id {
+            AVPlayerManager.shared.removePlayer(videoId: videoId)
+        }
+
         // Trigger background refill if needed
         refillIfNeeded()
 
@@ -116,6 +122,10 @@ class QuestionQueueManager: ObservableObject {
         hasMore = true
         totalAvailable = 0
         lastError = nil
+
+        // Clear all cached players
+        AVPlayerManager.shared.clearAll()
+
         logger.info("Queue cleared")
     }
 

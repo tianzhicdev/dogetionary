@@ -1,0 +1,15 @@
+# Load Testing Dependencies
+# Install with: pip install -r load_test_requirements.txt
+
+# Locust - Modern load testing framework with web UI
+locust>=2.15.0
+
+# Requests - HTTP library for simple benchmark mode
+requests>=2.31.0
+
+# Fix for zope.event dependency issue
+zope.event>=5.0
+
+# Optional: For enhanced reporting
+# matplotlib>=3.7.0
+# pandas>=2.0.0

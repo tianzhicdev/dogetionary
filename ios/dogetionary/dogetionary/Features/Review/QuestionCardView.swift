@@ -19,6 +19,12 @@ struct QuestionCardView: View {
     let onAnswer: (Bool, String) -> Void
     let onSwipeComplete: () -> Void
 
+    // MARK: - Layout Constants (adjust these to tune padding/margins)
+    private let contentVerticalPadding: CGFloat = 0      // Inner content vertical padding
+    private let containerHorizontalPadding: CGFloat = 0  // Outer container horizontal padding
+    private let containerVerticalPadding: CGFloat = 0     // Outer container vertical padding
+    private let definitionHorizontalPadding: CGFloat = 8 // Definition card horizontal padding
+
     @State private var dragOffset: CGFloat = 0
     @State private var showSwipeHint = false
     @State private var isExcluded = false
@@ -60,7 +66,7 @@ struct QuestionCardView: View {
                         // Definition card
                         if let def = convertedDefinition {
                             DefinitionCard(definition: def)
-                                .padding(.horizontal)
+                                .padding(.horizontal, definitionHorizontalPadding)
                         }
 
                         // Exclude from practice button
@@ -95,13 +101,13 @@ struct QuestionCardView: View {
                 }
                 .frame(height: 1)
             }
-            .padding(.vertical, 20)
+            .padding(.vertical, contentVerticalPadding)
         }
         .scrollIndicators(.hidden)
         .coordinateSpace(name: "scrollView")
         .background(Color.clear)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, containerHorizontalPadding)
+        .padding(.vertical, containerVerticalPadding)
         .offset(y: dragOffset)
         .onPreferenceChange(BottomReachedPreferenceKey.self) { maxY in
             // Detect when scrolled to bottom
