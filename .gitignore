@@ -221,3 +221,4 @@ logs/
 
 # TODO execution logs
 todo_logs/
+docker-compose.override.yml
