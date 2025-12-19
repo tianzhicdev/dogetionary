@@ -30,19 +30,28 @@ class BaseNetworkService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
+        // Generate client-side request ID for tracing
+        let requestId = UUID().uuidString
+        request.setValue(requestId, forHTTPHeaderField: "X-Request-ID")
+
         if let body = body {
             request.httpBody = body
         }
 
         // Log request details to console
-        logger.info("REQUEST: \(method) \(url.absoluteString)")
+        logger.info("REQUEST: \(method) \(url.absoluteString) [Request-ID: \(requestId)]")
         if let body = body, let bodyString = String(data: body, encoding: .utf8) {
             logger.info("REQUEST BODY: \(bodyString)")
         }
 
         // Log request to NetworkLogger for debug UI
         let startTime = Date()
-        let logId = NetworkLogger.shared.logRequest(url: url.absoluteString, method: method, body: body)
+        let logId = NetworkLogger.shared.logRequest(
+            url: url.absoluteString,
+            method: method,
+            body: body,
+            requestId: requestId
+        )
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             // Log response to NetworkLogger

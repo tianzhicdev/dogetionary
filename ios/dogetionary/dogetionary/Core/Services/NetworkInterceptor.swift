@@ -62,11 +62,21 @@ class NetworkInterceptor: URLProtocol {
 
         let startTime = Date()
 
+        // Generate or extract request ID
+        let requestId: String
+        if let existingId = request.value(forHTTPHeaderField: "X-Request-ID") {
+            requestId = existingId
+        } else {
+            requestId = UUID().uuidString
+            URLProtocol.setProperty(requestId, forKey: "X-Request-ID", in: mutableRequest)
+        }
+
         // Log request to NetworkLogger
         let logId = NetworkLogger.shared.logRequest(
             url: request.url?.absoluteString ?? "",
             method: request.httpMethod ?? "GET",
-            body: request.httpBody
+            body: request.httpBody,
+            requestId: requestId
         )
 
         // Store metadata for this request

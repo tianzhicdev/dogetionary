@@ -376,6 +376,33 @@ struct NetworkCallRow: View {
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
             VStack(alignment: .leading, spacing: 8) {
+                // Request ID and UTC Timestamp
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Request ID:")
+                            .font(.caption2.bold())
+                            .foregroundColor(.gray)
+                        Text(call.requestId)
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.blue)
+                            .textSelection(.enabled)
+                    }
+
+                    HStack(spacing: 4) {
+                        Text("UTC Time:")
+                            .font(.caption2.bold())
+                            .foregroundColor(.gray)
+                        Text(formatUTCTimestamp(call.timestamp))
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.orange)
+                            .textSelection(.enabled)
+                    }
+                }
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Color(.systemGray5))
+                .cornerRadius(4)
+
                 // Request details
                 VStack(alignment: .leading, spacing: 4) {
                     Text("REQUEST")
@@ -469,6 +496,15 @@ struct NetworkCallRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// Format timestamp as UTC with milliseconds
+    /// Format: "2025-12-18 19:45:23.456 UTC"
+    private func formatUTCTimestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        return formatter.string(from: date) + " UTC"
     }
 }
 

@@ -25,6 +25,7 @@ class NetworkLogger: ObservableObject {
         let url: String
         let method: String
         let requestBody: String?
+        let requestId: String  // Client-generated request ID for backend correlation
         var responseStatus: Int?
         var responseBody: String?
         var responseHeaders: [String: String]?
@@ -65,7 +66,7 @@ class NetworkLogger: ObservableObject {
 
     /// Log the start of a network request
     /// Returns a UUID to correlate with the response
-    func logRequest(url: String, method: String, body: Data?) -> UUID {
+    func logRequest(url: String, method: String, body: Data?, requestId: String) -> UUID {
         guard DebugConfig.isDeveloperModeEnabled else {
             // Skip logging if debug mode is disabled
             return UUID()
@@ -91,6 +92,7 @@ class NetworkLogger: ObservableObject {
             url: url,
             method: method,
             requestBody: bodyString,
+            requestId: requestId,
             responseStatus: nil,
             responseBody: nil,
             responseHeaders: nil,

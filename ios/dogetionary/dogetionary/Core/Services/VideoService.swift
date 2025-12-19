@@ -526,10 +526,12 @@ class VideoService: ObservableObject {
         print("   Base URL: \(baseURL)")
 
         // Log request to NetworkLogger (manual logging for downloadTask)
+        let requestId = UUID().uuidString
         let logId = NetworkLogger.shared.logRequest(
             url: videoURL.absoluteString,
             method: "GET",
-            body: nil
+            body: nil,
+            requestId: requestId
         )
 
         // Create download task with custom session (has delegate for progress)

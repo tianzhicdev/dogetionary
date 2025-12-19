@@ -128,7 +128,10 @@ def setup_logging(app):
 def log_request_info():
     """Log all incoming requests with full details"""
     g.start_time = time.time()
-    g.request_id = str(uuid.uuid4())
+
+    # Use client-provided request ID if available (for request tracing),
+    # otherwise generate a new one on the server
+    g.request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
 
     # Log request details
     request_data = {
