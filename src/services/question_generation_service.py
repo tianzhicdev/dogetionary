@@ -500,13 +500,24 @@ def call_openai_for_question(prompt: str) -> Dict:
         if not content:
             raise Exception("LLM completion returned empty content")
 
-        question_data = json.loads(content)
+        # Parse JSON - if this fails, let it raise so fallback can catch it
+        try:
+            question_data = json.loads(content)
+        except json.JSONDecodeError as json_err:
+            # Log full content when JSON parsing fails for debugging
+            logger.error(
+                f"JSONDecodeError: {json_err.msg} at line {json_err.lineno} col {json_err.colno} (char {json_err.pos}). "
+                f"Full LLM response:\n{content}",
+                exc_info=True
+            )
+            # Re-raise to let fallback mechanism try next model
+            raise
 
         logger.info("Successfully generated question with LLM")
         return question_data
 
     except Exception as e:
-        logger.error(f"Error calling LLM API: {e}", exc_info=True)
+        logger.error(f"Error in question generation: {e}", exc_info=True)
         raise
 
 

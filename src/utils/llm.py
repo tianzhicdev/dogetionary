@@ -5,6 +5,7 @@ Centralized utility for making LLM completion API calls.
 Supports multiple providers: OpenAI (gpt-5-nano, gpt-4o-mini) and Groq (llama-4-scout).
 """
 
+import json
 import logging
 import os
 import time
@@ -148,7 +149,7 @@ def llm_completion_with_fallback(
 
     for i, model_name in enumerate(chain):
         try:
-            logger.debug(f"Attempting model {i+1}/{len(chain)}: {model_name}")
+            logger.info(f"Attempting model {i+1}/{len(chain)}: {model_name} for use_case={use_case}")
 
             result = llm_completion(
                 messages=messages,
@@ -163,13 +164,24 @@ def llm_completion_with_fallback(
 
             if result:
                 if i > 0:
-                    logger.info(f"Fallback successful: {model_name} (level {i})")
+                    logger.warning(f"Fallback to model {model_name} succeeded (fallback level {i}) for use_case={use_case}")
+                else:
+                    logger.info(f"Primary model {model_name} succeeded for use_case={use_case}")
                 return result
             else:
-                logger.warning(f"Model {model_name} returned None, trying next in chain")
+                logger.warning(f"Model {model_name} returned None, trying next in chain (attempt {i+1}/{len(chain)})")
 
         except Exception as e:
-            logger.warning(f"Model {model_name} failed with {type(e).__name__}: {e}, trying next in chain")
+            # Catch ANY exception and try next model
+            # Log everything for debugging
+            error_type = type(e).__name__
+            error_msg = str(e)
+
+            logger.warning(
+                f"Model {model_name} failed with {error_type}: {error_msg}. "
+                f"Trying next model in chain (attempt {i+1}/{len(chain)})",
+                exc_info=True  # Include full stack trace
+            )
             continue
 
     # All models failed
@@ -293,6 +305,13 @@ def llm_completion(
 
         # Extract content
         content = response.choices[0].message.content
+
+        # Log which model was actually used and response details
+        logger.info(f"LLM response received: provider={provider}, model={model_name}, use_case={use_case}, content_length={len(content) if content else 0}, duration={duration:.2f}s")
+
+        # Log content preview for debugging (especially for JSON responses)
+        if response_format is not None:
+            logger.info(f"LLM content preview (first 500 chars): {content[:500] if content else 'EMPTY'}...")
 
         if not content:
             logger.error(f"{provider.upper()} returned empty content. Model: {model_name}, Response: {response}", exc_info=True)
