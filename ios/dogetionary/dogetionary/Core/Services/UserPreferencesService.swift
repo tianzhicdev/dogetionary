@@ -24,11 +24,9 @@ class UserPreferencesService: BaseNetworkService {
 
         logger.info("Fetching user preferences for: \(userID)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let headers = ["Accept": "application/json"]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "GET", headers: headers) { data, response, error in
             if let error = error {
                 self.logger.error("Network error fetching user preferences: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -61,7 +59,9 @@ class UserPreferencesService: BaseNetworkService {
                 self.logger.error("Failed to decode user preferences response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, timezone: String? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
@@ -99,13 +99,12 @@ class UserPreferencesService: BaseNetworkService {
             return
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = jsonData
+        let headers = [
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        ]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: jsonData) { data, response, error in
             if let error = error {
                 self.logger.error("Network error updating user preferences: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -138,7 +137,9 @@ class UserPreferencesService: BaseNetworkService {
                 self.logger.error("Failed to decode user preferences update response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func submitFeedback(feedback: String, completion: @escaping (Result<Bool, Error>) -> Void) {
@@ -149,24 +150,23 @@ class UserPreferencesService: BaseNetworkService {
             return
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let body: [String: Any] = [
             "user_id": userID,
             "feedback": feedback
         ]
 
+        let jsonData: Data
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+            jsonData = try JSONSerialization.data(withJSONObject: body, options: [])
         } catch {
             logger.error("Failed to encode feedback request: \(error)")
             completion(.failure(error))
             return
         }
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let headers = ["Content-Type": "application/json"]
+
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: jsonData) { data, response, error in
             if let error = error {
                 self.logger.error("Network error submitting feedback: \(error)")
                 completion(.failure(error))
@@ -186,6 +186,8 @@ class UserPreferencesService: BaseNetworkService {
                 self.logger.error("Failed to submit feedback. Status: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 }

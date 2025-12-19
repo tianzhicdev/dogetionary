@@ -100,7 +100,8 @@ def get_practice_status():
                 SELECT
                     toefl_beginner_enabled, toefl_intermediate_enabled, toefl_advanced_enabled,
                     ielts_beginner_enabled, ielts_intermediate_enabled, ielts_advanced_enabled,
-                    demo_enabled, target_end_date
+                    demo_enabled, business_english_enabled, everyday_english_enabled,
+                    target_end_date
                 FROM user_preferences
                 WHERE user_id = %s
             """, (user_id,))
@@ -110,10 +111,19 @@ def get_practice_status():
                 test_type = get_active_test_type(prefs)
                 target_end_date = prefs.get('target_end_date')
 
-                logger.info(f"Practice status check: user_id={user_id}, test_type={test_type}, target_end_date={target_end_date}, today={today}")
+                # Check if any test prep is enabled (matches schedule.py logic)
+                test_prep_enabled = (
+                    prefs.get('toefl_beginner_enabled') or prefs.get('toefl_intermediate_enabled') or prefs.get('toefl_advanced_enabled') or
+                    prefs.get('ielts_beginner_enabled') or prefs.get('ielts_intermediate_enabled') or prefs.get('ielts_advanced_enabled') or
+                    prefs.get('demo_enabled') or prefs.get('business_english_enabled') or prefs.get('everyday_english_enabled')
+                )
+
+                logger.info(f"Practice status check: user_id={user_id}, test_type={test_type}, test_prep_enabled={test_prep_enabled}, target_end_date={target_end_date}, today={today}")
+                logger.info(f"Condition check: test_prep_enabled={test_prep_enabled}, target_end_date={bool(target_end_date)}, target_end_date > today={(target_end_date > today) if target_end_date else 'N/A'}")
 
                 # If user has test prep enabled, calculate schedule on-the-fly
-                if test_type and target_end_date and target_end_date > today:
+                # Match schedule.py logic: check test_prep_enabled instead of test_type
+                if test_prep_enabled and target_end_date and target_end_date > today:
                     from services.schedule_service import fetch_schedule_data, calc_schedule, get_schedule
 
                     # Fetch all data needed for calculation
@@ -145,7 +155,7 @@ def get_practice_status():
 
         except Exception as e:
             # If schedule calculation fails, default to 0
-            logger.debug(f"Could not calculate schedule: {e}")
+            logger.error(f"Could not calculate schedule: {e}", exc_info=True)
 
         # Get not-due-yet count (reviewed before, last review > 24h ago, not due yet)
         # FIXED: Use user timezone for "not due yet" check

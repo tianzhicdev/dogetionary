@@ -30,7 +30,7 @@ class ReviewService: BaseNetworkService {
 
         logger.info("Fetching due counts for user: \(userID)")
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url) { data, response, error in
             if let error = error {
                 self.logger.error("Network error getting due counts: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -63,7 +63,9 @@ class ReviewService: BaseNetworkService {
                 self.logger.error("Failed to decode due counts response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     // MARK: - Review Submission
@@ -78,10 +80,6 @@ class ReviewService: BaseNetworkService {
 
         logger.info("Submitting review - Word: \(word), Response: \(response), Question Type: \(questionType ?? "recognition"), User: \(userID)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let reviewRequest = EnhancedReviewSubmissionRequest(
             user_id: userID,
             word: word,
@@ -91,15 +89,18 @@ class ReviewService: BaseNetworkService {
             question_type: questionType
         )
 
+        let body: Data
         do {
-            request.httpBody = try JSONEncoder().encode(reviewRequest)
+            body = try JSONEncoder().encode(reviewRequest)
         } catch {
             logger.error("Failed to encode review request: \(error.localizedDescription)")
             completion(.failure(DictionaryError.decodingError(error)))
             return
         }
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let headers = ["Content-Type": "application/json"]
+
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: body) { data, response, error in
             if let error = error {
                 self.logger.error("Network error submitting review: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -132,7 +133,9 @@ class ReviewService: BaseNetworkService {
                 self.logger.error("Failed to decode review submission response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     // MARK: - Batch Reviews
@@ -154,7 +157,7 @@ class ReviewService: BaseNetworkService {
 
         logger.info("Fetching batch review words: count=\(count), excluding=\(excludeWords.count) words")
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url) { data, response, error in
             if let error = error {
                 self.logger.error("Network error getting batch reviews: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -190,7 +193,9 @@ class ReviewService: BaseNetworkService {
                 }
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     // MARK: - Review Stats
@@ -203,7 +208,7 @@ class ReviewService: BaseNetworkService {
             return
         }
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url) { data, response, error in
             if let error = error {
                 self.logger.error("Network error fetching review progress stats: \(error)")
                 completion(.failure(error))
@@ -224,7 +229,9 @@ class ReviewService: BaseNetworkService {
                 self.logger.error("Failed to decode review progress stats: \(error)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func getPracticeStatus(completion: @escaping (Result<PracticeStatusResponse, Error>) -> Void) {

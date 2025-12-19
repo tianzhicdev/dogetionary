@@ -33,12 +33,12 @@ class WordService: BaseNetworkService {
 
         logger.info("Searching word: \(word)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let headers = [
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        ]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "GET", headers: headers) { data, response, error in
             if let error = error {
                 self.logger.error("Network error: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -76,7 +76,9 @@ class WordService: BaseNetworkService {
                 self.logger.error("Failed to decode response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     // MARK: - Saved Words Management
@@ -91,10 +93,6 @@ class WordService: BaseNetworkService {
 
         logger.info("Saving word: \(word) for user: \(userID)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let requestBody = [
             "word": word,
             "user_id": userID,
@@ -103,15 +101,18 @@ class WordService: BaseNetworkService {
             "metadata": ["saved_at": Date().timeIntervalSince1970]
         ] as [String : Any]
 
+        let jsonData: Data
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            jsonData = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
             logger.error("Failed to encode save request: \(error.localizedDescription)")
             completion(.failure(DictionaryError.decodingError(error)))
             return
         }
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let headers = ["Content-Type": "application/json"]
+
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: jsonData) { data, response, error in
             if let error = error {
                 self.logger.error("Network error saving word: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -143,7 +144,9 @@ class WordService: BaseNetworkService {
                 self.logger.error("Server error saving word: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func getSavedWords(dueOnly: Bool = false, completion: @escaping (Result<[SavedWord], Error>) -> Void) {
@@ -157,11 +160,9 @@ class WordService: BaseNetworkService {
 
         logger.info("Fetching saved words for user: \(userID), dueOnly: \(dueOnly)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let headers = ["Accept": "application/json"]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "GET", headers: headers) { data, response, error in
             if let error = error {
                 self.logger.error("Network error fetching saved words: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -200,7 +201,9 @@ class WordService: BaseNetworkService {
                 self.logger.error("Failed to decode saved words response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func isWordSaved(word: String, learningLanguage: String, nativeLanguage: String, completion: @escaping (Result<(isSaved: Bool, savedWordId: Int?), Error>) -> Void) {
@@ -212,7 +215,7 @@ class WordService: BaseNetworkService {
             return
         }
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
@@ -234,7 +237,9 @@ class WordService: BaseNetworkService {
             } catch {
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func unsaveWord(wordID: Int, completion: @escaping (Result<Bool, Error>) -> Void) {
@@ -247,24 +252,23 @@ class WordService: BaseNetworkService {
 
         logger.info("Unsaving word ID: \(wordID) for user: \(userID)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let requestBody = [
             "word_id": wordID,
             "user_id": userID
         ] as [String : Any]
 
+        let jsonData: Data
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            jsonData = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
             logger.error("Failed to encode unsave request: \(error.localizedDescription)")
             completion(.failure(DictionaryError.decodingError(error)))
             return
         }
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let headers = ["Content-Type": "application/json"]
+
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: jsonData) { data, response, error in
             if let error = error {
                 self.logger.error("Network error unsaving word: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -287,7 +291,9 @@ class WordService: BaseNetworkService {
                 self.logger.error("Server error unsaving word: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func toggleExcludeFromPractice(word: String, excluded: Bool, learningLanguage: String? = nil, nativeLanguage: String? = nil, completion: @escaping (Result<ToggleExcludeResponse, Error>) -> Void) {
@@ -299,10 +305,6 @@ class WordService: BaseNetworkService {
         }
 
         logger.info("Toggling exclusion for word: '\(word)' to \(excluded) for user: \(userID)")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         var requestBody: [String: Any] = [
             "user_id": userID,
@@ -317,15 +319,18 @@ class WordService: BaseNetworkService {
             requestBody["native_language"] = nativeLang
         }
 
+        let jsonData: Data
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            jsonData = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
             logger.error("Failed to encode toggle-exclude request: \(error.localizedDescription)")
             completion(.failure(DictionaryError.decodingError(error)))
             return
         }
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let headers = ["Content-Type": "application/json"]
+
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: jsonData) { data, response, error in
             if let error = error {
                 self.logger.error("Network error toggling exclusion: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -357,7 +362,9 @@ class WordService: BaseNetworkService {
                 self.logger.error("Server error toggling exclusion: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func getWordDetails(wordID: Int, completion: @escaping (Result<WordDetails, Error>) -> Void) {
@@ -370,11 +377,9 @@ class WordService: BaseNetworkService {
 
         logger.info("Fetching word details for word ID: \(wordID)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let headers = ["Accept": "application/json"]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "GET", headers: headers) { data, response, error in
             if let error = error {
                 self.logger.error("Network error fetching word details: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -407,6 +412,8 @@ class WordService: BaseNetworkService {
                 self.logger.error("Failed to decode word details response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 }

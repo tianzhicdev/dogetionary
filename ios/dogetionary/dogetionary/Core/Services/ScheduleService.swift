@@ -24,11 +24,9 @@ class ScheduleService: BaseNetworkService {
 
         logger.info("Fetching today's schedule for user: \(userID)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let headers = ["Accept": "application/json"]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "GET", headers: headers) { data, response, error in
             if let error = error {
                 self.logger.error("Network error fetching today schedule: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -61,7 +59,9 @@ class ScheduleService: BaseNetworkService {
                 self.logger.error("Failed to decode today schedule response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func getScheduleRange(days: Int = 7, onlyNewWords: Bool = true, completion: @escaping (Result<GetScheduleRangeResponse, Error>) -> Void) {
@@ -75,11 +75,9 @@ class ScheduleService: BaseNetworkService {
 
         logger.info("Fetching schedule range for \(days) days (only new words: \(onlyNewWords))")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let headers = ["Accept": "application/json"]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "GET", headers: headers) { data, response, error in
             if let error = error {
                 self.logger.error("Network error fetching schedule range: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -113,7 +111,9 @@ class ScheduleService: BaseNetworkService {
                 self.logger.error("Failed to decode schedule range response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func getTestProgress(completion: @escaping (Result<TestProgressResponse, Error>) -> Void) {

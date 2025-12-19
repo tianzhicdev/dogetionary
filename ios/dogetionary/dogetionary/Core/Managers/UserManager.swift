@@ -323,7 +323,7 @@ class UserManager: ObservableObject {
         // Use targetDays as the source
         let studyDurationDays: Int? = self.targetDays > 0 ? self.targetDays : nil
 
-        // Auto-include device timezone
+        // Always sync device timezone to backend for schedule calculations
         let timezone = TimeZone.current.identifier
 
         DictionaryService.shared.updateUserPreferences(
@@ -333,7 +333,8 @@ class UserManager: ObservableObject {
             userName: self.userName,
             userMotto: self.userMotto,
             testPrep: testPrep,
-            studyDurationDays: studyDurationDays
+            studyDurationDays: studyDurationDays,
+            timezone: timezone
         ) { result in
             switch result {
             case .success(_):
@@ -450,6 +451,9 @@ class UserManager: ObservableObject {
         hasCompletedOnboarding = true
         UserDefaults.standard.set(true, forKey: hasCompletedOnboardingKey)
         logger.info("Marked onboarding as completed")
+
+        // Sync preferences (including timezone) to backend after onboarding
+        syncPreferencesToServer()
     }
 
     func resetOnboarding() {

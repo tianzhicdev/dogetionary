@@ -24,11 +24,9 @@ class AudioService: BaseNetworkService {
 
         logger.info("Fetching/generating audio for text: '\(text)' in \(language)")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let headers = ["Accept": "application/json"]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "GET", headers: headers) { data, response, error in
             if let error = error {
                 self.logger.error("Network error fetching audio: \(error.localizedDescription)")
                 completion(nil)
@@ -68,6 +66,8 @@ class AudioService: BaseNetworkService {
                 self.logger.error("Failed to decode audio response: \(error.localizedDescription)")
                 completion(nil)
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 }

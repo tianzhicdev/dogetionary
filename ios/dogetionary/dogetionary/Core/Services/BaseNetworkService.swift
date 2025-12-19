@@ -17,7 +17,7 @@ class BaseNetworkService {
         self.logger = Logger(subsystem: "com.shojin.app", category: category)
     }
 
-    /// Generic network request handler with logging
+    /// Generic network request handler using NetworkClient
     func performNetworkRequest<T: Codable>(
         url: URL,
         method: String = "GET",
@@ -25,45 +25,18 @@ class BaseNetworkService {
         responseType: T.Type,
         completion: @escaping (Result<T, Error>) -> Void
     ) {
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        // Use NetworkClient for automatic request ID and logging
+        let headers = [
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        ]
 
-        // Generate client-side request ID for tracing
-        let requestId = UUID().uuidString
-        request.setValue(requestId, forHTTPHeaderField: "X-Request-ID")
-
-        if let body = body {
-            request.httpBody = body
-        }
-
-        // Log request details to console
-        logger.info("REQUEST: \(method) \(url.absoluteString) [Request-ID: \(requestId)]")
-        if let body = body, let bodyString = String(data: body, encoding: .utf8) {
-            logger.info("REQUEST BODY: \(bodyString)")
-        }
-
-        // Log request to NetworkLogger for debug UI
-        let startTime = Date()
-        let _ = NetworkLogger.shared.logRequest(
-            url: url.absoluteString,
+        let task = NetworkClient.shared.dataTask(
+            url: url,
             method: method,
-            body: body,
-            requestId: requestId
-        )
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            // Log response to NetworkLogger (using same requestId)
-            let httpResponse = response as? HTTPURLResponse
-            NetworkLogger.shared.logResponse(
-                id: requestId,
-                status: httpResponse?.statusCode,
-                data: data,
-                headers: httpResponse?.allHeaderFields,
-                error: error,
-                startTime: startTime
-            )
+            headers: headers,
+            body: body
+        ) { data, response, error in
 
             if let error = error {
                 self.logger.error("Network error: \(error.localizedDescription)")
@@ -71,27 +44,16 @@ class BaseNetworkService {
                 return
             }
 
-            guard let httpResponse = httpResponse else {
+            guard let httpResponse = response as? HTTPURLResponse else {
                 self.logger.error("Invalid response type")
                 completion(.failure(DictionaryError.invalidResponse))
                 return
             }
 
-            // Log response status and headers to console
-            self.logger.info("RESPONSE STATUS: \(httpResponse.statusCode)")
-            self.logger.info("RESPONSE HEADERS: \(httpResponse.allHeaderFields)")
-
             guard let data = data else {
                 self.logger.error("No data received")
                 completion(.failure(DictionaryError.noData))
                 return
-            }
-
-            // Log raw response data for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                self.logger.info("RAW RESPONSE: \(responseString)")
-            } else {
-                self.logger.error("Could not convert response data to string")
             }
 
             if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
@@ -110,7 +72,9 @@ class BaseNetworkService {
                 self.logger.error("HTTP error: \(httpResponse.statusCode)")
                 completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 }
 

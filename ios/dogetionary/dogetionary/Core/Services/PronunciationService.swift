@@ -39,14 +39,12 @@ class PronunciationService: BaseNetworkService {
             return
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = jsonData
-        request.timeoutInterval = AppConstants.Network.standardTimeout
+        let headers = [
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        ]
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: jsonData) { data, response, error in
             if let error = error {
                 self.logger.error("Network error in pronunciation practice: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -103,7 +101,9 @@ class PronunciationService: BaseNetworkService {
                 self.logger.error("Failed to decode pronunciation practice response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func submitPronunciationReview(
@@ -140,14 +140,12 @@ class PronunciationService: BaseNetworkService {
             throw DictionaryError.invalidURL
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = jsonData
-        request.timeoutInterval = AppConstants.Network.standardTimeout
+        let headers = [
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        ]
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkClient.shared.data(from: url, method: "POST", headers: headers, body: jsonData)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             logger.error("Invalid response type for pronunciation review")

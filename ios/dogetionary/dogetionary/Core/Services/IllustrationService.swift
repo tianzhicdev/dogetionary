@@ -30,16 +30,14 @@ class IllustrationService: BaseNetworkService {
             return
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = jsonData
-        request.timeoutInterval = AppConstants.Network.aiGenerationTimeout  // Longer timeout for AI generation
+        let headers = [
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        ]
 
         logger.info("🎨 Getting illustration for word: \(word) (cache-first with generation fallback)")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url, method: "POST", headers: headers, body: jsonData) { data, response, error in
             if let error = error {
                 self.logger.error("❌ Get illustration request failed: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -74,7 +72,9 @@ class IllustrationService: BaseNetworkService {
                 self.logger.error("Failed to decode illustration response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func generateIllustration(word: String, language: String, completion: @escaping (Result<IllustrationResponse, Error>) -> Void) {

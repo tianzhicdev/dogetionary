@@ -22,7 +22,7 @@ class LeaderboardService: BaseNetworkService {
 
         logger.info("🏆 Fetching leaderboard")
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        let task = NetworkClient.shared.dataTask(url: url) { data, response, error in
             if let error = error {
                 self.logger.error("❌ Leaderboard request failed: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -55,7 +55,9 @@ class LeaderboardService: BaseNetworkService {
                 self.logger.error("Failed to decode leaderboard response: \(error.localizedDescription)")
                 completion(.failure(DictionaryError.decodingError(error)))
             }
-        }.resume()
+        }
+
+        task.resume()
     }
 
     func getStreakDays(completion: @escaping (Result<StreakDaysResponse, Error>) -> Void) {
