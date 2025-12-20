@@ -630,12 +630,13 @@ def get_or_generate_question(
 
     # Step 5: Handle audio for pronounce_sentence questions
     if question.get('question_type') == 'pronounce_sentence' and question.get('sentence'):
-        from handlers.review_batch import get_or_generate_audio_base64
+        from services.audio_service import get_or_generate_audio_base64
         audio_url = get_or_generate_audio_base64(question['sentence'], learning_lang)
         question['audio_url'] = audio_url
 
     # Step 6: Build audio references
-    from handlers.words import collect_audio_references, audio_exists
+    from handlers.words import collect_audio_references
+    from services.audio_service import audio_exists
     audio_refs = collect_audio_references(definition_data, learning_lang)
     if audio_exists(word, learning_lang):
         audio_refs["word_audio"] = True

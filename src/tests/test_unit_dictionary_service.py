@@ -12,12 +12,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 # Set environment variable before importing app
 os.environ.setdefault('OPENAI_API_KEY', 'test-key-for-unit-tests')
 
-# Import functions from the original app since they haven't been moved yet
+# Import functions from their current locations
 from app import (
     get_cached_definition, build_definition_prompt,
-    collect_audio_references, queue_missing_audio,
-    audio_exists, store_audio, generate_audio_for_text
+    collect_audio_references, queue_missing_audio
 )
+from services.audio_service import audio_exists, store_audio, generate_audio_for_text
 
 class TestDictionaryService(unittest.TestCase):
     """Unit tests for dictionary service functions"""

@@ -28,6 +28,12 @@ from static.support import SUPPORT_HTML
 from utils.database import validate_language, get_db_connection, db_fetch_one
 from services.user_service import generate_user_profile, get_user_preferences
 from utils.timezone_utils import get_user_timezone
+from services.audio_service import (
+    audio_exists,
+    generate_audio_for_text,
+    store_audio,
+    get_or_generate_audio
+)
 
 # Get logger
 import logging
@@ -123,30 +129,6 @@ def get_word_review_data(user_id: str, word_id: int):
         if conn:
             conn.close()
 
-
-def audio_exists(text: str, language: str) -> bool:
-    """Check if audio exists for text+language"""
-    conn = None
-    cur = None
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        cur.execute("""
-            SELECT 1 FROM audio
-            WHERE text_content = %s AND language = %s
-        """, (text, language))
-
-        result = cur.fetchone()
-        return result is not None
-    except Exception as e:
-        logger.error(f"Error checking audio existence: {str(e)}", exc_info=True)
-        return False
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 def collect_audio_references(definition_data: dict, learning_lang: str) -> dict:
     """Collect all audio references for a definition - now just returns available texts"""
@@ -437,109 +419,32 @@ def get_saved_words():
 
 
 
-def generate_audio_for_text(text: str) -> bytes:
-    """Generate TTS audio for text using OpenAI"""
-    try:
-        client = openai.OpenAI()
-        response = client.audio.speech.create(
-            model=TTS_MODEL_NAME,
-            voice=TTS_VOICE,
-            input=text,
-            response_format="mp3"
-        )
-
-        return response.content
-
-    except Exception as e:
-        logger.error(f"Failed to generate audio: {str(e)}", exc_info=True)
-        raise
-
-def store_audio(text: str, language: str, audio_data: bytes) -> str:
-    """Store audio, return the created_at timestamp"""
-    conn = None
-    cur = None
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        # First try to insert
-        cur.execute("""
-            INSERT INTO audio (text_content, language, audio_data, content_type)
-            VALUES (%s, %s, %s, 'audio/mpeg')
-            ON CONFLICT (text_content, language)
-            DO UPDATE SET audio_data = EXCLUDED.audio_data, content_type = EXCLUDED.content_type
-        """, (text, language, audio_data))
-
-        # Then get the actual timestamp from database
-        cur.execute("""
-            SELECT created_at FROM audio
-            WHERE text_content = %s AND language = %s
-        """, (text, language))
-
-        result = cur.fetchone()
-        conn.commit()
-
-        return result['created_at'].isoformat() if result else datetime.now().isoformat()
-
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        logger.error(f"Error storing audio: {str(e)}", exc_info=True)
-        raise
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
 def get_audio(text, language):
     """Get or generate audio for text+language"""
     conn = None
     cur = None
     try:
+        # Use service (handles cache check + generation + storage)
+        audio_data = get_or_generate_audio(text, language)
+
+        # Get metadata for response
         conn = get_db_connection()
         cur = conn.cursor()
-
-        # Try to get existing audio
         cur.execute("""
-            SELECT audio_data, content_type, created_at
+            SELECT content_type, created_at
             FROM audio
             WHERE text_content = %s AND language = %s
         """, (text, language))
 
         result = cur.fetchone()
 
-        if result:
-            # Return existing audio
-            audio_base64 = base64.b64encode(result['audio_data']).decode('utf-8')
-
-            return jsonify({
-                "audio_data": audio_base64,
-                "content_type": result['content_type'],
-                "created_at": result['created_at'].isoformat() if result['created_at'] else None,
-                "generated": False
-            })
-
-        # Audio doesn't exist, generate it
-        logger.info(f"Generating audio on-demand for text: '{text}' in {language}")
-
-        try:
-            audio_data = generate_audio_for_text(text)
-            created_at = store_audio(text, language, audio_data)
-
-            # Return the generated audio
-            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-
-            return jsonify({
-                "audio_data": audio_base64,
-                "content_type": "audio/mpeg",
-                "created_at": created_at,
-                "generated": True
-            })
-
-        except Exception as audio_error:
-            logger.error(f"Failed to generate audio: {str(audio_error, exc_info=True)}")
-            return jsonify({"error": "Failed to generate audio"}), 500
+        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+        return jsonify({
+            "audio_data": audio_base64,
+            "content_type": result['content_type'] if result else "audio/mpeg",
+            "created_at": result['created_at'].isoformat() if result else None,
+            "generated": True
+        })
 
     except Exception as e:
         logger.error(f"Error getting audio: {str(e)}", exc_info=True)
