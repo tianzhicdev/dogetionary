@@ -365,16 +365,17 @@ struct ReviewSubmissionRequest: Codable {
 
 struct ReviewSubmissionResponse: Codable {
     let success: Bool
+    let word: String?
     let word_id: Int
     let response: Bool
-    let review_count: Int
-    let interval_days: Int
-    let next_review_date: String
+    let review_count: Int?  // Optional - removed from backend
+    let interval_days: Int?  // Optional - removed from backend
+    let next_review_date: String?  // Optional - removed from backend
     let new_score: Int?
     let new_badges: [NewBadge]?  // Array to support multiple badges (e.g., score milestone + test completion)
 
     private enum CodingKeys: String, CodingKey {
-        case success, word_id, response, review_count, interval_days, next_review_date, new_score, new_badges
+        case success, word, word_id, response, review_count, interval_days, next_review_date, new_score, new_badges
     }
 }
 

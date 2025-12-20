@@ -37,6 +37,43 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def get_or_create_saved_word(user_id: str, word: str, learning_language: str, native_language: str, cur) -> tuple:
+    """
+    Get existing saved_word or create new one if it doesn't exist.
+
+    Args:
+        user_id: User UUID string
+        word: The word to save
+        learning_language: Learning language code
+        native_language: Native language code
+        cur: Database cursor (for transaction support)
+
+    Returns:
+        Tuple of (word_id, created_at)
+    """
+    # Look up word in saved_words using composite key
+    cur.execute("""
+        SELECT id, created_at
+        FROM saved_words
+        WHERE user_id = %s AND word = %s AND learning_language = %s AND native_language = %s
+    """, (user_id, word, learning_language, native_language))
+    word_data = cur.fetchone()
+
+    if word_data:
+        # Word already saved
+        return word_data['id'], word_data['created_at']
+    else:
+        # Word not saved yet - save it now
+        cur.execute("""
+            INSERT INTO saved_words (user_id, word, learning_language, native_language)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id, created_at
+        """, (user_id, word, learning_language, native_language))
+        new_word = cur.fetchone()
+        logger.info(f"Created new saved_word for '{word}' (id={new_word['id']}) for user {user_id}")
+        return new_word['id'], new_word['created_at']
+
+
 def save_word():
     try:
         data = request.get_json()
@@ -172,34 +209,22 @@ def submit_review():
         # Get old score BEFORE inserting review (for badge calculation)
         old_score = calculate_user_score(user_id)
 
+        # Check test completion BEFORE saving word (to detect completion after this review)
+        old_completion_badges = check_test_completion_badges(
+            user_id=user_id,
+            current_word=word,
+            learning_language=learning_language,
+            enabled_tests_only=True
+        )
+        old_completion_badge_ids = {badge['badge_id'] for badge in old_completion_badges}
+
         # Use a single connection for the entire transaction
         conn = get_db_connection()
         cur = conn.cursor()
 
         try:
-            # Look up word in saved_words using composite key, or create if not exists
-            cur.execute("""
-                SELECT id, created_at
-                FROM saved_words
-                WHERE user_id = %s AND word = %s AND learning_language = %s AND native_language = %s
-            """, (user_id, word, learning_language, native_language))
-            word_data = cur.fetchone()
-
-            if word_data:
-                # Word already saved
-                word_id = word_data['id']
-                created_at = word_data['created_at']
-            else:
-                # Word not saved yet - save it now
-                cur.execute("""
-                    INSERT INTO saved_words (user_id, word, learning_language, native_language)
-                    VALUES (%s, %s, %s, %s)
-                    RETURNING id, created_at
-                """, (user_id, word, learning_language, native_language))
-                new_word = cur.fetchone()
-                word_id = new_word['id']
-                created_at = new_word['created_at']
-                logger.info(f"Created new saved_word for '{word}' (id={word_id}) for user {user_id}")
+            # Get or create saved_word
+            word_id, created_at = get_or_create_saved_word(user_id, word, learning_language, native_language, cur)
 
             # Get existing reviews
             cur.execute("""
@@ -244,14 +269,17 @@ def submit_review():
         score_badges = get_newly_earned_score_badges(old_score, new_score, user_id)
         new_badges.extend(score_badges)
 
-        # Check for test vocabulary completion badges
-        completion_badges = check_test_completion_badges(
+        # Check for test vocabulary completion badges AFTER saving word
+        new_completion_badges = check_test_completion_badges(
             user_id=user_id,
             current_word=word,
             learning_language=learning_language,
             enabled_tests_only=True
         )
-        new_badges.extend(completion_badges)
+        # Only include badges that weren't already earned before this review
+        for badge in new_completion_badges:
+            if badge['badge_id'] not in old_completion_badge_ids:
+                new_badges.append(badge)
 
         # Record all new badges in user_badges table
         if new_badges:
@@ -261,57 +289,11 @@ def submit_review():
                 badge_type = 'score_milestone' if badge['badge_id'].startswith('score_') else 'test_completion'
                 record_earned_badge(user_id, badge['badge_id'], badge_type)
 
-        # Calculate simple stats for response
-        review_count = len(all_reviews)
-        interval_days = (next_review_date - current_review_time).days if next_review_date else 1
-
-        # Check if user has completed all reviews for today (0 overdue + 0 new words)
-        # If so, create a streak date record
-        conn = get_db_connection()
-        try:
-            cur = conn.cursor()
-
-            # Get due count after this review
-            cur.execute("""
-                SELECT
-                    COUNT(*) as total_count,
-                    COUNT(CASE
-                        WHEN COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW()
-                        THEN 1
-                    END) as due_count
-                FROM saved_words sw
-                LEFT JOIN (
-                    SELECT
-                        word_id,
-                        next_review_date,
-                        ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
-                    FROM reviews
-                ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
-                WHERE sw.user_id = %s
-            """, (user_id,))
-
-            result = cur.fetchone()
-            due_count = result['due_count'] or 0
-
-            # If no more due words, create streak date
-            if due_count == 0:
-                from handlers.streaks import create_streak_date
-                create_streak_date(user_id)
-                logger.info(f"User {user_id} completed all reviews, streak date created")
-
-            cur.close()
-        finally:
-            conn.close()
-
         return jsonify({
             "success": True,
             "word": word,
-            "word_id": word_id,  # saved_word_id for reference
+            "word_id": word_id,
             "response": response,
-            "review_count": review_count,
-            "ease_factor": 2.5,
-            "interval_days": interval_days,
-            "next_review_date": next_review_date.isoformat(),
             "new_score": new_score,
             "new_badges": new_badges if new_badges else None
         })
