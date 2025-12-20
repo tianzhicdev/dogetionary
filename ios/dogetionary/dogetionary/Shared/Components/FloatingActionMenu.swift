@@ -16,9 +16,6 @@ struct FloatingActionMenu: View {
     // Detect reduce motion preference
     @Environment(\.accessibilityReduceMotion) var reduceMotion
 
-    // Animation state for practice alert
-    @State private var isPulsing = false
-
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             // Dimmed overlay when expanded (tap to dismiss)
@@ -41,6 +38,8 @@ struct FloatingActionMenu: View {
                             tag: item.tag,
                             badge: item.tag == 2 ? practiceCount : nil,
                             isSelected: selectedView == item.tag,
+                            shouldHighlight: item.tag == 2 && practiceCount > 0 && selectedView != 2,
+                            shouldWiggle: item.tag == 2 && practiceCount > 0 && selectedView != 2,
                             gradient: item.color,
                             onTap: {
                                 handleItemTap(item.tag)
@@ -56,66 +55,21 @@ struct FloatingActionMenu: View {
                     }
                 }
 
-                HStack(spacing: 12) {
-                    // Practice button (show when there's something to practice)
-                    if practiceCount > 0 && selectedView != 2 {
-                        Button(action: {
-                            handlePracticeTap()
-                        }) {
-                            ZStack(alignment: .topTrailing) {
-                                Image(systemName: "brain.head.profile")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(AppTheme.bgPrimary)
-                                    .frame(width: 56, height: 56)
-                                    .background(AppTheme.accentPink)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                                    .scaleEffect(isPulsing ? 1.15 : 1.0)
-                                    .rotationEffect(.degrees(isPulsing ? 5 : 0))
-
-                                // Badge for practice count
-                                Text("\(practiceCount)")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(AppTheme.bgPrimary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .frame(minWidth: 20)
-                                    .background(AppTheme.electricYellow)
-                                    .clipShape(Capsule())
-                                    .offset(x: 8, y: -4)
-                            }
-                        }
-                        .accessibilityLabel("Practice")
-                        .accessibilityHint("Double tap to start practice")
-                        .transition(.scale.combined(with: .opacity))
-                        .onAppear {
-                            if !reduceMotion {
-                                startPulseAnimation()
-                            }
-                        }
-                        .onChange(of: practiceCount) { _, newCount in
-                            if newCount > 0 && !reduceMotion {
-                                startPulseAnimation()
-                            }
-                        }
-                    }
-
-                    // Main FAB (always visible)
-                    Button(action: {
-                        toggleMenu()
-                    }) {
-                        Image(systemName: isExpanded ? "xmark" : "line.3.horizontal")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(AppTheme.bgPrimary)
-                            .frame(width: 56, height: 56)
-                            .background(AppTheme.accentCyan)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    }
-                    .accessibilityLabel(isExpanded ? "Close menu" : "Open menu")
-                    .accessibilityHint("Double tap to \(isExpanded ? "close" : "open") navigation menu")
+                // Main FAB (always visible)
+                Button(action: {
+                    toggleMenu()
+                }) {
+                    Image(systemName: isExpanded ? "xmark" : "line.3.horizontal")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(AppTheme.bgPrimary)
+                        .frame(width: 56, height: 56)
+                        .background(AppTheme.accentCyan)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
+                .accessibilityLabel(isExpanded ? "Close menu" : "Open menu")
+                .accessibilityHint("Double tap to \(isExpanded ? "close" : "open") navigation menu")
             }
             .padding(16)
         }
@@ -129,11 +83,6 @@ struct FloatingActionMenu: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )),
-            (icon: "calendar", label: "Schedule", tag: 1, color: LinearGradient(
-                colors: [AppTheme.electricYellow, AppTheme.accentCyan],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )),
             (icon: "brain.head.profile", label: "Practice", tag: 2, color: LinearGradient(
                 colors: [AppTheme.accentPink, AppTheme.neonPurple],
                 startPoint: .topLeading,
@@ -144,7 +93,6 @@ struct FloatingActionMenu: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )),
-            (icon: "trophy.fill", label: "Leaderboard", tag: 4, color: AppTheme.shinyGradient),
             (icon: "gear", label: "Settings", tag: 5, color: LinearGradient(
                 colors: [AppTheme.accentCyan, AppTheme.accentPink],
                 startPoint: .topLeading,
@@ -161,17 +109,6 @@ struct FloatingActionMenu: View {
         withAnimation(reduceMotion ? .easeInOut(duration: AppConstants.Animation.easeShortDuration) : .spring(response: AppConstants.Animation.springResponse, dampingFraction: AppConstants.Animation.springDamping)) {
             isExpanded.toggle()
         }
-    }
-
-    private func handlePracticeTap() {
-        // Navigate to practice mode
-        let generator = UISelectionFeedbackGenerator()
-        generator.selectionChanged()
-
-        // Stop pulsing animation
-        stopPulseAnimation()
-
-        onItemTapped(2)  // Tag 2 = Practice view
     }
 
     private func closeMenu() {
@@ -195,27 +132,6 @@ struct FloatingActionMenu: View {
             onItemTapped(tag)
         }
     }
-
-    private func startPulseAnimation() {
-        // Reset animation state first to ensure it restarts
-        isPulsing = false
-
-        // Small delay to allow state reset, then start bouncy animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
-            withAnimation(
-                .spring(response: 0.6, dampingFraction: 0.5)
-                .repeatForever(autoreverses: true)
-            ) {
-                self.isPulsing = true
-            }
-        }
-    }
-
-    private func stopPulseAnimation() {
-        withAnimation(.easeOut(duration: 0.2)) {
-            isPulsing = false
-        }
-    }
 }
 
 struct FloatingMenuItem: View {
@@ -224,8 +140,16 @@ struct FloatingMenuItem: View {
     let tag: Int
     var badge: Int? = nil
     var isSelected: Bool = false
+    var shouldHighlight: Bool = false
+    var shouldWiggle: Bool = false
     let gradient: LinearGradient
     let onTap: () -> Void
+
+    // Detect reduce motion preference
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+
+    // Animation state for wiggle
+    @State private var isWiggling = false
 
     var body: some View {
         Button(action: onTap) {
@@ -244,6 +168,7 @@ struct FloatingMenuItem: View {
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(AppTheme.selectableTint)
                         .frame(width: 48, height: 48)
+                        .rotationEffect(.degrees(shouldWiggle && isWiggling ? 5 : 0))
 
                     // Badge for practice count
                     if let badge = badge, badge > 0 {
@@ -262,12 +187,45 @@ struct FloatingMenuItem: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(width: 200)
-            .background(AppTheme.verticalGradient2)
+            .background(shouldHighlight ? gradient : AppTheme.verticalGradient2)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
             .cornerRadius(4)
         }
         .accessibilityLabel("\(label)\(badge != nil && badge! > 0 ? ", \(badge!) items" : "")")
         .accessibilityHint("Double tap to navigate to \(label)")
+        .onAppear {
+            if shouldWiggle && !reduceMotion {
+                startWiggleAnimation()
+            }
+        }
+        .onChange(of: shouldWiggle) { _, newValue in
+            if newValue && !reduceMotion {
+                startWiggleAnimation()
+            } else {
+                stopWiggleAnimation()
+            }
+        }
+    }
+
+    private func startWiggleAnimation() {
+        // Reset animation state first to ensure it restarts
+        isWiggling = false
+
+        // Small delay to allow state reset, then start wiggle animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+            withAnimation(
+                .spring(response: 0.6, dampingFraction: 0.5)
+                .repeatForever(autoreverses: true)
+            ) {
+                self.isWiggling = true
+            }
+        }
+    }
+
+    private func stopWiggleAnimation() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            isWiggling = false
+        }
     }
 }
 

@@ -24,11 +24,11 @@ LANG_NAMES = {
 # Question type weights for random selection
 # NOTE: Temporarily boosted video_mc to 90% for testing video questions
 QUESTION_TYPE_WEIGHTS = {
-    'mc_definition': 0.02,       # Tests comprehension
-    'mc_word': 0.02,             # Tests word recognition from definition
-    'fill_blank': 0.02,          # Tests contextual usage
-    'pronounce_sentence': 0.04,  # Tests pronunciation with sentence context
-    'video_mc': 0.90,            # Tests visual recognition from video (TESTING: normally 0.10)
+    'mc_definition': 0.2,       # Tests comprehension
+    'mc_word': 0.2,             # Tests word recognition from definition
+    'fill_blank': 0.2,          # Tests contextual usage
+    'pronounce_sentence': 0.4,  # Tests pronunciation with sentence context
+    # 'video_mc': 0.90,            # Tests visual recognition from video (TESTING: normally 0.10)
 }
 
 
@@ -218,19 +218,9 @@ Return ONLY a JSON object with this structure:
             raise ValueError("LLM did not return exactly 3 distractors")
 
     except Exception as e:
-        logger.error(f"Error generating video question with LLM: {e}, using fallback", exc_info=True)
-        # Fallback to basic definition-based approach
-        definitions = definition.get('definitions', [])
-        if definitions:
-            correct_meaning = definitions[0].get('definition', 'No definition available')
-        else:
-            correct_meaning = f"Meaning related to '{word}'"
-
-        distractors = [
-            "a different meaning (distractor 1)",
-            "an alternative definition (distractor 2)",
-            "another interpretation (distractor 3)"
-        ]
+        logger.error(f"Error generating video question with LLM: {e}", exc_info=True)
+        # Don't return crap - let the error propagate
+        raise
 
     # Build question data
     question_data = {
@@ -546,7 +536,6 @@ def generate_question_with_llm(
     # Handle video_mc type specially (doesn't use LLM for generation)
     if question_type == 'video_mc':
         return generate_video_mc_question(word, definition, learning_lang, native_lang)
-
     # Select appropriate prompt generator for LLM-based questions
     if question_type == 'mc_definition':
         prompt = generate_mc_definition_prompt(word, definition, native_lang)
@@ -571,27 +560,48 @@ def generate_question_with_llm(
 
 def get_or_generate_question(
     word: str,
-    definition: Dict,
     learning_lang: str,
     native_lang: str,
-    question_type: Optional[str] = None
-) -> Dict:
+    question_type: Optional[str] = None,
+    definition: Optional[Dict] = None
+) -> Optional[Dict]:
     """
-    Get question from cache or generate new one if not cached.
+    Self-contained function that fetches/generates definition (if not provided),
+    generates question, and handles audio for pronounce_sentence questions.
 
     Args:
         word: The word to create a question for
-        definition: Full definition data
         learning_lang: Language being learned
         native_lang: User's native language
         question_type: Specific type or None for random selection
+        definition: Optional pre-fetched definition (for batch operations)
 
     Returns:
-        Dict containing question data with shuffled options
+        Dict containing complete question data:
+        {
+            "question": {...},  # Question with audio_url if pronounce_sentence
+            "definition_data": {...},  # Full definition
+            "audio_references": {...}  # Audio availability map
+        }
+        or None if definition fetch fails
     """
-    import copy
+    # Import here to avoid circular imports
+    import base64
+    from utils.database import get_db_connection
 
-    # Select question type with video prioritization
+    # Step 1: Get or fetch definition (if not provided)
+    if definition is None:
+        from handlers.review_batch import fetch_and_cache_definition
+        definition_data = fetch_and_cache_definition(word, learning_lang, native_lang)
+
+        if definition_data is None:
+            logger.warning(f"Could not get definition for '{word}', cannot generate question")
+            return None
+    else:
+        # Use provided definition (for batch operations that already fetched it)
+        definition_data = definition
+
+    # Step 2: Select question type with video prioritization
     if question_type is None:
         # PRIORITY 1: Always use video_mc if word has videos
         if check_word_has_videos(word, learning_lang):
@@ -601,27 +611,38 @@ def get_or_generate_question(
             # PRIORITY 2: Random selection from all types (including video_mc with fallback)
             question_type = get_random_question_type()
 
-            # If video_mc was randomly selected but no videos available, fallback to mc_definition
-            if question_type == 'video_mc':
-                logger.info(f"video_mc randomly selected but no videos for '{word}', using mc_definition instead")
-                question_type = 'mc_definition'
+            logger.info(f"{question_type} selected for '{word}' by random")
 
-    # Check cache first
+    # Step 3: Check cache first
     cached = get_cached_question(word, learning_lang, native_lang, question_type)
     if cached:
-        # Make a deep copy so we don't modify the cached version
-        question = copy.deepcopy(cached)
+        # DB returns fresh dict - no need to copy
+        question = cached
     else:
         # Generate new question
-        question = generate_question_with_llm(word, definition, learning_lang, native_lang, question_type)
+        question = generate_question_with_llm(word, definition_data, learning_lang, native_lang, question_type)
 
         # Cache for future use (before shuffling, so cache has consistent order)
         cache_question(word, learning_lang, native_lang, question_type, question)
 
-        # Make a copy for shuffling
-        question = copy.deepcopy(question)
-
-    # Always shuffle options before returning (so correct answer isn't always A)
+    # Step 4: Always shuffle options before returning (so correct answer isn't always A)
     question = shuffle_question_options(question)
 
-    return question
+    # Step 5: Handle audio for pronounce_sentence questions
+    if question.get('question_type') == 'pronounce_sentence' and question.get('sentence'):
+        from handlers.review_batch import get_or_generate_audio_base64
+        audio_url = get_or_generate_audio_base64(question['sentence'], learning_lang)
+        question['audio_url'] = audio_url
+
+    # Step 6: Build audio references
+    from handlers.words import collect_audio_references, audio_exists
+    audio_refs = collect_audio_references(definition_data, learning_lang)
+    if audio_exists(word, learning_lang):
+        audio_refs["word_audio"] = True
+
+    # Step 7: Return complete package
+    return {
+        "question": question,
+        "definition_data": definition_data,
+        "audio_references": audio_refs
+    }

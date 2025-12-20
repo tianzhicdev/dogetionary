@@ -14,15 +14,12 @@ from handlers.pronunciation import practice_pronunciation, submit_pronunciation_
 from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice, is_word_saved
 from handlers.videos import get_video
 from handlers.admin_videos import batch_upload_videos, get_bundle_words_needing_videos
-from handlers.admin_questions import batch_generate_questions
-from handlers.admin_questions_smart import smart_batch_generate_questions
 from handlers.bundle_vocabulary import (
     get_test_vocabulary_count, update_test_settings, get_test_settings,
     add_daily_test_words, get_test_vocabulary_stats, batch_populate_test_vocabulary,
     get_test_config
 )
 from workers.bundle_vocabulary_worker import add_daily_test_words_for_all_users
-from handlers.schedule import get_today_schedule, get_schedule_range, get_test_progress
 from handlers.review_batch import get_review_words_batch
 from handlers.streaks import get_streak_days
 from handlers.achievements import get_achievement_progress, get_test_vocabulary_awards
@@ -74,11 +71,6 @@ v3_api.route('/is-word-saved', methods=['GET'])(is_word_saved)  # Check if word 
 # Test Vocabulary (V3)
 v3_api.route('/api/test-vocabulary-count', methods=['GET'])(get_test_vocabulary_count)  # Onboarding endpoint (legacy path)
 
-# Schedule Management (V3) - Study plan scheduling (on-the-fly calculation)
-v3_api.route('/schedule/today', methods=['GET'])(get_today_schedule)
-v3_api.route('/schedule/range', methods=['GET'])(get_schedule_range)
-v3_api.route('/schedule/test-progress', methods=['GET'])(get_test_progress)
-
 # Administrative (V3)
 v3_api.route('/test-review-intervals', methods=['GET'])(test_review_intervals)
 v3_api.route('/fix_next_review_dates', methods=['POST'])(fix_next_review_dates)
@@ -88,8 +80,6 @@ v3_api.route('/health', methods=['GET'])(health_check)
 v3_api.route('/usage', methods=['GET'])(get_usage_dashboard)
 v3_api.route('/admin/videos/batch-upload', methods=['POST'])(batch_upload_videos)
 v3_api.route('/admin/bundles/<bundle_name>/words-needing-videos', methods=['GET'])(get_bundle_words_needing_videos)
-v3_api.route('/admin/questions/batch-generate', methods=['POST'])(batch_generate_questions)
-v3_api.route('/admin/questions/smart-batch-generate', methods=['POST'])(smart_batch_generate_questions)
 
 # Analytics Tracking (V3)
 v3_api.route('/analytics/track', methods=['POST'])(track_user_action)

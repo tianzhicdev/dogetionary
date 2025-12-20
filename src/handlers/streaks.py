@@ -17,7 +17,7 @@ import logging
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.database import get_db_connection, db_execute, db_fetch_all, db_fetch_one
-from services.schedule_service import get_user_timezone, get_today_in_timezone
+from utils.timezone import get_user_today
 from middleware.logging import log_error
 
 logger = logging.getLogger(__name__)
@@ -36,8 +36,7 @@ def create_streak_date(user_id: str) -> bool:
     """
     try:
         # Get user's timezone
-        user_tz = get_user_timezone(user_id)
-        today = get_today_in_timezone(user_tz)
+        user_tz, today = get_user_today(user_id)
 
         # Insert today's date (idempotent due to UNIQUE constraint)
         db_execute("""
@@ -72,8 +71,7 @@ def calculate_streak_days(user_id: str) -> int:
     """
     try:
         # Get user's timezone
-        user_tz = get_user_timezone(user_id)
-        today = get_today_in_timezone(user_tz)
+        user_tz, today = get_user_today(user_id)
 
         # Get all streak dates for user (sorted DESC)
         streak_dates = db_fetch_all("""

@@ -62,6 +62,38 @@ def get_active_test_type(prefs: dict) -> str:
     return None
 
 
+def is_test_prep_enabled(prefs: dict) -> bool:
+    """
+    Check if any test preparation mode is enabled.
+
+    This helper function consolidates the common pattern of checking
+    all test prep boolean flags with a long OR chain.
+
+    Args:
+        prefs: Dictionary of user preferences (from database row)
+
+    Returns:
+        True if any test prep mode is enabled, False otherwise
+
+    Example:
+        prefs = {'toefl_beginner_enabled': True, ...}
+        is_test_prep_enabled(prefs)  # Returns True
+    """
+    return any([
+        prefs.get('toefl_enabled'),
+        prefs.get('ielts_enabled'),
+        prefs.get('demo_enabled'),
+        prefs.get('toefl_beginner_enabled'),
+        prefs.get('toefl_intermediate_enabled'),
+        prefs.get('toefl_advanced_enabled'),
+        prefs.get('ielts_beginner_enabled'),
+        prefs.get('ielts_intermediate_enabled'),
+        prefs.get('ielts_advanced_enabled'),
+        prefs.get('business_english_enabled'),
+        prefs.get('everyday_english_enabled'),
+    ])
+
+
 def update_test_settings():
     """
     DEPRECATED: Use POST /v3/users/{user_id}/preferences instead.
@@ -903,16 +935,16 @@ def batch_populate_test_vocabulary():
                                 summary["questions_cached"] += 1
                                 logger.debug(f"✓ Question cached for '{word}' ({q_type})")
                             else:
-                                # Generate new question
-                                question = get_or_generate_question(
+                                # Generate new question (passing definition to avoid re-fetching)
+                                result = get_or_generate_question(
                                     word=word,
-                                    definition=definition,
                                     learning_lang=learning_lang,
                                     native_lang=native_lang,
-                                    question_type=q_type
+                                    question_type=q_type,
+                                    definition=definition
                                 )
 
-                                if question:
+                                if result and result.get('question'):
                                     summary["questions_generated"] += 1
                                     logger.debug(f"✓ Generated question for '{word}' ({q_type})")
 

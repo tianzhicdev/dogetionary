@@ -389,22 +389,27 @@ refactoring:
 
 notification and cache clear
 
+backend code remove redundant
+
+demo test
+
 -- done --
 
 
 
 
-6. 
+schedule and practice status logic is too complicated, need a human review;
 
 
 UI menu button 
-bundle refactoring
-schedule and practice status logic is too complicated, need a human review;
-backend code remove redundant
 badge png
 learning english only, chinese/spanish/...
-demo test
-aggregate config
+names
+snapshot
+
+
+
+
 
 
 pipeline + human verification;
@@ -447,8 +452,6 @@ pipeline + human verification;
 
 
 
-names
-snapshot
 
 
 
@@ -529,93 +532,318 @@ Complete the Analogy -> multi choice -> multi choice "Happy : Ecstatic :: Sad :
 
 
 --- refactoring --
+  Executive Summary: Code Quality Analysis
 
+  The Three Functions You Asked About
 
-  Sprint 1 (Immediate - 40-60 hours)
+  1. get_review_words_batch() - handlers/review_batch.py (381
+  lines!)
 
-  1. ✅ Fix test configuration (1 hour)
-    - Change video_mc weight from 0.90 → 0.10
-  2. ✅ Consolidate app entry points (4-8 hours)
-    - Remove app_refactored.py
-    - Document which file is canonical
-  3. ✅ Add error path tests (20-30 hours)
-    - Test invalid inputs for top 10 endpoints
-    - Focus on authentication endpoints first
-  4. ✅ Centralize database URL (1 hour)
-    - Remove duplicate definitions
+  Status: EXTREMELY COMPLEX ❌
 
-  Sprint 2-3 (Short Term - 60-80 hours)
+  What it does:
+  - Fetches user timezone → calculates today's schedule → fetches
+  4 types of words → generates questions → generates audio →
+  returns batch
 
-  5. 📝 Standardize database access (12-20 hours)
-    - Refactor top 5 handlers to use db_* utilities
-    - Remove direct connection management
-  6. 📝 Standardize error responses (6-10 hours)
-    - Define single error schema
-    - Create helper function
-    - Refactor all endpoints
-  7. 📝 Add input validation (8-12 hours)
-    - Create validation decorators
-    - Apply to user-facing endpoints
+  Major problems:
+  - 381 lines (should be <100)
+  - Duplicates schedule calculation (50+ lines identical to
+  practice_status.py and schedule.py)
+  - 8+ database queries
+  - Mixed concerns: HTTP handling + business logic + data access
+  all in one function
 
-  Sprint 4-6 (Medium Term - 80-120 hours)
+  2. get_practice_status() - handlers/practice_status.py (173
+  lines)
 
-  8. 📚 Split large handler files (8-16 hours)
-    - words.py → 4 focused modules
-    - schedule.py, test_vocabulary.py
-  9. 📚 Add type hints (12-16 hours)
-    - Services: 80% coverage
-    - Utilities: 100% coverage
-    - Handlers: 50% coverage
-  10. 📚 Improve documentation (8-12 hours)
-    - Docstrings for all public functions
-    - API documentation (Swagger)
+  Status: VERY COMPLEX ❌
 
+  What it does:
+  - Gets words reviewed today → calculates schedule → counts
+  new/practice/due words → calculates user score
 
+  Major problems:
+  - Duplicates 50+ lines of schedule calculation (identical to
+  review_batch and schedule)
+  - Duplicates timezone fetching (8 locations total)
+  - Duplicates "words reviewed today" query (3 locations total)
 
+  3. calc_schedule() - services/schedule_service.py (236 lines)
 
-    1. Nginx Proxy Buffering (PRIMARY ISSUE) 🚨
+  Status: EXTREMELY COMPLEX ❌
 
-  Problem: Your nginx config at nginx/default.conf:40-70 is
-  missing proxy buffering settings. By default, nginx buffers
-   the ENTIRE response from Gunicorn before sending it to the
-   client.
+  What it does:
+  - Categorizes words → calculates new word quota → builds
+  practice schedule for all days → projects future reviews
 
-  What's happening:
-  - Nginx default proxy buffers: 8 × 8KB = 64KB total
-  - Your video: 4.5MB (70x larger than buffer!)
-  - Nginx has to:
-    a. Read 8KB from Gunicorn → buffer fills
-    b. Write buffer to disk (slow!)
-    c. Repeat 560 times for 4.5MB
-    d. Only then send to client
-
-  This disk I/O causes the 72-second delay!
+  Major problems:
+  - 236 lines (should be split into 5-6 smaller functions)
+  - 7 parameters (should use config object)
+  - Deep nesting (5 levels)
+  - No extractable helpers despite clear sub-tasks
 
   ---
-  2. Flask Response Not Streaming (SECONDARY ISSUE)
+  CRITICAL FINDING: Massive Code Duplication
 
-  Problem: src/handlers/videos.py:63 passes the entire 4.5MB
-  as a single bytes object:
+  The Smoking Gun: ~150 Lines Duplicated 3 Times
 
-  return Response(
-      video['video_data'],  # ← 4.5MB loaded into memory at
-  once
+  All three functions have IDENTICAL schedule calculation logic:
 
-  Flask doesn't stream this efficiently - it treats it as one
-   big chunk.
+  # This EXACT code appears in 3 places:
+  # 1. review_batch.py lines 166-206 (40 lines)
+  # 2. practice_status.py lines 99-155 (56 lines)
+  # 3. schedule.py lines 110-193 (83 lines)
+
+  # Fetch user preferences
+  cur.execute("""SELECT toefl_beginner_enabled, ... FROM
+  user_preferences ...""")
+  prefs = cur.fetchone()
+
+  # Check test prep enabled (11-way OR)
+  test_prep_enabled = (prefs.get('toefl_enabled') or
+  prefs.get('ielts_enabled') or ...)
+
+  # Get active test type
+  test_type = get_active_test_type(prefs)
+
+  # Validate target_end_date
+  if test_type and target_end_date and target_end_date > today:
+      # Calculate full schedule
+      schedule_data = fetch_schedule_data(user_id, test_type,
+  user_tz, today)
+      schedule_result = calc_schedule(...)
+      today_entry =
+  schedule_result['daily_schedules'].get(today_key)
+
+  Impact: ~150 lines of duplicated code across 3 critical
+  functions!
 
   ---
-  3. Gunicorn Sync Workers (CONTRIBUTES TO PROBLEM)
+  Common Functions We Can Extract (HIGH PRIORITY)
 
-  Problem: gunicorn.conf.py:
-  worker_class = 'sync'  # Blocking workers
-  workers = 4
-  threads = 2
-  # Total capacity = 8 concurrent requests
+  1. get_today_schedule_entry(user_id, user_tz, today)
 
-  When serving 4.5MB videos that take 72 seconds each:
-  - If 8 concurrent video requests come in → all workers
-  blocked
-  - Request #9 has to wait 72 seconds for a worker to free up
+  Replaces: 150 lines duplicated 3 timesReturns: Today's schedule
+  entry or NoneUsed by: review_batch, practice_status, schedule
+  handlersCode reduction: 90%
+
+  2. get_user_today(user_id)
+
+  Replaces: 16 lines duplicated 8 timesReturns: (user_tz,
+  today_date)Used by: All schedule-related functionsCode
+  reduction: 50%
+
+  3. is_test_prep_enabled(prefs)
+
+  Replaces: 27 lines duplicated 3 timesReturns: BooleanUsed by:
+  Schedule validation in 3 handlersCode reduction: 89%
+
+  4. get_user_schedule_preferences(user_id)
+
+  Replaces: Query duplicated 5+ timesReturns: User prefs dict with
+   test settingsUsed by: All schedule handlersCode reduction: 75%
+
+  5. Already exists but unused: get_words_reviewed_on_date()
+
+  Location: schedule_service.py:411-438Currently duplicated in:
+  review_batch.py:149-156, practice_status.py:68-75Action needed:
+  Use existing function instead of duplicating queryCode
+  reduction: 20 lines eliminated
 
   ---
+  Other Critical Code Quality Issues Found
+
+  God Functions (>200 lines each)
+
+  | Function                  | Lines | Should Be
+                  |
+  |---------------------------|-------|---------------------------
+  ----------------|
+  | get_review_words_batch()  | 381   | Split into 4-5 functions
+  (~80 lines each) |
+  | calc_schedule()           | 236   | Split into 3-4 functions
+  (~60 lines each) |
+  | get_today_schedule()      | 215   | Split into 3 functions
+                  |
+  | get_schedule_range()      | 220   | Split into 3 functions
+                  |
+  | generate_html_dashboard() | ~200  | Split into 5-6 functions
+                  |
+
+  Long Parameter Lists
+
+  - calc_schedule(): 7 parameters → Should use config object
+  - generate_html_dashboard(): 12 parameters! → Should use
+  dataclass
+
+  Tight Coupling (Handlers importing handlers)
+
+  # handlers/schedule.py imports:
+  from handlers.bundle_vocabulary import get_active_test_type  ❌
+  from handlers.streaks import calculate_streak_days  ❌
+
+  # handlers/practice_status.py imports:
+  from handlers.achievements import calculate_user_score  ❌
+
+  # handlers/review_batch.py imports:
+  from handlers.words import generate_audio_for_text  ❌
+
+  Problem: Violates layered architecture, creates circular
+  dependency risk
+
+  Solution: Move shared logic to services layer
+
+  Database Connection Leaks Risk
+
+  Found 40+ instances of manual connection management without
+  proper try/finally blocks
+
+  Magic Numbers
+
+  count = min(max(count, 1), 20)  # Why 20?
+  for i in range(7):  # Why 7?
+  INTERVAL '24 hours'  # Appears 5+ times
+
+  ---
+  Proposed Refactoring Strategy
+
+  Phase 1: Extract Common Functions (2-3 days)
+
+  Priority 1: Extract schedule calculation duplication
+  - Create get_today_schedule_entry()
+  - Update review_batch.py, practice_status.py, schedule.py to use
+   it
+  - Impact: 150 lines → 3 function calls
+
+  Priority 2: Extract common data fetching
+  - Create get_user_today()
+  - Create is_test_prep_enabled()
+  - Use existing get_words_reviewed_on_date()
+  - Impact: ~90 lines eliminated
+
+  Priority 3: Extract user preferences query
+  - Create get_user_schedule_preferences()
+  - Impact: ~40 lines eliminated
+
+  Total Phase 1 impact: ~280 lines eliminated, much clearer code
+
+  ---
+  Phase 2: Break Down God Functions (3-4 days)
+
+  get_review_words_batch() → 5 functions:
+  1. fetch_review_batch_prerequisites() - Get timezone, reviewed
+  words, schedule
+  2. fetch_new_words_batch() - Get new words from schedule
+  3. fetch_practice_words_batch() - Get test + non-test practice
+  4. fetch_not_due_words_batch() - Get not-due-yet words
+  5. enrich_words_with_questions_and_audio() - Generate
+  questions/audio
+
+  calc_schedule() → 4 functions:
+  1. categorize_saved_words() - Split test/non-test
+  2. calculate_new_words_quota() - Daily new word allocation
+  3. build_practice_schedule() - Generate due dates for reviews
+  4. project_future_reviews() - Calculate 7-day projection
+
+  Total Phase 2 impact: 600 lines → 15 focused functions (40 lines
+   each)
+
+  ---
+  Phase 3: Fix Architecture (2-3 days)
+
+  Move business logic to services:
+  handlers/           (HTTP only - request/response)
+    ├─ review_batch.py       → calls ReviewBatchService
+    ├─ practice_status.py    → calls PracticeStatusService
+    └─ schedule.py           → calls ScheduleService
+
+  services/           (Business logic - no HTTP)
+    ├─ review_batch_service.py
+    ├─ practice_status_service.py
+    ├─ schedule_service.py    (already exists, improve it)
+    └─ audio_service.py       (NEW - move from handlers/words.py)
+
+  repositories/       (Data access - NEW layer)
+    ├─ schedule_repository.py
+    └─ review_repository.py
+
+  Benefits:
+  - ✅ Testable business logic
+  - ✅ No handler-to-handler imports
+  - ✅ Dependency injection possible
+  - ✅ Clear separation of concerns
+
+  ---
+  Total Impact Estimate
+
+  If we complete all 3 phases:
+
+  | Metric               | Before                    | After
+             | Improvement    |
+  |----------------------|---------------------------|------------
+  -----------|----------------|
+  | Duplicated code      | ~600 lines                | ~0 lines
+             | 100%           |
+  | Longest function     | 381 lines                 | ~80 lines
+             | 79%            |
+  | Functions >200 lines | 5 functions               | 0 functions
+             | 100%           |
+  | Handler complexity   | High (mixed concerns)     | Low (thin
+  HTTP layer) | 70% reduction  |
+  | Testability          | Poor (DB-dependent)       | Good
+  (mockable)       | 5x improvement |
+  | Maintainability      | Hard (duplication)        | Easy (DRY)
+             | 3x improvement |
+  | Bug risk             | High (3 places to update) | Low (1
+  place)         | 67% reduction  |
+
+  Time investment: 7-10 daysLong-term savings: Weeks of reduced
+  maintenance, faster feature development
+
+  ---
+  Recommended Action Plan
+
+  This Week:
+
+  1. ✅ Extract get_today_schedule_entry() - Eliminates 150 lines
+  of duplication
+  2. ✅ Extract get_user_today() - Eliminates 16 lines across 8
+  locations
+  3. ✅ Extract is_test_prep_enabled() - Eliminates 27 lines
+  4. ✅ Use existing get_words_reviewed_on_date() - Eliminates 20
+  lines
+
+  Quick win: ~210 lines eliminated in 2-3 days
+
+  Next Week:
+
+  5. ✅ Break down get_review_words_batch() into 5 functions
+  6. ✅ Break down calc_schedule() into 4 functions
+  7. ✅ Create config objects for long parameter lists
+
+  Medium win: 600 lines → 15 focused functions
+
+  Following Week:
+
+  8. ✅ Create services layer for business logic
+  9. ✅ Create repositories layer for data access
+  10. ✅ Standardize database connection management
+
+  Long-term win: Clean architecture, easy to test/maintain
+
+  ---
+  Bottom Line
+
+  Your three core functions are extremely complex with massive
+  duplication. The good news: most complexity comes from
+  copy-pasted code that can be easily extracted into common
+  functions.
+
+  Biggest win: Extract the 150-line schedule calculation block
+  that's duplicated 3 times. This single refactoring eliminates
+  450 lines of code and makes all three functions 50% simpler.
+
+  Ready to start? I recommend beginning with Phase 1 (extract
+  common functions) - it's low-risk, high-impact, and can be done
+  incrementally without breaking existing functionality.

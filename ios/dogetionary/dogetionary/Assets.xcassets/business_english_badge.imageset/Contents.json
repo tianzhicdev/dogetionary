@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "business_english_badge.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
@@ -9,7 +10,6 @@
       "scale" : "2x"
     },
     {
-      "filename" : "badge@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
