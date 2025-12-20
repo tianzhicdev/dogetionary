@@ -591,8 +591,8 @@ def get_or_generate_question(
 
     # Step 1: Get or fetch definition (if not provided)
     if definition is None:
-        from handlers.review_batch import fetch_and_cache_definition
-        definition_data = fetch_and_cache_definition(word, learning_lang, native_lang)
+        from services.definition_service import get_or_generate_definition
+        definition_data = get_or_generate_definition(word, learning_lang, native_lang)
 
         if definition_data is None:
             logger.warning(f"Could not get definition for '{word}', cannot generate question")
