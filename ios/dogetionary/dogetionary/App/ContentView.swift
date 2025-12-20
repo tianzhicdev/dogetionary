@@ -14,7 +14,6 @@ struct ContentView: View {
     @StateObject private var appVersionManager = AppVersionManager.shared
     @State private var appState = AppState.shared
     @State private var selectedView = 0  // 0 = Search (default)
-    @State private var isMenuExpanded = false
     @State private var showOnboarding = false
     @Environment(\.scenePhase) var scenePhase
 
@@ -27,63 +26,50 @@ struct ContentView: View {
             )
         } else {
         ZStack {
-            // Main app content
-            ZStack(alignment: .bottomTrailing) {
-                AppTheme.verticalGradient2
-                    .ignoresSafeArea()
-
-                VStack(spacing: 0) {
-                    // App banner at the top
-    //                AppBanner()
-
-                    // View switcher
-                    Group {
-                        switch selectedView {
-                        case 0:
-                            SearchView(showProgressBar: true)
-                        case 1:
-                            ScheduleView()
-                        case 2:
-                            ReviewView()
-                        case 3:
-                            SavedWordsView()
-                        case 4:
-                            LeaderboardView()
-                        case 5:
-                            SettingsView()
-                        default:
-                            SearchView(showProgressBar: true)
-                        }
+            // Main app content with native TabView
+            TabView(selection: $selectedView) {
+                SearchView(showProgressBar: true)
+                    .tabItem {
+                        Label("Search", systemImage: "magnifyingglass")
                     }
-                }
+                    .tag(0)
 
-                // Floating Action Menu (overlay)
-                FloatingActionMenu(
-                    isExpanded: $isMenuExpanded,
-                    selectedView: $selectedView,
-                    practiceCount: userManager.practiceCount,
-                    onItemTapped: { tag in
-                        selectedView = tag
-
-                        // Track navigation analytics
-                        let action: AnalyticsAction = switch tag {
-                        case 1: .navTabSaved  // Schedule
-                        case 2: .navTabReview  // Practice
-                        case 3: .navTabSaved  // Saved Words
-                        case 4: .navTabLeaderboard
-                        case 5: .navTabSettings
-                        default: .navTabDictionary
-                        }
-                        AnalyticsManager.shared.track(action: action)
+                ReviewView()
+                    .tabItem {
+                        Label("Shojin", image: "shojin_symbol")
                     }
-                )
+                    .badge(userManager.practiceCount > 0 ? userManager.practiceCount : 0)
+                    .tag(2)
+
+                SavedWordsView()
+                    .tabItem {
+                        Label("History", systemImage: "clock.fill")
+                    }
+                    .tag(3)
+
+                SettingsView()
+                    .tabItem {
+                        Label("Settings", systemImage: "gear")
+                    }
+                    .tag(5)
             }
+            .accentColor(AppTheme.selectableTint)
 
             // Debug overlay (always on top, only visible when debug mode enabled)
             if DebugConfig.isDeveloperModeEnabled {
                 DebugOverlayView()
                     .zIndex(999)
             }
+        }
+        .onChange(of: selectedView) { oldValue, newValue in
+            // Track navigation analytics
+            let action: AnalyticsAction = switch newValue {
+            case 2: .navTabReview  // Practice
+            case 3: .navTabSaved  // Saved Words
+            case 5: .navTabSettings
+            default: .navTabDictionary
+            }
+            AnalyticsManager.shared.track(action: action)
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()

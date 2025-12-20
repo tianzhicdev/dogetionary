@@ -26,6 +26,7 @@ struct SettingsView: View {
     @State private var questionCacheInfo: String = ""
     @State private var showCacheClearAlert = false
     @State private var cacheClearMessage = ""
+    @State private var vocabularyCounts: [TestType: VocabularyCountInfo] = [:]
 
     var body: some View {
         ZStack {
@@ -37,6 +38,7 @@ struct SettingsView: View {
                 debugUserInfoSection
                 profileSection
                 languagePreferencesSection
+                programSection
                 notificationsSection
                 cacheSection
                 feedbackSection
@@ -52,7 +54,7 @@ struct SettingsView: View {
         .alert("INVALID LANGUAGE SELECTION", isPresented: $showLanguageAlert) {
             Button("OK") { }
         } message: {
-            Text("LEARNING LANGUAGE AND NATIVE LANGUAGE CANNOT BE THE SAME. PLEASE CHOOSE DIFFERENT LANGUAGES.")
+            Text("INVALID LANGUAGE SELECTION. PLEASE TRY AGAIN.")
         }
         .alert("FEEDBACK", isPresented: $showFeedbackAlert) {
             Button("OK") {
@@ -70,6 +72,7 @@ struct SettingsView: View {
         }
         .onAppear {
             updateCacheInfo()
+            fetchAllVocabularyCounts()
         }
     }
 
@@ -81,24 +84,6 @@ struct SettingsView: View {
         }
     }
 
-    private var learningLanguageBinding: Binding<String> {
-        Binding(
-            get: { userManager.learningLanguage },
-            set: { newValue in
-                if newValue == userManager.nativeLanguage {
-                    showLanguageAlert = true
-                } else {
-                    // Track profile language learning update
-                    AnalyticsManager.shared.track(action: .profileLanguageLearning, metadata: [
-                        "old_language": userManager.learningLanguage,
-                        "new_language": newValue
-                    ])
-                    userManager.learningLanguage = newValue
-                }
-            }
-        )
-    }
-    
     private var nativeLanguageBinding: Binding<String> {
         Binding(
             get: { userManager.nativeLanguage },
@@ -198,24 +183,6 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Spacer()
-                    Picker("LEARNING LANGUAGE", selection: learningLanguageBinding) {
-                        ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
-                            HStack {
-                                Text(name.uppercased())
-                                Text("(\(code.uppercased()))")
-                                    .font(.caption2)
-                                    .foregroundColor(AppTheme.smallTitleText)
-                            }
-                            .tag(code)
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                    .tint(AppTheme.selectableTint)
-                    .foregroundColor(AppTheme.smallTitleText)
-                }
-
-                HStack {
-                    Spacer()
                     Picker("NATIVE LANGUAGE", selection: nativeLanguageBinding) {
                         ForEach(LanguageConstants.availableLanguages, id: \.0) { code, name in
                             HStack {
@@ -230,6 +197,44 @@ struct SettingsView: View {
                     .pickerStyle(MenuPickerStyle())
                     .tint(AppTheme.selectableTint)
                     .foregroundColor(AppTheme.smallTitleText)
+                }
+            }
+        }.listRowBackground(Color.clear)
+    }
+
+    @ViewBuilder
+    private var programSection: some View {
+        Section(header:
+            HStack {
+                Text("PROGRAM")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Spacer()
+                    Picker("PROGRAM", selection: $userManager.activeTestType) {
+                        Text("NONE").tag(nil as TestType?)
+                        ForEach(TestType.allCases, id: \.self) { testType in
+                            if let count = vocabularyCounts[testType] {
+                                Text("\(testType.displayName.uppercased()), \(formatWordCount(count.total_words))")
+                                    .tag(testType as TestType?)
+                            } else {
+                                Text(testType.displayName.uppercased())
+                                    .tag(testType as TestType?)
+                            }
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .tint(AppTheme.selectableTint)
+                    .foregroundColor(AppTheme.smallTitleText)
+                    .onChange(of: userManager.activeTestType) { _, newValue in
+                        // Track program change analytics
+                        AnalyticsManager.shared.track(action: .settingsProgramChange, metadata: [
+                            "new_program": newValue?.rawValue ?? "none"
+                        ])
+                    }
                 }
             }
         }.listRowBackground(Color.clear)
@@ -624,6 +629,55 @@ struct SettingsView: View {
 
         print("SettingsView: Showing alert with message: \(cacheClearMessage)")
         showCacheClearAlert = true
+    }
+
+    private func fetchAllVocabularyCounts() {
+        let baseURL = Configuration.effectiveBaseURL
+        // Fetch all test types using "ALL" shorthand
+        guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=ALL") else {
+            Self.logger.error("Invalid URL for fetching all vocabulary counts")
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                Self.logger.error("Error fetching all vocabulary counts: \(error.localizedDescription, privacy: .public)")
+                return
+            }
+
+            guard let data = data else {
+                Self.logger.warning("No data received for vocabulary counts")
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(VocabularyCountResponse.self, from: data)
+
+                DispatchQueue.main.async {
+                    // Store all counts in the dictionary
+                    self.vocabularyCounts = response.allCounts()
+                    Self.logger.info("Fetched vocabulary counts for \(self.vocabularyCounts.count) test types")
+                }
+            } catch {
+                Self.logger.error("Error decoding vocabulary counts: \(error.localizedDescription, privacy: .public)")
+            }
+        }.resume()
+    }
+
+    /// Format word count for display (e.g., "1,247 words" or "3.5K words")
+    private func formatWordCount(_ count: Int) -> String {
+        if count >= 10000 {
+            let k = Double(count) / 1000.0
+            return String(format: "%.1fK words", k)
+        } else if count >= 1000 {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
+            return "\(formatted) words"
+        } else {
+            return "\(count) words"
+        }
     }
 
 }

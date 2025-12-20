@@ -127,6 +127,7 @@ enum AnalyticsAction: String, CaseIterable {
     case settingsNotificationTime = "settings_notification_time"
     case settingsTimezoneUpdate = "settings_timezone_update"
     case settingsDeveloperMode = "settings_developer_mode"
+    case settingsProgramChange = "settings_program_change"
 
     // Saved words actions
     case savedViewDetails = "saved_view_details"

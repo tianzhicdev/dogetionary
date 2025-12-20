@@ -20,10 +20,10 @@ struct QuestionCardView: View {
     let onSwipeComplete: () -> Void
 
     // MARK: - Layout Constants (adjust these to tune padding/margins)
-    private let contentVerticalPadding: CGFloat = 0      // Inner content vertical padding
-    private let containerHorizontalPadding: CGFloat = 0  // Outer container horizontal padding
-    private let containerVerticalPadding: CGFloat = 0     // Outer container vertical padding
-    private let definitionHorizontalPadding: CGFloat = 8 // Definition card horizontal padding
+    private let contentVerticalPadding: CGFloat = 0      // Inner content vertical padding (keep 0 to maximize video space)
+    private let containerHorizontalPadding: CGFloat = 0  // Outer container horizontal padding (keep 0, padding handled in VideoQuestionView)
+    private let containerVerticalPadding: CGFloat = 0     // Outer container vertical padding (keep 0 to remove gap between status bar and video)
+    private let definitionHorizontalPadding: CGFloat = 16 // Definition card horizontal padding
 
     @State private var dragOffset: CGFloat = 0
     @State private var showSwipeHint = false

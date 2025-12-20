@@ -57,12 +57,6 @@ struct SearchView: View {
                                 .padding()
                         }
 
-                        if let errorMessage = viewModel.errorMessage {
-                            Text(errorMessage.uppercased())
-                                .foregroundColor(AppTheme.selectableTint)
-                                .padding()
-                        }
-
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 16) {
                                 ForEach(viewModel.definitions) { definition in
@@ -98,6 +92,9 @@ struct SearchView: View {
 
                 Spacer()
             }
+        }
+        .errorToast(message: viewModel.errorMessage) {
+            viewModel.errorMessage = nil
         }
         .onTapGesture {
             // Dismiss keyboard when tapping outside text field

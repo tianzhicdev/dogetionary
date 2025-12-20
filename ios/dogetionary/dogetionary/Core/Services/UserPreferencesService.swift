@@ -64,7 +64,7 @@ class UserPreferencesService: BaseNetworkService {
         task.resume()
     }
 
-    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, timezone: String? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
+    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, dailyTimeCommitmentMinutes: Int? = nil, timezone: String? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
         guard let encodedUserID = userID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let url = URL(string: "\(baseURL)/v3/users/\(encodedUserID)/preferences") else {
             logger.error("Invalid URL for user preferences POST endpoint")
@@ -87,6 +87,10 @@ class UserPreferencesService: BaseNetworkService {
 
         if let studyDurationDays = studyDurationDays {
             requestBody["study_duration_days"] = studyDurationDays
+        }
+
+        if let dailyTimeCommitmentMinutes = dailyTimeCommitmentMinutes {
+            requestBody["daily_time_commitment_minutes"] = dailyTimeCommitmentMinutes
         }
 
         if let timezone = timezone {

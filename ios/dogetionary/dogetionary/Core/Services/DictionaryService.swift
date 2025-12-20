@@ -141,8 +141,8 @@ class DictionaryService {
         UserPreferencesService.shared.getUserPreferences(userID: userID, completion: completion)
     }
 
-    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, timezone: String? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
-        UserPreferencesService.shared.updateUserPreferences(userID: userID, learningLanguage: learningLanguage, nativeLanguage: nativeLanguage, userName: userName, userMotto: userMotto, testPrep: testPrep, studyDurationDays: studyDurationDays, timezone: timezone, completion: completion)
+    func updateUserPreferences(userID: String, learningLanguage: String, nativeLanguage: String, userName: String, userMotto: String, testPrep: String? = nil, studyDurationDays: Int? = nil, dailyTimeCommitmentMinutes: Int? = nil, timezone: String? = nil, completion: @escaping (Result<UserPreferences, Error>) -> Void) {
+        UserPreferencesService.shared.updateUserPreferences(userID: userID, learningLanguage: learningLanguage, nativeLanguage: nativeLanguage, userName: userName, userMotto: userMotto, testPrep: testPrep, studyDurationDays: studyDurationDays, dailyTimeCommitmentMinutes: dailyTimeCommitmentMinutes, timezone: timezone, completion: completion)
     }
 
     func submitFeedback(feedback: String, completion: @escaping (Result<Bool, Error>) -> Void) {

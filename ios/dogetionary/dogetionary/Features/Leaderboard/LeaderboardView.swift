@@ -28,33 +28,6 @@ struct LeaderboardView: View {
                                 .foregroundColor(AppTheme.smallTitleText)
 
                         }
-                    } else if let errorMessage = errorMessage {
-                        VStack(spacing: 16) {
-                            Image(systemName: "exclamationmark.triangle")
-                                .font(.system(size: AppTheme.emptyStateIconSize))
-                                .foregroundColor(AppTheme.selectableTint)
-
-                            Text("ERROR")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.smallTitleText)
-
-                            Text(errorMessage.uppercased())
-                                .foregroundColor(AppTheme.smallTextColor1)
-                                .multilineTextAlignment(.center)
-
-                            Button("TRY AGAIN") {
-                                Task {
-                                    await loadLeaderboard()
-                                }
-                            }
-                            .foregroundColor(AppTheme.bgPrimary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(AppTheme.accentCyan)
-                            .cornerRadius(4)
-                        }
-                        .padding()
                     } else if leaderboard.isEmpty {
                         VStack(spacing: 20) {
                             Image(systemName: "chart.bar")
@@ -82,6 +55,9 @@ struct LeaderboardView: View {
                         }
                     }
             }
+        }
+        .errorToast(message: errorMessage) {
+            errorMessage = nil
         }
         .refreshable {
             await loadLeaderboard()

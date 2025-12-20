@@ -48,17 +48,6 @@ struct ScheduleView: View {
                                 .foregroundColor(AppTheme.smallTitleText)
                         }
                         .frame(maxHeight: .infinity)
-                    } else if let error = errorMessage {
-                        VStack(spacing: 16) {
-                            Image(systemName: "exclamationmark.triangle")
-                                .font(.system(size: 48))
-                                .foregroundColor(AppTheme.selectableTint)
-                            Text(error.uppercased())
-                                .foregroundColor(AppTheme.smallTitleText)
-                                .multilineTextAlignment(.center)
-                                .padding()
-                        }
-                        .frame(maxHeight: .infinity)
                     } else if !schedules.isEmpty || userManager.learningLanguage == "en" {
                         SimpleScheduleListView(
                             schedules: schedules,
@@ -100,6 +89,9 @@ struct ScheduleView: View {
                     }
                 }
             }
+        }
+        .errorToast(message: errorMessage) {
+            errorMessage = nil
         }
         .task {
             // Always refresh when view appears (navigating to Schedule tab)

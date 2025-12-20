@@ -193,16 +193,6 @@ struct SavedWordsListView: View {
                             .multilineTextAlignment(.center)
                     }
                     .padding()
-                } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: AppTheme.emptyStateIconSize))
-                            .foregroundColor(AppTheme.selectableTint)
-                        Text(errorMessage.uppercased())
-                            .foregroundColor(AppTheme.selectableTint)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     VStack(spacing: 0) {
                         // Filter text bar
@@ -263,6 +253,9 @@ struct SavedWordsListView: View {
                 }
             }
         }
+        .errorToast(message: errorMessage) {
+            // Error auto-dismissed after 5 seconds
+        }
         .refreshable {
             await onRefresh()
         }
@@ -322,8 +315,11 @@ struct SavedWordRow: View {
                 }
             }
 
-            // 7-level progress indicator
-            WordProgressBar(progressLevel: savedWord.word_progress_level)
+            // Mini forgetting curve
+            MiniForgettingCurveView(wordId: savedWord.id)
+
+            // Vertical battery bar (7-level progress indicator)
+            VerticalBatteryBar(level: savedWord.word_progress_level)
 
             // Action menu button
             if onToggleKnown != nil || onDelete != nil {

@@ -104,6 +104,16 @@ class UserManager: ObservableObject {
         }
     }
 
+    /// Daily time commitment in minutes (10-480)
+    @Published var dailyTimeCommitmentMinutes: Int {
+        didSet {
+            UserDefaults.standard.set(dailyTimeCommitmentMinutes, forKey: "DogetionaryDailyTimeCommitmentMinutes")
+            if !isSyncingFromServer {
+                syncTestSettingsToServer()
+            }
+        }
+    }
+
     // MARK: - Legacy Test Preparation Properties (deprecated)
 
     /// Legacy property for backward compatibility
@@ -273,6 +283,10 @@ class UserManager: ObservableObject {
         let savedTargetDays = UserDefaults.standard.integer(forKey: targetDaysKey)
         self.targetDays = savedTargetDays > 0 ? savedTargetDays : 30
 
+        // Load daily time commitment (default: 30 minutes)
+        let savedTimeCommitment = UserDefaults.standard.integer(forKey: "DogetionaryDailyTimeCommitmentMinutes")
+        self.dailyTimeCommitmentMinutes = savedTimeCommitment > 0 ? savedTimeCommitment : 30
+
         // Load legacy test preparation settings (for backward compatibility)
         self.toeflEnabled = UserDefaults.standard.bool(forKey: toeflEnabledKey)
         self.ieltsEnabled = UserDefaults.standard.bool(forKey: ieltsEnabledKey)
@@ -334,6 +348,7 @@ class UserManager: ObservableObject {
             userMotto: self.userMotto,
             testPrep: testPrep,
             studyDurationDays: studyDurationDays,
+            dailyTimeCommitmentMinutes: self.dailyTimeCommitmentMinutes,
             timezone: timezone
         ) { result in
             switch result {
@@ -372,11 +387,12 @@ class UserManager: ObservableObject {
                     // Convert test_prep string to TestType
                     let serverTestType: TestType? = preferences.test_prep.flatMap { TestType(rawValue: $0) }
                     let serverTargetDays = preferences.study_duration_days ?? 30
+                    let serverTimeCommitment = preferences.daily_time_commitment_minutes ?? 30
 
-                    self.logger.info("Successfully fetched test settings from server: testType=\(serverTestType?.rawValue ?? "nil"), targetDays=\(serverTargetDays)")
+                    self.logger.info("Successfully fetched test settings from server: testType=\(serverTestType?.rawValue ?? "nil"), targetDays=\(serverTargetDays), timeCommitment=\(serverTimeCommitment)")
 
                     // Update local settings if they're different from server
-                    if self.activeTestType != serverTestType || self.targetDays != serverTargetDays {
+                    if self.activeTestType != serverTestType || self.targetDays != serverTargetDays || self.dailyTimeCommitmentMinutes != serverTimeCommitment {
                         self.logger.info("Updating local test settings to match server")
 
                         // Set flag to prevent sync loop
@@ -385,6 +401,7 @@ class UserManager: ObservableObject {
                         // Update V3 properties
                         self.activeTestType = serverTestType
                         self.targetDays = serverTargetDays
+                        self.dailyTimeCommitmentMinutes = serverTimeCommitment
 
                         // Update legacy properties for backward compatibility
                         self.updateLegacyPropertiesFromActive()
@@ -473,9 +490,9 @@ class UserManager: ObservableObject {
             DictionaryService.shared.getPracticeStatus { result in
                 switch result {
                 case .success(let status):
-                    // Only count words that are actually due for practice (exclude not_due_yet_count)
-                    let totalCount = status.new_words_count + status.test_practice_count + status.non_test_practice_count
-                    self.logger.info("Practice status refreshed - Total count: \(totalCount) (excluded \(status.not_due_yet_count) not-due-yet words)")
+                    // Use due_word_count for practice badge (words that are due for review)
+                    let totalCount = status.due_word_count
+                    self.logger.info("Practice status refreshed - Due words: \(totalCount), Last 24h: \(status.new_word_count_past_24h), Total: \(status.total_word_count)")
 
                     DispatchQueue.main.async {
                         self.practiceCount = totalCount

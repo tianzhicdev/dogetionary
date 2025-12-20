@@ -393,17 +393,49 @@ backend code remove redundant
 
 demo test
 
+badge png
+
 -- done --
-
-
-
 
 schedule and practice status logic is too complicated, need a human review;
 
+UI menu button
+the menu button we have here is quite obtrusive, it blocks question buttons and etc; 
+the menu has 6 items; ios buttom menu bar only allow 4; let's make remove leaderboard and schedule for now; do not remove the code for the views; just no button for them for now; we may add them back later;
 
-UI menu button 
-badge png
+there is a feature that if the user has something to practice today; we should an additional button for practice;
+we should replace it with highlighting the practice button -- using selectable tint for practice button on the menu and wiggle the icon/symbol;
+keep the logic -- no highlighting when in practice mode; 
+
+research how we should do this refactoring, no code yet; 
+
+
+
+video no looping
+
+
 learning english only, chinese/spanish/...
+
+in the ios, we doi not let people choose what language to learn for now
+this means disabling the selecting learning language in on boarding and settings;
+onboarding:
+page 1: choose your native language (here we can use the globe lottie)
+page 2: "are you studing for a test", lets change the wording to be "choose a program" -- default to demo;
+page 3: "how much time can you commit everyday"? slider from 10 mins to 8 hours;
+page 4: "give yourself a cool name"
+page 5: spaced repitition declaration page
+page 6: logo 
+
+
+
+the progress bar
+Streak: 15 / DAILY: (review in the past 24) / (user_commited_time * 2) -- it can be more than 100; [PROGRESS BAR]
+
+
+
+
+
+
 names
 snapshot
 

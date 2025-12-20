@@ -15,13 +15,13 @@ struct VideoQuestionView: View {
 
     // MARK: - Layout Constants (adjust these to tune padding/margins)
     private let videoHeight: CGFloat = 250                // Video player height
-    private let transcriptInnerPadding: CGFloat = 0      // Transcript text padding
-    private let transcriptHorizontalPadding: CGFloat = 0 // Transcript container horizontal padding
-    private let questionHorizontalPadding: CGFloat = 0   // Question text horizontal padding
-    private let questionTopPadding: CGFloat = 0           // Question text top padding
-    private let optionsHorizontalPadding: CGFloat = 0    // Options horizontal padding
-    private let outerPadding: CGFloat = 8                // Outer container padding
-    private let vStackSpacing: CGFloat = 8                // Spacing between elements in VStack
+    private let transcriptInnerPadding: CGFloat = 12     // Transcript text padding
+    private let transcriptHorizontalPadding: CGFloat = 16 // Transcript container horizontal padding
+    private let questionHorizontalPadding: CGFloat = 16   // Question text horizontal padding
+    private let questionTopPadding: CGFloat = 8           // Question text top padding
+    private let optionsHorizontalPadding: CGFloat = 16    // Options horizontal padding
+    private let outerPadding: CGFloat = 16                // Outer container padding (adds horizontal space for video)
+    private let vStackSpacing: CGFloat = 16                // Spacing between elements in VStack
     private let feedbackDelay: TimeInterval = 0           // Delay before showing definition (seconds)
 
     @State private var player: AVPlayer?

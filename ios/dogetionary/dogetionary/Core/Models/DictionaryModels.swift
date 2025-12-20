@@ -501,10 +501,11 @@ struct UserPreferences: Codable {
     let user_motto: String?
     let test_prep: String?
     let study_duration_days: Int?
+    let daily_time_commitment_minutes: Int?
     let updated: Bool?
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, learning_language, native_language, user_name, user_motto, test_prep, study_duration_days, updated
+        case user_id, learning_language, native_language, user_name, user_motto, test_prep, study_duration_days, daily_time_commitment_minutes, updated
     }
 }
 
@@ -1212,15 +1213,14 @@ typealias TestVocabularyAwardsResponse = [String: TestVocabularyProgress]
 /// Practice status response for the Practice tab
 struct PracticeStatusResponse: Codable {
     let user_id: String
-    let new_words_count: Int           // Scheduled new words for today
-    let test_practice_count: Int       // Test practice words from today's schedule
-    let non_test_practice_count: Int   // Non-test practice words from today's schedule
-    let not_due_yet_count: Int         // Words reviewed before, last review > 24h ago, not due yet
+    let due_word_count: Int            // Words that are due for review (next_review <= NOW)
+    let new_word_count_past_24h: Int   // Words saved in the last 24 hours
+    let total_word_count: Int          // Total saved words
     let score: Int                     // Current score from reviews
     let has_practice: Bool             // Quick check: any practice available
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, new_words_count, test_practice_count, non_test_practice_count, not_due_yet_count, score, has_practice
+        case user_id, due_word_count, new_word_count_past_24h, total_word_count, score, has_practice
     }
 }
 

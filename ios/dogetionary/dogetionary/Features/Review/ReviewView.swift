@@ -48,7 +48,7 @@ struct ReviewView: View {
                     }
                 )
                 .padding(.horizontal)
-                .padding(.vertical, 4)
+                .padding(.bottom, 8)
 
                 // Main content area (fills remaining space)
                 ZStack {
@@ -98,13 +98,9 @@ struct ReviewView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(AppTheme.errorColor)
-                        .font(.caption)
-                        .padding()
-                }
+            }
+            .errorToast(message: viewModel.errorMessage) {
+                viewModel.errorMessage = nil
             }
 
             // Badge celebration overlay - show badges sequentially

@@ -42,7 +42,8 @@ def get_user_preferences(user_id: str) -> dict:
         cur.execute("""
             SELECT learning_language, native_language, user_name, user_motto,
                    toefl_enabled, ielts_enabled, demo_enabled,
-                   toefl_target_days, ielts_target_days, demo_target_days
+                   toefl_target_days, ielts_target_days, demo_target_days,
+                   daily_time_commitment_minutes
             FROM user_preferences
             WHERE user_id = %s
         """, (user_id,))
@@ -71,7 +72,8 @@ def get_user_preferences(user_id: str) -> dict:
                 'user_name': result['user_name'] or '',
                 'user_motto': result['user_motto'] or '',
                 'test_prep': test_prep,
-                'study_duration_days': target_days
+                'study_duration_days': target_days,
+                'daily_time_commitment_minutes': result.get('daily_time_commitment_minutes', 30)
             }
         else:
             # Generate AI profile for new user
@@ -92,7 +94,8 @@ def get_user_preferences(user_id: str) -> dict:
                 'user_name': username,
                 'user_motto': motto,
                 'test_prep': None,
-                'study_duration_days': 30
+                'study_duration_days': 30,
+                'daily_time_commitment_minutes': 30
             }
 
     except Exception as e:
@@ -103,7 +106,8 @@ def get_user_preferences(user_id: str) -> dict:
             'user_name': 'LearningExplorer',
             'user_motto': 'Every word is a new adventure!',
             'test_prep': None,
-            'study_duration_days': 30
+            'study_duration_days': 30,
+            'daily_time_commitment_minutes': 30
         }
 
 
@@ -133,6 +137,7 @@ def handle_user_preferences(user_id):
             study_duration_days = data.get('study_duration_days')  # 30, 40, 50, 60, 70
             timezone = data.get('timezone')  # Optional: IANA timezone string (e.g., "America/New_York")
             target_end_date = data.get('target_end_date')  # "YYYY-MM-DD" format or null
+            daily_time_commitment = data.get('daily_time_commitment_minutes')  # Optional: 10-480 minutes
 
             if not learning_lang or not native_lang:
                 return jsonify({"error": "Both learning_language and native_language are required"}), 400
@@ -181,6 +186,15 @@ def handle_user_preferences(user_id):
                 except pytz.exceptions.UnknownTimeZoneError:
                     return jsonify({"error": "Invalid timezone. Use IANA timezone format (e.g., 'America/New_York')"}), 400
 
+            # Validate daily time commitment if provided (10-480 minutes)
+            if daily_time_commitment is not None:
+                try:
+                    daily_time_commitment = int(daily_time_commitment)
+                    if daily_time_commitment < 10 or daily_time_commitment > 480:
+                        return jsonify({"error": "daily_time_commitment_minutes must be between 10 and 480"}), 400
+                except (ValueError, TypeError):
+                    return jsonify({"error": "daily_time_commitment_minutes must be an integer"}), 400
+
             conn = get_db_connection()
             cur = conn.cursor()
 
@@ -214,6 +228,11 @@ def handle_user_preferences(user_id):
                 insert_cols.append('timezone')
                 insert_values.append(timezone)
 
+            # Add daily time commitment if provided
+            if daily_time_commitment is not None:
+                insert_cols.append('daily_time_commitment_minutes')
+                insert_values.append(daily_time_commitment)
+
             placeholders = ', '.join(['%s'] * len(insert_values))
 
             # Build the ON CONFLICT UPDATE clause
@@ -232,6 +251,9 @@ def handle_user_preferences(user_id):
             # Add timezone update if provided
             if timezone:
                 update_clauses.append('timezone = EXCLUDED.timezone')
+            # Add daily time commitment update if provided
+            if daily_time_commitment is not None:
+                update_clauses.append('daily_time_commitment_minutes = EXCLUDED.daily_time_commitment_minutes')
             update_clauses.append('updated_at = CURRENT_TIMESTAMP')
 
             # Execute the query
@@ -257,6 +279,8 @@ def handle_user_preferences(user_id):
             }
             if target_end_date:
                 response_data["target_end_date"] = target_end_date
+            if daily_time_commitment is not None:
+                response_data["daily_time_commitment_minutes"] = daily_time_commitment
             return jsonify(response_data)
     
     except Exception as e:

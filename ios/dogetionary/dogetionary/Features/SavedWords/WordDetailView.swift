@@ -57,6 +57,9 @@ struct WordDetailView: View {
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
         }
+        .errorToast(message: errorMessage) {
+            errorMessage = nil
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -170,19 +173,6 @@ struct DefinitionTabView: View {
                 if isLoading {
                     ProgressView("Loading definitions...")
                         .padding()
-                } else if let errorMessage = errorMessage {
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.title)
-                            .foregroundColor(AppTheme.warningColor)
-                        Text("Error loading definitions")
-                            .font(.headline)
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
                 } else {
                     LazyVStack(alignment: .leading, spacing: 16) {
                         ForEach(definitions) { (definition: Definition) in
@@ -207,19 +197,6 @@ struct StatsTabView: View {
                 if isLoading {
                     ProgressView("Loading stats...")
                         .padding()
-                } else if let errorMessage = errorMessage {
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.title)
-                            .foregroundColor(AppTheme.warningColor)
-                        Text("Error loading stats")
-                            .font(.headline)
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
                 } else if let details = wordDetails {
                     // Only show Forgetting Curve visualization
                     if !details.review_history.isEmpty {

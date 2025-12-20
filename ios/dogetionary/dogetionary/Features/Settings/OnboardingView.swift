@@ -16,13 +16,11 @@ struct OnboardingView: View {
     @Environment(AppState.self) private var appState
 
     @State private var currentPage = 0
-    @State private var selectedLearningLanguage = "en"
+    private let selectedLearningLanguage = "en" // Hardcoded to English for now
     @State private var selectedNativeLanguage = "fr"
-    @State private var selectedTestType: TestType? = nil // Level-based test selection
-    @State private var selectedStudyDuration: Double = 30 // 1-365 days via slider
-    @State private var vocabularyCount: Int = 0
-    @State private var studyPlans: [(days: Int, wordsPerDay: Int)] = []
-    @State private var isLoadingVocabulary = false
+    @State private var selectedTestType: TestType? = .demo // Default to DEMO as requested
+    private let selectedStudyDuration: Int = 30 // Default to 30 days (no longer user-configurable in onboarding)
+    @State private var dailyTimeCommitment: Double = 30 // 10-480 minutes via slider
     @State private var vocabularyCounts: [TestType: VocabularyCountInfo] = [:]  // All test type counts
     @State private var userName: String = {
         let names = [
@@ -74,46 +72,27 @@ struct OnboardingView: View {
 
                     // Page content
                     TabView(selection: $currentPage) {
-                        // Page 0: Learning Language
-                        languageSelectionPage(
-                            title: "WHAT LANGUAGE ARE YOU LEARNING?",
-                            description: "CHOOSE THE LANGUAGE YOU WANT TO LEARN AND IMPROVE",
-                            lottieAnimation: "globe2",
-                            selectedLanguage: $selectedLearningLanguage,
-                            excludeLanguage: selectedNativeLanguage
-                        )
-                        .tag(0)
-
-                        // Page 1: Native Language
+                        // Page 0: Native Language (with globe lottie animation)
                         languageSelectionPage(
                             title: "WHAT IS YOUR NATIVE LANGUAGE?",
                             description: "CHOOSE YOUR NATIVE LANGUAGE FOR TRANSLATIONS",
+                            lottieAnimation: "globe2",
                             selectedLanguage: $selectedNativeLanguage,
                             excludeLanguage: selectedLearningLanguage
                         )
-                        .tag(1)
+                        .tag(0)
 
-                        // Page 2: Test Prep (only shown if learning English)
-                        if selectedLearningLanguage == "en" {
-                            testPrepPage
-                                .tag(2)
-                        }
+                        // Page 1: Test Prep (renamed to "Choose a program")
+                        testPrepPage
+                            .tag(1)
 
-                        // Page 3: Study Duration (only shown if TOEFL or IELTS selected)
-                        if showDurationPage {
-                            studyDurationPage
-                                .tag(3)
-                        }
+                        // Page 2: Daily Time Commitment
+                        dailyTimeCommitmentPage
+                            .tag(2)
 
                         // Username Page
                         usernamePage
                             .tag(usernamePageIndex)
-
-                        // Schedule Preview Page (only if test prep enabled)
-                        if showDurationPage {
-                            schedulePreviewPage
-                                .tag(schedulePageIndex)
-                        }
 
                         // Declaration Page
                         declarationPage
@@ -296,7 +275,7 @@ struct OnboardingView: View {
     private var testPrepPage: some View {
         VStack(spacing: 40) {
             VStack(spacing: 20) {
-                Text("ARE YOU STUDYING FOR A TEST?")
+                Text("CHOOSE A PROGRAM")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.gradient1)
@@ -331,12 +310,13 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Study Duration Page
 
-    private var studyDurationPage: some View {
+    // MARK: - Daily Time Commitment Page
+
+    private var dailyTimeCommitmentPage: some View {
         VStack(spacing: 24) {
             VStack(spacing: 20) {
-                Text("HOW LONG DO YOU WANT TO MASTER THE VOCABULARY?")
+                Text("HOW MUCH TIME CAN YOU COMMIT EVERYDAY?")
                     .font(.system(size: 32, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.gradient1)
@@ -346,64 +326,30 @@ struct OnboardingView: View {
 
             Spacer()
 
-            if isLoadingVocabulary {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .tint(AppTheme.selectableTint)
-            } else {
-                VStack(spacing: 32) {
-                    // Duration display
-                    VStack(spacing: 8) {
-                        Text("\(Int(selectedStudyDuration))")
-                            .font(.system(size: 80, weight: .bold))
-                            .foregroundStyle(AppTheme.gradient1)
-                        Text("DAYS")
-                            .font(.title2)
-                            .foregroundColor(AppTheme.smallTitleText)
-                    }
+            VStack(spacing: 32) {
+                // Time display
+                VStack(spacing: 8) {
+                    Text(formatTimeCommitment(minutes: Int(dailyTimeCommitment)))
+                        .font(.system(size: 80, weight: .bold))
+                        .foregroundStyle(AppTheme.gradient1)
+                    Text(Int(dailyTimeCommitment) >= 60 ? "HOURS" : "MINUTES")
+                        .font(.title2)
+                        .foregroundColor(AppTheme.smallTitleText)
+                }
 
-                    // Slider
-                    VStack(spacing: 8) {
-                        Slider(value: $selectedStudyDuration, in: 1...365, step: 1)
-                            .tint(AppTheme.selectableTint)
+                // Slider
+                VStack(spacing: 8) {
+                    Slider(value: $dailyTimeCommitment, in: 10...480, step: 5)
+                        .tint(AppTheme.selectableTint)
 
-                        HStack {
-                            Text("1 DAY")
-                                .font(.caption)
-                                .foregroundColor(AppTheme.smallTextColor1)
-                            Spacer()
-                            Text("365 DAYS")
-                                .font(.caption)
-                                .foregroundColor(AppTheme.smallTextColor1)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-
-                    // Words per day calculation
-                    if vocabularyCount > 0 {
-                        let wordsPerDay = max(1, vocabularyCount / Int(selectedStudyDuration))
-                        Text("~\(wordsPerDay) NEW WORDS PER DAY")
-                            .font(.headline)
-                            .foregroundColor(AppTheme.smallTitleText)
-//                        VStack(spacing: 8) {
-//                            HStack {
-//                                Text("📝")
-//                                    .font(.title)
-//                                Text("~\(wordsPerDay) NEW WORDS PER DAY")
-//                                    .font(.headline)
-//                                    .foregroundColor(AppTheme.mediumTextColor1)
-//                            }
-//                            Text("\(vocabularyCount) TOTAL \((selectedTestType?.displayName ?? "").uppercased()) WORDS")
-//                                .font(.subheadline)
-//                                .foregroundColor(AppTheme.smallTextColor1)
-//                        }
-//                        .padding()
-//                        .background(AppTheme.textFieldBackgroundColor)
-//                        .cornerRadius(10)
-//                        .overlay(
-//                            RoundedRectangle(cornerRadius: 10)
-//                                .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
-//                        )
+                    HStack {
+                        Text("10 MIN")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.smallTextColor1)
+                        Spacer()
+                        Text("8 HOURS")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.smallTextColor1)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -411,22 +357,20 @@ struct OnboardingView: View {
 
             Spacer()
         }
-        .onAppear {
-            fetchVocabularyCount()
-        }
-        .onChange(of: selectedTestType) { _, _ in
-            // Reset and refetch when test type changes
-            studyPlans = []
-            selectedStudyDuration = 30
-            fetchVocabularyCount()
-        }
     }
 
-    // MARK: - Schedule Preview Page
-
-    private var schedulePreviewPage: some View {
-        // Reuse the existing ScheduleView in embedded mode (no NavigationStack)
-        ScheduleView(embedded: true)
+    // Helper function to format time commitment display
+    private func formatTimeCommitment(minutes: Int) -> String {
+        if minutes < 60 {
+            return "\(minutes)"
+        } else {
+            let hours = Double(minutes) / 60.0
+            if hours == Double(Int(hours)) {
+                return "\(Int(hours))"
+            } else {
+                return String(format: "%.1f", hours)
+            }
+        }
     }
 
     // MARK: - Declaration Page
@@ -512,48 +456,21 @@ struct OnboardingView: View {
     // MARK: - Helper Methods
 
     private var totalPages: Int {
-        if selectedLearningLanguage == "en" {
-            // With test: Learning, Native, TestPrep, Duration, Username, Schedule, Declaration, Motivation = 8 pages
-            // Without test: Learning, Native, TestPrep, Username, Declaration, Motivation = 6 pages
-            return showDurationPage ? 8 : 6
-        }
-        // Non-English: Learning, Native, Username, Declaration, Motivation = 5 pages
-        return 5
-    }
-
-    private var showDurationPage: Bool {
-        return selectedLearningLanguage == "en" && selectedTestType != nil
+        // Structure: Native, TestPrep, TimeCommitment, Username, Declaration, Motivation = 6 pages
+        return 6
     }
 
     private var usernamePageIndex: Int {
-        if selectedLearningLanguage == "en" {
-            return showDurationPage ? 4 : 3
-        }
-        return 2
-    }
-
-    private var schedulePageIndex: Int {
-        // Only valid when showDurationPage is true
-        return 5
+        return 3
     }
 
     private var declarationPageIndex: Int {
-        if selectedLearningLanguage == "en" {
-            // With test: page 6 (after schedule preview at page 5)
-            // Without test: page 4 (after username at page 3)
-            return showDurationPage ? 6 : 4
-        }
-        return 3
+        return 4
     }
 
     private var searchPageIndex: Int {
         // Note: This is actually the motivation page index (variable name kept for compatibility)
-        if selectedLearningLanguage == "en" {
-            // With test: page 7 (after declaration at page 6)
-            // Without test: page 5 (after declaration at page 4)
-            return showDurationPage ? 7 : 5
-        }
-        return 4
+        return 5
     }
 
     private var displayPageIndex: Int {
@@ -563,55 +480,23 @@ struct OnboardingView: View {
     private var canProceed: Bool {
         switch currentPage {
         case 0:
-            return !selectedLearningLanguage.isEmpty
-        case 1:
+            // Native language page
             return !selectedNativeLanguage.isEmpty && selectedNativeLanguage != selectedLearningLanguage
+        case 1:
+            // Test prep page - always allows proceeding (default is DEMO)
+            return true
         case 2:
-            // Test prep page (English) or Username page (non-English)
-            if selectedLearningLanguage == "en" {
-                return true // Test prep always allows proceeding
-            } else {
-                return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            }
+            // Time commitment page
+            return true // Slider always has a value
         case 3:
-            // Study duration (if test) or Username (if no test) or Declaration (non-English)
-            if selectedLearningLanguage == "en" {
-                if showDurationPage {
-                    return true // Slider always has a value
-                } else {
-                    return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
-                }
-            } else {
-                return true // Declaration page - always can proceed
-            }
+            // Username page
+            return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case 4:
-            // Username (if test) or Declaration (if no test) or Motivation (non-English) - English only
-            if selectedLearningLanguage == "en" {
-                if showDurationPage {
-                    return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty // Username page
-                } else {
-                    return true // Declaration page - always can proceed
-                }
-            } else {
-                return true // Motivation page - always can proceed
-            }
+            // Declaration page
+            return true
         case 5:
-            // Schedule preview page (English with test) or Motivation (if no test)
-            if showDurationPage {
-                return true // Schedule preview - always can proceed
-            } else {
-                return true // Motivation page - always can proceed
-            }
-        case 6:
-            // Declaration page (English with test) or beyond
-            if showDurationPage {
-                return true // Declaration page - always can proceed
-            } else {
-                return false
-            }
-        case 7:
-            // Motivation page (English with test)
-            return true // Motivation page - always can proceed
+            // Motivation page
+            return true
         default:
             return false
         }
@@ -635,11 +520,6 @@ struct OnboardingView: View {
         } else if currentPage == usernamePageIndex {
             // Submit onboarding data first
             submitOnboarding()
-        } else if currentPage == schedulePageIndex && showDurationPage {
-            // Schedule preview page - just advance to declaration
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                currentPage = declarationPageIndex
-            }
         } else if currentPage == declarationPageIndex {
             // Declaration page - just advance to motivation page
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -671,7 +551,8 @@ struct OnboardingView: View {
             userName: trimmedName,
             userMotto: "",
             testPrep: selectedTestType?.rawValue,  // Use raw value for legacy API
-            studyDurationDays: Int(selectedStudyDuration)
+            studyDurationDays: selectedStudyDuration,
+            dailyTimeCommitmentMinutes: Int(dailyTimeCommitment)
         ) { result in
             DispatchQueue.main.async {
                 isSubmitting = false
@@ -686,9 +567,8 @@ struct OnboardingView: View {
                     userManager.userName = trimmedName
 
                     // Update test prep settings using V3 API
-                    let duration = Int(selectedStudyDuration)
                     userManager.activeTestType = selectedTestType
-                    userManager.targetDays = duration
+                    userManager.targetDays = selectedStudyDuration
 
                     userManager.isSyncingFromServer = false
 
@@ -699,17 +579,13 @@ struct OnboardingView: View {
                     ]
                     if let testType = selectedTestType {
                         metadata["test_type"] = testType.rawValue
-                        metadata["study_duration_days"] = duration
+                        metadata["study_duration_days"] = selectedStudyDuration
                     }
                     AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
 
-                    // Move to next page (schedule preview if test enabled, otherwise declaration)
+                    // Move to next page (declaration page)
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        if self.showDurationPage {
-                            currentPage = schedulePageIndex
-                        } else {
-                            currentPage = declarationPageIndex
-                        }
+                        currentPage = declarationPageIndex
                     }
 
                 case .failure(let error):
@@ -740,69 +616,6 @@ struct OnboardingView: View {
         shouldDismiss = true
     }
 
-    private func fetchVocabularyCount() {
-        guard let testType = selectedTestType else {
-            return
-        }
-
-        isLoadingVocabulary = true
-
-        let baseURL = Configuration.effectiveBaseURL
-        guard let url = URL(string: "\(baseURL)/v3/api/test-vocabulary-count?test_type=\(testType.rawValue)") else {
-            isLoadingVocabulary = false
-            setDefaultStudyPlans()
-            return
-        }
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            DispatchQueue.main.async {
-                isLoadingVocabulary = false
-
-                if let error = error {
-                    Self.logger.error("Error fetching vocabulary count: \(error.localizedDescription, privacy: .public)")
-                    setDefaultStudyPlans()
-                    return
-                }
-
-                guard let data = data else {
-                    setDefaultStudyPlans()
-                    return
-                }
-
-                do {
-                    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                    if let totalWords = json?["total_words"] as? Int,
-                       let plans = json?["study_plans"] as? [[String: Int]] {
-
-                        vocabularyCount = totalWords
-                        studyPlans = plans.compactMap { plan in
-                            if let days = plan["days"], let wordsPerDay = plan["words_per_day"] {
-                                return (days: days, wordsPerDay: wordsPerDay)
-                            }
-                            return nil
-                        }
-
-                        // Auto-select 30 days as default
-                        selectedStudyDuration = 30
-                    } else {
-                        setDefaultStudyPlans()
-                    }
-                } catch {
-                    Self.logger.error("Error parsing vocabulary count response: \(error.localizedDescription, privacy: .public)")
-                    setDefaultStudyPlans()
-                }
-            }
-        }.resume()
-    }
-
-    private func setDefaultStudyPlans() {
-        // Fallback to default vocabulary count if API fails
-        // Assuming ~3500 words for typical test vocabulary
-        vocabularyCount = 3500
-
-        // Keep 30 days as default
-        selectedStudyDuration = 30
-    }
 
     private func fetchAllVocabularyCounts() {
         let baseURL = Configuration.effectiveBaseURL

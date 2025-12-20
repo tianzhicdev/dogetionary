@@ -19,26 +19,13 @@ struct PracticeStatusBar: View {
     var body: some View {
         ZStack(alignment: .top) {
             HStack {
-                // Simple summary: NEW 6 / PRACTICE 5 / DUE SOON 20
+                // Simple summary: PRACTICE 5 / LAST 24H 3 / TOTAL 87
                 if let status = practiceStatus {
-                    let practiceCount = status.test_practice_count + status.non_test_practice_count
-
                     HStack(spacing: 6) {
-                        Text("NEW")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(AppTheme.smallTitleText)
-                        Text("\(status.new_words_count)")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(AppTheme.bodyText)
-
-                        Text("/")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(AppTheme.bodyText)
-
                         Text("PRACTICE")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(AppTheme.smallTitleText)
-                        Text("\(practiceCount)")
+                        Text("\(status.due_word_count)")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(AppTheme.bodyText)
 
@@ -46,10 +33,21 @@ struct PracticeStatusBar: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(AppTheme.bodyText)
 
-                        Text("DUE SOON")
+                        Text("LAST 24H")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(AppTheme.smallTitleText)
-                        Text("\(status.not_due_yet_count)")
+                        Text("\(status.new_word_count_past_24h)")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(AppTheme.bodyText)
+
+                        Text("/")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(AppTheme.bodyText)
+
+                        Text("TOTAL")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppTheme.smallTitleText)
+                        Text("\(status.total_word_count)")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(AppTheme.bodyText)
                     }
@@ -84,10 +82,9 @@ struct PracticeStatusBar: View {
 #Preview("Practice Status Bar") {
     let sampleStatus = PracticeStatusResponse(
         user_id: "preview-user",
-        new_words_count: 12,
-        test_practice_count: 8,
-        non_test_practice_count: 5,
-        not_due_yet_count: 23,
+        due_word_count: 5,
+        new_word_count_past_24h: 3,
+        total_word_count: 87,
         score: 450,
         has_practice: true
     )
