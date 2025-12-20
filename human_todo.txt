@@ -395,8 +395,6 @@ demo test
 
 badge png
 
--- done --
-
 schedule and practice status logic is too complicated, need a human review;
 
 UI menu button
@@ -430,6 +428,22 @@ page 6: logo
 
 the progress bar
 Streak: 15 / DAILY: (review in the past 24) / (user_commited_time * 2) -- it can be more than 100; [PROGRESS BAR]
+
+when uncollapsed:
+badges
+
+
+
+when user want to fetch some questions for practice;
+we want to return some thing; 
+
+here is the logic:
+order:
+1. due words;
+2. new words from user selected bundle
+3. new words from every day english
+
+-- done --
 
 
 

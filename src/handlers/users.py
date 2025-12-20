@@ -124,7 +124,8 @@ def handle_user_preferences(user_id):
                 "user_name": prefs['user_name'],
                 "user_motto": prefs['user_motto'],
                 "test_prep": prefs['test_prep'],
-                "study_duration_days": prefs['study_duration_days']
+                "study_duration_days": prefs['study_duration_days'],
+                "daily_time_commitment_minutes": prefs['daily_time_commitment_minutes']
             })
         
         elif request.method == 'POST':

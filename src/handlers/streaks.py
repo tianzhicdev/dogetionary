@@ -53,15 +53,12 @@ def create_streak_date(user_id: str) -> bool:
 
 def calculate_streak_days(user_id: str) -> int:
     """
-    Calculate the current streak count for a user.
-    Works for all users, regardless of schedule status.
+    Calculate the current streak count based on review activity.
 
     Algorithm:
-    - Get today's date in user's timezone
-    - Fetch all streak dates for user (sorted DESC)
-    - Count consecutive dates backwards from today
-    - If today has a record, include it
-    - If yesterday has no record, streak resets
+    - If latest review > 24h ago → streak = 0
+    - Otherwise: count consecutive days with reviews (no gap > 24h)
+    - Uses reviews table directly (any review counts)
 
     Args:
         user_id: UUID of the user
@@ -73,26 +70,33 @@ def calculate_streak_days(user_id: str) -> int:
         # Get user's timezone
         user_tz, today = get_user_today(user_id)
 
-        # Get all streak dates for user (sorted DESC)
-        streak_dates = db_fetch_all("""
-            SELECT streak_date
-            FROM streak_days
+        # Get all unique review dates for user (sorted DESC)
+        review_dates = db_fetch_all("""
+            SELECT DATE(reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE %s) as review_date
+            FROM reviews
             WHERE user_id = %s
-            ORDER BY streak_date DESC
-        """, (user_id,))
+            GROUP BY DATE(reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE %s)
+            ORDER BY review_date DESC
+        """, (user_tz.zone, user_id, user_tz.zone))
 
-        if not streak_dates:
+        if not review_dates:
             return 0
 
         # Convert to date objects
-        dates = [row['streak_date'] for row in streak_dates]
+        dates = [row['review_date'] for row in review_dates]
+        latest_review_date = dates[0]
 
-        # Count consecutive dates backwards from today
+        # Check if latest review is within 24h (today or yesterday)
+        days_since_latest = (today - latest_review_date).days
+        if days_since_latest > 1:  # More than 24h gap
+            return 0
+
+        # Count consecutive days backwards from today
         streak = 0
         expected_date = today
 
-        for streak_date in dates:
-            if streak_date == expected_date:
+        for review_date in dates:
+            if review_date == expected_date:
                 streak += 1
                 expected_date = expected_date - timedelta(days=1)
             else:

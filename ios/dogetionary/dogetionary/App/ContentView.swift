@@ -13,9 +13,21 @@ struct ContentView: View {
     @StateObject private var questionQueue = QuestionQueueManager.shared
     @StateObject private var appVersionManager = AppVersionManager.shared
     @State private var appState = AppState.shared
-    @State private var selectedView = 0  // 0 = Search (default)
+    @State private var selectedView = 1  // 1 = Add (default)
     @State private var showOnboarding = false
+    @State private var dailyBannerExpanded = false
     @Environment(\.scenePhase) var scenePhase
+
+    private var dailyTarget: Int {
+        let questionsPerMinute: Double = 2.0
+        return Int(Double(userManager.dailyTimeCommitmentMinutes) * questionsPerMinute)
+    }
+
+    private var remainingReviewsForDailyGoal: Int {
+        let reviewsPast24h = userManager.practiceStatus?.reviews_past_24h ?? 0
+        let remaining = dailyTarget - reviewsPast24h
+        return max(0, remaining)
+    }
 
     var body: some View {
         // Show force upgrade view if required
@@ -26,34 +38,58 @@ struct ContentView: View {
             )
         } else {
         ZStack {
-            // Main app content with native TabView
-            TabView(selection: $selectedView) {
-                SearchView(showProgressBar: true)
+            
+            AppTheme.verticalGradient2.ignoresSafeArea()
+            // Main app content with daily progress banner + native TabView
+            VStack(spacing: 0) {
+                // Daily progress banner (persistent across all tabs)
+                DailyProgressBanner(
+                    testType: userManager.activeTestType?.rawValue ?? "NONE",
+                    streakDays: userManager.streakDays,
+                    reviewsPast24h: userManager.practiceStatus?.reviews_past_24h ?? 0,
+                    dailyTarget: dailyTarget,
+                    bundleProgress: userManager.practiceStatus?.bundle_progress,
+                    isExpanded: $dailyBannerExpanded
+                )
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+                // Tab view
+                TabView(selection: $selectedView) {
+                    Group {
+                        if remainingReviewsForDailyGoal > 0 {
+                            ReviewView()
+                                .badge(remainingReviewsForDailyGoal)
+                        } else {
+                            ReviewView()
+                        }
+                    }
                     .tabItem {
-                        Label("Search", systemImage: "magnifyingglass")
+                        Label("Shojin", systemImage: "figure.boxing")
                     }
                     .tag(0)
 
-                ReviewView()
-                    .tabItem {
-                        Label("Shojin", image: "shojin_symbol")
-                    }
-                    .badge(userManager.practiceCount > 0 ? userManager.practiceCount : 0)
-                    .tag(2)
+                    SearchView(showProgressBar: true)
+                        .tabItem {
+                            Label("Add", systemImage: "magnifyingglass")
+                        }
+                        .tag(1)
 
-                SavedWordsView()
-                    .tabItem {
-                        Label("History", systemImage: "clock.fill")
-                    }
-                    .tag(3)
+                    SavedWordsView()
+                        .tabItem {
+                            Label("History", systemImage: "clock.fill")
+                        }
+                        .tag(2)
 
-                SettingsView()
-                    .tabItem {
-                        Label("Settings", systemImage: "gear")
-                    }
-                    .tag(5)
+                    SettingsView()
+                        .tabItem {
+                            Label("Settings", systemImage: "gear")
+                        }
+                        .tag(3)
+                }
+                .accentColor(AppTheme.selectableTint)
             }
-            .accentColor(AppTheme.selectableTint)
 
             // Debug overlay (always on top, only visible when debug mode enabled)
             if DebugConfig.isDeveloperModeEnabled {
@@ -64,9 +100,10 @@ struct ContentView: View {
         .onChange(of: selectedView) { oldValue, newValue in
             // Track navigation analytics
             let action: AnalyticsAction = switch newValue {
-            case 2: .navTabReview  // Practice
-            case 3: .navTabSaved  // Saved Words
-            case 5: .navTabSettings
+            case 0: .navTabReview  // Shojin
+            case 1: .navTabDictionary  // Add
+            case 2: .navTabSaved  // History
+            case 3: .navTabSettings
             default: .navTabDictionary
             }
             AnalyticsManager.shared.track(action: action)
@@ -116,8 +153,8 @@ struct ContentView: View {
         }
         .onChange(of: appState.shouldNavigateToReview) { _, shouldNavigate in
             if shouldNavigate {
-                // Navigate to Practice view when notification is tapped
-                selectedView = 2
+                // Navigate to Shojin view when notification is tapped
+                selectedView = 0
             }
         }
         .environment(appState)

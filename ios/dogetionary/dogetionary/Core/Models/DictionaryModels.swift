@@ -373,9 +373,27 @@ struct ReviewSubmissionResponse: Codable {
     let next_review_date: String?  // Optional - removed from backend
     let new_score: Int?
     let new_badges: [NewBadge]?  // Array to support multiple badges (e.g., score milestone + test completion)
+    let practice_status: EmbeddedPracticeStatus?  // Practice status embedded in response to avoid extra API calls
 
     private enum CodingKeys: String, CodingKey {
-        case success, word, word_id, response, review_count, interval_days, next_review_date, new_score, new_badges
+        case success, word, word_id, response, review_count, interval_days, next_review_date, new_score, new_badges, practice_status
+    }
+}
+
+// Practice status embedded in review submission response
+struct EmbeddedPracticeStatus: Codable {
+    let user_id: String
+    let due_word_count: Int
+    let new_word_count_past_24h: Int
+    let total_word_count: Int
+    let score: Int
+    let has_practice: Bool
+    let reviews_past_24h: Int
+    let streak_days: Int
+    let bundle_progress: BundleProgress?
+
+    private enum CodingKeys: String, CodingKey {
+        case user_id, due_word_count, new_word_count_past_24h, total_word_count, score, has_practice, reviews_past_24h, streak_days, bundle_progress
     }
 }
 
@@ -1128,10 +1146,19 @@ struct BatchReviewQuestion: Codable, Identifiable {
     /// Human-readable source type for debug display
     var sourceLabel: String {
         switch source {
+        // New source values (v3 API)
+        case "DUE": return "Due"
+        case "BUNDLE": return "Bundle"
+        case "EVERYDAY": return "Everyday"
+        case "RANDOM": return "Random"
+        // Legacy source values (backward compatibility)
         case "new": return "New"
         case "test_practice": return "Test"
         case "non_test_practice": return "Prac"
         case "not_due_yet": return "Extra"
+        case "due": return "Due"
+        case "new_bundle": return "Bundle"
+        case "everyday_english": return "Everyday"
         default: return source
         }
     }
@@ -1210,6 +1237,13 @@ struct TestVocabularyProgress: Codable {
 /// Test vocabulary awards response - dictionary of test name to progress
 typealias TestVocabularyAwardsResponse = [String: TestVocabularyProgress]
 
+/// Bundle progress information (overall completion of active bundle)
+struct BundleProgress: Codable {
+    let saved_words: Int      // Words user has saved from this bundle
+    let total_words: Int      // Total words in this bundle
+    let percentage: Int       // Completion percentage (0-100)
+}
+
 /// Practice status response for the Practice tab
 struct PracticeStatusResponse: Codable {
     let user_id: String
@@ -1218,9 +1252,11 @@ struct PracticeStatusResponse: Codable {
     let total_word_count: Int          // Total saved words
     let score: Int                     // Current score from reviews
     let has_practice: Bool             // Quick check: any practice available
+    let reviews_past_24h: Int          // Number of reviews (questions answered) in past 24 hours
+    let bundle_progress: BundleProgress?  // Overall bundle completion (nil if no active bundle)
 
     private enum CodingKeys: String, CodingKey {
-        case user_id, due_word_count, new_word_count_past_24h, total_word_count, score, has_practice
+        case user_id, due_word_count, new_word_count_past_24h, total_word_count, score, has_practice, reviews_past_24h, bundle_progress
     }
 }
 

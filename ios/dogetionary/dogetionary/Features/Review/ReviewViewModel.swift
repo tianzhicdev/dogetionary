@@ -209,29 +209,39 @@ class ReviewViewModel: ObservableObject {
                             self.showBadgeCelebration = true
                         }
 
-                        // Refresh status after successful submission
-                        self.refreshStatusAfterCompletion()
+                        // Update practice status from embedded response (avoids extra API calls)
+                        if let embeddedStatus = submitResponse.practice_status {
+                            // Convert embedded status to PracticeStatusResponse format
+                            let practiceStatus = PracticeStatusResponse(
+                                user_id: embeddedStatus.user_id,
+                                due_word_count: embeddedStatus.due_word_count,
+                                new_word_count_past_24h: embeddedStatus.new_word_count_past_24h,
+                                total_word_count: embeddedStatus.total_word_count,
+                                score: embeddedStatus.score,
+                                has_practice: embeddedStatus.has_practice,
+                                reviews_past_24h: embeddedStatus.reviews_past_24h,
+                                bundle_progress: embeddedStatus.bundle_progress
+                            )
 
-                        // Refresh practice status
-                        await self.userManager.refreshPracticeStatus()
+                            // Update local practice status
+                            self.practiceStatus = practiceStatus
+
+                            // Update UserManager properties for banner and badge
+                            self.userManager.practiceCount = embeddedStatus.due_word_count
+                            self.userManager.practiceStatus = practiceStatus
+                            self.userManager.streakDays = embeddedStatus.streak_days
+
+                            // Update app badge
+                            DispatchQueue.main.async {
+                                UserDefaults.standard.set(embeddedStatus.due_word_count, forKey: "cachedPracticeCount")
+                            }
+                        }
 
                     case .failure(let error):
                         self.errorMessage = error.localizedDescription
                     }
 
                     continuation.resume()
-                }
-            }
-        }
-    }
-
-    private func refreshStatusAfterCompletion() {
-        dictionaryService.getPracticeStatus { [weak self] result in
-            guard let self = self else { return }
-
-            Task { @MainActor in
-                if case .success(let status) = result {
-                    self.practiceStatus = status
                 }
             }
         }

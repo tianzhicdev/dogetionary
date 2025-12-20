@@ -39,7 +39,9 @@ class UserManager: ObservableObject {
 
     // Practice status caching (replaces BackgroundTaskManager)
     @Published var practiceCount: Int = 0
-    
+    @Published var practiceStatus: PracticeStatusResponse?  // Full practice status for banner
+    @Published var streakDays: Int = 0  // Consecutive streak days
+
     @Published var userID: String
     @Published var learningLanguage: String {
         didSet {
@@ -484,25 +486,41 @@ class UserManager: ObservableObject {
     /// Refresh practice status from server and update badge
     @MainActor
     func refreshPracticeStatus() async {
-        logger.info("Refreshing practice status")
+        logger.info("Refreshing practice status and streak")
 
         await withCheckedContinuation { continuation in
+            // Fetch practice status
             DictionaryService.shared.getPracticeStatus { result in
                 switch result {
                 case .success(let status):
                     // Use due_word_count for practice badge (words that are due for review)
                     let totalCount = status.due_word_count
-                    self.logger.info("Practice status refreshed - Due words: \(totalCount), Last 24h: \(status.new_word_count_past_24h), Total: \(status.total_word_count)")
+                    self.logger.info("Practice status refreshed - Due words: \(totalCount), Last 24h: \(status.new_word_count_past_24h), Total: \(status.total_word_count), Reviews 24h: \(status.reviews_past_24h)")
 
                     DispatchQueue.main.async {
                         self.practiceCount = totalCount
+                        self.practiceStatus = status  // Store full status for banner
                         UserDefaults.standard.set(totalCount, forKey: self.cachedPracticeCountKey)
                         self.updateAppBadge(totalCount)
                     }
                 case .failure(let error):
                     self.logger.error("Failed to refresh practice status: \(error.localizedDescription)")
                 }
-                continuation.resume()
+
+                // Also fetch streak days
+                DictionaryService.shared.getStreakDays { streakResult in
+                    switch streakResult {
+                    case .success(let streakResponse):
+                        self.logger.info("Streak refreshed - Days: \(streakResponse.streak_days)")
+                        DispatchQueue.main.async {
+                            self.streakDays = streakResponse.streak_days
+                        }
+                    case .failure(let error):
+                        self.logger.error("Failed to refresh streak: \(error.localizedDescription)")
+                    }
+
+                    continuation.resume()
+                }
             }
         }
     }

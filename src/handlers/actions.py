@@ -29,8 +29,10 @@ from services.spaced_repetition_service import get_next_review_date_new
 from handlers.achievements import (
     calculate_user_score,
     get_newly_earned_score_badges,
-    check_test_completion_badges
+    check_test_completion_badges,
+    count_test_vocabulary_progress
 )
+from handlers.bundle_vocabulary import get_active_test_type, TEST_TYPE_MAPPING
 
 # Get logger from current app context
 import logging
@@ -288,13 +290,88 @@ def submit_review():
                 badge_type = 'score_milestone' if badge['badge_id'].startswith('score_') else 'test_completion'
                 record_earned_badge(user_id, badge['badge_id'], badge_type)
 
+        # Calculate practice status for immediate UI update (avoids separate API calls)
+        from handlers.streaks import calculate_streak_days
+
+        # Get practice counts
+        due_count_row = db_fetch_one("""
+            SELECT COUNT(DISTINCT sw.id) as cnt
+            FROM saved_words sw
+            LEFT JOIN (
+                SELECT word_id, next_review_date,
+                       ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
+                FROM reviews
+            ) r ON sw.id = r.word_id AND r.rn = 1
+            WHERE sw.user_id = %s
+            AND (sw.is_known IS NULL OR sw.is_known = FALSE)
+            AND (
+                r.next_review_date IS NULL OR
+                r.next_review_date <= CURRENT_DATE
+            )
+        """, (user_id,))
+        due_word_count = due_count_row['cnt'] if due_count_row else 0
+
+        new_count_row = db_fetch_one("""
+            SELECT COUNT(*) as cnt
+            FROM saved_words
+            WHERE user_id = %s
+            AND created_at >= NOW() - INTERVAL '24 hours'
+        """, (user_id,))
+        new_word_count_past_24h = new_count_row['cnt'] if new_count_row else 0
+
+        total_count_row = db_fetch_one("""
+            SELECT COUNT(*) as cnt
+            FROM saved_words
+            WHERE user_id = %s
+        """, (user_id,))
+        total_word_count = total_count_row['cnt'] if total_count_row else 0
+
+        reviews_24h_row = db_fetch_one("""
+            SELECT COUNT(*) as cnt
+            FROM reviews
+            WHERE user_id = %s
+            AND reviewed_at >= NOW() - INTERVAL '24 hours'
+        """, (user_id,))
+        reviews_past_24h = reviews_24h_row['cnt'] if reviews_24h_row else 0
+
+        streak_days = calculate_streak_days(user_id)
+        has_practice = due_word_count > 0
+
+        # Calculate bundle progress (if user has active test type)
+        bundle_progress = None
+        prefs = db_fetch_one("""
+            SELECT * FROM user_preferences WHERE user_id = %s
+        """, (user_id,))
+
+        if prefs:
+            active_test_type = get_active_test_type(prefs)
+            if active_test_type and active_test_type in TEST_TYPE_MAPPING:
+                vocab_column = TEST_TYPE_MAPPING[active_test_type][2]  # e.g., 'is_toefl_beginner'
+                progress = count_test_vocabulary_progress(user_id, vocab_column, learning_language)
+                bundle_progress = {
+                    "saved_words": progress["saved_words"],
+                    "total_words": progress["total_words"],
+                    "percentage": round(progress["saved_words"] / progress["total_words"] * 100) if progress["total_words"] > 0 else 0
+                }
+
         return jsonify({
             "success": True,
             "word": word,
             "word_id": word_id,
             "response": response,
             "new_score": new_score,
-            "new_badges": new_badges if new_badges else None
+            "new_badges": new_badges if new_badges else None,
+            "practice_status": {
+                "user_id": user_id,
+                "due_word_count": due_word_count,
+                "new_word_count_past_24h": new_word_count_past_24h,
+                "total_word_count": total_word_count,
+                "score": new_score,
+                "has_practice": has_practice,
+                "reviews_past_24h": reviews_past_24h,
+                "streak_days": streak_days,
+                "bundle_progress": bundle_progress
+            }
         })
 
     except Exception as e:

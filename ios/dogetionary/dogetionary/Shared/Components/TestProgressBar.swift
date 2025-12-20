@@ -18,6 +18,7 @@ struct TestProgressBar: View {
     @Binding var isExpanded: Bool  // Binding to track expansion state
 
     @State private var animatedProgress: Double = 0.0
+    @State private var isAnimatingScale: Bool = false
 
     // Badge metadata - map test names to user-friendly titles and SF Symbols
     private let badgeMetadata: [String: (title: String, symbol: String)] = [
@@ -57,6 +58,7 @@ struct TestProgressBar: View {
                 Text("\(Int(displayProgress * 100))%")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(AppTheme.bodyText)
+                    .scaleEffect(isAnimatingScale ? 1.2 : 1.0)
 
                 // Expand/collapse button
                 Button(action: {
@@ -213,6 +215,26 @@ struct TestProgressBar: View {
         .onChange(of: displayProgress) { oldValue, newValue in
             withAnimation(.easeOut(duration: 0.5)) {
                 animatedProgress = newValue
+            }
+        }
+        .onChange(of: savedWords) { oldValue, newValue in
+            // Only animate if value increased (word completed)
+            if newValue > oldValue {
+                // Trigger scale animation
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                    isAnimatingScale = true
+                }
+
+                // Haptic feedback
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+
+                // Reset after animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                        isAnimatingScale = false
+                    }
+                }
             }
         }
     }

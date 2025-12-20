@@ -263,6 +263,15 @@ struct QuestionQueueRow: View {
 
             Spacer()
 
+            // Source badge (why this word was picked)
+            Text(question.sourceLabel.uppercased())
+                .font(.caption2)
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(sourceColor)
+                .cornerRadius(4)
+
             // Question type badge
             Text(questionTypeLabel)
                 .font(.caption2)
@@ -285,10 +294,19 @@ struct QuestionQueueRow: View {
 
     private var sourceColor: Color {
         switch question.source {
+        // New source values (v3 API)
+        case "DUE": return .orange
+        case "BUNDLE": return .blue
+        case "EVERYDAY": return .green
+        case "RANDOM": return .gray
+        // Legacy source values (for backward compatibility)
         case "new": return .blue
         case "test_practice": return .orange
         case "non_test_practice": return .green
         case "not_due_yet": return .purple
+        case "due": return .orange
+        case "new_bundle": return .blue
+        case "everyday_english": return .green
         default: return .gray
         }
     }

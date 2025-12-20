@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional, List
 from utils.database import db_fetch_one, get_db_connection
 from services.question_generation_service import get_or_generate_question
 from services.user_service import get_user_preferences
-from handlers.bundle_vocabulary import get_active_test_type
+from handlers.bundle_vocabulary import get_active_test_type, TEST_TYPE_MAPPING
 from services.audio_service import get_or_generate_audio_base64
 
 logger = logging.getLogger(__name__)
@@ -21,16 +21,19 @@ logger = logging.getLogger(__name__)
 
 def get_review_words_batch():
     """
-    Get multiple review words with enhanced questions in a single request - SIMPLIFIED VERSION.
+    Get multiple review words with enhanced questions in a single request.
 
     GET /v3/next-review-words-batch?user_id=xxx&count=10&exclude_words=word1,word2
 
-    Simple Priority:
-    1. Random due words (next_review <= NOW) - prioritize these
-    2. If not enough due words, random new words from active bundle
+    Priority System (always returns questions):
+    1. DUE: Random due words (next_review <= NOW)
+    2. BUNDLE: New words from active bundle (if user has one)
+    3. EVERYDAY: New words from everyday_english bundle
+    4. RANDOM: Random words from ANY bundle (absolute fallback)
 
     Returns:
-        JSON with array of questions and metadata including full definition
+        JSON with array of questions and metadata including full definition.
+        Each question has a 'source' field: DUE, BUNDLE, EVERYDAY, or RANDOM
     """
     try:
         user_id = request.args.get('user_id')
@@ -80,13 +83,15 @@ def get_review_words_batch():
             cur.execute(due_words_query, params + [count])
             due_words = cur.fetchall()
 
+            logger.info(f"Fetched {len(due_words)} due words for user {user_id}")
+
             for row in due_words:
                 all_word_rows.append({
                     'saved_word_id': row['saved_word_id'],
                     'word': row['word'],
                     'learning_language': row['learning_language'],
                     'native_language': row['native_language'],
-                    'source_type': 'due'
+                    'source_type': 'DUE'
                 })
 
             # ============================================================
@@ -100,7 +105,10 @@ def get_review_words_batch():
 
                 test_type = get_active_test_type(prefs_row) if prefs_row else None
 
-                if test_type:
+                if test_type and test_type in TEST_TYPE_MAPPING:
+                    # Get the vocab column for this test type (e.g., 'is_toefl_beginner')
+                    vocab_column = TEST_TYPE_MAPPING[test_type][2]
+
                     # Add fetched words to exclusion set
                     all_excluded = exclude_words.copy()
                     for word_dict in all_word_rows:
@@ -113,12 +121,13 @@ def get_review_words_batch():
                         exclude_clause = f"AND bv.word NOT IN ({placeholders})"
                         exclude_params = list(all_excluded)
 
+                    # Use format() for column name (safe since we validated test_type in TEST_TYPE_MAPPING)
                     new_words_query = f"""
                         SELECT bv.word, up.learning_language, up.native_language
                         FROM bundle_vocabularies bv
                         CROSS JOIN user_preferences up
                         WHERE up.user_id = %s
-                        AND bv.bundle_name = %s
+                        AND bv.{vocab_column} = TRUE
                         AND bv.language = up.learning_language
                         {exclude_clause}
                         AND NOT EXISTS (
@@ -131,8 +140,10 @@ def get_review_words_batch():
                         LIMIT %s
                     """
 
-                    cur.execute(new_words_query, (user_id, test_type, *exclude_params, count - len(all_word_rows)))
+                    cur.execute(new_words_query, (user_id, *exclude_params, count - len(all_word_rows)))
                     new_words = cur.fetchall()
+
+                    logger.info(f"Fetched {len(new_words)} new words from active bundle '{test_type}' for user {user_id}")
 
                     for row in new_words:
                         all_word_rows.append({
@@ -140,8 +151,104 @@ def get_review_words_batch():
                             'word': row['word'],
                             'learning_language': row['learning_language'],
                             'native_language': row['native_language'],
-                            'source_type': 'new'
+                            'source_type': 'BUNDLE'
                         })
+
+            # ============================================================
+            # PRIORITY 3: If still not enough, get random new words from everyday English
+            # ============================================================
+            if len(all_word_rows) < count:
+                # Add all fetched words to exclusion set
+                all_excluded = exclude_words.copy()
+                for word_dict in all_word_rows:
+                    all_excluded.add(word_dict['word'])
+
+                exclude_clause = ""
+                exclude_params = []
+                if all_excluded:
+                    placeholders = ','.join(['%s'] * len(all_excluded))
+                    exclude_clause = f"AND bv.word NOT IN ({placeholders})"
+                    exclude_params = list(all_excluded)
+
+                everyday_query = f"""
+                    SELECT bv.word, up.learning_language, up.native_language
+                    FROM bundle_vocabularies bv
+                    CROSS JOIN user_preferences up
+                    WHERE up.user_id = %s
+                    AND bv.everyday_english = TRUE
+                    AND bv.language = up.learning_language
+                    {exclude_clause}
+                    AND NOT EXISTS (
+                        SELECT 1 FROM saved_words sw
+                        WHERE sw.user_id = up.user_id
+                        AND sw.word = bv.word
+                        AND sw.learning_language = bv.language
+                    )
+                    ORDER BY RANDOM()
+                    LIMIT %s
+                """
+
+                cur.execute(everyday_query, (user_id, *exclude_params, count - len(all_word_rows)))
+                everyday_words = cur.fetchall()
+
+                logger.info(f"Fetched {len(everyday_words)} fallback words from everyday_english for user {user_id}")
+
+                for row in everyday_words:
+                    all_word_rows.append({
+                        'saved_word_id': None,  # New words don't have saved_word_id yet
+                        'word': row['word'],
+                        'learning_language': row['learning_language'],
+                        'native_language': row['native_language'],
+                        'source_type': 'EVERYDAY'
+                    })
+
+            # ============================================================
+            # PRIORITY 4: If STILL not enough, get random words from ANY bundle
+            # ============================================================
+            if len(all_word_rows) < count:
+                # Add all fetched words to exclusion set
+                all_excluded = exclude_words.copy()
+                for word_dict in all_word_rows:
+                    all_excluded.add(word_dict['word'])
+
+                exclude_clause = ""
+                exclude_params = []
+                if all_excluded:
+                    placeholders = ','.join(['%s'] * len(all_excluded))
+                    exclude_clause = f"AND bv.word NOT IN ({placeholders})"
+                    exclude_params = list(all_excluded)
+
+                # Get random words from ANY bundle (any TRUE column)
+                random_query = f"""
+                    SELECT bv.word, up.learning_language, up.native_language
+                    FROM bundle_vocabularies bv
+                    CROSS JOIN user_preferences up
+                    WHERE up.user_id = %s
+                    AND bv.language = up.learning_language
+                    {exclude_clause}
+                    AND NOT EXISTS (
+                        SELECT 1 FROM saved_words sw
+                        WHERE sw.user_id = up.user_id
+                        AND sw.word = bv.word
+                        AND sw.learning_language = bv.language
+                    )
+                    ORDER BY RANDOM()
+                    LIMIT %s
+                """
+
+                cur.execute(random_query, (user_id, *exclude_params, count - len(all_word_rows)))
+                random_words = cur.fetchall()
+
+                logger.info(f"Fetched {len(random_words)} random words from any bundle for user {user_id}")
+
+                for row in random_words:
+                    all_word_rows.append({
+                        'saved_word_id': None,  # New words don't have saved_word_id yet
+                        'word': row['word'],
+                        'learning_language': row['learning_language'],
+                        'native_language': row['native_language'],
+                        'source_type': 'RANDOM'
+                    })
 
             # Generate questions for each word with position
             questions = []

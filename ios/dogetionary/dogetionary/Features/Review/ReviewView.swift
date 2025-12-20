@@ -35,21 +35,6 @@ struct ReviewView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Status bar (fixed at top)
-                PracticeStatusBar(
-                    practiceStatus: viewModel.practiceStatus,
-                    score: viewModel.currentScore,
-                    scoreAnimationScale: viewModel.scoreAnimationScale,
-                    scoreAnimationColor: viewModel.scoreAnimationColor,
-                    showMiniCurve: viewModel.showMiniCurve,
-                    curveIsCorrect: viewModel.curveIsCorrect,
-                    onCurveDismiss: {
-                        viewModel.dismissMiniCurve()
-                    }
-                )
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-
                 // Main content area (fills remaining space)
                 ZStack {
                     // PRIORITY 1: Show question immediately if available (don't wait for loading states)
