@@ -6,7 +6,6 @@ from flask import request, jsonify
 import json
 import logging
 from handlers.words import get_word_definition_v4, get_or_generate_illustration
-from handlers.reads import get_review_progress_stats
 from handlers.words import get_next_review_word_v2
 
 logger = logging.getLogger(__name__)
@@ -22,20 +21,15 @@ def get_word_definition_v2():
 def get_review_stats():
     """
     Backward compatibility for /reviews/stats endpoint
-    Returns empty stats or redirects to progress_stats
+    Returns minimal compatible response (original endpoint was removed as unused)
     """
-    logger.info("Legacy review stats endpoint called")
-    try:
-        # For backward compatibility, return the progress stats
-        return get_review_progress_stats()
-    except Exception as e:
-        logger.error(f"Error in compatibility review stats: {str(e)}", exc_info=True)
-        # Return minimal compatible response
-        return jsonify({
-            "total_reviews": 0,
-            "average_score": 0.0,
-            "streak_days": 0
-        })
+    logger.info("Legacy review stats endpoint called - returning minimal response")
+    # Return minimal compatible response
+    return jsonify({
+        "total_reviews": 0,
+        "average_score": 0.0,
+        "streak_days": 0
+    })
 
 def generate_illustration():
     """

@@ -318,83 +318,92 @@ class TestRunner:
             self.failed += 1
 
     def test_test_prep_settings_toggle(self):
-        """Test GET /v3/api/test-prep/settings and PUT /v3/api/test-prep/settings endpoints - especially toggle functionality"""
-        self.log("Testing test prep settings toggle...")
+        """Test user preferences endpoint with test prep settings - toggle functionality"""
+        self.log("Testing test prep settings toggle via /v3/users/{user_id}/preferences...")
 
         try:
-            # First, update settings to ensure user exists in user_preferences
+            # First, enable TOEFL_ADVANCED
             update_data = {
-                "user_id": self.test_user_id,
-                "toefl_enabled": True,
-                "ielts_enabled": False,
-                "toefl_target_days": 30,
-                "ielts_target_days": 60
+                "learning_language": "en",
+                "native_language": "zh",
+                "user_name": "Test User",
+                "user_motto": "Learning is fun",
+                "test_prep": "TOEFL_ADVANCED",
+                "study_duration_days": 30
             }
-            response = requests.put(f"{BASE_URL}/v3/api/test-prep/settings", json=update_data)
-            self.assert_status_code(response, 200, "PUT /v3/api/test-prep/settings - initial setup")
+            response = requests.post(f"{BASE_URL}/v3/users/{self.test_user_id}/preferences", json=update_data)
+            self.assert_status_code(response, 200, "POST /v3/users/{user_id}/preferences - enable TOEFL")
 
             if response.status_code == 200:
                 data = response.json()
-                self.assert_json_contains(data, "success", "Update response contains success")
-                self.assert_json_contains(data, "settings", "Update response contains settings")
+                self.assert_json_contains(data, "user_id", "Response contains user_id")
+                self.assert_json_contains(data, "test_prep", "Response contains test_prep")
 
-            # Test GET endpoint
-            response = requests.get(f"{BASE_URL}/v3/api/test-prep/settings", params={"user_id": self.test_user_id})
-            self.assert_status_code(response, 200, "GET /v3/api/test-prep/settings")
+            # Test GET endpoint to verify settings
+            response = requests.get(f"{BASE_URL}/v3/users/{self.test_user_id}/preferences")
+            self.assert_status_code(response, 200, "GET /v3/users/{user_id}/preferences")
 
             if response.status_code == 200:
                 data = response.json()
-                self.assert_json_contains(data, "settings", "GET response contains settings")
-                self.assert_json_contains(data, "progress", "GET response contains progress")
+                self.assert_json_contains(data, "test_prep", "GET response contains test_prep")
+                self.assert_json_contains(data, "study_duration_days", "GET response contains study_duration_days")
 
-                if data['settings']['toefl_enabled'] == True:
-                    self.log("✓ TOEFL correctly enabled after initial setup")
+                if data['test_prep'] == "TOEFL_ADVANCED":
+                    self.log("✓ TOEFL_ADVANCED correctly enabled after initial setup")
                     self.passed += 1
                 else:
-                    self.log("✗ TOEFL should be enabled but is not")
+                    self.log("✗ TOEFL_ADVANCED should be enabled but is not")
                     self.failed += 1
 
-            # Test disabling TOEFL (the bug scenario)
+            # Test disabling all test prep (set test_prep to null)
             disable_data = {
-                "user_id": self.test_user_id,
-                "toefl_enabled": False
+                "learning_language": "en",
+                "native_language": "zh",
+                "user_name": "Test User",
+                "user_motto": "Learning is fun",
+                "test_prep": None,
+                "study_duration_days": 30
             }
-            response = requests.put(f"{BASE_URL}/v3/api/test-prep/settings", json=disable_data)
-            self.assert_status_code(response, 200, "PUT /v3/api/test-prep/settings - disable TOEFL")
+            response = requests.post(f"{BASE_URL}/v3/users/{self.test_user_id}/preferences", json=disable_data)
+            self.assert_status_code(response, 200, "POST /v3/users/{user_id}/preferences - disable test prep")
 
             if response.status_code == 200:
                 data = response.json()
-                if data['settings']['toefl_enabled'] == False:
-                    self.log("✓ TOEFL correctly disabled")
+                if data['test_prep'] is None:
+                    self.log("✓ Test prep correctly disabled")
                     self.passed += 1
                 else:
-                    self.log("✗ TOEFL should be disabled but is still enabled (BUG!)")
+                    self.log("✗ Test prep should be disabled but is still enabled (BUG!)")
                     self.failed += 1
 
-            # Verify with GET that TOEFL is disabled
-            response = requests.get(f"{BASE_URL}/v3/api/test-prep/settings", params={"user_id": self.test_user_id})
+            # Verify with GET that test prep is disabled
+            response = requests.get(f"{BASE_URL}/v3/users/{self.test_user_id}/preferences")
             if response.status_code == 200:
                 data = response.json()
-                if data['settings']['toefl_enabled'] == False:
-                    self.log("✓ GET confirms TOEFL is disabled")
+                if data['test_prep'] is None:
+                    self.log("✓ GET confirms test prep is disabled")
                     self.passed += 1
                 else:
-                    self.log("✗ GET shows TOEFL still enabled (BUG!)")
+                    self.log("✗ GET shows test prep still enabled (BUG!)")
                     self.failed += 1
 
-            # Test re-enabling
+            # Test re-enabling with IELTS_BEGINNER
             enable_data = {
-                "user_id": self.test_user_id,
-                "toefl_enabled": True
+                "learning_language": "en",
+                "native_language": "zh",
+                "user_name": "Test User",
+                "user_motto": "Learning is fun",
+                "test_prep": "IELTS_BEGINNER",
+                "study_duration_days": 45
             }
-            response = requests.put(f"{BASE_URL}/v3/api/test-prep/settings", json=enable_data)
+            response = requests.post(f"{BASE_URL}/v3/users/{self.test_user_id}/preferences", json=enable_data)
             if response.status_code == 200:
                 data = response.json()
-                if data['settings']['toefl_enabled'] == True:
-                    self.log("✓ TOEFL correctly re-enabled")
+                if data['test_prep'] == "IELTS_BEGINNER":
+                    self.log("✓ IELTS_BEGINNER correctly enabled")
                     self.passed += 1
                 else:
-                    self.log("✗ TOEFL should be enabled but is not")
+                    self.log("✗ IELTS_BEGINNER should be enabled but is not")
                     self.failed += 1
 
         except Exception as e:

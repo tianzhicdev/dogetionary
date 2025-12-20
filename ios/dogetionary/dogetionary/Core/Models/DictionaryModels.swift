@@ -872,26 +872,6 @@ struct TestSettingsUpdateResponse: Codable {
     }
 }
 
-struct TestVocabularyStatsResponse: Codable {
-    let language: String
-    let statistics: TestVocabularyStatistics
-
-    private enum CodingKeys: String, CodingKey {
-        case language, statistics
-    }
-}
-
-struct TestVocabularyStatistics: Codable {
-    let total_unique_words: Int
-    let toefl_words: Int
-    let ielts_words: Int
-    let demo_words: Int?
-
-    private enum CodingKeys: String, CodingKey {
-        case total_unique_words, toefl_words, ielts_words, demo_words
-    }
-}
-
 // WordValidation struct remains as it's used by merged V1 endpoint
 struct WordValidation: Codable {
     let confidence: Double

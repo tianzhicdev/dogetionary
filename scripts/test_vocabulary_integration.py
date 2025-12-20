@@ -36,31 +36,32 @@ def test_get_initial_settings():
     """Test getting initial test settings"""
     print("\n📋 Test 1: Get initial settings")
 
-    response = requests.get(f"{API_BASE}/test-prep/settings", params={
-        "user_id": TEST_USER_ID
-    })
+    response = requests.get(f"{API_BASE}/v3/users/{TEST_USER_ID}/preferences")
 
     assert response.status_code == 200, f"Failed: {response.text}"
     data = response.json()
 
-    assert data["settings"]["toefl_enabled"] == False
-    assert data["settings"]["ielts_enabled"] == False
-    print("✅ Initial settings retrieved (both disabled)")
+    # In new API, test_prep is null when no test is enabled
+    assert data.get("test_prep") is None or data.get("test_prep") == ""
+    print("✅ Initial settings retrieved (test prep disabled)")
 
 def test_enable_toefl():
     """Test enabling TOEFL preparation"""
     print("\n📋 Test 2: Enable TOEFL preparation")
 
-    response = requests.put(f"{API_BASE}/test-prep/settings", json={
-        "user_id": TEST_USER_ID,
-        "toefl_enabled": True
+    response = requests.post(f"{API_BASE}/v3/users/{TEST_USER_ID}/preferences", json={
+        "learning_language": "en",
+        "native_language": "zh",
+        "user_name": "Test User",
+        "user_motto": "Learning",
+        "test_prep": "TOEFL_ADVANCED",
+        "study_duration_days": 30
     })
 
     assert response.status_code == 200, f"Failed: {response.text}"
     data = response.json()
 
-    assert data["settings"]["toefl_enabled"] == True
-    assert data["settings"]["ielts_enabled"] == False
+    assert data["test_prep"] == "TOEFL_ADVANCED"
     print("✅ TOEFL preparation enabled")
 
 def test_add_daily_words():
@@ -106,21 +107,23 @@ def test_prevent_duplicate_daily_add():
     print("✅ Duplicate addition prevented")
 
 def test_enable_both_tests():
-    """Test enabling both TOEFL and IELTS"""
-    print("\n📋 Test 5: Enable both TOEFL and IELTS")
+    """Test switching from TOEFL to IELTS"""
+    print("\n📋 Test 5: Switch from TOEFL to IELTS")
 
-    response = requests.put(f"{API_BASE}/test-prep/settings", json={
-        "user_id": TEST_USER_ID,
-        "toefl_enabled": True,
-        "ielts_enabled": True
+    response = requests.post(f"{API_BASE}/v3/users/{TEST_USER_ID}/preferences", json={
+        "learning_language": "en",
+        "native_language": "zh",
+        "user_name": "Test User",
+        "user_motto": "Learning",
+        "test_prep": "IELTS_BEGINNER",
+        "study_duration_days": 45
     })
 
     assert response.status_code == 200, f"Failed: {response.text}"
     data = response.json()
 
-    assert data["settings"]["toefl_enabled"] == True
-    assert data["settings"]["ielts_enabled"] == True
-    print("✅ Both tests enabled")
+    assert data["test_prep"] == "IELTS_BEGINNER"
+    print("✅ Successfully switched to IELTS")
 
 def test_check_saved_words():
     """Verify that test words were added to saved_words"""
@@ -162,17 +165,19 @@ def test_disable_all_tests():
     """Test disabling all test preparation"""
     print("\n📋 Test 8: Disable all test preparation")
 
-    response = requests.put(f"{API_BASE}/test-prep/settings", json={
-        "user_id": TEST_USER_ID,
-        "toefl_enabled": False,
-        "ielts_enabled": False
+    response = requests.post(f"{API_BASE}/v3/users/{TEST_USER_ID}/preferences", json={
+        "learning_language": "en",
+        "native_language": "zh",
+        "user_name": "Test User",
+        "user_motto": "Learning",
+        "test_prep": None,
+        "study_duration_days": 30
     })
 
     assert response.status_code == 200, f"Failed: {response.text}"
     data = response.json()
 
-    assert data["settings"]["toefl_enabled"] == False
-    assert data["settings"]["ielts_enabled"] == False
+    assert data.get("test_prep") is None
     print("✅ All test preparation disabled")
 
 def test_cannot_add_when_disabled():

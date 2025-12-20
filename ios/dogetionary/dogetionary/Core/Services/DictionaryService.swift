@@ -97,10 +97,6 @@ class DictionaryService {
         ScheduleService.shared.getTestProgress(completion: completion)
     }
 
-    func getTestVocabularyStats(language: String = "en", completion: @escaping (Result<TestVocabularyStatsResponse, Error>) -> Void) {
-        ScheduleService.shared.getTestVocabularyStats(language: language, completion: completion)
-    }
-
     // MARK: - Leaderboard Service Delegation
 
     func getLeaderboard(completion: @escaping (Result<[LeaderboardEntry], Error>) -> Void) {

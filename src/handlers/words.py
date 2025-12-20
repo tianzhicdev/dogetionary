@@ -548,7 +548,7 @@ def get_or_generate_illustration():
                 {"role": "user", "content": scene_prompt}
             ],
             use_case="scene_description",
-            max_completion_tokens=200  # Increased for reasoning models
+            max_completion_tokens=200 
         )
 
         if not scene_description:
@@ -673,78 +673,6 @@ def get_word_details(word_id):
     except Exception as e:
         logger.error(f"Error getting word details: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to get word details: {str(e)}"}), 500
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-
-def is_word_saved():
-    """Check if a specific word is saved for a user - efficient single-word check
-
-    GET /v3/is-word-saved?user_id=XXX&word=XXX&learning_lang=XX&native_lang=XX
-
-    Returns:
-        {
-            "is_saved": true/false,
-            "saved_word_id": 123 or null
-        }
-    """
-    conn = None
-    cur = None
-    try:
-        user_id = request.args.get('user_id')
-        word = request.args.get('word')
-        learning_lang = request.args.get('learning_lang')
-        native_lang = request.args.get('native_lang')
-
-        if not user_id or not word:
-            return jsonify({"error": "user_id and word parameters are required"}), 400
-
-        try:
-            uuid.UUID(user_id)
-        except ValueError:
-            return jsonify({"error": "Invalid user_id format. Must be a valid UUID"}), 400
-
-        word_normalized = word.strip().lower()
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        # Build query based on whether language params are provided
-        if learning_lang and native_lang:
-            cur.execute("""
-                SELECT id FROM saved_words
-                WHERE user_id = %s
-                  AND LOWER(word) = %s
-                  AND learning_language = %s
-                  AND native_language = %s
-                LIMIT 1
-            """, (user_id, word_normalized, learning_lang, native_lang))
-        else:
-            cur.execute("""
-                SELECT id FROM saved_words
-                WHERE user_id = %s AND LOWER(word) = %s
-                LIMIT 1
-            """, (user_id, word_normalized))
-
-        result = cur.fetchone()
-
-        if result:
-            return jsonify({
-                "is_saved": True,
-                "saved_word_id": result['id']
-            })
-        else:
-            return jsonify({
-                "is_saved": False,
-                "saved_word_id": None
-            })
-
-    except Exception as e:
-        logger.error(f"Error checking if word is saved: {str(e)}", exc_info=True)
-        return jsonify({"error": f"Failed to check word status: {str(e)}"}), 500
     finally:
         if cur:
             cur.close()

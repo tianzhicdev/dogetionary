@@ -127,13 +127,4 @@ class ScheduleService: BaseNetworkService {
         logger.info("Fetching test progress for user: \(userID)")
         performNetworkRequest(url: url, responseType: TestProgressResponse.self, completion: completion)
     }
-
-    func getTestVocabularyStats(language: String = "en", completion: @escaping (Result<TestVocabularyStatsResponse, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/v3/api/test-prep/stats?language=\(language)") else {
-            completion(.failure(DictionaryError.invalidURL))
-            return
-        }
-
-        performNetworkRequest(url: url, responseType: TestVocabularyStatsResponse.self, completion: completion)
-    }
 }
