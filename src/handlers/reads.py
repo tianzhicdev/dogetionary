@@ -33,58 +33,6 @@ from static.privacy import PRIVACY_POLICY
 from static.support import SUPPORT_HTML
 
 
-def get_due_words_count(user_id, conn=None):
-    """
-    Shared function to calculate words due for review today (including overdue).
-    
-    Logic:
-    - Words that have never been reviewed are due 1 day after being saved
-    - Words with reviews are due based on their latest next_review_date
-    - Uses consistent timestamp comparison (NOW() for precision)
-    
-    Returns dict with 'total_count' and 'due_count'
-    """
-    should_close_conn = conn is None
-    if conn is None:
-        conn = get_db_connection()
-    
-    try:
-        cur = conn.cursor()
-        
-        # Single query to get both total and due counts using consistent logic
-        cur.execute("""
-            SELECT 
-                COUNT(*) as total_count,
-                COUNT(CASE 
-                    WHEN COALESCE(latest_review.next_review_date, sw.created_at + INTERVAL '1 day') <= NOW() 
-                    THEN 1 
-                END) as due_count
-            FROM saved_words sw
-            LEFT JOIN (
-                SELECT 
-                    word_id,
-                    next_review_date,
-                    ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
-                FROM reviews
-            ) latest_review ON sw.id = latest_review.word_id AND latest_review.rn = 1
-            WHERE sw.user_id = %s
-            -- Exclude known words from due counts
-            AND (sw.is_known IS NULL OR sw.is_known = FALSE)
-        """, (user_id,))
-        
-        result = cur.fetchone()
-        cur.close()
-        
-        return {
-            'total_count': result['total_count'] or 0,
-            'due_count': result['due_count'] or 0
-        }
-        
-    finally:
-        if should_close_conn:
-            conn.close()
-
-
 def get_forgetting_curve(word_id):
     """Get forgetting curve data for a specific word"""
     try:
@@ -425,14 +373,33 @@ def get_due_counts():
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
 
-        # Use shared function for consistent calculation
-        result = get_due_words_count(user_id)
+        conn = get_db_connection()
+        cur = conn.cursor()
 
-        return jsonify({
-            "user_id": user_id,
-            "overdue_count": result['due_count'],
-            "total_count": result['total_count']
-        })
+        try:
+            # Use shared service for consistent due words logic
+            from services.due_words_service import build_due_words_base_query, get_total_saved_words_count
+
+            from_where_clause, params = build_due_words_base_query(user_id)
+
+            # Count due words using shared query logic
+            count_query = f"SELECT COUNT(*) as due_count {from_where_clause}"
+            cur.execute(count_query, params)
+            result = cur.fetchone()
+            due_count = result['due_count'] if result else 0
+
+            # Get total saved words count
+            total_count = get_total_saved_words_count(user_id, conn)
+
+            return jsonify({
+                "user_id": user_id,
+                "overdue_count": due_count,
+                "total_count": total_count
+            })
+
+        finally:
+            cur.close()
+            conn.close()
 
     except Exception as e:
         logger.error(f"Error getting due counts: {str(e)}", exc_info=True)

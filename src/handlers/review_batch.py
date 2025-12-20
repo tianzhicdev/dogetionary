@@ -61,35 +61,23 @@ def get_review_words_batch():
             all_word_rows = []  # List of word dictionaries to process
 
             # ============================================================
-            # PRIORITY 1: Get random due words (next_review <= NOW)
+            # PRIORITY 1: Get random due words using shared service
             # ============================================================
-            exclude_clause = ""
-            exclude_params = []
-            if exclude_words:
-                placeholders = ','.join(['%s'] * len(exclude_words))
-                exclude_clause = f"AND sw.word NOT IN ({placeholders})"
-                exclude_params = list(exclude_words)
+            from services.due_words_service import build_due_words_base_query
+
+            from_where_clause, params = build_due_words_base_query(
+                user_id,
+                exclude_words=list(exclude_words) if exclude_words else None
+            )
 
             due_words_query = f"""
                 SELECT sw.id as saved_word_id, sw.word, sw.learning_language, sw.native_language
-                FROM saved_words sw
-                LEFT JOIN (
-                    SELECT word_id, next_review_date,
-                           ROW_NUMBER() OVER (PARTITION BY word_id ORDER BY reviewed_at DESC) as rn
-                    FROM reviews
-                ) r ON sw.id = r.word_id AND r.rn = 1
-                WHERE sw.user_id = %s
-                AND (sw.is_known IS NULL OR sw.is_known = FALSE)
-                AND (
-                    r.next_review_date IS NULL OR  -- Never reviewed
-                    r.next_review_date <= CURRENT_DATE  -- Due today or earlier
-                )
-                {exclude_clause}
+                {from_where_clause}
                 ORDER BY RANDOM()
                 LIMIT %s
             """
 
-            cur.execute(due_words_query, (user_id, *exclude_params, count))
+            cur.execute(due_words_query, params + [count])
             due_words = cur.fetchall()
 
             for row in due_words:
