@@ -24,7 +24,7 @@ words_bp.route('/v3/is-word-saved', methods=['GET'])(is_word_saved)
 # Media
 words_bp.route('/audio/<path:text>/<language>')(get_audio)
 words_bp.route('/generate-illustration', methods=['POST'])(generate_illustration)
-words_bp.route('/illustration', methods=['GET'])(get_illustration)
+words_bp.route('/illustration', methods=['GET'])(get_or_generate_illustration)
 
 # Static site endpoints
 words_bp.route('/words', methods=['GET'])(get_all_words)

@@ -11,7 +11,7 @@ from handlers.admin import test_review_intervals, fix_next_review_dates, privacy
 from handlers.usage_dashboard import get_usage_dashboard
 from handlers.analytics import track_user_action
 from handlers.pronunciation import practice_pronunciation, submit_pronunciation_review
-from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_illustration, toggle_exclude_from_practice, is_word_saved
+from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_or_generate_illustration, toggle_exclude_from_practice, is_word_saved
 from handlers.videos import get_video
 from handlers.admin_videos import batch_upload_videos, get_bundle_words_needing_videos
 from handlers.bundle_vocabulary import (
@@ -51,7 +51,7 @@ v3_api.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forge
 
 # Media and Assets (V3 - merged illustration functionality)
 v3_api.route('/audio/<path:text>/<language>')(get_audio)
-v3_api.route('/illustration', methods=['GET', 'POST'])(get_illustration)  # Merged cache-first logic
+v3_api.route('/illustration', methods=['GET', 'POST'])(get_or_generate_illustration)  # Merged cache-first logic
 v3_api.route('/videos/<int:video_id>', methods=['GET'])(get_video)  # Video binary data for practice mode
 
 # User Management (V3)

@@ -11,7 +11,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 from utils.database import db_fetch_all, db_fetch_one
 from services.question_generation_service import get_or_generate_question, QUESTION_TYPE_WEIGHTS
-from services.definition_service import generate_definition_with_llm
+from services.definition_service import get_or_generate_definition
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ def smart_batch_generate_questions():
 
                 # Step 1: Get or generate definition
                 if not has_definition:
-                    definition_data = generate_definition_with_llm(word, learning_lang, native_lang)
+                    definition_data = get_or_generate_definition(word, learning_lang, native_lang)
                     if not definition_data:
                         logger.error(f"Failed to generate definition for '{word}'", exc_info=True)
                         stats['errors'] += 1

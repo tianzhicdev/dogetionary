@@ -5,7 +5,7 @@
 from flask import request, jsonify
 import json
 import logging
-from handlers.words import get_word_definition_v4, get_illustration
+from handlers.words import get_word_definition_v4, get_or_generate_illustration
 from handlers.reads import get_review_progress_stats
 from handlers.words import get_next_review_word_v2
 
@@ -44,7 +44,7 @@ def generate_illustration():
     """
     logger.info("Legacy generate illustration endpoint called")
     # The current get_illustration handles both GET and POST
-    return get_illustration()
+    return get_or_generate_illustration()
 
 def get_illustration_legacy():
     """
@@ -53,4 +53,4 @@ def get_illustration_legacy():
     """
     logger.info("Legacy get illustration endpoint called")
     # The current get_illustration handles both GET and POST
-    return get_illustration()
+    return get_or_generate_illustration()

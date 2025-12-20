@@ -25,10 +25,10 @@ def fetch_and_cache_definition(word: str, learning_lang: str, native_lang: str) 
     """
     try:
         # Import here to avoid circular imports
-        from services.definition_service import generate_definition_with_llm
+        from services.definition_service import get_or_generate_definition
 
         # Generate definition using shared V3 utility (no build_prompt_fn needed)
-        definition_data = generate_definition_with_llm(
+        definition_data = get_or_generate_definition(
             word=word,
             learning_lang=learning_lang,
             native_lang=native_lang

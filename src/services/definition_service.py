@@ -205,7 +205,7 @@ CRITICAL:
 - For source: only include if the etymology is interesting or helpful for remembering the word. Keep it brief and accessible."""
 
 
-def generate_definition_with_llm(word: str, learning_lang: str, native_lang: str, build_prompt_fn=None) -> Optional[Dict]:
+def get_or_generate_definition(word: str, learning_lang: str, native_lang: str, build_prompt_fn=None) -> Optional[Dict]:
     """
     Generate a word definition using OpenAI V4 schema and cache it in the database.
     Uses the V4 schema with vocabulary learning enhancements.

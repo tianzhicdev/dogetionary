@@ -185,7 +185,7 @@ def get_word_definition_v4():
     Frontend should prompt user if valid_word_score < 0.9
     """
     try:
-        from services.definition_service import generate_definition_with_llm
+        from services.definition_service import get_or_generate_definition
 
         user_id = request.args.get('user_id')
         word = request.args.get('w')
@@ -205,7 +205,7 @@ def get_word_definition_v4():
             native_lang = native_lang or user_native_lang
 
         # Generate or retrieve cached definition using centralized service
-        definition_data = generate_definition_with_llm(
+        definition_data = get_or_generate_definition(
             word=word_normalized,
             learning_lang=learning_lang,
             native_lang=native_lang
@@ -456,7 +456,7 @@ def get_audio(text, language):
             conn.close()
 
 
-def get_illustration():
+def get_or_generate_illustration():
     """Get AI illustration for a word - returns cached if exists, generates if not"""
     conn = None
     cur = None

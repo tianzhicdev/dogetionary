@@ -835,7 +835,7 @@ def batch_populate_test_vocabulary():
     """
     try:
         import time
-        from services.definition_service import generate_definition_with_llm
+        from services.definition_service import get_or_generate_definition
         from services.question_generation_service import get_or_generate_question, QUESTION_TYPE_WEIGHTS
         from utils.database import db_fetch_one
 
@@ -891,7 +891,7 @@ def batch_populate_test_vocabulary():
                         logger.debug(f"✓ Definition cached for '{word}'")
                     else:
                         # Generate new definition
-                        definition = generate_definition_with_llm(word, learning_lang, native_lang)
+                        definition = get_or_generate_definition(word, learning_lang, native_lang)
 
                         if definition:
                             summary["definitions_generated"] += 1

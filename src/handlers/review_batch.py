@@ -54,9 +54,9 @@ def fetch_and_cache_definition(word: str, learning_lang: str, native_lang: str) 
 
         # Cache miss - fetch from LLM
         logger.info(f"Cache miss for '{word}', fetching from LLM...")
-        from services.definition_service import generate_definition_with_llm
+        from services.definition_service import get_or_generate_definition
 
-        definition_data = generate_definition_with_llm(
+        definition_data = get_or_generate_definition(
             word=word,
             learning_lang=learning_lang,
             native_lang=native_lang
