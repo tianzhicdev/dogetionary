@@ -49,6 +49,8 @@ struct ContentView: View {
                     reviewsPast24h: userManager.practiceStatus?.reviews_past_24h ?? 0,
                     dailyTarget: dailyTarget,
                     bundleProgress: userManager.practiceStatus?.bundle_progress,
+                    achievementProgress: nil,
+                    testVocabularyAwards: nil,
                     isExpanded: $dailyBannerExpanded
                 )
                 .padding(.horizontal, 8)

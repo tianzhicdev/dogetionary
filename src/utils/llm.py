@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+import re
 import openai
 from typing import Dict, List, Any, Optional
 from middleware.metrics import (
@@ -22,6 +23,33 @@ from middleware.metrics import (
 from config.config import GROQ_TO_OPENAI_FALLBACK, FALLBACK_CHAINS
 
 logger = logging.getLogger(__name__)
+
+
+def clean_json_response(json_str: str) -> str:
+    """
+    Clean up common JSON formatting issues from LLM responses.
+
+    Fixes:
+    - Markdown code blocks (```json ... ```)
+    - Trailing commas in arrays/objects (e.g., [1, 2, 3,])
+    - Leading/trailing whitespace
+
+    Args:
+        json_str: Raw JSON string from LLM
+
+    Returns:
+        Cleaned JSON string ready for parsing
+    """
+    # Remove markdown code blocks
+    json_str = re.sub(r'```json\s*', '', json_str)
+    json_str = re.sub(r'```\s*$', '', json_str)
+
+    # Remove trailing commas before closing brackets/braces
+    # Matches: ,<optional whitespace>] or ,<optional whitespace>}
+    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+
+    return json_str.strip()
+
 
 # Try to import Groq, but make it optional
 try:
@@ -320,6 +348,28 @@ def llm_completion(
             llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type='empty_response').inc()
             llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
             return None
+
+        # If JSON mode requested, validate JSON before returning
+        if response_format and response_format.get("type") in ["json_object", "json_schema"]:
+            try:
+                # Clean up common JSON formatting issues
+                content = clean_json_response(content)
+
+                # Validate that it's actually valid JSON
+                json.loads(content)
+                logger.debug(f"JSON validation passed for {model_name}")
+            except json.JSONDecodeError as e:
+                # JSON validation failed - log and raise to trigger fallback
+                logger.error(
+                    f"JSON validation failed for {model_name}: {e.msg} at line {e.lineno} col {e.colno} (char {e.pos}). "
+                    f"Full content:\n{content}"
+                )
+                # Track JSON validation error in metrics
+                llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='error').inc()
+                llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type='json_validation_failed').inc()
+                llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
+                # Re-raise to let fallback mechanism catch it
+                raise
 
         # Track successful call metrics
         llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='success').inc()

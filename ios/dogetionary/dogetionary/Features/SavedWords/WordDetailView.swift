@@ -171,7 +171,7 @@ struct DefinitionTabView: View {
 //                .padding(.horizontal)
                 
                 if isLoading {
-                    ProgressView("Loading definitions...")
+                    ProgressView()
                         .padding()
                 } else {
                     LazyVStack(alignment: .leading, spacing: 16) {
@@ -195,7 +195,7 @@ struct StatsTabView: View {
         ScrollView {
             VStack(spacing: 24) {
                 if isLoading {
-                    ProgressView("Loading stats...")
+                    ProgressView()
                         .padding()
                 } else if let details = wordDetails {
                     // Only show Forgetting Curve visualization

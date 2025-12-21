@@ -66,6 +66,26 @@ class AVPlayerManager: ObservableObject {
         }
     }
 
+    /// Clear all players except specified videoId
+    func clearExcept(videoId: Int) {
+        poolQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
+
+            var removedCount = 0
+            let keysToRemove = self.playerPool.keys.filter { $0 != videoId }
+
+            for key in keysToRemove {
+                if let player = self.playerPool.removeValue(forKey: key) {
+                    player.pause()
+                    player.replaceCurrentItem(with: nil)
+                    removedCount += 1
+                }
+            }
+
+            print("AVPlayerManager: Cleared \(removedCount) players (kept video \(videoId))")
+        }
+    }
+
     /// Clear all players
     func clearAll() {
         poolQueue.async(flags: .barrier) { [weak self] in

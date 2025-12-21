@@ -13,10 +13,13 @@ struct DailyProgressBanner: View {
     let reviewsPast24h: Int
     let dailyTarget: Int
     let bundleProgress: BundleProgress?  // Overall bundle completion
+    let achievementProgress: AchievementProgressResponse?  // Score-based badges
+    let testVocabularyAwards: TestVocabularyAwardsResponse?  // Test completion badges
     @Binding var isExpanded: Bool
 
     @State private var animatedProgress: Double = 0.0
     @State private var isAnimatingScale: Bool = false
+    @State private var showCelebration = false
 
     // Badge metadata for test type display names
     private let testTypeNames: [String: String] = [
@@ -74,6 +77,19 @@ struct DailyProgressBanner: View {
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                         isAnimatingScale = false
                     }
+                }
+            }
+        }
+        .onChange(of: displayProgress) { oldValue, newValue in
+            // Trigger celebration when crossing 100% threshold
+            if oldValue < 1.0 && newValue >= 1.0 {
+                showCelebration = true
+            }
+        }
+        .overlay {
+            if showCelebration {
+                DailyGoalCelebrationView {
+                    showCelebration = false
                 }
             }
         }
@@ -206,7 +222,7 @@ struct DailyProgressBanner: View {
             // Bundle progress (if available)
             if let progress = bundleProgress {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("BUNDLE")
+                    Text("PROGRAM")
                         .font(.caption)
                         .foregroundColor(AppTheme.smallTitleText)
                     HStack(spacing: 4) {
@@ -216,6 +232,55 @@ struct DailyProgressBanner: View {
                         Text("(\(progress.percentage)%)")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(AppTheme.smallTextColor1)
+                    }
+                }
+            }
+
+            // Achievements section - badges and awards
+            if let achievements = achievementProgress {
+                let unlockedAchievements = achievements.achievements.filter { $0.unlocked }
+                let earnedTestBadges = testVocabularyAwards?.filter { $0.value.isEarned }.sorted(by: { $0.key < $1.key }) ?? []
+
+                if !unlockedAchievements.isEmpty || !earnedTestBadges.isEmpty {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("ACHIEVEMENTS")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(AppTheme.smallTitleText)
+                            Spacer()
+                            HStack(spacing: -10) {
+                                Text("\(achievements.score)")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(AppTheme.bodyText)
+                                AnimatedScoreStar(size: 45)
+                            }
+                        }
+
+                        // Badge grid (4 columns)
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 12) {
+                            // Score-based achievements
+                            ForEach(unlockedAchievements) { achievement in
+                                VStack(spacing: 4) {
+                                    BadgeAnimation(badgeId: "score_\(achievement.milestone)", size: 60)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                            }
+
+                            // Test completion badges
+                            ForEach(earnedTestBadges, id: \.key) { testName, progress in
+                                VStack(spacing: 4) {
+                                    BadgeAnimation(badgeId: testName, size: 60)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                            }
+                        }
                     }
                 }
             }
@@ -296,6 +361,8 @@ struct DailyProgressBanner: View {
             reviewsPast24h: 15,
             dailyTarget: 60,
             bundleProgress: BundleProgress(saved_words: 234, total_words: 1500, percentage: 15),
+            achievementProgress: nil,
+            testVocabularyAwards: nil,
             isExpanded: .constant(false)
         )
 
@@ -306,6 +373,8 @@ struct DailyProgressBanner: View {
             reviewsPast24h: 45,
             dailyTarget: 60,
             bundleProgress: BundleProgress(saved_words: 680, total_words: 1200, percentage: 56),
+            achievementProgress: nil,
+            testVocabularyAwards: nil,
             isExpanded: .constant(true)
         )
 
@@ -316,6 +385,8 @@ struct DailyProgressBanner: View {
             reviewsPast24h: 90,
             dailyTarget: 60,
             bundleProgress: nil,
+            achievementProgress: nil,
+            testVocabularyAwards: nil,
             isExpanded: .constant(true)
         )
     }

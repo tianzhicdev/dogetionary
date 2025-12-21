@@ -111,23 +111,41 @@ class QuestionQueueManager: ObservableObject {
     }
 
     /// Clear the queue (e.g., when user logs out or data changes)
-    func clearQueue() {
-        questionQueue.removeAll()
-        queuedWords.removeAll()
+    func clearQueue(preserveFirst: Bool = false) {
+        if preserveFirst && !questionQueue.isEmpty {
+            // Keep only the first question
+            let first = questionQueue[0]
+            questionQueue = [first]
+            queuedWords = [first.word]
+
+            logger.info("Queue cleared (preserved first question: \(first.word))")
+
+            // Clear all cached players except current question's video
+            if let videoId = first.question.video_id {
+                AVPlayerManager.shared.clearExcept(videoId: videoId)
+            } else {
+                AVPlayerManager.shared.clearAll()
+            }
+        } else {
+            // Remove everything
+            questionQueue.removeAll()
+            queuedWords.removeAll()
+
+            logger.info("Queue cleared (all questions removed)")
+
+            // Clear all cached players
+            AVPlayerManager.shared.clearAll()
+        }
+
         hasMore = true
         totalAvailable = 0
         lastError = nil
-
-        // Clear all cached players
-        AVPlayerManager.shared.clearAll()
-
-        logger.info("Queue cleared")
     }
 
-    /// Force refresh - clear and reload
+    /// Force refresh - clear and reload (preserves current question)
     func forceRefresh() {
-        clearQueue()
-        preloadQuestions()
+        clearQueue(preserveFirst: true)
+        refillIfNeeded()  // Refill from position 1 onward
     }
 
     // MARK: - Private Methods

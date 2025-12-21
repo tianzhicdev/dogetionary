@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import AudioToolbox
 import os.log
 
 struct PronounceSentenceQuestionView: View {
@@ -123,6 +124,17 @@ struct PronounceSentenceQuestionView: View {
                     // Hard-coded threshold: 0.8 (80%)
                     let threshold = 0.8
                     let passed = practiceResult.similarityScore >= threshold
+
+                    // Play sound and haptic feedback based on correctness
+                    if passed {
+                        AudioServicesPlaySystemSound(1057)  // Tock - subtle positive sound
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    } else {
+                        AudioServicesPlaySystemSound(1053)  // Error tone
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.error)
+                    }
 
                     // Convert to evaluation state for display
                     evaluationState = PronunciationEvaluationState(

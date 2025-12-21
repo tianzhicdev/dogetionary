@@ -47,9 +47,13 @@ class AudioRecorder: NSObject, ObservableObject {
         // Clean up any previous recording
         stopRecording()
 
-        // Reset audio session
+        // Reset audio session with Bluetooth support
         do {
-            try recordingSession.setCategory(.playAndRecord, mode: .default, options: [])
+            try recordingSession.setCategory(
+                .playAndRecord,
+                mode: .default,
+                options: [.allowBluetoothA2DP]
+            )
             try recordingSession.setActive(true)
         } catch {
             logger.error("Failed to configure audio session: \(error)")

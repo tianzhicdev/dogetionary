@@ -37,9 +37,14 @@ struct ShojinApp: App {
     private func configureAudioSession() {
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback, mode: .moviePlayback, options: [])
+            // Allow Bluetooth routing and mixing with other apps
+            try audioSession.setCategory(
+                .playback,
+                mode: .moviePlayback,
+                options: [.allowBluetoothA2DP, .mixWithOthers]
+            )
             try audioSession.setActive(true)
-            print("✓ ShojinApp: Audio session configured for playback")
+            print("✓ ShojinApp: Audio session configured for playback with Bluetooth support")
         } catch {
             print("❌ ShojinApp: Failed to configure audio session: \(error.localizedDescription)")
         }

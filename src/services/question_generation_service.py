@@ -8,11 +8,33 @@ Implements caching to avoid regenerating the same questions.
 import json
 import random
 import logging
+import re
 from typing import Dict, Any, Optional, List
 from utils.database import db_fetch_one, db_execute
 from utils.llm import llm_completion_with_fallback
 
 logger = logging.getLogger(__name__)
+
+
+def clean_json_response(json_str: str) -> str:
+    """
+    Clean up common JSON formatting issues from LLM responses.
+
+    Fixes:
+    - Trailing commas in arrays/objects (e.g., [1, 2, 3,])
+    - Leading/trailing whitespace
+
+    Args:
+        json_str: Raw JSON string from LLM
+
+    Returns:
+        Cleaned JSON string ready for parsing
+    """
+    # Remove trailing commas before closing brackets/braces
+    # Matches: ,<optional whitespace>] or ,<optional whitespace>}
+    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+
+    return json_str.strip()
 
 # Language code to name mapping for prompts
 LANG_NAMES = {
@@ -471,7 +493,8 @@ def call_openai_for_question(prompt: str) -> Dict:
         Dict containing the generated question data
     """
     try:
-        # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
+        # Uses fallback chain: Gemini -> DeepSeek V3 -> Qwen 2.5 -> GPT-4o-mini
+        # JSON validation happens automatically in llm_completion() with fallback on error
         content = llm_completion_with_fallback(
             messages=[
                 {
@@ -490,18 +513,8 @@ def call_openai_for_question(prompt: str) -> Dict:
         if not content:
             raise Exception("LLM completion returned empty content")
 
-        # Parse JSON - if this fails, let it raise so fallback can catch it
-        try:
-            question_data = json.loads(content)
-        except json.JSONDecodeError as json_err:
-            # Log full content when JSON parsing fails for debugging
-            logger.error(
-                f"JSONDecodeError: {json_err.msg} at line {json_err.lineno} col {json_err.colno} (char {json_err.pos}). "
-                f"Full LLM response:\n{content}",
-                exc_info=True
-            )
-            # Re-raise to let fallback mechanism try next model
-            raise
+        # Parse JSON (already validated and cleaned in llm_completion())
+        question_data = json.loads(content)
 
         logger.info("Successfully generated question with LLM")
         return question_data

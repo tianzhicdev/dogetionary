@@ -323,7 +323,7 @@ struct ReviewSessionView: View {
             // Show definitions if user answered "No"
             if hasAnswered && userResponse == false {
                 if isLoadingDefinitions {
-                    ProgressView("Loading definitions...")
+                    ProgressView()
                         .padding()
                 } else if !wordDefinitions.isEmpty && wordDefinitions.first?.meanings.count ?? 0 > 0 {
                     ScrollView {

@@ -56,17 +56,12 @@ struct DefinitionCard: View {
                             }
                         }) {
                             if loadingAudio {
-                                HStack(spacing: 4) {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                    Text("Loading")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(AppTheme.accentCyan.opacity(0.15))
-                                .foregroundColor(AppTheme.accentCyan)
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(AppTheme.accentCyan.opacity(0.15))
+                                    .foregroundColor(AppTheme.accentCyan)
                                 .cornerRadius(8)
                             } else {
                                 HStack(spacing: 4) {

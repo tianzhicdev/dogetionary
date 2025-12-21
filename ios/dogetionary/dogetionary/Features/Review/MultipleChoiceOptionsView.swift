@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import AudioToolbox
 
 struct MultipleChoiceOptionsView: View {
     let options: [QuestionOption]
@@ -52,6 +53,18 @@ struct MultipleChoiceOptionsView: View {
 
     private func submitAnswer() {
         guard let answer = selectedAnswer else { return }
+
+        // Play sound and haptic feedback based on correctness
+        let isCorrect = (answer == correctAnswer)
+        if isCorrect {
+            AudioServicesPlaySystemSound(1057)  // Tock - subtle positive sound
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        } else {
+            AudioServicesPlaySystemSound(1053)  // Error tone
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.error)
+        }
 
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             showFeedback = true
