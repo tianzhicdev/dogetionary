@@ -33,6 +33,7 @@ struct QuestionCardView: View {
     @State private var isAtBottom = false  // Track if scrolled to bottom
     @State private var indicatorOffset: CGFloat = 0  // Independent indicator animation
     @State private var indicatorOpacity: Double = 1.0  // Indicator fade animation
+    @State private var showDefinitionSheet = false  // Show definition in modal
 
     private let swipeThreshold: CGFloat = 100  // Vertical swipe threshold
 
@@ -60,14 +61,24 @@ struct QuestionCardView: View {
                 )
                 .disabled(isAnswered)
 
-                // Definition section (shown after answering)
+                // Action buttons (shown after answering)
                 if isAnswered {
-                    VStack(spacing: 16) {
-                        // Definition card
-                        if let def = convertedDefinition {
-                            DefinitionCard(definition: def)
-                                .padding(.horizontal, definitionHorizontalPadding)
+                    VStack(spacing: 12) {
+                        // View Definition button
+                        Button(action: { showDefinitionSheet = true }) {
+                            HStack {
+                                Image(systemName: "book")
+                                    .font(.system(size: 16, weight: .medium))
+                                Text("View Definition")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .foregroundColor(AppTheme.selectableTint)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.selectableTint.opacity(0.15))
+                            .cornerRadius(10)
                         }
+                        .padding(.horizontal)
 
                         // Exclude from practice button
                         Button(action: toggleExclusion) {
@@ -198,6 +209,38 @@ struct QuestionCardView: View {
                 }
             }
         )
+        .sheet(isPresented: $showDefinitionSheet) {
+            NavigationView {
+                ZStack {
+                    AppTheme.verticalGradient2.ignoresSafeArea()
+
+                    if let def = convertedDefinition {
+                        ScrollView {
+                            DefinitionCard(definition: def)
+                                .padding()
+                        }
+                    } else {
+                        VStack(spacing: 16) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 50))
+                                .foregroundColor(.secondary)
+                            Text("No definition available")
+                                .foregroundColor(AppTheme.bodyText)
+                        }
+                    }
+                }
+                .navigationTitle(word.capitalized)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Close") {
+                            showDefinitionSheet = false
+                        }
+                        .foregroundColor(AppTheme.selectableTint)
+                    }
+                }
+            }
+        }
     }
 
     private func toggleExclusion() {

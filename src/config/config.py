@@ -52,6 +52,12 @@ FALLBACK_CHAINS = {
         "deepseek/deepseek-chat-v3.1",
         "qwen/qwen-2.5-7b-instruct",
         "openai/gpt-4o-mini"
+    ],
+    "video_analysis": [
+        "google/gemini-2.0-flash-lite-001",   # Fast structured output for video analysis
+        "deepseek/deepseek-chat-v3.1",        # Good JSON quality
+        "qwen/qwen-2.5-7b-instruct",          # Backup for structured output
+        "openai/gpt-4o-mini"                  # Final fallback
     ]
 }
 

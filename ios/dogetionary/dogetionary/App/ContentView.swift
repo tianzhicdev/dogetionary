@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var selectedView = 1  // 1 = Add (default)
     @State private var showOnboarding = false
     @State private var dailyBannerExpanded = false
+    @State private var showDailyGoalCelebration = false  // Full-screen celebration
     @Environment(\.scenePhase) var scenePhase
 
     private var dailyTarget: Int {
@@ -51,7 +52,8 @@ struct ContentView: View {
                     bundleProgress: userManager.practiceStatus?.bundle_progress,
                     achievementProgress: nil,
                     testVocabularyAwards: nil,
-                    isExpanded: $dailyBannerExpanded
+                    isExpanded: $dailyBannerExpanded,
+                    showDailyGoalCelebration: $showDailyGoalCelebration
                 )
                 .padding(.horizontal, 8)
                 .padding(.top, 8)
@@ -91,6 +93,14 @@ struct ContentView: View {
                         .tag(3)
                 }
                 .accentColor(AppTheme.selectableTint)
+            }
+
+            // Daily goal celebration (full-screen, same level as badge celebration)
+            if showDailyGoalCelebration {
+                DailyGoalCelebrationView {
+                    showDailyGoalCelebration = false
+                }
+                .zIndex(900)
             }
 
             // Debug overlay (always on top, only visible when debug mode enabled)

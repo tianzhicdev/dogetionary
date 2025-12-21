@@ -33,6 +33,13 @@ struct VideoQuestionView: View {
     var body: some View {
         VStack(spacing: vStackSpacing) {
 
+            // Video metadata at the top
+            if let metadata = question.video_metadata {
+                VideoMetadataView(metadata: metadata)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+            }
+
             // Video player or loading state
             ZStack {
                 if isLoading {
@@ -63,12 +70,6 @@ struct VideoQuestionView: View {
                         .frame(height: videoHeight)
                         .cornerRadius(12)
                         .shadow(radius: 5)
-                        .overlay(alignment: .bottomTrailing) {
-                            // Video metadata overlaid on bottom-right corner
-                            if let metadata = question.video_metadata {
-                                VideoMetadataView(metadata: metadata)
-                            }
-                        }
                 }
             }
 

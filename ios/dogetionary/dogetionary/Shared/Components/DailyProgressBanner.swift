@@ -16,10 +16,10 @@ struct DailyProgressBanner: View {
     let achievementProgress: AchievementProgressResponse?  // Score-based badges
     let testVocabularyAwards: TestVocabularyAwardsResponse?  // Test completion badges
     @Binding var isExpanded: Bool
+    @Binding var showDailyGoalCelebration: Bool  // Controlled by parent
 
     @State private var animatedProgress: Double = 0.0
     @State private var isAnimatingScale: Bool = false
-    @State private var showCelebration = false
 
     // Badge metadata for test type display names
     private let testTypeNames: [String: String] = [
@@ -83,14 +83,7 @@ struct DailyProgressBanner: View {
         .onChange(of: displayProgress) { oldValue, newValue in
             // Trigger celebration when crossing 100% threshold
             if oldValue < 1.0 && newValue >= 1.0 {
-                showCelebration = true
-            }
-        }
-        .overlay {
-            if showCelebration {
-                DailyGoalCelebrationView {
-                    showCelebration = false
-                }
+                showDailyGoalCelebration = true
             }
         }
     }
@@ -353,6 +346,8 @@ struct DailyProgressBanner: View {
 // MARK: - Preview
 
 #Preview("Daily Progress Banner") {
+    @Previewable @State var showCelebration = false
+
     VStack(spacing: 20) {
         // Collapsed - low progress
         DailyProgressBanner(
@@ -363,7 +358,8 @@ struct DailyProgressBanner: View {
             bundleProgress: BundleProgress(saved_words: 234, total_words: 1500, percentage: 15),
             achievementProgress: nil,
             testVocabularyAwards: nil,
-            isExpanded: .constant(false)
+            isExpanded: .constant(false),
+            showDailyGoalCelebration: $showCelebration
         )
 
         // Expanded - good progress
@@ -375,7 +371,8 @@ struct DailyProgressBanner: View {
             bundleProgress: BundleProgress(saved_words: 680, total_words: 1200, percentage: 56),
             achievementProgress: nil,
             testVocabularyAwards: nil,
-            isExpanded: .constant(true)
+            isExpanded: .constant(true),
+            showDailyGoalCelebration: $showCelebration
         )
 
         // Expanded - over 100%
@@ -387,7 +384,8 @@ struct DailyProgressBanner: View {
             bundleProgress: nil,
             achievementProgress: nil,
             testVocabularyAwards: nil,
-            isExpanded: .constant(true)
+            isExpanded: .constant(true),
+            showDailyGoalCelebration: $showCelebration
         )
     }
     .padding()

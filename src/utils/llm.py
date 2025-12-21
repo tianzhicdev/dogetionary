@@ -25,7 +25,67 @@ from config.config import GROQ_TO_OPENAI_FALLBACK, FALLBACK_CHAINS
 logger = logging.getLogger(__name__)
 
 
-# Removed clean_json_response() - JSON must be valid or fail to trigger fallback
+# ============================================================================
+# JSON String Cleanup - Normalize whitespace in LLM responses
+# ============================================================================
+
+def normalize_whitespace_string(s: str) -> str:
+    """
+    Normalize whitespace in a single string.
+
+    Transformations:
+    - Tabs and newlines → single space
+    - Multiple consecutive spaces → single space
+    - Leading/trailing whitespace → removed
+
+    Args:
+        s: Input string with potentially messy whitespace
+
+    Returns:
+        Cleaned string with normalized whitespace
+
+    Examples:
+        "a  b"   → "a b"
+        "a\tb"   → "a b"
+        "a\nb"   → "a b"
+        "  a  "  → "a"
+    """
+    # Replace tabs and newlines with space
+    s = re.sub(r'[\t\n\r]+', ' ', s)
+    # Collapse multiple spaces into one
+    s = re.sub(r' {2,}', ' ', s)
+    # Strip leading/trailing whitespace
+    return s.strip()
+
+
+def clean_json_strings(obj):
+    """
+    Recursively clean all string values in a parsed JSON object.
+
+    This function walks through the entire JSON structure (dicts, lists)
+    and normalizes whitespace in all string values. Non-string values
+    (numbers, booleans, None) are left unchanged.
+
+    Args:
+        obj: Parsed JSON object (dict, list, str, int, float, bool, None)
+
+    Returns:
+        Same structure with all string values cleaned
+
+    Examples:
+        {"text": "a  b"} → {"text": "a b"}
+        [{"t": "a  b"}]  → [{"t": "a b"}]
+        {"n": 123}       → {"n": 123}  (unchanged)
+    """
+    if isinstance(obj, dict):
+        return {k: clean_json_strings(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_json_strings(item) for item in obj]
+    elif isinstance(obj, str):
+        return normalize_whitespace_string(obj)
+    else:
+        # Numbers, bools, None unchanged
+        return obj
 
 
 # Try to import Groq, but make it optional
@@ -428,7 +488,13 @@ def llm_completion(
                     llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
                     return None  # Fail to trigger fallback
 
-                logger.debug(f"JSON validation passed for {model_name}")
+                # Clean up whitespace in all string values (universal cleanup for all LLM responses)
+                parsed = clean_json_strings(parsed)
+
+                # Convert back to JSON string for return (maintains backward compatibility)
+                content = json.dumps(parsed, ensure_ascii=False)
+
+                logger.debug(f"JSON validation and cleanup passed for {model_name}")
             except json.JSONDecodeError as e:
                 # JSON parsing failed - log raw output and fail to trigger fallback
                 logger.error(

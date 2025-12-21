@@ -39,6 +39,7 @@ struct SettingsView: View {
                 profileSection
                 languagePreferencesSection
                 programSection
+                dailyCommitmentSection
                 notificationsSection
                 cacheSection
                 feedbackSection
@@ -234,6 +235,60 @@ struct SettingsView: View {
                         AnalyticsManager.shared.track(action: .settingsProgramChange, metadata: [
                             "new_program": newValue?.rawValue ?? "none"
                         ])
+                    }
+                }
+            }
+        }.listRowBackground(Color.clear)
+    }
+
+    @ViewBuilder
+    private var dailyCommitmentSection: some View {
+        Section(header:
+            HStack {
+                Text("DAILY COMMITMENT")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Time display
+                VStack(spacing: 8) {
+                    Text(formatTimeCommitment(minutes: userManager.dailyTimeCommitmentMinutes))
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundStyle(AppTheme.gradient1)
+                    Text(userManager.dailyTimeCommitmentMinutes >= 60 ? "HOURS" : "MINUTES")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.smallTitleText)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+
+                // Slider
+                VStack(spacing: 8) {
+                    Slider(
+                        value: Binding(
+                            get: { Double(userManager.dailyTimeCommitmentMinutes) },
+                            set: { userManager.dailyTimeCommitmentMinutes = Int($0) }
+                        ),
+                        in: 10...480,
+                        step: 5
+                    )
+                    .tint(AppTheme.selectableTint)
+                    .onChange(of: userManager.dailyTimeCommitmentMinutes) { _, newValue in
+                        // Track daily commitment change
+                        AnalyticsManager.shared.track(action: .settingsDailyCommitment, metadata: [
+                            "minutes": newValue
+                        ])
+                    }
+
+                    HStack {
+                        Text("10 MIN")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.smallTextColor1)
+                        Spacer()
+                        Text("8 HOURS")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.smallTextColor1)
                     }
                 }
             }
@@ -677,6 +732,20 @@ struct SettingsView: View {
             return "\(formatted) words"
         } else {
             return "\(count) words"
+        }
+    }
+
+    /// Format time commitment display
+    private func formatTimeCommitment(minutes: Int) -> String {
+        if minutes < 60 {
+            return "\(minutes)"
+        } else {
+            let hours = Double(minutes) / 60.0
+            if hours == Double(Int(hours)) {
+                return "\(Int(hours))"
+            } else {
+                return String(format: "%.1f", hours)
+            }
         }
     }
 

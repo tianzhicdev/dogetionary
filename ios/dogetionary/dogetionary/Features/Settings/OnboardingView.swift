@@ -17,7 +17,7 @@ struct OnboardingView: View {
 
     @State private var currentPage = 0
     private let selectedLearningLanguage = "en" // Hardcoded to English for now
-    @State private var selectedNativeLanguage = "fr"
+    @State private var selectedNativeLanguage = "zh" // Default to Chinese
     @State private var selectedTestType: TestType? = .demo // Default to DEMO as requested
     private let selectedStudyDuration: Int = 30 // Default to 30 days (no longer user-configurable in onboarding)
     @State private var dailyTimeCommitment: Double = 30 // 10-480 minutes via slider
@@ -194,6 +194,11 @@ struct OnboardingView: View {
                 if let lottieAnimation = lottieAnimation {
                     LottieView(animation: .named(lottieAnimation))
                         .playing(loopMode: .loop)
+                        .configure { lottieAnimationView in
+                            // Mute audio for all Lottie animations in onboarding
+                            lottieAnimationView.backgroundBehavior = .pauseAndRestore
+                            lottieAnimationView.respectAnimationFrameRate = true
+                        }
 //                        .frame(width: 200, height: 200)
                 } else if let symbolName = symbolName {
                     Image(systemName: symbolName)
@@ -539,58 +544,50 @@ struct OnboardingView: View {
     }
 
     private func submitOnboarding() {
-        isSubmitting = true
-
         let trimmedName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
         let userId = userManager.getUserID()
 
+        // Update local user manager immediately (optimistic update)
+        userManager.isSyncingFromServer = true
+        userManager.learningLanguage = selectedLearningLanguage
+        userManager.nativeLanguage = selectedNativeLanguage
+        userManager.userName = trimmedName
+        userManager.activeTestType = selectedTestType
+        userManager.targetDays = selectedStudyDuration
+        userManager.isSyncingFromServer = false
+
+        // Track analytics
+        var metadata: [String: Any] = [
+            "learning_language": selectedLearningLanguage,
+            "native_language": selectedNativeLanguage
+        ]
+        if let testType = selectedTestType {
+            metadata["test_type"] = testType.rawValue
+            metadata["study_duration_days"] = selectedStudyDuration
+        }
+        AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
+
+        // Move to next page immediately (don't wait for server)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            currentPage = declarationPageIndex
+        }
+
+        // Sync to server in background (non-blocking)
         DictionaryService.shared.updateUserPreferences(
             userID: userId,
             learningLanguage: selectedLearningLanguage,
             nativeLanguage: selectedNativeLanguage,
             userName: trimmedName,
             userMotto: "",
-            testPrep: selectedTestType?.rawValue,  // Use raw value for legacy API
+            testPrep: selectedTestType?.rawValue,
             studyDurationDays: selectedStudyDuration,
             dailyTimeCommitmentMinutes: Int(dailyTimeCommitment)
         ) { result in
-            DispatchQueue.main.async {
-                isSubmitting = false
-
-                switch result {
-                case .success:
-                    // Update local user manager
-                    // Set isSyncingFromServer to prevent didSet observers from triggering additional API calls
-                    userManager.isSyncingFromServer = true
-                    userManager.learningLanguage = selectedLearningLanguage
-                    userManager.nativeLanguage = selectedNativeLanguage
-                    userManager.userName = trimmedName
-
-                    // Update test prep settings using V3 API
-                    userManager.activeTestType = selectedTestType
-                    userManager.targetDays = selectedStudyDuration
-
-                    userManager.isSyncingFromServer = false
-
-                    // Track analytics
-                    var metadata: [String: Any] = [
-                        "learning_language": selectedLearningLanguage,
-                        "native_language": selectedNativeLanguage
-                    ]
-                    if let testType = selectedTestType {
-                        metadata["test_type"] = testType.rawValue
-                        metadata["study_duration_days"] = selectedStudyDuration
-                    }
-                    AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
-
-                    // Move to next page (declaration page)
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        currentPage = declarationPageIndex
-                    }
-
-                case .failure(let error):
-                    errorMessage = error.localizedDescription
-                    showError = true
+            // Only handle errors, success is silent
+            if case .failure(let error) = result {
+                DispatchQueue.main.async {
+                    Self.logger.warning("Background preference sync failed: \(error.localizedDescription, privacy: .public)")
+                    // Don't show error to user - they've already moved on
                 }
             }
         }
