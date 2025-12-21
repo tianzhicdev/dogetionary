@@ -18,14 +18,10 @@ class AudioPlayer: NSObject, ObservableObject {
     
     func playAudio(from data: Data) {
         do {
-            // Configure audio session
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
-            
             // Create player from data
             player = try AVAudioPlayer(data: data)
             player?.delegate = self
-            
+
             // Play audio
             if let player = player {
                 player.play()
@@ -33,7 +29,7 @@ class AudioPlayer: NSObject, ObservableObject {
                 errorMessage = nil
                 logger.info("Started playing audio")
             }
-            
+
         } catch {
             logger.error("Failed to play audio: \(error.localizedDescription)")
             errorMessage = "Failed to play audio: \(error.localizedDescription)"

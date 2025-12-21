@@ -11,12 +11,14 @@ struct SavedWordsView: View {
     @State private var savedWords: [SavedWord] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var curveDataCache: [Int: ForgettingCurveResponse] = [:]
     @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationView {
             SavedWordsListView(
                 savedWords: $savedWords,
+                curveDataCache: curveDataCache,
                 isLoading: isLoading,
                 errorMessage: errorMessage,
                 onRefresh: { await loadSavedWords() },
@@ -69,6 +71,11 @@ struct SavedWordsView: View {
 
                             return d1 < d2
                         }
+
+                        // Load all forgetting curves in parallel after saved words loaded
+                        Task {
+                            await self.loadAllCurveData(for: words)
+                        }
                     case .failure(let error):
                         self.errorMessage = error.localizedDescription
                     }
@@ -77,6 +84,39 @@ struct SavedWordsView: View {
                 }
             }
         }
+    }
+
+    @MainActor
+    private func loadAllCurveData(for words: [SavedWord]) async {
+        print("🔄 SavedWordsView: Loading curve data for \(words.count) words in parallel")
+
+        // Load all curves in parallel using TaskGroup
+        await withTaskGroup(of: (Int, ForgettingCurveResponse?).self) { group in
+            for word in words {
+                group.addTask {
+                    await withCheckedContinuation { continuation in
+                        DictionaryService.shared.getForgettingCurve(wordId: word.id) { result in
+                            switch result {
+                            case .success(let data):
+                                continuation.resume(returning: (word.id, data))
+                            case .failure(let error):
+                                print("❌ SavedWordsView: Failed to load curve for word_id=\(word.id): \(error)")
+                                continuation.resume(returning: (word.id, nil))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Collect all results and update cache
+            for await (wordId, curveData) in group {
+                if let data = curveData {
+                    curveDataCache[wordId] = data
+                }
+            }
+        }
+
+        print("✅ SavedWordsView: Loaded \(curveDataCache.count) curve data entries")
     }
 
     @MainActor
@@ -148,6 +188,7 @@ struct SavedWordsView: View {
 
 struct SavedWordsListView: View {
     @Binding var savedWords: [SavedWord]
+    let curveDataCache: [Int: ForgettingCurveResponse]
     let isLoading: Bool
     let errorMessage: String?
     let onRefresh: () async -> Void
@@ -239,6 +280,7 @@ struct SavedWordsListView: View {
                                     ) {
                                         SavedWordRow(
                                             savedWord: savedWord,
+                                            curveData: curveDataCache[savedWord.id],
                                             onToggleKnown: { Task { await onToggleKnown(savedWord) } },
                                             onDelete: { Task { await onDelete(savedWord) } }
                                         )
@@ -273,6 +315,7 @@ struct SavedWordsListView: View {
 
 struct SavedWordRow: View {
     let savedWord: SavedWord
+    let curveData: ForgettingCurveResponse?
     var onToggleKnown: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     @ObservedObject private var userManager = UserManager.shared
@@ -315,8 +358,8 @@ struct SavedWordRow: View {
                 }
             }
 
-            // Mini forgetting curve
-            MiniForgettingCurveView(wordId: savedWord.id)
+            // Mini forgetting curve (use cached data if available)
+            MiniForgettingCurveView(wordId: savedWord.id, preloadedData: curveData)
 
             // Vertical battery bar (7-level progress indicator)
             VerticalBatteryBar(level: savedWord.word_progress_level)

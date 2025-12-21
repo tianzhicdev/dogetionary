@@ -37,9 +37,10 @@ struct ReviewView: View {
             VStack(spacing: 0) {
                 // Main content area (fills remaining space)
                 ZStack {
-                    // PRIORITY 1: Show question immediately if available (don't wait for loading states)
+                    // Simple 2-state logic: Question OR Loading
+                    // Backend always returns questions via 4-tier fallback (DUE → BUNDLE → EVERYDAY → RANDOM)
                     if let question = currentQuestion {
-                        // Question card with definition below
+                        // State 1: Show question immediately
                         QuestionCardView(
                             question: question.question,
                             definition: question.definition,
@@ -57,29 +58,11 @@ struct ReviewView: View {
                         .id(question.word)
                         .offset(x: viewModel.cardOffset)
                         .opacity(viewModel.cardOpacity)
-                    } else if viewModel.isLoadingStatus {
-                        ProgressView("Loading practice...")
-                    } else if let status = viewModel.practiceStatus, !status.has_practice, !queueManager.hasQuestions {
-                        NothingToPracticeView()
-                    } else if queueManager.isFetching && currentQuestion == nil {
-                        ProgressView("Loading question...")
-                    } else if !queueManager.hasMore && !queueManager.hasQuestions {
-                        NothingToPracticeView()
                     } else {
-                        VStack(spacing: 16) {
-                            Text("Loading questions...")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            if queueManager.isFetching {
-                                ProgressView()
-                            } else {
-                                Button("Retry") {
-                                    queueManager.forceRefresh()
-                                    viewModel.loadPracticeStatus()
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                        }
+                        // State 2: Loading question from backend
+                        ProgressView("LOADING QUESTION...")
+                            .tint(AppTheme.accentCyan)
+                            .foregroundColor(AppTheme.smallTitleText)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

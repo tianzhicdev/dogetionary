@@ -77,7 +77,7 @@ def calculate_streak_days(user_id: str) -> int:
             WHERE user_id = %s
             GROUP BY DATE(reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE %s)
             ORDER BY review_date DESC
-        """, (user_tz.zone, user_id, user_tz.zone))
+        """, (user_tz, user_id, user_tz))
 
         if not review_dates:
             return 0

@@ -225,19 +225,6 @@ CREATE TABLE user_actions (
     CONSTRAINT fk_user_actions_user_id FOREIGN KEY (user_id) REFERENCES user_preferences(user_id) ON DELETE CASCADE
 );
 
--- Pronunciation practice table
-CREATE TABLE pronunciation_practice (
-    id SERIAL PRIMARY KEY,
-    user_id UUID NOT NULL,
-    word VARCHAR(255) NOT NULL,
-    language VARCHAR(10) NOT NULL,
-    user_audio_url TEXT,
-    reference_audio_url TEXT,
-    similarity_score FLOAT CHECK (similarity_score >= 0 AND similarity_score <= 1),
-    feedback JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Notification logs table
 CREATE TABLE notification_logs (
     id SERIAL PRIMARY KEY,
@@ -328,10 +315,6 @@ CREATE INDEX idx_user_actions_category ON user_actions(category);
 CREATE INDEX idx_user_actions_created_at ON user_actions(created_at DESC);
 CREATE INDEX idx_user_actions_daily ON user_actions(DATE(created_at), action);
 CREATE INDEX idx_user_actions_user_date ON user_actions(user_id, created_at DESC);
-
--- Pronunciation indexes
-CREATE INDEX idx_pronunciation_user_id ON pronunciation_practice(user_id);
-CREATE INDEX idx_pronunciation_word ON pronunciation_practice(word);
 
 -- Notification logs indexes
 CREATE INDEX idx_notification_logs_user_id ON notification_logs(user_id);

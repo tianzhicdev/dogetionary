@@ -30,6 +30,7 @@ private func parseDateString(_ dateString: String) -> Date? {
 /// Mini sparkline-style forgetting curve for saved words list
 struct MiniForgettingCurveView: View {
     let wordId: Int
+    let preloadedData: ForgettingCurveResponse?
     @State private var curveData: ForgettingCurveResponse?
     @State private var isLoading = false
     @State private var hasError = false
@@ -60,7 +61,15 @@ struct MiniForgettingCurveView: View {
             }
         }
         .onAppear {
-            loadCurveData()
+            // If preloaded data exists, use it immediately (no API call)
+            if let preloaded = preloadedData {
+                print("✅ MiniForgettingCurve: Using preloaded data for word_id=\(wordId)")
+                curveData = preloaded
+            } else {
+                // No preloaded data, load from API
+                print("⚠️ MiniForgettingCurve: No preloaded data, loading from API for word_id=\(wordId)")
+                loadCurveData()
+            }
         }
     }
 
@@ -216,7 +225,7 @@ private struct ChartDataPoint: Identifiable {
                 HStack {
                     Text("Loading:")
                         .foregroundColor(AppTheme.smallTitleText)
-                    MiniForgettingCurveView(wordId: 1)
+                    MiniForgettingCurveView(wordId: 1, preloadedData: nil)
                         .onAppear {
                             // This will trigger loading state
                         }
@@ -225,13 +234,13 @@ private struct ChartDataPoint: Identifiable {
                 HStack {
                     Text("With data:")
                         .foregroundColor(AppTheme.smallTitleText)
-                    MiniForgettingCurveView(wordId: 237)
+                    MiniForgettingCurveView(wordId: 237, preloadedData: nil)
                 }
 
                 HStack {
                     Text("Scaled 2x:")
                         .foregroundColor(AppTheme.smallTitleText)
-                    MiniForgettingCurveView(wordId: 237)
+                    MiniForgettingCurveView(wordId: 237, preloadedData: nil)
                         .scaleEffect(2.0)
                 }
             }

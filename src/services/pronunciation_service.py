@@ -7,7 +7,6 @@ import json
 import logging
 import tempfile
 import os
-from utils.database import get_db_connection
 from utils.llm import llm_completion_with_fallback
 from typing import Dict, Any
 from config.config import WHISPER_MODEL_NAME
@@ -27,8 +26,8 @@ class PronunciationService:
         Args:
             original_text: Text the user is trying to pronounce
             audio_data: Audio recording in bytes
-            user_id: User ID for database storage
-            metadata: Additional metadata to store
+            user_id: User ID (for logging purposes)
+            metadata: Additional metadata (for logging purposes)
             language: Language code for speech recognition (e.g. 'en', 'zh', 'es')
 
         Returns:
@@ -44,19 +43,10 @@ class PronunciationService:
                     'error': 'Could not recognize speech. Please speak clearly and try again.'
                 }
 
-            # Step 2: Compare similarity using GPT-4
+            # Step 2: Compare similarity using LLM
             comparison_result = self._compare_pronunciation(original_text, recognized_text)
 
-            # Step 3: Store in database
-            self._store_practice_record(
-                user_id=user_id,
-                original_text=original_text,
-                audio_data=audio_data,
-                speech_to_text=recognized_text,
-                result=comparison_result['similar'],
-                similarity_score=comparison_result['score'],
-                metadata=metadata
-            )
+            logger.info(f"Pronunciation evaluated for user {user_id}: {comparison_result['similar']}")
 
             return {
                 'success': True,
@@ -176,37 +166,3 @@ Respond with valid JSON only."""
                 'feedback': 'Great job!' if similar else 'Keep practicing!'
             }
 
-    def _store_practice_record(self, user_id: str, original_text: str,
-                               audio_data: bytes, speech_to_text: str,
-                               result: bool, similarity_score: float,
-                               metadata: Dict[str, Any]) -> None:
-        """
-        Store pronunciation practice record in database
-        """
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-
-            cur.execute("""
-                INSERT INTO pronunciation_practice (
-                    user_id, original_text, user_audio, speech_to_text,
-                    result, similarity_score, metadata
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-                user_id,
-                original_text,
-                audio_data,
-                speech_to_text,
-                result,
-                similarity_score,
-                json.dumps(metadata)
-            ))
-
-            conn.commit()
-            cur.close()
-            conn.close()
-
-            logger.info(f"Stored pronunciation practice for user {user_id}: {result}")
-
-        except Exception as e:
-            logger.error(f"Failed to store pronunciation record: {str(e)}", exc_info=True)

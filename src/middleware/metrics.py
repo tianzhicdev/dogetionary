@@ -68,6 +68,37 @@ llm_errors_total = Counter(
 )
 
 # ============================================================================
+# DATABASE METRICS
+# ============================================================================
+
+db_connections_active = Gauge(
+    'db_connections_active',
+    'Number of active database connections currently checked out from pool'
+)
+
+db_connections_idle = Gauge(
+    'db_connections_idle',
+    'Number of idle database connections in pool'
+)
+
+db_connections_max = Gauge(
+    'db_connections_max',
+    'Maximum database connections allowed in pool'
+)
+
+db_connection_errors_total = Counter(
+    'db_connection_errors_total',
+    'Total database connection errors',
+    ['error_type']
+)
+
+db_connection_wait_seconds = Histogram(
+    'db_connection_wait_seconds',
+    'Time spent waiting for database connection from pool',
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0)
+)
+
+# ============================================================================
 # BUSINESS METRICS
 # ============================================================================
 

@@ -35,43 +35,54 @@ from static.support import SUPPORT_HTML
 
 def get_forgetting_curve(word_id):
     """Get forgetting curve data for a specific word"""
+    conn = None
+    cur = None
     try:
         user_id = request.args.get('user_id')
-        
+
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
         # Get word details
-        cur.execute("""
-            SELECT id, word, learning_language, created_at
-            FROM saved_words 
-            WHERE id = %s AND user_id = %s
-        """, (word_id, user_id))
-        
-        word = cur.fetchone()
-        if not word:
-            return jsonify({"error": "Word not found"}), 404
-        
+        try:
+            cur.execute("""
+                SELECT id, word, learning_language, created_at
+                FROM saved_words
+                WHERE id = %s AND user_id = %s
+            """, (word_id, user_id))
+
+            word = cur.fetchone()
+            if not word:
+                return jsonify({"error": "Word not found"}), 404
+        except Exception as e:
+            logger.error(f"Error fetching word details: {str(e)}", exc_info=True)
+            if conn:
+                conn.rollback()
+            raise
+
         # Get review history
-        cur.execute("""
-            SELECT response, reviewed_at
-            FROM reviews
-            WHERE word_id = %s AND user_id = %s
-            ORDER BY reviewed_at ASC
-        """, (word_id, user_id))
-        
-        review_history = []
-        for review in cur.fetchall():
-            review_history.append({
-                "response": review['response'],
-                "reviewed_at": review['reviewed_at']
-            })
-        
-        cur.close()
-        conn.close()
+        try:
+            cur.execute("""
+                SELECT response, reviewed_at
+                FROM reviews
+                WHERE word_id = %s AND user_id = %s
+                ORDER BY reviewed_at ASC
+            """, (word_id, user_id))
+
+            review_history = []
+            for review in cur.fetchall():
+                review_history.append({
+                    "response": review['response'],
+                    "reviewed_at": review['reviewed_at']
+                })
+        except Exception as e:
+            logger.error(f"Error fetching review history: {str(e)}", exc_info=True)
+            if conn:
+                conn.rollback()
+            raise
         
         # Calculate curve data points
         created_at = word['created_at']
@@ -174,55 +185,73 @@ def get_forgetting_curve(word_id):
             ],
             "all_markers": all_markers
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting forgetting curve: {str(e)}", exc_info=True)
+        if conn:
+            conn.rollback()
         return jsonify({"error": f"Failed to get forgetting curve: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def get_word_details(word_id):
     """Get detailed information about a saved word"""
+    conn = None
+    cur = None
     try:
         user_id = request.args.get('user_id')
-        
+
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
         # Get word details
-        cur.execute("""
-            SELECT id, word, learning_language, metadata, created_at
-            FROM saved_words 
-            WHERE id = %s AND user_id = %s
-        """, (word_id, user_id))
-        
-        word = cur.fetchone()
-        if not word:
-            return jsonify({"error": "Word not found"}), 404
-        
+        try:
+            cur.execute("""
+                SELECT id, word, learning_language, metadata, created_at
+                FROM saved_words
+                WHERE id = %s AND user_id = %s
+            """, (word_id, user_id))
+
+            word = cur.fetchone()
+            if not word:
+                return jsonify({"error": "Word not found"}), 404
+        except Exception as e:
+            logger.error(f"Error fetching word details: {str(e)}", exc_info=True)
+            if conn:
+                conn.rollback()
+            raise
+
         # Get review history
-        cur.execute("""
-            SELECT response, reviewed_at
-            FROM reviews
-            WHERE word_id = %s AND user_id = %s
-            ORDER BY reviewed_at DESC
-        """, (word_id, user_id))
-        
-        review_history = []
-        for review in cur.fetchall():
-            review_history.append({
-                "response": review['response'],
-                "response_time_ms": None,  # Simplified
-                "reviewed_at": review['reviewed_at'].strftime('%Y-%m-%d %H:%M:%S')
-            })
-        
+        try:
+            cur.execute("""
+                SELECT response, reviewed_at
+                FROM reviews
+                WHERE word_id = %s AND user_id = %s
+                ORDER BY reviewed_at DESC
+            """, (word_id, user_id))
+
+            review_history = []
+            for review in cur.fetchall():
+                review_history.append({
+                    "response": review['response'],
+                    "response_time_ms": None,  # Simplified
+                    "reviewed_at": review['reviewed_at'].strftime('%Y-%m-%d %H:%M:%S')
+                })
+        except Exception as e:
+            logger.error(f"Error fetching review history: {str(e)}", exc_info=True)
+            if conn:
+                conn.rollback()
+            raise
+
         # Calculate review data
         review_count, interval_days, next_review_date, last_reviewed_at = get_word_review_data(user_id, word_id)
-        
-        cur.close()
-        conn.close()
         
         return jsonify({
             "id": word['id'],
@@ -236,10 +265,17 @@ def get_word_details(word_id):
             "last_reviewed_at": last_reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if last_reviewed_at else None,
             "review_history": review_history
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting word details: {str(e)}", exc_info=True)
+        if conn:
+            conn.rollback()
         return jsonify({"error": f"Failed to get word details: {str(e)}"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def get_leaderboard_v2():

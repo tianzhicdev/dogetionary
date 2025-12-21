@@ -7,8 +7,23 @@ from contextlib import contextmanager
 from typing import Optional, List, Dict, Any, Union
 import logging
 import atexit
+import time
 
 logger = logging.getLogger(__name__)
+
+# Import metrics for connection pool monitoring
+try:
+    from middleware.metrics import (
+        db_connections_active,
+        db_connections_idle,
+        db_connections_max,
+        db_connection_errors_total,
+        db_connection_wait_seconds
+    )
+    METRICS_ENABLED = True
+except ImportError:
+    logger.warning("Metrics module not available, database metrics disabled")
+    METRICS_ENABLED = False
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://dogeuser:dogepass@localhost:5432/dogetionary')
 
@@ -36,8 +51,12 @@ class PooledConnectionWrapper:
             try:
                 self._pool.putconn(self._conn)
                 self._closed = True
+                # Update pool metrics after returning connection
+                _update_pool_metrics()
             except Exception as e:
                 logger.error(f"Failed to return connection to pool: {str(e)}", exc_info=True)
+                if METRICS_ENABLED:
+                    db_connection_errors_total.labels(error_type='putconn_failed').inc()
                 try:
                     self._conn.close()
                 except:
@@ -117,6 +136,26 @@ def _initialize_connection_pool():
         logger.error(f"Failed to initialize connection pool: {str(e)}", exc_info=True)
         raise
 
+def _update_pool_metrics():
+    """Update Prometheus metrics with current pool statistics."""
+    global _connection_pool
+
+    if not METRICS_ENABLED or _connection_pool is None:
+        return
+
+    try:
+        # ThreadedConnectionPool doesn't expose direct stats, but we can use internal _used
+        # _used is a dict mapping thread IDs to connections
+        active_count = len(getattr(_connection_pool, '_used', {}))
+        max_count = _connection_pool.maxconn
+        idle_count = max_count - active_count
+
+        db_connections_active.set(active_count)
+        db_connections_idle.set(idle_count)
+        db_connections_max.set(max_count)
+    except Exception as e:
+        logger.debug(f"Failed to update pool metrics: {str(e)}")
+
 def _close_connection_pool():
     """Close all connections in the pool on application shutdown."""
     global _connection_pool
@@ -170,15 +209,31 @@ def get_db_connection():
     if _connection_pool is None:
         _initialize_connection_pool()
 
+    start_time = time.time() if METRICS_ENABLED else None
+
     try:
         raw_conn = _connection_pool.getconn()
+
+        # Track connection wait time
+        if METRICS_ENABLED and start_time is not None:
+            wait_time = time.time() - start_time
+            db_connection_wait_seconds.observe(wait_time)
+
+        # Update pool metrics after checkout
+        _update_pool_metrics()
+
         # Wrap connection so close() returns it to the pool
         return PooledConnectionWrapper(raw_conn, _connection_pool)
+
     except pool.PoolError as e:
         logger.error(f"Connection pool exhausted: {str(e)}", exc_info=True)
+        if METRICS_ENABLED:
+            db_connection_errors_total.labels(error_type='pool_exhausted').inc()
         raise
     except Exception as e:
         logger.error(f"Failed to get connection from pool: {str(e)}", exc_info=True)
+        if METRICS_ENABLED:
+            db_connection_errors_total.labels(error_type='getconn_failed').inc()
         raise
 
 @contextmanager

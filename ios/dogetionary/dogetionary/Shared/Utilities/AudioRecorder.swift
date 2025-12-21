@@ -49,7 +49,7 @@ class AudioRecorder: NSObject, ObservableObject {
 
         // Reset audio session
         do {
-            try recordingSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+            try recordingSession.setCategory(.playAndRecord, mode: .default, options: [])
             try recordingSession.setActive(true)
         } catch {
             logger.error("Failed to configure audio session: \(error)")

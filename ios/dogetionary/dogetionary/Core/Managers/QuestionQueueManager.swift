@@ -94,11 +94,6 @@ class QuestionQueueManager: ObservableObject {
             return
         }
 
-        guard hasMore else {
-            logger.debug("No more questions available, skipping refill")
-            return
-        }
-
         guard questionQueue.count < targetQueueSize else {
             logger.debug("Queue size \(self.questionQueue.count) >= target \(self.targetQueueSize), skipping refill")
             return
@@ -108,8 +103,8 @@ class QuestionQueueManager: ObservableObject {
         // Fetch ONE question at a time
         fetchNextQuestion { [weak self] success in
             guard let self = self, success else { return }
-            // Continue fetching until target size
-            if self.questionQueue.count < self.targetQueueSize && self.hasMore {
+            // Continue fetching until target size (backend always has questions via 4-tier fallback)
+            if self.questionQueue.count < self.targetQueueSize {
                 self.refillIfNeeded()
             }
         }
