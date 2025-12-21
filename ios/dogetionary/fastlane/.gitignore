@@ -1,0 +1,35 @@
+# Fastlane .gitignore
+
+# IMPORTANT: DO NOT commit these files to git!
+
+# Reports and test results
+report.xml
+test_output/
+screenshots/
+fastlane/Preview.html
+fastlane/README.md
+timeline.html
+
+# Delivery files (contain metadata that might be sensitive)
+delivery/
+
+# Snapshots
+fastlane/screenshots
+
+# App Store Connect API Key (NEVER commit this!)
+*.p8
+AuthKey_*.p8
+
+# Match (code signing)
+match/
+certs/
+profiles/
+
+# Temporary files
+*.log
+*.itmsp/
+*.dSYM.zip
+
+# Build artifacts
+*.ipa
+*.app.dSYM.zip

@@ -5,7 +5,7 @@ from utils.llm import llm_completion_with_fallback
 def generate_user_profile() -> tuple[str, str]:
     """Generate a proper, civil user name and motto using LLM with fallback chain"""
     try:
-        # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
+        # Uses fallback chain: Gemini 2.0 -> DeepSeek V3 -> Qwen 2.5 -> GPT-4o-mini
         content = llm_completion_with_fallback(
             messages=[
                 {
@@ -18,28 +18,7 @@ def generate_user_profile() -> tuple[str, str]:
                 }
             ],
             use_case="user_profile",
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "user_profile",
-                    "strict": True,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "username": {
-                                "type": "string",
-                                "description": "A friendly, appropriate username suitable for all ages (max 20 characters)"
-                            },
-                            "motto": {
-                                "type": "string",
-                                "description": "A positive, motivational motto related to learning (max 50 characters)"
-                            }
-                        },
-                        "required": ["username", "motto"],
-                        "additionalProperties": False
-                    }
-                }
-            },
+            schema_name="user_profile",  # Uses USER_PROFILE_SCHEMA from config/json_schemas.py
             max_tokens=150
         )
 

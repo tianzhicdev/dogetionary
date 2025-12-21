@@ -15,6 +15,119 @@ References:
 """
 
 # ============================================================================
+# Word Definition Schema
+# ============================================================================
+
+DEFINITION_SCHEMA = {
+    "name": "word_definition_v4",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "valid_word_score": {
+                "type": "number",
+                "description": "Score between 0 and 1 indicating validity (0.9+ = highly valid)"
+            },
+            "suggestion": {
+                "type": ["string", "null"],
+                "description": "Suggested correction if score < 0.9, otherwise null"
+            },
+            "word": {"type": "string"},
+            "phonetic": {"type": "string"},
+            "translations": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Direct translations from learning language to native language"
+            },
+            "definitions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "part_of_speech": {"type": "string"},
+                        "definition": {"type": "string"},
+                        "definition_native": {"type": "string"},
+                        "examples": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "cultural_notes": {"type": ["string", "null"]}
+                    },
+                    "required": ["part_of_speech", "definition", "definition_native", "examples", "cultural_notes"],
+                    "additionalProperties": False
+                }
+            },
+            "collocations": {
+                "type": "array",
+                "items": {"type": "string"}
+            },
+            "synonyms": {
+                "type": ["array", "null"],
+                "items": {"type": "string"}
+            },
+            "antonyms": {
+                "type": ["array", "null"],
+                "items": {"type": "string"}
+            },
+            "comment": {"type": ["string", "null"]},
+            "source": {"type": ["string", "null"]},
+            "word_family": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "word": {"type": "string"},
+                        "part_of_speech": {"type": "string"}
+                    },
+                    "required": ["word", "part_of_speech"],
+                    "additionalProperties": False
+                }
+            },
+            "cognates": {"type": ["string", "null"]},
+            "famous_quote": {
+                "type": ["object", "null"],
+                "properties": {
+                    "quote": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["quote", "source"],
+                "additionalProperties": False
+            }
+        },
+        "required": [
+            "valid_word_score", "suggestion", "word", "phonetic", "translations",
+            "definitions", "collocations", "synonyms", "antonyms", "comment",
+            "source", "word_family", "cognates", "famous_quote"
+        ],
+        "additionalProperties": False
+    }
+}
+
+# ============================================================================
+# User Profile Schema
+# ============================================================================
+
+USER_PROFILE_SCHEMA = {
+    "name": "user_profile",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "username": {
+                "type": "string",
+                "description": "A friendly, appropriate username suitable for all ages (max 20 characters)"
+            },
+            "motto": {
+                "type": "string",
+                "description": "A positive, motivational motto related to learning (max 50 characters)"
+            }
+        },
+        "required": ["username", "motto"],
+        "additionalProperties": False
+    }
+}
+
+# ============================================================================
 # Pronunciation Comparison Schema
 # ============================================================================
 
@@ -152,30 +265,56 @@ PRONOUNCE_SENTENCE_QUESTION_SCHEMA = {
 }
 
 # ============================================================================
-# Video Multiple Choice Schema
+# Video Multiple Choice Schema (Enhanced with pedagogical question types)
 # ============================================================================
 
-VIDEO_MC_OPTIONS_SCHEMA = {
-    "name": "video_mc_options",
+VIDEO_MC_ENHANCED_SCHEMA = {
+    "name": "video_mc_enhanced",
     "strict": True,
     "schema": {
         "type": "object",
         "properties": {
-            "correct_meaning": {
+            "question_type": {
                 "type": "string",
-                "description": "The correct meaning/translation of the word shown in the video"
+                "enum": ["MEANING_IN_CONTEXT", "SYNONYM", "COLLOCATION",
+                         "IDIOM_COMPONENT", "REGISTER", "GRAMMAR_PATTERN"],
+                "description": "Type of vocabulary question being tested"
             },
-            "distractors": {
+            "analysis": {
+                "type": "string",
+                "description": "Brief explanation of why this question type was chosen for this context"
+            },
+            "question": {
+                "type": "string",
+                "description": "The actual question text to display to the learner"
+            },
+            "options": {
                 "type": "array",
                 "items": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "Option text"
+                        },
+                        "correct": {
+                            "type": "boolean",
+                            "description": "Whether this option is correct"
+                        }
+                    },
+                    "required": ["text", "correct"],
+                    "additionalProperties": False
                 },
-                "minItems": 3,
-                "maxItems": 3,
-                "description": "Exactly 3 plausible but incorrect alternatives"
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Exactly 2 options (binary choice for better pedagogy)"
+            },
+            "explanation": {
+                "type": "string",
+                "description": "One sentence explaining why the correct answer is right (shown after answering)"
             }
         },
-        "required": ["correct_meaning", "distractors"],
+        "required": ["question_type", "analysis", "question", "options", "explanation"],
         "additionalProperties": False
     }
 }
@@ -185,11 +324,13 @@ VIDEO_MC_OPTIONS_SCHEMA = {
 # ============================================================================
 
 SCHEMA_REGISTRY = {
+    "definition": DEFINITION_SCHEMA,
+    "user_profile": USER_PROFILE_SCHEMA,
     "pronunciation": PRONUNCIATION_SCHEMA,
     "mc_definition": MC_DEFINITION_QUESTION_SCHEMA,
     "mc_fillin": MC_FILLIN_QUESTION_SCHEMA,
     "pronounce_sentence": PRONOUNCE_SENTENCE_QUESTION_SCHEMA,
-    "video_mc_options": VIDEO_MC_OPTIONS_SCHEMA,
+    "video_mc_enhanced": VIDEO_MC_ENHANCED_SCHEMA,
 }
 
 

@@ -147,9 +147,8 @@ Respond with valid JSON only."""
                     'feedback': 'Unable to evaluate pronunciation. Please try again.'
                 }
 
-            # Validate JSON response (handles list-instead-of-dict errors)
-            from utils.llm import validate_json_response
-            result = validate_json_response(content, "pronunciation")
+            # Parse JSON response (strict validation happens in llm_completion)
+            result = json.loads(content)
 
             # Ensure all required fields are present with correct types
             return {

@@ -1,0 +1,146 @@
+# Fastfile
+# More documentation: https://docs.fastlane.tools
+
+# Opt out of usage statistics (optional)
+opt_out_usage
+
+default_platform(:ios)
+
+platform :ios do
+  # MARK: - Configuration
+
+  # Project and scheme
+  XCODEPROJ = "dogetionary.xcodeproj"
+  SCHEME = "Shojin"
+
+  # Build configuration
+  CONFIGURATION = "Release"
+
+  # MARK: - Before All
+
+  before_all do
+    # Ensure we're on a clean git state (optional - comment out if not using git)
+    # ensure_git_status_clean
+  end
+
+  # MARK: - Lanes
+
+  desc "Build the app (without uploading)"
+  lane :build do
+    build_app(
+      scheme: SCHEME,
+      configuration: CONFIGURATION,
+      export_method: "app-store",
+      skip_archive: false,
+      clean: true
+    )
+  end
+
+  desc "Upload a new Beta Build to TestFlight"
+  desc "This will build and upload your app to TestFlight for beta testing"
+  lane :beta do
+    # Increment build number (optional - uses latest TestFlight build + 1)
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1,
+      xcodeproj: XCODEPROJ
+    )
+
+    # Build the app
+    build_app(
+      scheme: SCHEME,
+      configuration: CONFIGURATION,
+      export_method: "app-store",
+      clean: true
+    )
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: false,
+      skip_submission: true,
+      notify_external_testers: false
+    )
+
+    UI.success("✅ Successfully uploaded to TestFlight!")
+  end
+
+  desc "Deploy a new version to the App Store"
+  desc "This will build and submit your app to App Store review"
+  lane :release do
+    # Increment version number (optional - you can do this manually in Xcode)
+    # increment_version_number(
+    #   bump_type: "patch" # or "minor", "major"
+    # )
+
+    # Increment build number
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1,
+      xcodeproj: XCODEPROJ
+    )
+
+    # Build the app
+    build_app(
+      scheme: SCHEME,
+      configuration: CONFIGURATION,
+      export_method: "app-store",
+      clean: true
+    )
+
+    # Upload to App Store
+    upload_to_app_store(
+      force: true,
+      skip_screenshots: true,
+      skip_metadata: true,
+      skip_app_version_update: true,
+      precheck_include_in_app_purchases: false,
+      submit_for_review: false # Set to true to auto-submit for review
+    )
+
+    UI.success("✅ Successfully uploaded to App Store!")
+  end
+
+  desc "Take screenshots for the App Store"
+  lane :screenshots do
+    snapshot
+  end
+
+  # MARK: - Custom Lanes
+
+  desc "Bump build number only (no build)"
+  lane :bump do
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1,
+      xcodeproj: XCODEPROJ
+    )
+    UI.success("Build number bumped to: #{get_build_number}")
+  end
+
+  desc "Show current version and build number"
+  lane :version do
+    version = get_version_number(xcodeproj: XCODEPROJ, target: "dogetionary")
+    build = get_build_number(xcodeproj: XCODEPROJ)
+    UI.message("Version: #{version}")
+    UI.message("Build: #{build}")
+  end
+
+  # MARK: - After All
+
+  after_all do |lane|
+    # This block is called only if the executed lane was successful
+
+    # Commit version bump (optional)
+    # commit_version_bump(
+    #   message: "Version Bump by fastlane",
+    #   xcodeproj: XCODEPROJ
+    # )
+
+    # Push to git (optional)
+    # push_to_git_remote
+  end
+
+  # MARK: - Error Handling
+
+  error do |lane, exception|
+    UI.error("Error in lane #{lane}: #{exception.message}")
+    # Add error notification (Slack, Discord, etc.) here if needed
+  end
+end

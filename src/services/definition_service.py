@@ -243,7 +243,7 @@ def get_or_generate_definition(word: str, learning_lang: str, native_lang: str, 
         prompt = build_v4_definition_prompt(word, learning_lang, native_lang)
 
         # Call LLM API with V4 schema using utility function
-        # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
+        # Uses fallback chain: Gemini 2.0 -> DeepSeek V3 -> Qwen 2.5 -> GPT-4o-mini
         definition_content = llm_completion_with_fallback(
             messages=[
                 {
@@ -256,14 +256,7 @@ def get_or_generate_definition(word: str, learning_lang: str, native_lang: str, 
                 }
             ],
             use_case="definition",
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "word_definition_v4_with_learning_features",
-                    "strict": True,
-                    "schema": WORD_DEFINITION_V4_SCHEMA
-                }
-            }
+            schema_name="definition"  # Uses DEFINITION_SCHEMA from config/json_schemas.py
         )
 
         # Check if content is None or empty

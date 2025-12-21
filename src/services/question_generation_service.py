@@ -185,38 +185,72 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
         logger.warning(f"No audio_transcript available for video {video_id}, falling back to mc_definition")
         return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
 
-    # Generate meaning and distractors using LLM based on transcript context
-    prompt = f"""Given this audio transcript from a video and a target word, determine the word's meaning based on how it's used in the transcript, then generate 3 plausible but incorrect alternatives.
+    # Generate pedagogically-sound question using enhanced prompt
+    prompt = f"""You are generating a vocabulary question for English learners.
 
-Audio transcript: "{audio_transcript}"
+INPUT:
+- TRANSCRIPT: "{audio_transcript}"
+- KEYWORD: "{word}"
 
-Target word: "{word}"
+TASK:
+1. Analyze how KEYWORD is used in this transcript
+2. Choose the most appropriate question type
+3. Generate the question
 
-Task:
-1. Infer the meaning of "{word}" based on how it's used in the transcript
-2. Generate 3 plausible but INCORRECT definitions that could confuse learners
+QUESTION TYPES (choose one):
 
-Requirements:
-- The correct meaning should be clear, concise, and pedagogically sound
-- Distractors must be semantically related or describe similar concepts
-- All definitions should use simple, common vocabulary
-- Similar length and complexity across all options
-- Avoid negations or "none of the above"
+MEANING_IN_CONTEXT
+- Use when: the word has multiple meanings and context clarifies which one
+- Example: "right" (correct vs. direction), "fire" (flames vs. terminate)
 
-Return ONLY a JSON object with this structure:
+SYNONYM
+- Use when: testing if learner can recognize equivalent expressions
+- Example: "enormous" → "huge", "vanished" → "disappeared"
+
+COLLOCATION
+- Use when: the word pairs naturally with specific other words
+- Example: "make" + decision, "heavy" + rain, "commit" + crime
+
+IDIOM_COMPONENT
+- Use when: the word is part of an idiomatic expression in the transcript
+- Example: "break" in "break the ice", "hit" in "hit the road"
+
+REGISTER
+- Use when: the word signals formality level (slang, casual, formal)
+- Example: "gonna", "ain't", "commence", "dude"
+
+GRAMMAR_PATTERN
+- Use when: the word's form reveals tense, aspect, or structure worth noting
+- Example: "been" (present perfect), "would" (conditional), "-ing" vs "-ed"
+
+OUTPUT FORMAT (JSON):
 {{
-  "correct_meaning": "the correct definition inferred from transcript context",
-  "distractors": ["distractor 1 text", "distractor 2 text", "distractor 3 text"]
-}}"""
+  "question_type": "MEANING_IN_CONTEXT",
+  "analysis": "Brief explanation of why this type fits",
+  "question": "What does 'X' mean in this scene?",
+  "options": [
+    {{"text": "...", "correct": true}},
+    {{"text": "...", "correct": false}}
+  ],
+  "explanation": "One sentence explaining the correct answer"
+}}
+
+RULES:
+- Always exactly 2 options, exactly 1 correct
+- Distractors must be plausible (common misunderstandings, literal readings, similar words)
+- All options similar length and grammatical structure
+- Question must be answerable from transcript alone
+- Use simple, common vocabulary in all text
+- If the keyword usage is too ambiguous to generate a reliable question, return {{"error": "reason"}}"""
 
     try:
-        # Generate meaning and distractors with LLM
+        # Generate pedagogical question with LLM (enhanced format with 2 options)
         # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
         response_json = llm_completion_with_fallback(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a language learning expert. Analyze transcripts to infer word meanings. Return only valid JSON without markdown formatting."
+                    "content": "You are a language learning expert. Analyze transcripts to create pedagogically sound vocabulary questions. Return only valid JSON without markdown formatting."
                 },
                 {
                     "role": "user",
@@ -224,47 +258,78 @@ Return ONLY a JSON object with this structure:
                 }
             ],
             use_case="question",
-            schema_name="video_mc_options"  # Use strict JSON schema for type safety
+            schema_name="video_mc_enhanced"  # Use enhanced schema with question types
         )
 
-        # Validate JSON response (handles list-instead-of-dict errors)
-        from utils.llm import validate_json_response
-        parsed = validate_json_response(response_json.strip(), "video_mc_options")
+        # Parse JSON response (strict validation happens in llm_completion)
+        parsed = json.loads(response_json.strip())
 
-        if 'correct_meaning' not in parsed or 'distractors' not in parsed:
-            raise ValueError("LLM response missing required fields")
+        # Handle error case (LLM couldn't generate reliable question)
+        if 'error' in parsed:
+            logger.warning(f"LLM returned error for video question: {parsed['error']}, falling back to mc_definition")
+            # Fall back to definition-based question instead
+            return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
 
-        correct_meaning = parsed['correct_meaning']
-        distractors = parsed['distractors']
+        # Extract fields from enhanced format
+        question_type_detail = parsed['question_type']
+        analysis = parsed['analysis']
+        question_text = parsed['question']
+        options = parsed['options']
+        explanation = parsed['explanation']
 
-        if not isinstance(distractors, list) or len(distractors) != 3:
-            raise ValueError("LLM did not return exactly 3 distractors")
+        # Validate we have exactly 2 options with correct flags
+        if len(options) != 2:
+            raise ValueError(f"Expected 2 options, got {len(options)}")
+
+        correct_options = [opt for opt in options if opt['correct']]
+        if len(correct_options) != 1:
+            raise ValueError(f"Expected exactly 1 correct option, got {len(correct_options)}")
+
+        # Extract correct and incorrect options
+        correct_option = correct_options[0]
+        incorrect_option = next(opt for opt in options if not opt['correct'])
+
+        # Randomize order to avoid pattern learning (correct answer not always A)
+        if random.random() < 0.5:
+            # Correct answer is A
+            ios_options = [
+                {'id': 'A', 'text': correct_option['text']},
+                {'id': 'B', 'text': incorrect_option['text']}
+            ]
+            correct_answer = 'A'
+        else:
+            # Correct answer is B
+            ios_options = [
+                {'id': 'A', 'text': incorrect_option['text']},
+                {'id': 'B', 'text': correct_option['text']}
+            ]
+            correct_answer = 'B'
 
     except Exception as e:
         logger.error(f"Error generating video question with LLM: {e}", exc_info=True)
         # Don't return crap - let the error propagate
         raise
 
-    # Build question data
+    # Build question data in iOS-compatible format
     question_data = {
         'question_type': 'video_mc',
         'word': word,
         'video_id': video_id,
         'audio_transcript': audio_transcript,  # Use audio_transcript field
-        'question_text': f"Which best describes the meaning of '{word}' in this scene?",
+        'question_text': question_text,  # Dynamic question from LLM
         'show_word_before_video': False,  # Hide word initially, reveal after answer
         'video_metadata': {
             'movie_title': movie_title,
             'movie_year': movie_year,
             'title': title  # Fallback if movie_title is not available
         },
-        'options': [
-            {'id': 'A', 'text': correct_meaning, 'is_correct': True},
-            {'id': 'B', 'text': distractors[0], 'is_correct': False},
-            {'id': 'C', 'text': distractors[1], 'is_correct': False},
-            {'id': 'D', 'text': distractors[2], 'is_correct': False}
-        ],
-        'correct_answer': 'A'
+        'options': ios_options,
+        'correct_answer': correct_answer,
+        'meta': {  # Store pedagogical metadata for future analytics
+            'question_type_detail': question_type_detail,
+            'analysis': analysis,
+            'explanation': explanation
+        }
     }
 
     logger.info(f"Generated video_mc question for word '{word}' with video_id={video_id}, movie_title={movie_title}, has_audio_transcript={audio_transcript is not None}")
@@ -518,9 +583,8 @@ def call_openai_for_question(prompt: str, schema_name: str) -> Dict:
         if not content:
             raise Exception("LLM completion returned empty content")
 
-        # Validate JSON response (handles list-instead-of-dict errors)
-        from utils.llm import validate_json_response
-        question_data = validate_json_response(content, schema_name)
+        # Parse JSON response (strict validation happens in llm_completion)
+        question_data = json.loads(content)
 
         logger.info("Successfully generated question with LLM")
         return question_data

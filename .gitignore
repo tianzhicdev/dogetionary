@@ -222,3 +222,27 @@ logs/
 # TODO execution logs
 todo_logs/
 docker-compose.override.yml
+
+# Fastlane
+ios/dogetionary/fastlane/report.xml
+ios/dogetionary/fastlane/Preview.html
+ios/dogetionary/fastlane/screenshots
+ios/dogetionary/fastlane/test_output
+ios/dogetionary/fastlane/README.md
+ios/dogetionary/fastlane/*.ipa
+ios/dogetionary/fastlane/*.dSYM.zip
+
+# App Store Connect API Keys (NEVER commit these!)
+*.p8
+AuthKey_*.p8
+
+# Bundler
+ios/dogetionary/Gemfile.lock
+ios/dogetionary/.bundle/
+ios/dogetionary/vendor/bundle
+
+# iOS build artifacts
+ios/dogetionary/build/
+*.ipa
+*.dSYM.zip
+*.app.dSYM.zip

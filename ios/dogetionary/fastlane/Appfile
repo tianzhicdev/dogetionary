@@ -1,0 +1,15 @@
+# Appfile
+# More information: https://docs.fastlane.tools/advanced/#appfile
+
+# Your App Store Connect credentials
+# You can use App Store Connect API key (recommended)
+# Or use your Apple ID (requires app-specific password)
+
+app_identifier("com.tianzhistudio.dogetionary.dogetionary") # The bundle identifier of your app
+# apple_id("your_apple_id@example.com") # Your Apple ID email address
+
+# Uncomment when you have your team ID
+# For more information about the team ID, visit:
+# https://developer.apple.com/help/account/manage-your-team/locate-your-team-id
+# team_id("YOUR_TEAM_ID") # Developer Portal Team ID
+# itc_team_id("YOUR_ITC_TEAM_ID") # App Store Connect Team ID (usually same as team_id)

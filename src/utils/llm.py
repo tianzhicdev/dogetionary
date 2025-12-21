@@ -25,30 +25,7 @@ from config.config import GROQ_TO_OPENAI_FALLBACK, FALLBACK_CHAINS
 logger = logging.getLogger(__name__)
 
 
-def clean_json_response(json_str: str) -> str:
-    """
-    Clean up common JSON formatting issues from LLM responses.
-
-    Fixes:
-    - Markdown code blocks (```json ... ```)
-    - Trailing commas in arrays/objects (e.g., [1, 2, 3,])
-    - Leading/trailing whitespace
-
-    Args:
-        json_str: Raw JSON string from LLM
-
-    Returns:
-        Cleaned JSON string ready for parsing
-    """
-    # Remove markdown code blocks
-    json_str = re.sub(r'```json\s*', '', json_str)
-    json_str = re.sub(r'```\s*$', '', json_str)
-
-    # Remove trailing commas before closing brackets/braces
-    # Matches: ,<optional whitespace>] or ,<optional whitespace>}
-    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
-
-    return json_str.strip()
+# Removed clean_json_response() - JSON must be valid or fail to trigger fallback
 
 
 # Try to import Groq, but make it optional
@@ -213,49 +190,13 @@ def get_response_format(
         return None
 
 
-def validate_json_response(content: str, schema_name: str) -> Dict[str, Any]:
-    """
-    Validate and sanitize JSON response from LLM.
-
-    For models without JSON Schema support, this provides defensive type checking
-    and fixes common issues like:
-    - LLM returning array instead of object
-    - Missing required fields
-    - Wrong data types
-
-    Args:
-        content: JSON string from LLM
-        schema_name: Name of expected schema for validation hints
-
-    Returns:
-        Validated dict
-
-    Raises:
-        ValueError: If response cannot be fixed to match expected schema
-    """
-    # Parse JSON
-    parsed = json.loads(content)
-
-    # Fix: LLM returned array instead of object
-    if isinstance(parsed, list):
-        if len(parsed) > 0 and isinstance(parsed[0], dict):
-            logger.warning(f"LLM returned array instead of object for {schema_name}, using first element")
-            parsed = parsed[0]
-        else:
-            raise ValueError(f"LLM returned invalid array for {schema_name}: {parsed}")
-
-    # Ensure it's a dict
-    if not isinstance(parsed, dict):
-        raise ValueError(f"LLM response is not a dict or array for {schema_name}: {type(parsed)}")
-
-    return parsed
+# Removed validate_json_response() - JSON must be valid or fail to trigger fallback
 
 
 def llm_completion_with_fallback(
     messages: List[Dict[str, str]],
     use_case: str,
-    response_format: Optional[Dict[str, Any]] = None,
-    schema_name: Optional[str] = None,
+    schema_name: str,
     temperature: float = 1.0,
     max_tokens: Optional[int] = None,
     max_completion_tokens: Optional[int] = None
@@ -267,8 +208,7 @@ def llm_completion_with_fallback(
     Args:
         messages: List of message dicts with 'role' and 'content' keys
         use_case: Use case identifier (definition, question, pronunciation, etc.)
-        response_format: (Deprecated) Optional response format specification - use schema_name instead
-        schema_name: Name of JSON schema from config.json_schemas (e.g., 'pronunciation', 'mc_definition')
+        schema_name: Name of JSON schema from config.json_schemas (REQUIRED)
                      Automatically selects json_schema or json_object based on model support
         temperature: Sampling temperature (default: 1.0)
         max_tokens: Maximum tokens in response (deprecated, use max_completion_tokens)
@@ -279,9 +219,11 @@ def llm_completion_with_fallback(
 
     Example:
         >>> messages = [{"role": "user", "content": "Define 'hello'"}]
-        >>> response = llm_completion_with_fallback(messages, use_case="definition", schema_name="mc_definition")
-        # Tries: deepseek-v3.1 -> qwen -> mistral -> gpt-4o until one succeeds
-        # Uses json_schema for gpt-4o, json_object for others
+        >>> response = llm_completion_with_fallback(
+        ...     messages, use_case="definition", schema_name="definition"
+        ... )
+        # Tries: gemini -> deepseek-v3 -> qwen -> gpt-4o-mini until one succeeds
+        # Uses json_schema for supported models, json_object for others
     """
     chain = get_fallback_chain(use_case)
 
@@ -289,18 +231,14 @@ def llm_completion_with_fallback(
         logger.error(f"No fallback chain configured for use_case={use_case}")
         return None
 
-    logger.info(f"Starting fallback chain for use_case={use_case}, models={chain}")
+    logger.info(f"Starting fallback chain for use_case={use_case}, schema={schema_name}, models={chain}")
 
     for i, model_name in enumerate(chain):
         try:
             logger.info(f"Attempting model {i+1}/{len(chain)}: {model_name} for use_case={use_case}")
 
             # Auto-select response format based on model capabilities
-            # If schema_name provided, use it; otherwise fall back to deprecated response_format
-            if schema_name:
-                model_response_format = get_response_format(model_name, schema_name)
-            else:
-                model_response_format = response_format
+            model_response_format = get_response_format(model_name, schema_name)
 
             result = llm_completion(
                 messages=messages,
@@ -473,26 +411,35 @@ def llm_completion(
             return None
 
         # If JSON mode requested, validate JSON before returning
+        # STRICT: Any invalid JSON fails immediately to trigger fallback
         if response_format and response_format.get("type") in ["json_object", "json_schema"]:
             try:
-                # Clean up common JSON formatting issues
-                content = clean_json_response(content)
+                # Validate that it's actually valid JSON (no cleanup, must be perfect)
+                parsed = json.loads(content)
 
-                # Validate that it's actually valid JSON
-                json.loads(content)
+                # Additional type check: must be dict, not list or other types
+                if not isinstance(parsed, dict):
+                    logger.error(
+                        f"JSON type validation failed for {model_name}: Expected dict, got {type(parsed).__name__}. "
+                        f"Full content:\n{content}"
+                    )
+                    llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='error').inc()
+                    llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type='json_wrong_type').inc()
+                    llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
+                    return None  # Fail to trigger fallback
+
                 logger.debug(f"JSON validation passed for {model_name}")
             except json.JSONDecodeError as e:
-                # JSON validation failed - log and raise to trigger fallback
+                # JSON parsing failed - log raw output and fail to trigger fallback
                 logger.error(
-                    f"JSON validation failed for {model_name}: {e.msg} at line {e.lineno} col {e.colno} (char {e.pos}). "
-                    f"Full content:\n{content}"
+                    f"JSON parsing failed for {model_name}: {e.msg} at line {e.lineno} col {e.colno} (char {e.pos}). "
+                    f"Raw LLM output:\n{content}"
                 )
                 # Track JSON validation error in metrics
                 llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='error').inc()
-                llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type='json_validation_failed').inc()
+                llm_errors_total.labels(provider=provider, model=normalized_model, use_case=use_case, error_type='json_parse_failed').inc()
                 llm_request_duration_seconds.labels(provider=provider, model=normalized_model, use_case=use_case).observe(duration)
-                # Re-raise to let fallback mechanism catch it
-                raise
+                return None  # Fail to trigger fallback
 
         # Track successful call metrics
         llm_calls_total.labels(provider=provider, model=normalized_model, use_case=use_case, status='success').inc()
