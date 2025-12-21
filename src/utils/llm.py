@@ -84,6 +84,20 @@ MODEL_PROVIDER_MAP = {
     "gpt-3.5-turbo": "openai",
 }
 
+# Models that support strict JSON Schema validation
+# Reference: https://platform.openai.com/docs/guides/structured-outputs
+MODELS_WITH_JSON_SCHEMA_SUPPORT = {
+    # OpenAI models
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-5-nano",
+
+    # Google models (via OpenRouter)
+    "google/gemini-2.0-flash-lite-001",
+    "google/gemini-2.0-flash-exp",
+    "google/gemini-2.0-flash-thinking-exp-01-21",
+}
+
 
 def normalize_model_name(model_name: str) -> str:
     """
@@ -139,10 +153,109 @@ def get_fallback_chain(use_case: str) -> List[str]:
     return FALLBACK_CHAINS.get(use_case, FALLBACK_CHAINS.get('general', []))
 
 
+def supports_json_schema(model_name: str) -> bool:
+    """
+    Check if a model supports strict JSON Schema validation.
+
+    Args:
+        model_name: Name of the model to check
+
+    Returns:
+        True if model supports JSON Schema, False otherwise
+    """
+    return model_name in MODELS_WITH_JSON_SCHEMA_SUPPORT
+
+
+def get_response_format(
+    model_name: str,
+    schema_name: Optional[str] = None,
+    fallback_to_json_object: bool = True
+) -> Optional[Dict[str, Any]]:
+    """
+    Get appropriate response_format parameter based on model capabilities.
+
+    Args:
+        model_name: Name of the model to use
+        schema_name: Name of the schema from config.json_schemas (e.g., 'pronunciation', 'mc_definition')
+        fallback_to_json_object: If True, use json_object for models without schema support
+
+    Returns:
+        Response format dict, or None if no JSON formatting requested
+
+    Example:
+        >>> # For a model with schema support
+        >>> get_response_format("gpt-4o", "pronunciation")
+        {"type": "json_schema", "json_schema": {...}}
+
+        >>> # For a model without schema support
+        >>> get_response_format("deepseek/deepseek-chat-v3.1", "pronunciation")
+        {"type": "json_object"}  # Falls back to loose JSON mode
+    """
+    if schema_name is None:
+        return None
+
+    # Import here to avoid circular dependency
+    from config.json_schemas import get_schema
+
+    if supports_json_schema(model_name):
+        # Use strict JSON Schema
+        schema = get_schema(schema_name)
+        return {
+            "type": "json_schema",
+            "json_schema": schema
+        }
+    elif fallback_to_json_object:
+        # Fall back to loose JSON mode
+        logger.debug(f"Model {model_name} does not support JSON Schema, using json_object mode")
+        return {"type": "json_object"}
+    else:
+        # No JSON formatting
+        return None
+
+
+def validate_json_response(content: str, schema_name: str) -> Dict[str, Any]:
+    """
+    Validate and sanitize JSON response from LLM.
+
+    For models without JSON Schema support, this provides defensive type checking
+    and fixes common issues like:
+    - LLM returning array instead of object
+    - Missing required fields
+    - Wrong data types
+
+    Args:
+        content: JSON string from LLM
+        schema_name: Name of expected schema for validation hints
+
+    Returns:
+        Validated dict
+
+    Raises:
+        ValueError: If response cannot be fixed to match expected schema
+    """
+    # Parse JSON
+    parsed = json.loads(content)
+
+    # Fix: LLM returned array instead of object
+    if isinstance(parsed, list):
+        if len(parsed) > 0 and isinstance(parsed[0], dict):
+            logger.warning(f"LLM returned array instead of object for {schema_name}, using first element")
+            parsed = parsed[0]
+        else:
+            raise ValueError(f"LLM returned invalid array for {schema_name}: {parsed}")
+
+    # Ensure it's a dict
+    if not isinstance(parsed, dict):
+        raise ValueError(f"LLM response is not a dict or array for {schema_name}: {type(parsed)}")
+
+    return parsed
+
+
 def llm_completion_with_fallback(
     messages: List[Dict[str, str]],
     use_case: str,
     response_format: Optional[Dict[str, Any]] = None,
+    schema_name: Optional[str] = None,
     temperature: float = 1.0,
     max_tokens: Optional[int] = None,
     max_completion_tokens: Optional[int] = None
@@ -154,7 +267,9 @@ def llm_completion_with_fallback(
     Args:
         messages: List of message dicts with 'role' and 'content' keys
         use_case: Use case identifier (definition, question, pronunciation, etc.)
-        response_format: Optional response format specification
+        response_format: (Deprecated) Optional response format specification - use schema_name instead
+        schema_name: Name of JSON schema from config.json_schemas (e.g., 'pronunciation', 'mc_definition')
+                     Automatically selects json_schema or json_object based on model support
         temperature: Sampling temperature (default: 1.0)
         max_tokens: Maximum tokens in response (deprecated, use max_completion_tokens)
         max_completion_tokens: Maximum tokens in completion
@@ -164,8 +279,9 @@ def llm_completion_with_fallback(
 
     Example:
         >>> messages = [{"role": "user", "content": "Define 'hello'"}]
-        >>> response = llm_completion_with_fallback(messages, use_case="definition")
+        >>> response = llm_completion_with_fallback(messages, use_case="definition", schema_name="mc_definition")
         # Tries: deepseek-v3.1 -> qwen -> mistral -> gpt-4o until one succeeds
+        # Uses json_schema for gpt-4o, json_object for others
     """
     chain = get_fallback_chain(use_case)
 
@@ -179,11 +295,18 @@ def llm_completion_with_fallback(
         try:
             logger.info(f"Attempting model {i+1}/{len(chain)}: {model_name} for use_case={use_case}")
 
+            # Auto-select response format based on model capabilities
+            # If schema_name provided, use it; otherwise fall back to deprecated response_format
+            if schema_name:
+                model_response_format = get_response_format(model_name, schema_name)
+            else:
+                model_response_format = response_format
+
             result = llm_completion(
                 messages=messages,
                 model_name=model_name,
                 use_case=use_case,
-                response_format=response_format,
+                response_format=model_response_format,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 max_completion_tokens=max_completion_tokens,

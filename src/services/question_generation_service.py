@@ -224,13 +224,14 @@ Return ONLY a JSON object with this structure:
                 }
             ],
             use_case="question",
-            response_format={"type": "json_object"}
+            schema_name="video_mc_options"  # Use strict JSON schema for type safety
         )
 
-        # Parse the response
-        parsed = json.loads(response_json.strip())
+        # Validate JSON response (handles list-instead-of-dict errors)
+        from utils.llm import validate_json_response
+        parsed = validate_json_response(response_json.strip(), "video_mc_options")
 
-        if not isinstance(parsed, dict) or 'correct_meaning' not in parsed or 'distractors' not in parsed:
+        if 'correct_meaning' not in parsed or 'distractors' not in parsed:
             raise ValueError("LLM response missing required fields")
 
         correct_meaning = parsed['correct_meaning']
@@ -485,16 +486,20 @@ def shuffle_question_options(question_data: Dict) -> Dict:
     return question_data
 
 
-def call_openai_for_question(prompt: str) -> Dict:
+def call_openai_for_question(prompt: str, schema_name: str) -> Dict:
     """
     Call OpenAI API to generate question based on prompt.
+
+    Args:
+        prompt: The prompt for question generation
+        schema_name: Name of JSON schema to use (e.g., 'mc_definition', 'mc_fillin')
 
     Returns:
         Dict containing the generated question data
     """
     try:
         # Uses fallback chain: Gemini -> DeepSeek V3 -> Qwen 2.5 -> GPT-4o-mini
-        # JSON validation happens automatically in llm_completion() with fallback on error
+        # JSON validation happens automatically with strict schemas for supported models
         content = llm_completion_with_fallback(
             messages=[
                 {
@@ -507,14 +512,15 @@ def call_openai_for_question(prompt: str) -> Dict:
                 }
             ],
             use_case="question",
-            response_format={"type": "json_object"}  # Ensure JSON response
+            schema_name=schema_name  # Use strict JSON schema for type safety
         )
 
         if not content:
             raise Exception("LLM completion returned empty content")
 
-        # Parse JSON (already validated and cleaned in llm_completion())
-        question_data = json.loads(content)
+        # Validate JSON response (handles list-instead-of-dict errors)
+        from utils.llm import validate_json_response
+        question_data = validate_json_response(content, schema_name)
 
         logger.info("Successfully generated question with LLM")
         return question_data
@@ -549,20 +555,25 @@ def generate_question_with_llm(
     # Handle video_mc type specially (doesn't use LLM for generation)
     if question_type == 'video_mc':
         return generate_video_mc_question(word, definition, learning_lang, native_lang)
-    # Select appropriate prompt generator for LLM-based questions
+
+    # Select appropriate prompt generator and schema for LLM-based questions
     if question_type == 'mc_definition':
         prompt = generate_mc_definition_prompt(word, definition, native_lang)
+        schema_name = 'mc_definition'
     elif question_type == 'mc_word':
         prompt = generate_mc_word_prompt(word, definition, native_lang)
+        schema_name = 'mc_definition'  # Same schema as mc_definition
     elif question_type == 'fill_blank':
         prompt = generate_fill_blank_prompt(word, definition, native_lang)
+        schema_name = 'mc_fillin'
     elif question_type == 'pronounce_sentence':
         prompt = generate_pronounce_sentence_prompt(word, definition, native_lang)
+        schema_name = 'pronounce_sentence'
     else:
         raise ValueError(f"Unknown question type: {question_type}")
 
-    # Generate with LLM
-    question_data = call_openai_for_question(prompt)
+    # Generate with LLM using appropriate schema
+    question_data = call_openai_for_question(prompt, schema_name)
 
     # Add metadata
     question_data['question_type'] = question_type

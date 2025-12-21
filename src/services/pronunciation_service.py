@@ -137,7 +137,7 @@ Respond with valid JSON only."""
                     }
                 ],
                 use_case="pronunciation",
-                response_format={"type": "json_object"}
+                schema_name="pronunciation"  # Use strict JSON schema for type safety
             )
 
             if not content:
@@ -147,9 +147,11 @@ Respond with valid JSON only."""
                     'feedback': 'Unable to evaluate pronunciation. Please try again.'
                 }
 
-            result = json.loads(content)
+            # Validate JSON response (handles list-instead-of-dict errors)
+            from utils.llm import validate_json_response
+            result = validate_json_response(content, "pronunciation")
 
-            # Ensure all required fields are present
+            # Ensure all required fields are present with correct types
             return {
                 'similar': result.get('similar', False),
                 'score': float(result.get('score', 0.0)),
