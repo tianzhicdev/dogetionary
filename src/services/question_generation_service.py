@@ -348,15 +348,16 @@ Word information:
 - Translations: {', '.join(translations)}
 - Definitions: {json.dumps(definitions, indent=2)}
 
-Task: Create a question asking "What does '{word}' mean?" with 4 answer options:
+Task: Create a question asking "What does '{word}' mean?" with 2 answer options:
 - Option A: The CORRECT definition (clear, concise, pedagogically sound)
-- Options B, C, D: Plausible but INCORRECT distractors
+- Option B: A plausible but INCORRECT distractor
 
 Distractor requirements:
-- Must be semantically related or similar-sounding concepts
+- Must be semantically related or similar-sounding concept
 - Should test real understanding, not be obviously wrong
 - Similar length and style to correct answer
 - Avoid negations or "none of the above"
+- Focus on creating ONE high-quality distractor
 
 IMPORTANT - Language Simplicity:
 - Use SIMPLE, COMMON vocabulary in all answer options
@@ -369,9 +370,7 @@ Return ONLY valid JSON (no markdown, no explanation):
   "question_text": "What does '{word}' mean?",
   "options": [
     {{"id": "A", "text": "..."}},
-    {{"id": "B", "text": "..."}},
-    {{"id": "C", "text": "..."}},
-    {{"id": "D", "text": "..."}}
+    {{"id": "B", "text": "..."}}
   ],
   "correct_answer": "A"
 }}"""
@@ -390,25 +389,24 @@ Task: Create a question showing the definition and asking which word it describe
 
 Requirements:
 - Option A: "{word}" (CORRECT)
-- Options B, C, D: Similar words that DON'T match the definition
-  - Should be related/similar to {word} (synonyms, near-synonyms, or words in same semantic field)
-  - Must be real English words
-  - Should be believable distractors
+- Option B: A similar word that DOESN'T match the definition
+  - Should be related/similar to {word} (synonym, near-synonym, or word in same semantic field)
+  - Must be a real English word
+  - Should be a believable distractor
 
 IMPORTANT - Distractor Selection:
-- Choose COMMON, WELL-KNOWN words as distractors
+- Choose a COMMON, WELL-KNOWN word as the distractor
 - Avoid obscure, complex, or advanced vocabulary
-- Users should recognize all the word options, even if they don't know exact meanings
-- Use words at a basic to intermediate level
+- Users should recognize the word, even if they don't know exact meaning
+- Use a word at a basic to intermediate level
+- Focus on creating ONE high-quality distractor
 
 Return ONLY valid JSON (no markdown):
 {{
   "question_text": "Which word matches this definition: '{main_definition}'?",
   "options": [
     {{"id": "A", "text": "{word}"}},
-    {{"id": "B", "text": "..."}},
-    {{"id": "C", "text": "..."}},
-    {{"id": "D", "text": "..."}}
+    {{"id": "B", "text": "..."}}
   ],
   "correct_answer": "A"
 }}"""
@@ -428,12 +426,12 @@ def generate_fill_blank_prompt(word: str, definition_data: Dict, native_lang: st
 Definition data:
 {json.dumps(definition_data, indent=2)}
 
-Task: Create a sentence with a blank where "{word}" should go, plus 4 options.
+Task: Create a sentence with a blank where "{word}" should go, plus 2 options.
 
 Requirements:
 - Create a natural, context-rich sentence (or use/adapt one of the examples)
 - Option A: "{word}" (CORRECT)
-- Options B, C, D: Related words that DON'T fit the context
+- Option B: A related word that DOESN'T fit the context
 - Include translation of the sentence to {lang_name}
 
 IMPORTANT - Language Simplicity:
@@ -449,9 +447,7 @@ Return ONLY valid JSON:
   "question_text": "Fill in the blank:",
   "options": [
     {{"id": "A", "text": "{word}"}},
-    {{"id": "B", "text": "..."}},
-    {{"id": "C", "text": "..."}},
-    {{"id": "D", "text": "..."}}
+    {{"id": "B", "text": "..."}}
   ],
   "correct_answer": "A",
   "sentence_translation": "..."
@@ -638,6 +634,30 @@ def generate_question_with_llm(
 
     # Generate with LLM using appropriate schema
     question_data = call_openai_for_question(prompt, schema_name)
+
+    # Randomize answer position for MC questions (prevents pattern learning)
+    # LLM always returns correct answer as "A", we randomize it here
+    if question_type in ['mc_definition', 'mc_word', 'fill_blank']:
+        if 'options' in question_data and len(question_data['options']) == 2:
+            # Extract option texts (LLM returns: A=correct, B=incorrect)
+            option_a = question_data['options'][0]
+            option_b = question_data['options'][1]
+
+            # 50/50 chance to swap positions
+            if random.random() < 0.5:
+                # Keep correct answer as A
+                question_data['options'] = [
+                    {'id': 'A', 'text': option_a['text']},
+                    {'id': 'B', 'text': option_b['text']}
+                ]
+                question_data['correct_answer'] = 'A'
+            else:
+                # Swap: correct answer becomes B
+                question_data['options'] = [
+                    {'id': 'A', 'text': option_b['text']},
+                    {'id': 'B', 'text': option_a['text']}
+                ]
+                question_data['correct_answer'] = 'B'
 
     # Add metadata
     question_data['question_type'] = question_type

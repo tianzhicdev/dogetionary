@@ -216,34 +216,32 @@ def _upload_single_video(cursor, video_data: dict, source_id: str = None) -> dic
     except Exception as e:
         raise ValueError(f"Invalid base64 video data: {e}")
 
-    # Check if video already exists (idempotency)
+    # Use INSERT ... ON CONFLICT to handle idempotency and race conditions
     cursor.execute("""
-        SELECT id FROM videos
-        WHERE name = %s AND format = %s
-    """, (name, format_type))
+        INSERT INTO videos (name, format, video_data, size_bytes, transcript, audio_transcript,
+                           audio_transcript_verified, whisper_metadata, metadata, source_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (name, format) DO UPDATE
+        SET video_data = EXCLUDED.video_data,
+            size_bytes = EXCLUDED.size_bytes,
+            transcript = EXCLUDED.transcript,
+            audio_transcript = EXCLUDED.audio_transcript,
+            audio_transcript_verified = EXCLUDED.audio_transcript_verified,
+            whisper_metadata = EXCLUDED.whisper_metadata,
+            metadata = EXCLUDED.metadata,
+            source_id = EXCLUDED.source_id,
+            updated_at = NOW()
+        RETURNING id, (xmax = 0) AS inserted
+    """, (name, format_type, video_bytes, size_bytes or len(video_bytes), transcript, audio_transcript,
+          audio_transcript_verified, psycopg2.extras.Json(whisper_metadata) if whisper_metadata else None,
+          psycopg2.extras.Json(metadata), source_id))
 
-    existing = cursor.fetchone()
-
-    if existing:
-        video_id = existing['id']
-        status = "existed"
-        logger.info(f"Video already exists: {name}.{format_type} (id={video_id})")
-    else:
-        # Insert video with audio transcript support
-        cursor.execute("""
-            INSERT INTO videos (name, format, video_data, size_bytes, transcript, audio_transcript,
-                               audio_transcript_verified, whisper_metadata, metadata, source_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (name, format_type, video_bytes, size_bytes or len(video_bytes), transcript, audio_transcript,
-              audio_transcript_verified, psycopg2.extras.Json(whisper_metadata) if whisper_metadata else None,
-              psycopg2.extras.Json(metadata), source_id))
-
-        video_id = cursor.fetchone()['id']
-        status = "created"
-        size_mb = (size_bytes or len(video_bytes)) / (1024 * 1024)
-        logger.info(f"Created video: {name}.{format_type} (id={video_id}, size={size_mb:.2f}MB, "
-                   f"audio_verified={audio_transcript_verified}, source_id={source_id})")
+    result = cursor.fetchone()
+    video_id = result['id']
+    status = "created" if result['inserted'] else "updated"
+    size_mb = (size_bytes or len(video_bytes)) / (1024 * 1024)
+    logger.info(f"{status.capitalize()} video: {name}.{format_type} (id={video_id}, size={size_mb:.2f}MB, "
+               f"audio_verified={audio_transcript_verified}, source_id={source_id})")
 
     # Insert word mappings
     mappings_created = 0

@@ -164,8 +164,8 @@ MC_OPTION_SCHEMA = {
     "properties": {
         "id": {
             "type": "string",
-            "enum": ["A", "B", "C", "D"],
-            "description": "Option identifier (A, B, C, or D)"
+            "enum": ["A", "B"],
+            "description": "Option identifier (A or B)"
         },
         "text": {
             "type": "string",
@@ -189,13 +189,13 @@ MC_DEFINITION_QUESTION_SCHEMA = {
             "options": {
                 "type": "array",
                 "items": MC_OPTION_SCHEMA,
-                "minItems": 4,
-                "maxItems": 4,
-                "description": "Exactly 4 answer options (A, B, C, D)"
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Exactly 2 answer options (A, B)"
             },
             "correct_answer": {
                 "type": "string",
-                "enum": ["A", "B", "C", "D"],
+                "enum": ["A", "B"],
                 "description": "The ID of the correct option"
             }
         },
@@ -221,13 +221,13 @@ MC_FILLIN_QUESTION_SCHEMA = {
             "options": {
                 "type": "array",
                 "items": MC_OPTION_SCHEMA,
-                "minItems": 4,
-                "maxItems": 4,
-                "description": "Exactly 4 answer options (A, B, C, D)"
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Exactly 2 answer options (A, B)"
             },
             "correct_answer": {
                 "type": "string",
-                "enum": ["A", "B", "C", "D"],
+                "enum": ["A", "B"],
                 "description": "The ID of the correct option"
             },
             "sentence_translation": {

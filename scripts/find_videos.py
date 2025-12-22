@@ -37,6 +37,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# LLM fallback chain for video analysis (Gemini -> DeepSeek -> Qwen -> GPT-4o-mini)
+LLM_FALLBACK_CHAIN = [
+    "google/gemini-2.0-flash-lite-001",   # $0.10/$0.40/M - 40% cheaper than GPT-4o-mini
+    "deepseek/deepseek-chat-v3.1",        # $0.14-0.28/M
+    "qwen/qwen-2.5-7b-instruct",          # $0.15/$0.17/M
+    "openai/gpt-4o-mini"                  # $0.15/$0.60/M - final fallback
+]
+
 
 class VideoFinder:
     """Main class for video discovery and upload pipeline"""
@@ -52,8 +60,7 @@ class VideoFinder:
         education_min_score: float = 0.6,  # Dual-criteria: education score threshold
         context_min_score: float = 0.6,     # Dual-criteria: context score threshold
         max_mappings_per_video: int = 5,
-        download_only: bool = False,
-        output_dir: Optional[str] = None
+        download_only: bool = False
     ):
         self.storage_dir = Path(storage_dir)
         self.backend_url = backend_url.rstrip('/') if backend_url else ''
@@ -69,70 +76,10 @@ class VideoFinder:
         # Generate unique source_id for this pipeline run
         self.source_id = f"find_videos_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        # Setup directories
-        self.metadata_dir = self.storage_dir / "metadata"
-        self.candidates_dir = self.storage_dir / "candidates"  # Stage 2: candidate selections
-        self.audio_transcripts_dir = self.storage_dir / "audio_transcripts"  # Stage 3: Whisper transcripts
-        self.final_analysis_dir = self.storage_dir / "final_analysis"  # Stage 3: final LLM analysis
-        self.videos_dir = self.storage_dir / "videos"
-        self.state_dir = self.storage_dir / "state"
-        self.logs_dir = self.storage_dir / "logs"
+        # Create storage directory if it doesn't exist
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-        # Output directory for download-only mode
-        if output_dir:
-            self.output_dir = Path(output_dir)
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self.output_dir = self.storage_dir / "output"
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-
-        for d in [self.metadata_dir, self.candidates_dir, self.audio_transcripts_dir,
-                  self.final_analysis_dir, self.videos_dir, self.state_dir, self.logs_dir]:
-            d.mkdir(parents=True, exist_ok=True)
-
-        # State tracking for idempotency
-        self.processed_words: Set[str] = set()
-        self.uploaded_videos: Set[str] = set()
-        self.saved_videos: Set[str] = set()  # For download-only mode
-        self.failed_uploads: List[Dict] = []
-
-        self._load_state()
-
-    def _load_state(self):
-        """Load state from disk to enable resume"""
-        processed_file = self.state_dir / "processed_words.txt"
-        if processed_file.exists():
-            self.processed_words = set(line.strip() for line in open(processed_file) if line.strip())
-            logger.info(f"Loaded {len(self.processed_words)} processed words from state")
-
-        uploaded_file = self.state_dir / "uploaded_videos.txt"
-        if uploaded_file.exists():
-            self.uploaded_videos = set(line.strip() for line in open(uploaded_file) if line.strip())
-            logger.info(f"Loaded {len(self.uploaded_videos)} uploaded videos from state")
-
-        saved_file = self.state_dir / "saved_videos.txt"
-        if saved_file.exists():
-            self.saved_videos = set(line.strip() for line in open(saved_file) if line.strip())
-            logger.info(f"Loaded {len(self.saved_videos)} saved videos from state")
-
-    def _save_processed_word(self, word: str):
-        """Mark word as processed"""
-        self.processed_words.add(word)
-        with open(self.state_dir / "processed_words.txt", 'a') as f:
-            f.write(f"{word}\n")
-
-    def _save_uploaded_video(self, slug: str):
-        """Mark video as uploaded"""
-        self.uploaded_videos.add(slug)
-        with open(self.state_dir / "uploaded_videos.txt", 'a') as f:
-            f.write(f"{slug}\n")
-
-    def _save_failed_upload(self, slug: str, error: str):
-        """Record failed upload"""
-        entry = {"slug": slug, "error": error, "timestamp": datetime.now().isoformat()}
-        self.failed_uploads.append(entry)
-        with open(self.state_dir / "failed_uploads.jsonl", 'a') as f:
-            f.write(json.dumps(entry) + "\n")
+        # No state tracking needed - idempotency via metadata.json existence
 
     def fetch_bundle_words(self, bundle_name: str) -> List[str]:
         """Fetch words from bundle via backend API that need videos"""
@@ -167,16 +114,6 @@ class VideoFinder:
 
     def search_clipcafe(self, word: str) -> List[Dict]:
         """Search ClipCafe API for videos containing word in transcript"""
-        # Check cache first
-        cache_dir = self.metadata_dir / word.lower()
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        cached_files = list(cache_dir.glob("*.json"))
-        if cached_files:
-            logger.info(f"  Found {len(cached_files)} cached metadata files for '{word}'")
-            return [json.load(open(f)) for f in cached_files]
-
-        # Search ClipCafe with retry logic for rate limiting
         logger.info(f"  Searching ClipCafe for '{word}'...")
         params = {
             'api_key': self.clipcafe_api_key,
@@ -215,14 +152,7 @@ class VideoFinder:
                     if source:
                         clips.append(source)
 
-                # Save to cache
-                for i, clip in enumerate(clips, 1):
-                    slug = clip.get('slug', f'clip_{i}')
-                    cache_file = cache_dir / f"{slug}.json"
-                    with open(cache_file, 'w', encoding='utf-8') as f:
-                        json.dump(clip, f, indent=2, ensure_ascii=False)
-
-                logger.info(f"  Cached {len(clips)} metadata files for '{word}'")
+                logger.info(f"  Found {len(clips)} videos for '{word}'")
                 return clips
 
             except requests.exceptions.HTTPError as e:
@@ -265,14 +195,6 @@ class VideoFinder:
         slug = metadata.get('slug', '')
         if not slug:
             return None
-
-        word_dir = search_word.lower()
-
-        # Check cache first
-        cache_file = self.candidates_dir / word_dir / f"{slug}_candidates.json"
-        if cache_file.exists():
-            logger.info(f"    Using cached candidate analysis for {slug}")
-            return json.load(open(cache_file))
 
         # Validate transcript
         transcript = metadata.get('transcript', '')
@@ -332,7 +254,7 @@ class VideoFinder:
         validated_mappings = sorted(validated_mappings, key=lambda x: (x['education_score'] + x['context_score']) / 2, reverse=True)
         validated_mappings = validated_mappings[:self.max_mappings_per_video]
 
-        # Cache result
+        # Build result
         analysis = {
             "slug": slug,
             "search_word": search_word,
@@ -340,10 +262,6 @@ class VideoFinder:
             "analyzed_at": datetime.now().isoformat(),
             "stage": "candidate"
         }
-
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(cache_file, 'w', encoding='utf-8') as f:
-            json.dump(analysis, f, indent=2, ensure_ascii=False)
 
         logger.info(f"    Found {len(validated_mappings)} candidate mappings for {slug}")
         return analysis
@@ -414,27 +332,54 @@ IMPORTANT RULES:
         return prompt
 
     def _query_llm(self, prompt: str) -> Dict:
-        """Query OpenAI API with retry logic"""
-        headers = {
-            "Authorization": f"Bearer {self.openai_api_key}",
-            "Content-Type": "application/json"
-        }
+        """Query LLM with fallback chain (Gemini -> DeepSeek -> Qwen -> GPT-4o-mini)"""
+        messages = [
+            {"role": "system", "content": "You are an ESL teaching expert. Always return valid JSON."},
+            {"role": "user", "content": prompt}
+        ]
 
-        payload = {
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": "You are an ESL teaching expert. Always return valid JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.3,
-            "max_tokens": 800,
-            "response_format": {"type": "json_object"}
-        }
-
-        for attempt in range(3):
+        # Try each model in the fallback chain
+        for i, model_name in enumerate(LLM_FALLBACK_CHAIN):
             try:
+                # Determine API endpoint and key
+                if "/" not in model_name:
+                    # OpenAI direct (gpt-4o-mini without provider prefix)
+                    api_base = "https://api.openai.com/v1"
+                    api_key = self.openai_api_key
+                elif model_name.startswith("openai/"):
+                    # OpenAI via OpenRouter (with openai/ prefix)
+                    openrouter_key = os.getenv('OPEN_ROUTER_KEY')
+                    if not openrouter_key:
+                        # Fallback to direct OpenAI if no OpenRouter key
+                        api_base = "https://api.openai.com/v1"
+                        api_key = self.openai_api_key
+                        model_name = model_name.replace("openai/", "")  # Remove prefix for direct API
+                    else:
+                        api_base = "https://openrouter.ai/api/v1"
+                        api_key = openrouter_key
+                else:
+                    # OpenRouter for other providers (google/, deepseek/, qwen/, etc.)
+                    api_base = "https://openrouter.ai/api/v1"
+                    api_key = os.getenv('OPEN_ROUTER_KEY')
+                    if not api_key:
+                        logger.warning(f"    {model_name} requires OPEN_ROUTER_KEY")
+                        continue
+
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+
+                payload = {
+                    "model": model_name,
+                    "messages": messages,
+                    "temperature": 0.3,
+                    "max_tokens": 800,
+                    "response_format": {"type": "json_object"}
+                }
+
                 response = requests.post(
-                    "https://api.openai.com/v1/chat/completions",
+                    f"{api_base}/chat/completions",
                     headers=headers,
                     json=payload,
                     timeout=60
@@ -443,20 +388,25 @@ IMPORTANT RULES:
 
                 result = response.json()
                 content = result['choices'][0]['message']['content']
-                return json.loads(content)
+                parsed = json.loads(content)
+
+                if i > 0:
+                    logger.info(f"    ✓ Fallback to {model_name} succeeded")
+
+                return parsed
 
             except json.JSONDecodeError as e:
-                logger.warning(f"    LLM returned invalid JSON (attempt {attempt+1}): {e}")
-                if attempt == 2:
-                    return {"mappings": []}
-                time.sleep(2)
-
+                logger.warning(f"    {model_name} returned invalid JSON: {e}")
+                continue
             except Exception as e:
-                logger.warning(f"    LLM API error (attempt {attempt+1}): {e}")
-                if attempt == 2:
-                    raise
-                time.sleep(5)
+                logger.warning(f"    {model_name} failed: {e}")
+                if i < len(LLM_FALLBACK_CHAIN) - 1:
+                    logger.info(f"    Trying next model in chain...")
+                    time.sleep(2)
+                continue
 
+        # All models failed
+        logger.error("    ✗ All LLM models in fallback chain failed")
         return {"mappings": []}
 
     def extract_audio_transcript(self, video_path: Path, slug: str) -> Optional[Dict]:
@@ -465,12 +415,6 @@ IMPORTANT RULES:
 
         Returns: {"text": "...", "words": [...], "duration": 12.5, "whisper_metadata": {...}}
         """
-        # Check cache first
-        cache_file = self.audio_transcripts_dir / f"{slug}_whisper.json"
-        if cache_file.exists():
-            logger.info(f"      Using cached Whisper transcript for {slug}")
-            return json.load(open(cache_file))
-
         logger.info(f"      Extracting audio transcript with Whisper for {slug}...")
 
         try:
@@ -509,10 +453,6 @@ IMPORTANT RULES:
                 "extracted_at": datetime.now().isoformat()
             }
 
-            # Cache result
-            with open(cache_file, 'w', encoding='utf-8') as f:
-                json.dump(audio_transcript, f, indent=2, ensure_ascii=False)
-
             logger.info(f"      Whisper transcript extracted: {len(audio_transcript['text'].split())} words, "
                        f"{audio_transcript['duration']:.1f}s")
 
@@ -533,14 +473,6 @@ IMPORTANT RULES:
         slug = metadata.get('slug', '')
         if not slug:
             return None
-
-        word_dir = search_word.lower()
-
-        # Check cache first
-        cache_file = self.final_analysis_dir / word_dir / f"{slug}_final.json"
-        if cache_file.exists():
-            logger.info(f"      Using cached final analysis for {slug}")
-            return json.load(open(cache_file))
 
         # Get clean audio transcript
         clean_transcript = audio_transcript.get('text', '')
@@ -601,7 +533,7 @@ IMPORTANT RULES:
         validated_mappings = sorted(validated_mappings, key=lambda x: (x['education_score'] + x['context_score']) / 2, reverse=True)
         validated_mappings = validated_mappings[:self.max_mappings_per_video]
 
-        # Cache result
+        # Build result
         final_analysis = {
             "slug": slug,
             "search_word": search_word,
@@ -611,10 +543,6 @@ IMPORTANT RULES:
             "analyzed_at": datetime.now().isoformat(),
             "stage": "final"
         }
-
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(cache_file, 'w', encoding='utf-8') as f:
-            json.dump(final_analysis, f, indent=2, ensure_ascii=False)
 
         logger.info(f"      ✓ Final analysis: {len(validated_mappings)} verified mappings for {slug}")
         return final_analysis
@@ -694,26 +622,30 @@ IMPORTANT RULES:
         return None
 
     def download_video(self, metadata: Dict) -> Optional[Path]:
-        """Download video file and cache locally (max 5MB)"""
+        """Download video file to final destination (max 5MB)"""
         slug = metadata.get('slug', '')
         download_url = metadata.get('download')
 
         if not slug or not download_url:
             return None
 
-        # Check cache
-        video_cache = self.videos_dir / f"{slug}.mp4"
-        if video_cache.exists():
-            file_size_bytes = video_cache.stat().st_size
+        # Video destination path
+        video_dir = self.storage_dir / slug
+        video_dir.mkdir(parents=True, exist_ok=True)
+        video_path = video_dir / f"{slug}.mp4"
+
+        # Check if already exists (idempotency)
+        if video_path.exists():
+            file_size_bytes = video_path.stat().st_size
             file_size_mb = file_size_bytes / (1024 * 1024)
 
-            # Check size limit even for cached videos
+            # Check size limit even for existing videos
             if file_size_bytes > 5 * 1024 * 1024:
-                logger.warning(f"      Skipping cached {slug}.mp4 - too large ({file_size_mb:.2f} MB)")
+                logger.warning(f"      Skipping existing {slug}.mp4 - too large ({file_size_mb:.2f} MB)")
                 return None
 
-            logger.info(f"      Using cached video: {slug}.mp4 ({file_size_mb:.2f} MB)")
-            return video_cache
+            logger.info(f"      Using existing video: {slug}.mp4 ({file_size_mb:.2f} MB)")
+            return video_path
 
         # Download
         logger.info(f"      Downloading video: {slug}.mp4...")
@@ -721,27 +653,27 @@ IMPORTANT RULES:
             response = requests.get(download_url, stream=True, timeout=60)
             response.raise_for_status()
 
-            with open(video_cache, 'wb') as f:
+            with open(video_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
 
-            file_size_bytes = video_cache.stat().st_size
+            file_size_bytes = video_path.stat().st_size
             file_size_mb = file_size_bytes / (1024 * 1024)
 
             # Check size limit (5MB)
             if file_size_bytes > 5 * 1024 * 1024:
                 logger.warning(f"      Skipping {slug}.mp4 - too large ({file_size_mb:.2f} MB)")
-                video_cache.unlink()
+                video_path.unlink()
                 return None
 
             logger.info(f"      Downloaded {slug}.mp4 ({file_size_mb:.2f} MB)")
-            return video_cache
+            return video_path
 
         except Exception as e:
             logger.error(f"      Failed to download {slug}: {e}")
-            if video_cache.exists():
-                video_cache.unlink()
+            if video_path.exists():
+                video_path.unlink()
             return None
 
     def upload_to_backend(self, metadata: Dict, analysis: Dict, video_path: Path,
@@ -759,9 +691,10 @@ IMPORTANT RULES:
         """
         slug = metadata.get('slug', '')
 
-        # Check if already uploaded (idempotency)
-        if slug in self.uploaded_videos:
-            logger.info(f"      Skipping upload - {slug} already uploaded")
+        # Check if already uploaded (idempotency via metadata.json)
+        video_dir = self.storage_dir / slug
+        if (video_dir / "metadata.json").exists():
+            logger.info(f"      Skipping upload - {slug} already exists")
             return None
 
         # Read video file
@@ -829,12 +762,10 @@ IMPORTANT RULES:
             logger.info(f"      ✓ Uploaded {slug}: video_id={video_result['video_id']}, "
                        f"mappings_created={video_result['mappings_created']}")
 
-            self._save_uploaded_video(slug)
             return video_result
 
         except Exception as e:
             logger.error(f"      ✗ Failed to upload {slug}: {e}")
-            self._save_failed_upload(slug, str(e))
             return None
 
     def save_video_to_directory(
@@ -845,13 +776,14 @@ IMPORTANT RULES:
         audio_transcript: Optional[Dict] = None
     ) -> Optional[Dict]:
         """
-        Save video and metadata to directory structure for download-only mode.
+        Save video and metadata to directory structure.
 
         Directory structure:
-        output_dir/
+        storage_dir/
           <video_slug>/
+            <video_slug>.mp4      # Original video
             <video_slug>.mp3      # Extracted audio
-            metadata.json         # All metadata including word mappings
+            metadata.json         # v3 metadata with word mappings
 
         Args:
             metadata: ClipCafe metadata
@@ -864,14 +796,15 @@ IMPORTANT RULES:
         """
         slug = metadata.get('slug', '')
 
-        # Check if already saved (idempotency)
-        if slug in self.saved_videos:
-            logger.info(f"      Skipping save - {slug} already saved")
-            return None
-
         # Create video directory
-        video_dir = self.output_dir / slug
+        video_dir = self.storage_dir / slug
         video_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy MP4 video to final location
+        mp4_dest = video_dir / f"{slug}.mp4"
+        if video_path != mp4_dest:
+            import shutil
+            shutil.copy2(video_path, mp4_dest)
 
         # Extract MP3 audio from MP4 video
         mp3_path = video_dir / f"{slug}.mp3"
@@ -897,7 +830,7 @@ IMPORTANT RULES:
             logger.error(f"      ✗ Failed to extract MP3 for {slug}: {e}")
             return None
 
-        # Prepare metadata.json
+        # Prepare metadata.json (v3 format)
         metadata_file = video_dir / "metadata.json"
         metadata_content = {
             "slug": slug,
@@ -907,7 +840,7 @@ IMPORTANT RULES:
             "transcript": metadata.get('transcript', ''),
             "audio_transcript": audio_transcript.get('text', '') if audio_transcript else None,
             "audio_transcript_verified": analysis.get('audio_verified', False),
-            "whisper_metadata": audio_transcript.get('whisper_metadata', {}) if audio_transcript else None,
+            "whisper_metadata": audio_transcript.get('whisper_metadata', {}) if audio_transcript else {"segments": [], "task": "transcribe"},
             "clipcafe_metadata": {
                 "clip_id": metadata.get('clipID'),
                 "duration_seconds": metadata.get('duration'),
@@ -942,9 +875,6 @@ IMPORTANT RULES:
 
             logger.info(f"      ✓ Saved metadata.json with {len(analysis['mappings'])} word mappings")
 
-            # Mark as saved
-            self._save_saved_video(slug)
-
             return {
                 "slug": slug,
                 "mp3_path": str(mp3_path),
@@ -955,13 +885,6 @@ IMPORTANT RULES:
         except Exception as e:
             logger.error(f"      ✗ Failed to save metadata for {slug}: {e}")
             return None
-
-    def _save_saved_video(self, slug: str):
-        """Mark video as saved to directory (download-only mode)"""
-        self.saved_videos.add(slug)
-        saved_file = self.state_dir / "saved_videos.txt"
-        with open(saved_file, 'a') as f:
-            f.write(f"{slug}\n")
 
     def process_word(self, word: str, vocab_list: List[str]) -> Dict:
         """Process a single word through the 3-stage pipeline
@@ -1017,10 +940,10 @@ IMPORTANT RULES:
         for metadata, candidate_analysis in candidate_videos:
             slug = metadata.get('slug', '')
 
-            # Skip if already uploaded or saved
-            if slug in self.uploaded_videos or slug in self.saved_videos:
-                status = "saved" if slug in self.saved_videos else "uploaded"
-                logger.info(f"    Skipping {slug} - already {status}")
+            # Skip if already exists (idempotency check)
+            video_dir = self.storage_dir / slug
+            if (video_dir / "metadata.json").exists():
+                logger.info(f"    Skipping {slug} - already exists")
                 continue
 
             # Download video
@@ -1118,9 +1041,7 @@ IMPORTANT RULES:
         logger.info(f"Mode: {'DOWNLOAD-ONLY' if self.download_only else 'DOWNLOAD + UPLOAD'}")
         logger.info(f"Source ID: {self.source_id}")
         logger.info(f"Storage Dir: {self.storage_dir}")
-        if self.download_only:
-            logger.info(f"Output Dir: {self.output_dir}")
-        else:
+        if not self.download_only:
             logger.info(f"Backend URL: {self.backend_url}")
         logger.info(f"Word Source: {source_name or self.word_list_path}")
         logger.info(f"Max Videos per Word: {self.max_videos_per_word}")
@@ -1139,13 +1060,8 @@ IMPORTANT RULES:
         all_word_stats = []
 
         for i, word in enumerate(words, 1):
-            if word in self.processed_words:
-                logger.info(f"\nSkipping '{word}' - already processed ({i}/{len(words)})")
-                continue
-
             word_stats = self.process_word(word, vocab_list)
             all_word_stats.append(word_stats)
-            self._save_processed_word(word)
             words_processed += 1
 
             logger.info(f"\nProgress: {i}/{len(words)} words ({100*i/len(words):.1f}%)")
@@ -1162,7 +1078,6 @@ IMPORTANT RULES:
         logger.info(f"Words Processed: {words_processed}")
         logger.info(f"Videos Uploaded: {total_videos}")
         logger.info(f"Mappings Created: {total_mappings}")
-        logger.info(f"Failed Uploads: {len(self.failed_uploads)}")
         logger.info(f"Time Elapsed: {elapsed/3600:.2f} hours")
         logger.info(f"{'='*80}")
 
@@ -1186,8 +1101,8 @@ def main():
 
     parser.add_argument(
         '--storage-dir',
-        default='/Volumes/databank/dogetionary-pipeline',
-        help='Base directory for caching (default: /Volumes/databank/dogetionary-pipeline)'
+        default='/Volumes/databank/shortfilms',
+        help='Base directory for caching (default: /Volumes/databank/shortfilms)'
     )
 
     parser.add_argument(
@@ -1220,12 +1135,7 @@ def main():
     parser.add_argument(
         '--download-only',
         action='store_true',
-        help='Download and process videos without uploading (saves to output directory)'
-    )
-
-    parser.add_argument(
-        '--output-dir',
-        help='Output directory for download-only mode (default: <storage-dir>/output)'
+        help='Download and process videos without uploading (saves to storage directory)'
     )
 
     args = parser.parse_args()
@@ -1255,8 +1165,7 @@ def main():
         max_videos_per_word=args.max_videos,
         education_min_score=args.education_min_score,
         context_min_score=args.context_min_score,
-        download_only=args.download_only,
-        output_dir=args.output_dir
+        download_only=args.download_only
     )
 
     # Get words from either bundle or CSV

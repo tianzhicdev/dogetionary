@@ -197,7 +197,6 @@ struct OnboardingView: View {
                         .configure { lottieAnimationView in
                             // Mute audio for all Lottie animations in onboarding
                             lottieAnimationView.backgroundBehavior = .pauseAndRestore
-                            lottieAnimationView.respectAnimationFrameRate = true
                         }
 //                        .frame(width: 200, height: 200)
                 } else if let symbolName = symbolName {
