@@ -2,6 +2,7 @@ import os
 import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
+from psycopg2.extensions import STATUS_READY
 from config.config import SUPPORTED_LANGUAGES
 from contextlib import contextmanager
 from typing import Optional, List, Dict, Any, Union
@@ -49,6 +50,35 @@ class PooledConnectionWrapper:
         """Return connection to pool instead of closing"""
         if not self._closed and self._pool is not None and self._conn is not None:
             try:
+                # Validate connection health before returning to pool
+                # This prevents corrupted connections from polluting the pool
+                if self._conn.closed != 0:
+                    # Connection is closed, don't return to pool
+                    logger.warning("Attempted to return closed connection to pool, discarding")
+                    if METRICS_ENABLED:
+                        db_connection_errors_total.labels(error_type='connection_closed').inc()
+                    self._closed = True
+                    return
+
+                # Check if connection is in a clean state (not mid-transaction)
+                if hasattr(self._conn, 'status') and self._conn.status != STATUS_READY:
+                    # Connection is in a dirty state, try to rollback first
+                    logger.warning(f"Connection in non-ready state ({self._conn.status}), rolling back before pool return")
+                    try:
+                        self._conn.rollback()
+                    except Exception as rb_error:
+                        # Rollback failed, connection is corrupted - discard it
+                        logger.error(f"Failed to rollback dirty connection: {rb_error}, discarding connection")
+                        if METRICS_ENABLED:
+                            db_connection_errors_total.labels(error_type='rollback_failed').inc()
+                        try:
+                            self._conn.close()
+                        except:
+                            pass
+                        self._closed = True
+                        return
+
+                # Connection is healthy, return to pool
                 self._pool.putconn(self._conn)
                 self._closed = True
                 # Update pool metrics after returning connection
@@ -312,7 +342,15 @@ def db_fetch_one(query: str, params: Optional[tuple] = None) -> Optional[Dict[st
     """
     with db_cursor() as cur:
         cur.execute(query, params)
-        return cur.fetchone()
+        try:
+            return cur.fetchone()
+        except psycopg2.ProgrammingError as e:
+            # Query returned 0 rows - this is normal, not an error
+            # Without this, calling fetchone() on empty results corrupts connection state
+            if "no results to fetch" in str(e):
+                return None
+            # Re-raise other ProgrammingErrors
+            raise
 
 def db_fetch_all(query: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
     """Fetch all rows from the database.
