@@ -12,7 +12,6 @@ struct ContentView: View {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var questionQueue = QuestionQueueManager.shared
     @StateObject private var appVersionManager = AppVersionManager.shared
-    @State private var appState = AppState.shared
     @State private var selectedView = 1  // 1 = Add (default)
     @State private var showOnboarding = false
     @State private var dailyBannerExpanded = false
@@ -163,13 +162,13 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: appState.shouldNavigateToReview) { _, shouldNavigate in
+        .onChange(of: AppState.shared.shouldNavigateToReview) { _, shouldNavigate in
             if shouldNavigate {
                 // Navigate to Shojin view when notification is tapped
                 selectedView = 0
             }
         }
-        .environment(appState)
+        .environment(AppState.shared)
         .onChange(of: scenePhase) { oldPhase, newPhase in
             // Refresh practice status when app becomes active
             if newPhase == .active {
@@ -178,7 +177,7 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: appState.testSettingsChanged) { _, changed in
+        .onChange(of: AppState.shared.testSettingsChanged) { _, changed in
             if changed {
                 // Auto-refresh question queue when test settings change
                 questionQueue.forceRefresh()
