@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Fetch error logs from production Loki instance.
+Fetch error logs from production Loki instance or local Docker container.
 
 Usage:
-    python scripts/fetch_error_logs.py                    # Last 100 errors
+    python scripts/fetch_error_logs.py                    # Last 100 errors from prod
+    python scripts/fetch_error_logs.py --local            # Last 100 lines from local Docker
     python scripts/fetch_error_logs.py --limit 50         # Last 50 errors
     python scripts/fetch_error_logs.py --hours 24         # Errors from last 24 hours
     python scripts/fetch_error_logs.py --job dogetionary_errors  # Specific job
@@ -12,6 +13,7 @@ Usage:
 
 import argparse
 import requests
+import subprocess
 import sys
 from datetime import datetime, timedelta
 from typing import Optional
@@ -112,25 +114,77 @@ def print_logs(response: dict, show_metadata: bool = False):
     print(f"✅ Found {total_entries} log entries", file=sys.stderr)
 
 
+def fetch_local_docker_logs(limit: int = 100, grep_pattern: str = None):
+    """Fetch logs from local Docker container."""
+    container_name = "dogetionary-app-1"
+
+    print(f"🔍 Fetching logs from local Docker container: {container_name}", file=sys.stderr)
+    print(f"   Limit: {limit} lines", file=sys.stderr)
+    if grep_pattern:
+        print(f"   Filter: {grep_pattern}", file=sys.stderr)
+    print("", file=sys.stderr)
+
+    try:
+        # Build docker logs command
+        cmd = ["docker", "logs", "--tail", str(limit), container_name]
+
+        # Run command
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+        if result.returncode != 0:
+            print(f"❌ Error fetching Docker logs: {result.stderr}", file=sys.stderr)
+            sys.exit(1)
+
+        # Combine stdout and stderr (Docker sends logs to both)
+        logs = result.stdout + result.stderr
+
+        # Filter by grep pattern if provided
+        if grep_pattern:
+            filtered_logs = []
+            for line in logs.split('\n'):
+                if grep_pattern.lower() in line.lower():
+                    filtered_logs.append(line)
+            logs = '\n'.join(filtered_logs)
+            print(f"✅ Found {len(filtered_logs)} matching lines", file=sys.stderr)
+        else:
+            print(f"✅ Fetched {len(logs.split(chr(10)))} lines", file=sys.stderr)
+
+        print("", file=sys.stderr)
+        print(logs)
+
+    except subprocess.TimeoutExpired:
+        print("❌ Timeout fetching Docker logs", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Fetch error logs from production Loki',
+        description='Fetch error logs from production Loki or local Docker',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Fetch last 100 errors
+  # Fetch last 100 errors from production
   %(prog)s
 
-  # Fetch last 50 errors from last 6 hours
+  # Fetch last 100 lines from local Docker
+  %(prog)s --local
+
+  # Fetch last 200 lines from local Docker with error filter
+  %(prog)s --local --limit 200 --grep error
+
+  # Fetch last 50 errors from last 6 hours (production)
   %(prog)s --limit 50 --hours 6
 
-  # Fetch errors from specific job
+  # Fetch errors from specific job (production)
   %(prog)s --job dogetionary_errors
 
-  # Custom LogQL query
+  # Custom LogQL query (production)
   %(prog)s --query '{job="dogetionary"} |= "Traceback"'
 
-  # Show metadata about log streams
+  # Show metadata about log streams (production)
   %(prog)s --metadata
 
 Common LogQL patterns:
@@ -141,6 +195,16 @@ Common LogQL patterns:
 """
     )
 
+    parser.add_argument(
+        '--local',
+        action='store_true',
+        help='Fetch logs from local Docker container instead of production Loki'
+    )
+    parser.add_argument(
+        '--grep',
+        help='Filter local Docker logs by pattern (case-insensitive)',
+        default=None
+    )
     parser.add_argument(
         '--query',
         help='Custom LogQL query (overrides --job)',
@@ -181,23 +245,27 @@ Common LogQL patterns:
 
     args = parser.parse_args()
 
-    # Build LogQL query
-    if args.query:
-        query = args.query
+    # Fetch from local Docker or production Loki
+    if args.local:
+        fetch_local_docker_logs(limit=args.limit, grep_pattern=args.grep)
     else:
-        query = f'{{job="{args.job}"}}'
+        # Build LogQL query
+        if args.query:
+            query = args.query
+        else:
+            query = f'{{job="{args.job}"}}'
 
-    # Fetch logs
-    response = fetch_loki_logs(
-        query=query,
-        hours=args.hours,
-        limit=args.limit,
-        start_time=args.start,
-        end_time=args.end
-    )
+        # Fetch logs
+        response = fetch_loki_logs(
+            query=query,
+            hours=args.hours,
+            limit=args.limit,
+            start_time=args.start,
+            end_time=args.end
+        )
 
-    # Print logs
-    print_logs(response, show_metadata=args.metadata)
+        # Print logs
+        print_logs(response, show_metadata=args.metadata)
 
 
 if __name__ == '__main__':

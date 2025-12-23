@@ -91,17 +91,17 @@ struct DefinitionCard: View {
                 }
                 
                 Spacer()
-                
-                // Compact AI Illustration in top right corner
-                CompactIllustrationView(
-                    word: definition.word,
-                    language: userManager.learningLanguage,
-                    definition: definition,
-                    illustration: $illustration,
-                    isGenerating: $isGeneratingIllustration,
-                    error: $illustrationError
-                )
-                .frame(width: 80, height: 80)
+
+                // DISABLED: Compact AI Illustration feature removed to reduce costs
+                // CompactIllustrationView(
+                //     word: definition.word,
+                //     language: userManager.learningLanguage,
+                //     definition: definition,
+                //     illustration: $illustration,
+                //     isGenerating: $isGeneratingIllustration,
+                //     error: $illustrationError
+                // )
+                // .frame(width: 80, height: 80)
             }
             
             // Show translations if available

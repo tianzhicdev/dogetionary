@@ -18,27 +18,15 @@ logger = logging.getLogger(__name__)
 
 def audio_exists(text: str, language: str) -> bool:
     """Check if audio exists for text+language"""
-    conn = None
-    cur = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        cur.execute("""
+        result = db_fetch_one("""
             SELECT 1 FROM audio
             WHERE text_content = %s AND language = %s
         """, (text, language))
-
-        result = cur.fetchone()
         return result is not None
     except Exception as e:
         logger.error(f"Error checking audio existence: {str(e)}", exc_info=True)
         return False
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 
 def generate_audio_for_text(text: str) -> bytes:
@@ -61,41 +49,29 @@ def generate_audio_for_text(text: str) -> bytes:
 
 def store_audio(text: str, language: str, audio_data: bytes) -> str:
     """Store audio, return the created_at timestamp"""
-    conn = None
-    cur = None
+    from utils.database import db_cursor
+
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
+        with db_cursor(commit=True) as cur:
+            # First try to insert
+            cur.execute("""
+                INSERT INTO audio (text_content, language, audio_data, content_type)
+                VALUES (%s, %s, %s, 'audio/mpeg')
+                ON CONFLICT (text_content, language)
+                DO UPDATE SET audio_data = EXCLUDED.audio_data, content_type = EXCLUDED.content_type
+            """, (text, language, audio_data))
 
-        # First try to insert
-        cur.execute("""
-            INSERT INTO audio (text_content, language, audio_data, content_type)
-            VALUES (%s, %s, %s, 'audio/mpeg')
-            ON CONFLICT (text_content, language)
-            DO UPDATE SET audio_data = EXCLUDED.audio_data, content_type = EXCLUDED.content_type
-        """, (text, language, audio_data))
-
-        # Then get the actual timestamp from database
-        cur.execute("""
+        # After commit, fetch the timestamp
+        result = db_fetch_one("""
             SELECT created_at FROM audio
             WHERE text_content = %s AND language = %s
         """, (text, language))
 
-        result = cur.fetchone()
-        conn.commit()
-
         return result['created_at'].isoformat() if result else datetime.now().isoformat()
 
     except Exception as e:
-        if conn:
-            conn.rollback()
         logger.error(f"Error storing audio: {str(e)}", exc_info=True)
         raise
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 
 def get_or_generate_audio(text: str, language: str) -> bytes:

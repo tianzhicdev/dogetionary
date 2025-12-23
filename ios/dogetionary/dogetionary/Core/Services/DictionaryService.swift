@@ -158,4 +158,121 @@ class DictionaryService {
     func checkAppVersion(completion: @escaping (Result<AppVersionResponse, Error>) -> Void) {
         AppVersionService.shared.checkAppVersion(completion: completion)
     }
+
+    // MARK: - Video Search Workflow
+
+    /// Check if word has videos in word_to_video table
+    func checkWordHasVideos(word: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        let baseURL = Configuration.effectiveBaseURL
+        let encodedWord = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word
+
+        guard let url = URL(string: "\(baseURL)/v3/api/check-word-videos?word=\(encodedWord)&lang=en") else {
+            completion(.failure(NSError(domain: "DictionaryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "DictionaryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data"])))
+                }
+                return
+            }
+
+            do {
+                struct VideoCheckResponse: Codable {
+                    let has_videos: Bool
+                }
+                let result = try JSONDecoder().decode(VideoCheckResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(result.has_videos))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
+    /// Fetch video questions for a specific word
+    func getVideoQuestionsForWord(word: String, limit: Int = 5, completion: @escaping (Result<[BatchReviewQuestion], Error>) -> Void) {
+        let baseURL = Configuration.effectiveBaseURL
+        let encodedWord = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word
+
+        guard let url = URL(string: "\(baseURL)/v3/api/video-questions-for-word?word=\(encodedWord)&lang=en&limit=\(limit)") else {
+            completion(.failure(NSError(domain: "DictionaryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "DictionaryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data"])))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let result = try decoder.decode(VideoQuestionsResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(result.questions))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
+    /// Trigger async video search on server (fire-and-forget)
+    func triggerVideoSearch(word: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let baseURL = Configuration.effectiveBaseURL
+
+        guard let url = URL(string: "\(baseURL)/v3/api/trigger-video-search") else {
+            completion(.failure(NSError(domain: "DictionaryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: String] = ["word": word, "learning_language": "en"]
+        request.httpBody = try? JSONEncoder().encode(body)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
+            }
+        }.resume()
+    }
+}
+
+// MARK: - Supporting Types for Video Workflow
+
+struct VideoQuestionsResponse: Codable {
+    let word: String
+    let questions: [BatchReviewQuestion]
+    let count: Int
 }

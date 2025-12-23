@@ -21,7 +21,7 @@ import os
 # Add parent directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.database import validate_language, get_db_connection
+from utils.database import validate_language, get_db_connection, db_fetch_one, db_fetch_all
 from services.spaced_repetition_service import get_next_review_date_new, calculate_retention, get_decay_rate
 
 from config.config import *
@@ -35,54 +35,37 @@ from static.support import SUPPORT_HTML
 
 def get_forgetting_curve(word_id):
     """Get forgetting curve data for a specific word"""
-    conn = None
-    cur = None
     try:
         user_id = request.args.get('user_id')
 
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
 
-        conn = get_db_connection()
-        cur = conn.cursor()
-
         # Get word details
-        try:
-            cur.execute("""
-                SELECT id, word, learning_language, created_at
-                FROM saved_words
-                WHERE id = %s AND user_id = %s
-            """, (word_id, user_id))
+        word = db_fetch_one("""
+            SELECT id, word, learning_language, created_at
+            FROM saved_words
+            WHERE id = %s AND user_id = %s
+        """, (word_id, user_id))
 
-            word = cur.fetchone()
-            if not word:
-                return jsonify({"error": "Word not found"}), 404
-        except Exception as e:
-            logger.error(f"Error fetching word details: {str(e)}", exc_info=True)
-            if conn:
-                conn.rollback()
-            raise
+        if not word:
+            return jsonify({"error": "Word not found"}), 404
 
         # Get review history
-        try:
-            cur.execute("""
-                SELECT response, reviewed_at
-                FROM reviews
-                WHERE word_id = %s AND user_id = %s
-                ORDER BY reviewed_at ASC
-            """, (word_id, user_id))
+        reviews = db_fetch_all("""
+            SELECT response, reviewed_at
+            FROM reviews
+            WHERE word_id = %s AND user_id = %s
+            ORDER BY reviewed_at ASC
+        """, (word_id, user_id))
 
-            review_history = []
-            for review in cur.fetchall():
-                review_history.append({
-                    "response": review['response'],
-                    "reviewed_at": review['reviewed_at']
-                })
-        except Exception as e:
-            logger.error(f"Error fetching review history: {str(e)}", exc_info=True)
-            if conn:
-                conn.rollback()
-            raise
+        review_history = [
+            {
+                "response": review['response'],
+                "reviewed_at": review['reviewed_at']
+            }
+            for review in reviews
+        ]
         
         # Calculate curve data points
         created_at = word['created_at']
@@ -188,14 +171,7 @@ def get_forgetting_curve(word_id):
 
     except Exception as e:
         logger.error(f"Error getting forgetting curve: {str(e)}", exc_info=True)
-        if conn:
-            conn.rollback()
         return jsonify({"error": f"Failed to get forgetting curve: {str(e)}"}), 500
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 
 def get_word_details(word_id):

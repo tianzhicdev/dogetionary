@@ -96,6 +96,30 @@ struct SearchView: View {
         .errorToast(message: viewModel.errorMessage) {
             viewModel.errorMessage = nil
         }
+        .overlay(
+            // Video search message toast
+            Group {
+                if viewModel.showVideoSearchMessage {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Image(systemName: "magnifyingglass.circle.fill")
+                                .foregroundColor(AppTheme.accentCyan)
+                            Text(viewModel.videoSearchMessageText)
+                                .foregroundColor(.white)
+                                .font(.subheadline)
+                        }
+                        .padding()
+                        .background(AppTheme.panelFill)
+                        .cornerRadius(10)
+                        .shadow(color: .black.opacity(0.3), radius: 10)
+                        .padding(.bottom, 60)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(), value: viewModel.showVideoSearchMessage)
+                }
+            }
+        )
         .onTapGesture {
             // Dismiss keyboard when tapping outside text field
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

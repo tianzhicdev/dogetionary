@@ -76,7 +76,7 @@ struct ContentView: View {
 
                     SearchView(showProgressBar: true)
                         .tabItem {
-                            Label("Add", systemImage: "magnifyingglass")
+                            Label("Search", systemImage: "magnifyingglass")
                         }
                         .tag(1)
 

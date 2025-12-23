@@ -14,6 +14,7 @@ from handlers.pronunciation import practice_pronunciation
 from handlers.words import get_saved_words, get_word_definition_v4, get_word_details, get_audio, get_or_generate_illustration, toggle_exclude_from_practice
 from handlers.videos import get_video
 from handlers.admin_videos import batch_upload_videos, get_bundle_words_needing_videos
+from handlers.video_search import check_word_has_videos, get_video_questions_for_word, trigger_video_search
 from handlers.bundle_vocabulary import batch_populate_test_vocabulary
 from workers.bundle_vocabulary_worker import add_daily_test_words_for_all_users
 from handlers.review_batch import get_review_words_batch
@@ -89,6 +90,11 @@ v3_api.route('/feedback', methods=['POST'])(submit_feedback)
 
 # App Version Check (V3)
 v3_api.route('/app-version', methods=['GET'])(check_app_version)
+
+# Video Search Workflow (V3)
+v3_api.route('/api/check-word-videos', methods=['GET'])(check_word_has_videos)
+v3_api.route('/api/video-questions-for-word', methods=['GET'])(get_video_questions_for_word)
+v3_api.route('/api/trigger-video-search', methods=['POST'])(trigger_video_search)
 
 # ============================================================================
 # TEST PREP ENDPOINTS (V3) - TOEFL/IELTS/DEMO vocabulary preparation

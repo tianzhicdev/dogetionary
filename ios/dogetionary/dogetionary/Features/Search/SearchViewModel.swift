@@ -44,6 +44,12 @@ class SearchViewModel: ObservableObject {
     // Progress bar expansion state
     @Published var isProgressBarExpanded = false
 
+    // Video search workflow state
+    @Published var isCheckingVideos = false
+    @Published var videoSearchTriggered = false
+    @Published var showVideoSearchMessage = false
+    @Published var videoSearchMessageText = ""
+
     // MARK: - Computed Properties
 
     var isSearchActive: Bool {
@@ -113,6 +119,9 @@ class SearchViewModel: ObservableObject {
                             try? await Task.sleep(nanoseconds: AppConstants.Delay.appRatingDelay) // 1 second
                             self.requestAppRating()
                         }
+
+                        // NEW: Video workflow - check if word has videos
+                        self.checkAndHandleVideoWorkflow(word: definition.word)
                     } else {
                         // Low confidence (<0.9) - store definition and show alert
                         self.pendingDefinitions = definitions
@@ -222,6 +231,89 @@ class SearchViewModel: ObservableObject {
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
             SKStoreReviewController.requestReview(in: windowScene)
             userManager.markAppRatingRequested()
+        }
+    }
+
+    // MARK: - Video Workflow
+
+    private func checkAndHandleVideoWorkflow(word: String) {
+        isCheckingVideos = true
+
+        dictionaryService.checkWordHasVideos(word: word) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isCheckingVideos = false
+
+                switch result {
+                case .success(let hasVideos):
+                    if hasVideos {
+                        // Branch A: Has videos → fetch questions and navigate to Shojin
+                        self.fetchVideoQuestionsAndNavigate(word: word)
+                    } else {
+                        // Branch B: No videos → trigger search
+                        self.triggerVideoSearch(word: word)
+                    }
+                case .failure(let error):
+                    // Fallback: trigger search anyway
+                    self.logger.warning("Error checking videos for '\(word)': \(error.localizedDescription). Triggering search anyway.")
+                    self.triggerVideoSearch(word: word)
+                }
+            }
+        }
+    }
+
+    private func fetchVideoQuestionsAndNavigate(word: String) {
+        logger.info("Fetching video questions for '\(word)'...")
+
+        dictionaryService.getVideoQuestionsForWord(word: word, limit: 5) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                switch result {
+                case .success(let questions):
+                    guard !questions.isEmpty else {
+                        self.logger.warning("No video questions returned for '\(word)' despite hasVideos=true")
+                        return
+                    }
+
+                    // Insert to front of queue
+                    QuestionQueueManager.shared.prependQuestions(questions)
+
+                    // Switch to Shojin tab
+                    AppState.shared.navigateToReview()
+
+                    self.logger.info("Prepended \(questions.count) video questions for '\(word)' and navigated to Shojin")
+
+                case .failure(let error):
+                    self.logger.error("Failed to fetch video questions for '\(word)': \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func triggerVideoSearch(word: String) {
+        videoSearchTriggered = true
+        videoSearchMessageText = "Searching... Videos will show up in Shojin later"
+        showVideoSearchMessage = true
+
+        logger.info("Triggering background video search for '\(word)'...")
+
+        dictionaryService.triggerVideoSearch(word: word) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                // Auto-hide message after 3 seconds
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                self.showVideoSearchMessage = false
+
+                switch result {
+                case .success:
+                    self.logger.info("Video search triggered successfully for '\(word)'")
+                case .failure(let error):
+                    self.logger.error("Failed to trigger video search for '\(word)': \(error.localizedDescription)")
+                }
+            }
         }
     }
 }

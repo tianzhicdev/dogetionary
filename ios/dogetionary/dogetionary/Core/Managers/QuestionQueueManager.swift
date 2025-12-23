@@ -69,6 +69,21 @@ class QuestionQueueManager: ObservableObject {
         return questionQueue.count
     }
 
+    /// Prepend questions to the FRONT of the queue (for instant video practice)
+    func prependQuestions(_ questions: [BatchReviewQuestion]) {
+        guard !questions.isEmpty else { return }
+
+        // Insert at beginning
+        questionQueue.insert(contentsOf: questions, at: 0)
+
+        // Update queued words
+        for question in questions {
+            queuedWords.insert(question.word)
+        }
+
+        logger.info("Prepended \(questions.count) questions to queue, new size: \(self.questionQueue.count)")
+    }
+
     // MARK: - Fetching
 
     /// Initial load on app launch - fetch ONE-BY-ONE until target size
