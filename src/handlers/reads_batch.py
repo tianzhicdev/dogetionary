@@ -6,7 +6,6 @@ Uses SQL JOIN aggregation to minimize database queries (200 queries → 1 query 
 """
 
 from flask import jsonify, request
-from utils.database import get_db_connection
 from handlers.reads import calculate_curve_for_word
 import logging
 
@@ -42,10 +41,9 @@ def get_forgetting_curves_batch():
             return jsonify({"error": "Maximum 200 words per batch"}), 400
 
         # Fetch all words and reviews in ONE optimized query
-        conn = get_db_connection()
-        cur = conn.cursor()
+        from utils.database import db_fetch_all
 
-        cur.execute("""
+        results = db_fetch_all("""
             SELECT
                 sw.id as word_id,
                 sw.word,
@@ -67,16 +65,12 @@ def get_forgetting_curves_batch():
             ORDER BY sw.id
         """, (word_ids, user_id))
 
-        results = cur.fetchall()
-        cur.close()
-        conn.close()
-
         # Convert results to dict for easier processing
         words_data = []
         for row in results:
             # Parse JSONB review_history (psycopg2 returns it as string)
             import json
-            review_history_raw = row[4]
+            review_history_raw = row['review_history']
             if isinstance(review_history_raw, str):
                 review_history = json.loads(review_history_raw)
             else:
@@ -89,10 +83,10 @@ def get_forgetting_curves_batch():
                     review['reviewed_at'] = datetime.fromisoformat(review['reviewed_at'].replace('Z', '+00:00'))
 
             words_data.append({
-                'id': row[0],
-                'word': row[1],
-                'learning_language': row[2],
-                'created_at': row[3],
+                'id': row['word_id'],
+                'word': row['word'],
+                'learning_language': row['learning_language'],
+                'created_at': row['created_at'],
                 'review_history': review_history
             })
 
