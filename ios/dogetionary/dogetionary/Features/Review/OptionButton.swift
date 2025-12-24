@@ -16,10 +16,22 @@ struct OptionButton: View {
     let correctAnswer: String?
     let showFeedback: Bool
     let onTap: () -> Void
+    let allowWordTap: Bool  // If false, disable clickable text (for mc_def_native)
 
     enum DisplayStyle {
         case idBadgeAndText  // Shows "A" + option.text (for MC and Video)
         case textOnly        // Shows option.text only (for Fill Blank)
+    }
+
+    init(option: QuestionOption, style: DisplayStyle, isSelected: Bool, isCorrect: Bool, correctAnswer: String?, showFeedback: Bool, onTap: @escaping () -> Void, allowWordTap: Bool = true) {
+        self.option = option
+        self.style = style
+        self.isSelected = isSelected
+        self.isCorrect = isCorrect
+        self.correctAnswer = correctAnswer
+        self.showFeedback = showFeedback
+        self.onTap = onTap
+        self.allowWordTap = allowWordTap
     }
 
     // Show this option as correct if user was wrong and this is the correct answer
@@ -74,24 +86,60 @@ struct OptionButton: View {
                     .foregroundColor(AppTheme.selectableTint)
                     .frame(width: 32, height: 32)
 
-                // Option Text - clickable for word lookup
-                ClickableTextView(
-                    text: option.text,
-                    font: .body.weight(.medium),
-                    foregroundColor: AppTheme.bodyText,
-                    alignment: .leading
-                )
+                // Option Text + Native Translation
+                VStack(alignment: .leading, spacing: 4) {
+                    // Main text - clickable or plain based on allowWordTap
+                    if allowWordTap {
+                        ClickableTextView(
+                            text: option.text,
+                            font: .body.weight(.medium),
+                            foregroundColor: AppTheme.bodyText,
+                            alignment: .leading
+                        )
+                    } else {
+                        Text(option.text)
+                            .font(.body.weight(.medium))
+                            .foregroundColor(AppTheme.bodyText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Native language translation (if available)
+                    if let textNative = option.text_native {
+                        Text(textNative)
+                            .font(.caption)
+                            .foregroundColor(AppTheme.bodyText.opacity(0.6))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             case .textOnly:
-                // Option Text (word) - clickable for word lookup
-                ClickableTextView(
-                    text: option.text,
-                    font: .headline.weight(.semibold),
-                    foregroundColor: AppTheme.bodyText,
-                    alignment: .leading
-                )
+                // Option Text + Native Translation
+                VStack(alignment: .leading, spacing: 4) {
+                    // Main text (word) - clickable or plain based on allowWordTap
+                    if allowWordTap {
+                        ClickableTextView(
+                            text: option.text,
+                            font: .headline.weight(.semibold),
+                            foregroundColor: AppTheme.bodyText,
+                            alignment: .leading
+                        )
+                    } else {
+                        Text(option.text)
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(AppTheme.bodyText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Native language translation (if available)
+                    if let textNative = option.text_native {
+                        Text(textNative)
+                            .font(.caption)
+                            .foregroundColor(AppTheme.bodyText.opacity(0.6))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

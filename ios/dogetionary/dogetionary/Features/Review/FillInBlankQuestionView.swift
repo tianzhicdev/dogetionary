@@ -39,6 +39,7 @@ struct FillInBlankQuestionView: View {
                 correctAnswer: question.correct_answer,
                 feedbackDelay: feedbackDelay,
                 optionButtonStyle: .textOnly,
+                questionType: question.question_type,
                 onImmediateFeedback: onImmediateFeedback,
                 onAnswer: onAnswer
             )

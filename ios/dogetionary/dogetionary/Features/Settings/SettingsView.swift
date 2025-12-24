@@ -36,7 +36,6 @@ struct SettingsView: View {
 
             Form {
                 debugUserInfoSection
-                profileSection
                 languagePreferencesSection
                 programSection
                 dailyCommitmentSection
@@ -125,52 +124,6 @@ struct SettingsView: View {
         }
     }
 
-    @ViewBuilder
-    private var profileSection: some View {
-        Section(header:
-            HStack {
-                Text("PROFILE")
-                .foregroundStyle(AppTheme.gradient1)
-                    .fontWeight(.semibold)
-            }
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("NAME")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.smallTextColor1)
-                    
-                    TextField("ENTER YOUR NAME", text: $userManager.userName)
-                        .onSubmit {
-                            AnalyticsManager.shared.track(action: .profileNameUpdate, metadata: [
-                                "name_length": userManager.userName.count
-                            ])
-                        }
-                        .padding(4)
-                        .background(AppTheme.textFieldBackgroundColor)
-                        .border(AppTheme.textFieldBorderColor).cornerRadius(4)
-                        .foregroundColor(AppTheme.textFieldUserInput)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("MOTTO")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.smallTextColor1)
-                    TextField("ENTER YOUR MOTTO", text: $userManager.userMotto)
-                        .onSubmit {
-                            AnalyticsManager.shared.track(action: .profileMottoUpdate, metadata: [
-                                "motto_length": userManager.userMotto.count
-                            ])
-                        }
-                        .padding(4)
-                        .background(AppTheme.textFieldBackgroundColor)
-                        .border(AppTheme.textFieldBorderColor).cornerRadius(4)
-                        .foregroundColor(AppTheme.textFieldUserInput)
-                    
-                }
-            }
-        }.listRowBackground(Color.clear)
-    }
 
     @ViewBuilder
     private var languagePreferencesSection: some View {
@@ -219,7 +172,7 @@ struct SettingsView: View {
                         Text("NONE").tag(nil as TestType?)
                         ForEach(TestType.allCases, id: \.self) { testType in
                             if let count = vocabularyCounts[testType] {
-                                Text("\(testType.displayName.uppercased()), \(formatWordCount(count.total_words))")
+                                Text("\(testType.displayName.uppercased()), \(count.total_words.formatAsWordCount())")
                                     .tag(testType as TestType?)
                             } else {
                                 Text(testType.displayName.uppercased())
@@ -253,7 +206,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Time display
                 VStack(spacing: 8) {
-                    Text(formatTimeCommitment(minutes: userManager.dailyTimeCommitmentMinutes))
+                    Text(userManager.dailyTimeCommitmentMinutes.formatAsTimeCommitment())
                         .font(.system(size: 48, weight: .bold))
                         .foregroundStyle(AppTheme.gradient1)
                     Text(userManager.dailyTimeCommitmentMinutes >= 60 ? "HOURS" : "MINUTES")
@@ -715,34 +668,6 @@ struct SettingsView: View {
         }.resume()
     }
 
-    /// Format word count for display (e.g., "1,247 words" or "3.5K words")
-    private func formatWordCount(_ count: Int) -> String {
-        if count >= 10000 {
-            let k = Double(count) / 1000.0
-            return String(format: "%.1fK words", k)
-        } else if count >= 1000 {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
-            return "\(formatted) words"
-        } else {
-            return "\(count) words"
-        }
-    }
-
-    /// Format time commitment display
-    private func formatTimeCommitment(minutes: Int) -> String {
-        if minutes < 60 {
-            return "\(minutes)"
-        } else {
-            let hours = Double(minutes) / 60.0
-            if hours == Double(Int(hours)) {
-                return "\(Int(hours))"
-            } else {
-                return String(format: "%.1f", hours)
-            }
-        }
-    }
 
 }
 

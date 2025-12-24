@@ -1037,9 +1037,16 @@ struct TestProgressResponse: Codable {
 struct QuestionOption: Codable, Identifiable {
     let id: String
     let text: String
+    let text_native: String?  // Native language translation (optional)
+
+    init(id: String, text: String, text_native: String? = nil) {
+        self.id = id
+        self.text = text
+        self.text_native = text_native
+    }
 
     private enum CodingKeys: String, CodingKey {
-        case id, text
+        case id, text, text_native
     }
 }
 

@@ -22,23 +22,6 @@ struct OnboardingView: View {
     private let selectedStudyDuration: Int = 30 // Default to 30 days (no longer user-configurable in onboarding)
     @State private var dailyTimeCommitment: Double = 30 // 10-480 minutes via slider
     @State private var vocabularyCounts: [TestType: VocabularyCountInfo] = [:]  // All test type counts
-    @State private var userName: String = {
-        let names = [
-            "Vocabulary Ninja",
-            "Word Wizard",
-            "Dictionary Doge",
-            "Lexicon Legend",
-            "Vocab Viking",
-            "Grammar Guru",
-            "Spelling Senpai",
-            "Word Nerd Supreme",
-            "Captain Vocabulary",
-            "The Wordinator",
-            "Sir Learns-a-Lot",
-            "Professor Vocab"
-        ]
-        return names.randomElement() ?? "Word Wizard"
-    }()
     @State private var searchWord = "unforgettable"
     @State private var isSubmitting = false
     @State private var isSearching = false
@@ -89,10 +72,6 @@ struct OnboardingView: View {
                         // Page 2: Daily Time Commitment
                         dailyTimeCommitmentPage
                             .tag(2)
-
-                        // Username Page
-                        usernamePage
-                            .tag(usernamePageIndex)
 
                         // Declaration Page
                         declarationPage
@@ -235,44 +214,6 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Username Page
-
-    private var usernamePage: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 20) {
-                Text("GIVE YOURSELF A COOL NAME")
-                    .font(.system(size: 32, weight: .bold))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(AppTheme.gradient1)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 40)
-
-            Spacer()
-
-            VStack(spacing: 16) {
-                TextField("", text: $userName)
-                    .font(.title3)
-                    .foregroundColor(AppTheme.textFieldUserInput)
-                    .padding(4)
-                    .background(AppTheme.textFieldBackgroundColor)
-                    .cornerRadius(4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(AppTheme.textFieldBorderColor, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 24)
-                    .autocapitalization(.words)
-                    .disableAutocorrection(false)
-
-                Text("\(userName.count)/30 CHARACTERS")
-                    .font(.caption)
-                    .foregroundColor(AppTheme.smallTextColor1)
-            }
-
-            Spacer()
-        }
-    }
 
     // MARK: - Test Prep Page
 
@@ -294,7 +235,7 @@ struct OnboardingView: View {
                     Text("NONE").tag(nil as TestType?)
                     ForEach(TestType.allCases, id: \.self) { testType in
                         if let count = vocabularyCounts[testType] {
-                            Text("\(testType.displayName.uppercased()), \(formatWordCount(count.total_words))")
+                            Text("\(testType.displayName.uppercased()), \(count.total_words.formatAsWordCount())")
                                 .tag(testType as TestType?)
                         } else {
                             Text(testType.displayName.uppercased())
@@ -333,7 +274,7 @@ struct OnboardingView: View {
             VStack(spacing: 32) {
                 // Time display
                 VStack(spacing: 8) {
-                    Text(formatTimeCommitment(minutes: Int(dailyTimeCommitment)))
+                    Text(Int(dailyTimeCommitment).formatAsTimeCommitment())
                         .font(.system(size: 80, weight: .bold))
                         .foregroundStyle(AppTheme.gradient1)
                     Text(Int(dailyTimeCommitment) >= 60 ? "HOURS" : "MINUTES")
@@ -363,19 +304,6 @@ struct OnboardingView: View {
         }
     }
 
-    // Helper function to format time commitment display
-    private func formatTimeCommitment(minutes: Int) -> String {
-        if minutes < 60 {
-            return "\(minutes)"
-        } else {
-            let hours = Double(minutes) / 60.0
-            if hours == Double(Int(hours)) {
-                return "\(Int(hours))"
-            } else {
-                return String(format: "%.1f", hours)
-            }
-        }
-    }
 
     // MARK: - Declaration Page
 
@@ -460,21 +388,17 @@ struct OnboardingView: View {
     // MARK: - Helper Methods
 
     private var totalPages: Int {
-        // Structure: Native, TestPrep, TimeCommitment, Username, Declaration, Motivation = 6 pages
-        return 6
-    }
-
-    private var usernamePageIndex: Int {
-        return 3
+        // Structure: Native, TestPrep, TimeCommitment, Declaration, Motivation = 5 pages
+        return 5
     }
 
     private var declarationPageIndex: Int {
-        return 4
+        return 3
     }
 
     private var searchPageIndex: Int {
         // Note: This is actually the motivation page index (variable name kept for compatibility)
-        return 5
+        return 4
     }
 
     private var displayPageIndex: Int {
@@ -493,12 +417,9 @@ struct OnboardingView: View {
             // Time commitment page
             return true // Slider always has a value
         case 3:
-            // Username page
-            return !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case 4:
             // Declaration page
             return true
-        case 5:
+        case 4:
             // Motivation page
             return true
         default:
@@ -507,25 +428,23 @@ struct OnboardingView: View {
     }
 
     private var buttonTitle: String {
-        if currentPage == usernamePageIndex {
-            return "GET STARTED"
-        } else if currentPage == searchPageIndex {
+        if currentPage == searchPageIndex {
             return "START"
+        } else if currentPage == declarationPageIndex {
+            return "GET STARTED"
         } else {
             return "NEXT"
         }
     }
 
     private func handleNextButton() {
-        if currentPage < usernamePageIndex {
+        if currentPage < declarationPageIndex {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentPage += 1
             }
-        } else if currentPage == usernamePageIndex {
-            // Submit onboarding data first
-            submitOnboarding()
         } else if currentPage == declarationPageIndex {
-            // Declaration page - just advance to motivation page
+            // Declaration page - submit onboarding data and advance to motivation page
+            submitOnboarding()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentPage = searchPageIndex
             }
@@ -543,14 +462,13 @@ struct OnboardingView: View {
     }
 
     private func submitOnboarding() {
-        let trimmedName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
         let userId = userManager.getUserID()
 
         // Update local user manager immediately (optimistic update)
         userManager.isSyncingFromServer = true
         userManager.learningLanguage = selectedLearningLanguage
         userManager.nativeLanguage = selectedNativeLanguage
-        userManager.userName = trimmedName
+        userManager.userName = ""  // Empty string for backward compatibility
         userManager.activeTestType = selectedTestType
         userManager.targetDays = selectedStudyDuration
         userManager.isSyncingFromServer = false
@@ -566,18 +484,13 @@ struct OnboardingView: View {
         }
         AnalyticsManager.shared.track(action: .onboardingComplete, metadata: metadata)
 
-        // Move to next page immediately (don't wait for server)
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            currentPage = declarationPageIndex
-        }
-
         // Sync to server in background (non-blocking)
         DictionaryService.shared.updateUserPreferences(
             userID: userId,
             learningLanguage: selectedLearningLanguage,
             nativeLanguage: selectedNativeLanguage,
-            userName: trimmedName,
-            userMotto: "",
+            userName: "",  // Empty string for backward compatibility
+            userMotto: "",  // Empty string for backward compatibility
             testPrep: selectedTestType?.rawValue,
             studyDurationDays: selectedStudyDuration,
             dailyTimeCommitmentMinutes: Int(dailyTimeCommitment)
@@ -647,20 +560,6 @@ struct OnboardingView: View {
         }.resume()
     }
 
-    /// Format word count for display (e.g., "1,247 words" or "3.5K words")
-    private func formatWordCount(_ count: Int) -> String {
-        if count >= 10000 {
-            let k = Double(count) / 1000.0
-            return String(format: "%.1fK words", k)
-        } else if count >= 1000 {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
-            return "\(formatted) words"
-        } else {
-            return "\(count) words"
-        }
-    }
 
 }
 

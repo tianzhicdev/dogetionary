@@ -84,7 +84,11 @@ struct ScheduleView: View {
                             }
                             .frame(maxHeight: .infinity)
                         } else {
-                            NoScheduleView(message: "NO SCHEDULE AVAILABLE.")
+                            EmptyStateView(
+                                icon: "calendar.badge.plus",
+                                title: "No Schedule Yet",
+                                message: "No schedule available."
+                            )
                         }
                     }
                 }
@@ -736,29 +740,6 @@ struct WordSection: View {
 
 // MARK: - Empty State
 
-struct NoScheduleView: View {
-    let message: String
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.system(size: AppTheme.emptyStateIconSize))
-                .foregroundColor(AppTheme.accentCyan)
-
-            Text("NO SCHEDULE YET")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(AppTheme.smallTitleText)
-
-            Text(message.uppercased())
-                .font(.subheadline)
-                .foregroundColor(AppTheme.smallTextColor1)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
 
 #Preview {
     ScheduleView()

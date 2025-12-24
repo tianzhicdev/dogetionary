@@ -207,7 +207,12 @@ struct StatsTabView: View {
                             wordId: details.id
                         )
                     } else {
-                        EmptyHistorySection()
+                        EmptyStateView(
+                            icon: "clock",
+                            title: "No Practice Yet",
+                            message: "This word hasn't been practiced yet. It will appear in your practice queue when due."
+                        )
+                        .padding(.vertical, 24)
                     }
                     
                     if !details.review_history.isEmpty {
@@ -227,7 +232,7 @@ struct ReviewHistorySection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Practice History")
+            SectionHeader("Practice History")
             // Show practice history
             ForEach(Array(reviewHistory.enumerated()), id: \.offset) { index, entry in
                 ReviewHistoryRow(
@@ -348,7 +353,7 @@ struct ReviewStatsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Practice Statistics")
+            SectionHeader("Practice Statistics")
 
             VStack(spacing: 12) {
                 InfoRow(
@@ -380,25 +385,6 @@ struct ReviewStatsSection: View {
     }
 }
 
-struct EmptyHistorySection: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "clock")
-                .font(.system(size: 32))
-                .foregroundColor(.secondary)
-            
-            Text("No Practice Yet")
-                .font(.headline)
-                .foregroundColor(.secondary)
-
-            Text("This word hasn't been practiced yet. It will appear in your practice queue when due.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.vertical, 24)
-    }
-}
 
 struct ErrorView: View {
     let message: String
@@ -427,16 +413,6 @@ struct ErrorView: View {
     }
 }
 
-struct SectionHeader: View {
-    let title: String
-    
-    var body: some View {
-        Text(title)
-            .font(.headline)
-            .fontWeight(.semibold)
-            .foregroundColor(AppTheme.smallTitleText)
-    }
-}
 
 struct InfoRow: View {
     enum Style {

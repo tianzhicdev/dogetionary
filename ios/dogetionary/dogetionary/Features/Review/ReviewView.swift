@@ -575,26 +575,7 @@ struct ReviewSessionView: View {
             loadWordAudio()
         }
     }
-    
-//    private func loadWordDefinitions() {
-//        isLoadingDefinitions = true
-//        
-//        DictionaryService.shared.searchWord(currentWord.word) { result in
-//            DispatchQueue.main.async {
-//                self.isLoadingDefinitions = false
-//                
-//                switch result {
-//                case .success(let definitions):
-//                    if !definitions.isEmpty {
-//                        self.wordDefinitions = definitions
-//                    }
-//                case .failure(let error):
-//                    print("Failed to load definitions: \(error.localizedDescription)")
-//                }
-//            }
-//        }
-//    }
-    
+
     private func loadWordAudio() {
         // Only show loading if we don't already have data for this word
         if wordDefinitions.isEmpty || wordDefinitions.first?.word != currentWord.word {

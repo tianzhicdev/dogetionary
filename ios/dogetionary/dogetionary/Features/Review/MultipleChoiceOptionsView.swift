@@ -14,11 +14,17 @@ struct MultipleChoiceOptionsView: View {
     let correctAnswer: String?
     let feedbackDelay: TimeInterval  // 0.5 for video, 1.2 for MC/FillBlank
     let optionButtonStyle: OptionButton.DisplayStyle
+    let questionType: String?  // For determining if clickable text should be disabled
     let onImmediateFeedback: ((String) -> Void)?
     let onAnswer: (String) -> Void
 
     @State private var selectedAnswer: String? = nil
     @State private var showFeedback = false
+
+    // Disable clickable text for mc_def_native (options are in native language)
+    var allowWordTap: Bool {
+        questionType != "mc_def_native"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,7 +39,8 @@ struct MultipleChoiceOptionsView: View {
                     showFeedback: showFeedback,
                     onTap: {
                         handleOptionTap(option.id)
-                    }
+                    },
+                    allowWordTap: allowWordTap
                 )
                 .disabled(showFeedback)
             }
@@ -99,6 +106,7 @@ struct MultipleChoiceOptionsView: View {
                 correctAnswer: "A",
                 feedbackDelay: 1.2,
                 optionButtonStyle: .idBadgeAndText,
+                questionType: nil,
                 onImmediateFeedback: { answer in
                     print("Immediate feedback: \(answer)")
                 },
@@ -128,6 +136,7 @@ struct MultipleChoiceOptionsView: View {
                 correctAnswer: "A",
                 feedbackDelay: 1.2,
                 optionButtonStyle: .textOnly,
+                questionType: nil,
                 onImmediateFeedback: { answer in
                     print("Immediate feedback: \(answer)")
                 },

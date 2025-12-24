@@ -44,13 +44,14 @@ LANG_NAMES = {
 }
 
 # Question type weights for random selection
-# NOTE: Temporarily boosted video_mc to 90% for testing video questions
+# NOTE: Set to 0 for all types - relying on video_mc prioritization and mc_def_native
 QUESTION_TYPE_WEIGHTS = {
-    'mc_definition': 0.2,       # Tests comprehension
-    'mc_word': 0.2,             # Tests word recognition from definition
-    'fill_blank': 0.2,          # Tests contextual usage
-    'pronounce_sentence': 0.4,  # Tests pronunciation with sentence context
-    # 'video_mc': 0.90,            # Tests visual recognition from video (TESTING: normally 0.10)
+    'mc_definition': 0.0,       # Disabled
+    'mc_word': 0.0,             # Disabled
+    'fill_blank': 0.0,          # Disabled
+    'pronounce_sentence': 0.0,  # Disabled
+    'mc_def_native': 1.0,       # Native language definition MC (used when no videos available)
+    # video_mc is prioritized separately via check_word_has_videos() on line 715
 }
 
 
@@ -159,12 +160,12 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
 
     Args:
         word: The vocabulary word
-        definition: Full definition data (not used for video questions)
+        definition: Full definition data (used to get native language translations)
         learning_lang: Language being learned
         native_lang: User's native language
 
     Returns:
-        Dict containing video question data
+        Dict containing video question data with native language translations in options
     """
     # Check if word has videos
     video_info = check_word_has_videos(word, learning_lang)
@@ -185,17 +186,21 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
         logger.warning(f"No audio_transcript available for video {video_id}, falling back to mc_definition")
         return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
 
+    # Get native language name for prompt
+    lang_name = LANG_NAMES.get(native_lang, native_lang)
+
     # Generate pedagogically-sound question using enhanced prompt
-    prompt = f"""You are generating a vocabulary question for English learners.
+    prompt = f"""You are generating a vocabulary question for English learners whose native language is {lang_name}.
 
 INPUT:
 - TRANSCRIPT: "{audio_transcript}"
 - KEYWORD: "{word}"
+- NATIVE LANGUAGE: {lang_name}
 
 TASK:
 1. Analyze how KEYWORD is used in this transcript
 2. Choose the most appropriate question type
-3. Generate the question
+3. Generate the question with answer options in BOTH English and {lang_name}
 
 QUESTION TYPES (choose one):
 
@@ -229,14 +234,15 @@ OUTPUT FORMAT (JSON):
   "analysis": "Brief explanation of why this type fits",
   "question": "What does 'X' mean in this scene?",
   "options": [
-    {{"text": "...", "correct": true}},
-    {{"text": "...", "correct": false}}
+    {{"text": "...", "text_native": "... ({lang_name} translation)", "correct": true}},
+    {{"text": "...", "text_native": "... ({lang_name} translation)", "correct": false}}
   ],
   "explanation": "One sentence explaining the correct answer"
 }}
 
 RULES:
 - Always exactly 2 options, exactly 1 correct
+- Each option MUST have both "text" (English) and "text_native" ({lang_name})
 - Distractors must be plausible (common misunderstandings, literal readings, similar words)
 - All options similar length and grammatical structure
 - Question must be answerable from transcript alone
@@ -293,15 +299,15 @@ RULES:
         if random.random() < 0.5:
             # Correct answer is A
             ios_options = [
-                {'id': 'A', 'text': correct_option['text']},
-                {'id': 'B', 'text': incorrect_option['text']}
+                {'id': 'A', 'text': correct_option['text'], 'text_native': correct_option.get('text_native')},
+                {'id': 'B', 'text': incorrect_option['text'], 'text_native': incorrect_option.get('text_native')}
             ]
             correct_answer = 'A'
         else:
             # Correct answer is B
             ios_options = [
-                {'id': 'A', 'text': incorrect_option['text']},
-                {'id': 'B', 'text': correct_option['text']}
+                {'id': 'A', 'text': incorrect_option['text'], 'text_native': incorrect_option.get('text_native')},
+                {'id': 'B', 'text': correct_option['text'], 'text_native': correct_option.get('text_native')}
             ]
             correct_answer = 'B'
 
@@ -492,6 +498,52 @@ Return ONLY valid JSON:
 }}"""
 
 
+def generate_mc_def_native_prompt(word: str, definition_data: Dict, native_lang: str) -> str:
+    """Generate prompt for multiple choice native language definition question."""
+    definitions = definition_data.get('definitions', [])
+
+    # Extract native language definitions
+    native_definitions = []
+    for d in definitions:
+        if 'definition_native' in d:
+            native_definitions.append(d['definition_native'])
+
+    lang_name = LANG_NAMES.get(native_lang, native_lang)
+
+    return f"""Generate a multiple choice question testing understanding of the word "{word}" using {lang_name} definitions.
+
+Word: "{word}"
+Available {lang_name} definitions:
+{json.dumps(native_definitions, indent=2, ensure_ascii=False)}
+
+Task: Create a question asking "What does '{word}' mean?" with 2 answer options in {lang_name}:
+- Option A: The CORRECT definition in {lang_name} (clear, concise, pedagogically sound)
+- Option B: A plausible but INCORRECT distractor in {lang_name}
+
+Distractor requirements:
+- Must be semantically related or similar concept
+- Should test real understanding, not be obviously wrong
+- Similar length and style to correct answer
+- Avoid negations or "none of the above"
+- Focus on creating ONE high-quality distractor in {lang_name}
+
+IMPORTANT - Language Quality:
+- Use natural, idiomatic {lang_name}
+- Avoid overly literal or awkward translations
+- The correct definition should match one of the provided native definitions
+- Write at an appropriate level for language learners
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{
+  "question_text": "What does '{word}' mean?",
+  "options": [
+    {{"id": "A", "text": "... ({lang_name})"}},
+    {{"id": "B", "... ({lang_name})"}}
+  ],
+  "correct_answer": "A"
+}}"""
+
+
 def shuffle_question_options(question_data: Dict) -> Dict:
     """
     Shuffle the options in a multiple choice question to randomize answer position.
@@ -623,6 +675,9 @@ def generate_question_with_llm(
     elif question_type == 'mc_word':
         prompt = generate_mc_word_prompt(word, definition, native_lang)
         schema_name = 'mc_definition'  # Same schema as mc_definition
+    elif question_type == 'mc_def_native':
+        prompt = generate_mc_def_native_prompt(word, definition, native_lang)
+        schema_name = 'mc_definition'  # Same schema as mc_definition
     elif question_type == 'fill_blank':
         prompt = generate_fill_blank_prompt(word, definition, native_lang)
         schema_name = 'mc_fillin'
@@ -637,7 +692,7 @@ def generate_question_with_llm(
 
     # Randomize answer position for MC questions (prevents pattern learning)
     # LLM always returns correct answer as "A", we randomize it here
-    if question_type in ['mc_definition', 'mc_word', 'fill_blank']:
+    if question_type in ['mc_definition', 'mc_word', 'mc_def_native', 'fill_blank']:
         if 'options' in question_data and len(question_data['options']) == 2:
             # Extract option texts (LLM returns: A=correct, B=incorrect)
             option_a = question_data['options'][0]
