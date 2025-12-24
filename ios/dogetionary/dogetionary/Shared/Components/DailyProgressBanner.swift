@@ -17,6 +17,7 @@ struct DailyProgressBanner: View {
     let testVocabularyAwards: TestVocabularyAwardsResponse?  // Test completion badges
     @Binding var isExpanded: Bool
     @Binding var showDailyGoalCelebration: Bool  // Controlled by parent
+    @Binding var showSearchBar: Bool  // Control search bar visibility
 
     @State private var animatedProgress: Double = 0.0
     @State private var isAnimatingScale: Bool = false
@@ -129,6 +130,17 @@ struct DailyProgressBanner: View {
 
             Spacer()
 
+            // Search button
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    showSearchBar.toggle()
+                }
+            }) {
+                Image(systemName: "magnifyingglass.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(AppTheme.selectableTint)
+            }
+
             // Expand button
             Button(action: {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -229,54 +241,6 @@ struct DailyProgressBanner: View {
                 }
             }
 
-            // Achievements section - badges and awards
-            if let achievements = achievementProgress {
-                let unlockedAchievements = achievements.achievements.filter { $0.unlocked }
-                let earnedTestBadges = testVocabularyAwards?.filter { $0.value.isEarned }.sorted(by: { $0.key < $1.key }) ?? []
-
-                if !unlockedAchievements.isEmpty || !earnedTestBadges.isEmpty {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("ACHIEVEMENTS")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(AppTheme.smallTitleText)
-                            Spacer()
-                            HStack(spacing: -10) {
-                                Text("\(achievements.score)")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(AppTheme.bodyText)
-                                AnimatedScoreStar(size: 45)
-                            }
-                        }
-
-                        // Badge grid (4 columns)
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 12) {
-                            // Score-based achievements
-                            ForEach(unlockedAchievements) { achievement in
-                                VStack(spacing: 4) {
-                                    BadgeAnimation(badgeId: "score_\(achievement.milestone)", size: 60)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 6)
-                            }
-
-                            // Test completion badges
-                            ForEach(earnedTestBadges, id: \.key) { testName, progress in
-                                VStack(spacing: 4) {
-                                    BadgeAnimation(badgeId: testName, size: 60)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 6)
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -347,6 +311,7 @@ struct DailyProgressBanner: View {
 
 #Preview("Daily Progress Banner") {
     @Previewable @State var showCelebration = false
+    @Previewable @State var showSearch = false
 
     VStack(spacing: 20) {
         // Collapsed - low progress
@@ -359,7 +324,8 @@ struct DailyProgressBanner: View {
             achievementProgress: nil,
             testVocabularyAwards: nil,
             isExpanded: .constant(false),
-            showDailyGoalCelebration: $showCelebration
+            showDailyGoalCelebration: $showCelebration,
+            showSearchBar: $showSearch
         )
 
         // Expanded - good progress
@@ -372,7 +338,8 @@ struct DailyProgressBanner: View {
             achievementProgress: nil,
             testVocabularyAwards: nil,
             isExpanded: .constant(true),
-            showDailyGoalCelebration: $showCelebration
+            showDailyGoalCelebration: $showCelebration,
+            showSearchBar: $showSearch
         )
 
         // Expanded - over 100%
@@ -385,7 +352,8 @@ struct DailyProgressBanner: View {
             achievementProgress: nil,
             testVocabularyAwards: nil,
             isExpanded: .constant(true),
-            showDailyGoalCelebration: $showCelebration
+            showDailyGoalCelebration: $showCelebration,
+            showSearchBar: $showSearch
         )
     }
     .padding()

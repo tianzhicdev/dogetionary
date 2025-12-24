@@ -19,7 +19,6 @@ class QuestionQueueManager: ObservableObject {
 
     // MARK: - Published State
     @Published private(set) var questionQueue: [BatchReviewQuestion] = []
-    @Published private(set) var queuedWords: Set<String> = []
     @Published private(set) var isFetching = false
     @Published private(set) var hasMore = true
     @Published private(set) var totalAvailable = 0
@@ -39,7 +38,6 @@ class QuestionQueueManager: ObservableObject {
     func popQuestion() -> BatchReviewQuestion? {
         guard !questionQueue.isEmpty else { return nil }
         let question = questionQueue.removeFirst()
-        queuedWords.remove(question.word)
         logger.info("Popped question: \(question.word), queue size: \(self.questionQueue.count)")
 
         // Cleanup player for video questions (after user has finished with it)
@@ -76,10 +74,8 @@ class QuestionQueueManager: ObservableObject {
         // Insert at beginning
         questionQueue.insert(contentsOf: questions, at: 0)
 
-        // Update queued words
-        for question in questions {
-            queuedWords.insert(question.word)
-        }
+        // Prefetch videos for video_mc questions (same as addToQueue)
+        prefetchVideosFromQueue(questions)
 
         logger.info("Prepended \(questions.count) questions to queue, new size: \(self.questionQueue.count)")
     }
@@ -88,6 +84,13 @@ class QuestionQueueManager: ObservableObject {
 
     /// Initial load on app launch - fetch ONE-BY-ONE until target size
     func preloadQuestions() {
+        // Don't preload if onboarding hasn't been completed yet
+        // This prevents videos from downloading/playing during onboarding
+        guard UserManager.shared.hasCompletedOnboarding else {
+            logger.info("Skipping preload - onboarding not completed yet")
+            return
+        }
+
         guard questionQueue.isEmpty else {
             logger.info("Queue already has questions, skipping preload")
             return
@@ -131,7 +134,6 @@ class QuestionQueueManager: ObservableObject {
             // Keep only the first question
             let first = questionQueue[0]
             questionQueue = [first]
-            queuedWords = [first.word]
 
             logger.info("Queue cleared (preserved first question: \(first.word))")
 
@@ -144,7 +146,6 @@ class QuestionQueueManager: ObservableObject {
         } else {
             // Remove everything
             questionQueue.removeAll()
-            queuedWords.removeAll()
 
             logger.info("Queue cleared (all questions removed)")
 
@@ -177,7 +178,7 @@ class QuestionQueueManager: ObservableObject {
             self.lastError = nil
         }
 
-        let excludeWords = Array(queuedWords)
+        let excludeWords = questionQueue.map { $0.word }
         let userManager = UserManager.shared
         let learningLang = userManager.learningLanguage
         let nativeLang = userManager.nativeLanguage
@@ -218,12 +219,11 @@ class QuestionQueueManager: ObservableObject {
 
     private func addToQueue(_ questions: [BatchReviewQuestion]) {
         for question in questions {
-            guard !queuedWords.contains(question.word) else {
+            guard !questionQueue.contains(where: { $0.word == question.word }) else {
                 logger.debug("Skipping duplicate word: \(question.word)")
                 continue
             }
             questionQueue.append(question)
-            queuedWords.insert(question.word)
         }
 
         // Prefetch videos for video_mc questions

@@ -11,10 +11,6 @@ from typing import Dict, List
 import threading
 import tempfile
 import os
-import sys
-
-# Add scripts directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
 
 from utils.database import get_db_connection, db_fetch_one, db_fetch_all
 from services.question_generation_service import generate_video_mc_question
@@ -84,7 +80,7 @@ def get_video_questions_for_word():
 
         # Generate questions for each video
         questions = []
-        for video in videos:
+        for idx, video in enumerate(videos):
             try:
                 # Generate video_mc question
                 question_data = generate_video_mc_question(
@@ -94,11 +90,16 @@ def get_video_questions_for_word():
                     native_lang='zh'  # TODO: get from user preferences
                 )
 
+                # Return BatchReviewQuestion format (same as /v3/review-batch)
                 questions.append({
                     "word": video['word'],
-                    "question_type": "video_mc",
+                    "saved_word_id": None,  # Video questions are not from saved words
+                    "source": "VIDEO",  # Custom source type for video questions
+                    "position": idx,
+                    "learning_language": lang,
+                    "native_language": "zh",  # TODO: get from user preferences
                     "question": question_data,
-                    "video_id": video['video_id']
+                    "definition": None  # No definition needed for video questions
                 })
             except Exception as e:
                 logger.error(f"Failed to generate question for video {video['video_id']}: {e}")
@@ -147,10 +148,10 @@ def trigger_video_search():
 def run_video_finder_for_word(word: str, lang: str):
     """
     Background task to run find_videos.py for a single word.
-    Uses VideoFinder class from scripts/find_videos.py.
+    Uses VideoFinder class from services/video_finder.py.
     """
     try:
-        from find_videos import VideoFinder
+        from services.video_finder import VideoFinder
 
         # Get API keys from environment
         clipcafe_api_key = os.getenv('CLIPCAFE')

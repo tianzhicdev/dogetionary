@@ -20,12 +20,35 @@ struct ReviewView: View {
     // ViewModel
     @StateObject private var viewModel = ReviewViewModel()
 
+    // Search ViewModel
+    @StateObject private var searchViewModel = ReviewSearchViewModel()
+
     // App state for cross-view communication
     @Environment(AppState.self) private var appState
+
+    // Search bar state (controlled by DailyProgressBanner in ContentView)
+    @Binding var showSearchBar: Bool
 
     // Current question is now computed directly from queue - no caching
     private var currentQuestion: BatchReviewQuestion? {
         return queueManager.currentQuestion()
+    }
+
+    /// Generate stable, unique ID for SwiftUI view identity
+    /// Uses video_id for video questions, saved_word_id for saved words, or combination for new words
+    private func questionID(for question: BatchReviewQuestion) -> String {
+        // Video questions: use video_id (always unique)
+        if let videoId = question.question.video_id {
+            return "video-\(videoId)"
+        }
+
+        // Saved words: use saved_word_id + type (unique per saved word)
+        if let savedWordId = question.saved_word_id {
+            return "saved-\(savedWordId)-\(question.question.question_type)"
+        }
+
+        // New words: use word + type + source (reasonably unique, duplicates prevented by queuedWords set)
+        return "new-\(question.word)-\(question.question.question_type)-\(question.source)"
     }
 
     var body: some View {
@@ -35,6 +58,15 @@ struct ReviewView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Search bar overlay (shown when search button clicked)
+                if showSearchBar {
+                    searchBarView()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(100)
+                }
+
                 // Main content area (fills remaining space)
                 ZStack {
                     // Simple 2-state logic: Question OR Loading
@@ -55,7 +87,7 @@ struct ReviewView: View {
                             onAnswer: viewModel.handleAnswer,
                             onSwipeComplete: { viewModel.handleSwipeComplete(currentQuestion: currentQuestion) }
                         )
-                        .id(question.word)
+                        .id(questionID(for: question))
                         .offset(x: viewModel.cardOffset)
                         .opacity(viewModel.cardOpacity)
                     } else {
@@ -70,23 +102,73 @@ struct ReviewView: View {
             .errorToast(message: viewModel.errorMessage) {
                 viewModel.errorMessage = nil
             }
+        }
+        .sheet(isPresented: $searchViewModel.showDefinitionSheet) {
+            // Definition modal (same pattern as VideoQuestionView:231)
+            if let definition = searchViewModel.currentDefinition {
+                NavigationView {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // Info banner: Videos being prepared
+                            HStack(spacing: 12) {
+                                Image(systemName: "film.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(AppTheme.accentCyan)
 
-            // Badge celebration overlay - show badges sequentially
-            if viewModel.showBadgeCelebration, let firstBadge = viewModel.earnedBadges.first {
-                BadgeCelebrationView(badge: firstBadge) {
-                    // Defer state mutation to next run loop to avoid SwiftUI state conflicts
-                    DispatchQueue.main.async {
-                        // Guard against double-dismissal (auto-dismiss + manual dismiss)
-                        guard !viewModel.earnedBadges.isEmpty else { return }
+                                Text("Videos for **\(definition.word)** will appear in Shojin shortly")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppTheme.bodyText)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding()
+                            .background(
+                                AppTheme.verticalGradient2.ignoresSafeArea())
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                            .padding(.top, 8)
 
-                        // Remove the first badge and continue showing if more exist
-                        viewModel.earnedBadges.removeFirst()
-                        if viewModel.earnedBadges.isEmpty {
-                            viewModel.showBadgeCelebration = false
+                            DefinitionCard(definition: definition)
+                                .padding(.horizontal)
+                        }
+                    }
+                    .navigationTitle("Definition")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                searchViewModel.dismissDefinition()
+                            }
                         }
                     }
                 }
             }
+        }
+        .alert("Word Validation", isPresented: $searchViewModel.showValidationAlert) {
+            if let suggestion = searchViewModel.validationSuggestion {
+                Button(suggestion) {
+                    searchViewModel.searchSuggestedWord {
+                        withAnimation {
+                            showSearchBar = false
+                        }
+                    }
+                }
+                Button("Yes, use original") {
+                    searchViewModel.confirmOriginalWord()
+                }
+                Button("Cancel", role: .cancel) {
+                    searchViewModel.cancelSearch()
+                }
+            } else {
+                Button("Yes") {
+                    searchViewModel.confirmOriginalWord()
+                }
+                Button("Cancel", role: .cancel) {
+                    searchViewModel.cancelSearch()
+                }
+            }
+        } message: {
+            let confidence = searchViewModel.currentWordConfidence
+            Text("This word seems unusual (confidence: \(Int(confidence * 100))%). Did you mean '\(searchViewModel.validationSuggestion ?? "")'?")
         }
         .onAppear {
             viewModel.loadPracticeStatus()
@@ -113,6 +195,62 @@ struct ReviewView: View {
         }
     }
 
+    // MARK: - Search Bar View
+
+    @ViewBuilder
+    private func searchBarView() -> some View {
+        HStack(spacing: 12) {
+            HStack {
+                TextField("Search word...", text: $searchViewModel.searchText)
+                    .font(.title2)
+                    .foregroundColor(AppTheme.textFieldUserInput)
+                    .onSubmit {
+                        searchViewModel.searchWord {
+                            // Close search bar when videos prepended
+                            withAnimation {
+                                showSearchBar = false
+                            }
+                        }
+                    }
+
+                if !searchViewModel.searchText.isEmpty {
+                    Button(action: {
+                        searchViewModel.searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(AppTheme.selectableTint)
+                            .font(.title3)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(AppTheme.textFieldBackgroundColor)
+            .cornerRadius(4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(AppTheme.textFieldBorderColor, lineWidth: 2)
+            )
+
+            Button(action: {
+                searchViewModel.searchWord {
+                    // Close search bar when videos prepended
+                    withAnimation {
+                        showSearchBar = false
+                    }
+                }
+            }) {
+                Image(systemName: "magnifyingglass")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.bigButtonForeground1)
+                    .frame(width: 50, height: 50)
+                    .background(AppTheme.bigButtonBackground1)
+                    .cornerRadius(10)
+            }
+            .disabled(searchViewModel.searchText.isEmpty || searchViewModel.isLoading)
+        }
+    }
 }
 
 // MARK: - Today Complete View
@@ -688,6 +826,6 @@ struct DefinitionSheetView: View {
 }
 
 #Preview {
-    ReviewView()
+    ReviewView(showSearchBar: .constant(false))
         .environment(AppState.shared)
 }

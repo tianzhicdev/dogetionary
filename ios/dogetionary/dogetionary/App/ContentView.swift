@@ -12,10 +12,11 @@ struct ContentView: View {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var questionQueue = QuestionQueueManager.shared
     @StateObject private var appVersionManager = AppVersionManager.shared
-    @State private var selectedView = 1  // 1 = Add (default)
+    @State private var selectedView = 0  // 0 = Shojin (default)
     @State private var showOnboarding = false
     @State private var dailyBannerExpanded = false
     @State private var showDailyGoalCelebration = false  // Full-screen celebration
+    @State private var showSearchBar = false  // Control search bar visibility (for Shojin tab only)
     @Environment(\.scenePhase) var scenePhase
 
     private var dailyTarget: Int {
@@ -52,7 +53,8 @@ struct ContentView: View {
                     achievementProgress: nil,
                     testVocabularyAwards: nil,
                     isExpanded: $dailyBannerExpanded,
-                    showDailyGoalCelebration: $showDailyGoalCelebration
+                    showDailyGoalCelebration: $showDailyGoalCelebration,
+                    showSearchBar: $showSearchBar
                 )
                 .padding(.horizontal, 8)
                 .padding(.top, 8)
@@ -60,38 +62,32 @@ struct ContentView: View {
 
                 // Tab view
                 TabView(selection: $selectedView) {
-                    Group {
-                        if remainingReviewsForDailyGoal > 0 {
-                            ReviewView()
-                                .badge(remainingReviewsForDailyGoal)
-                        } else {
-                            ReviewView()
+                        Group {
+                            if remainingReviewsForDailyGoal > 0 {
+                                ReviewView(showSearchBar: $showSearchBar)
+                                    .badge(remainingReviewsForDailyGoal)
+                            } else {
+                                ReviewView(showSearchBar: $showSearchBar)
+                            }
                         }
+                        .tabItem {
+                            Label("Shojin", systemImage: "figure.boxing")
+                        }
+                        .tag(0)
+
+                        SavedWordsView()
+                            .tabItem {
+                                Label("History", systemImage: "clock.fill")
+                            }
+                            .tag(1)
+
+                        SettingsView()
+                            .tabItem {
+                                Label("Settings", systemImage: "gear")
+                            }
+                            .tag(2)
                     }
-                    .tabItem {
-                        Label("Shojin", systemImage: "figure.boxing")
-                    }
-                    .tag(0)
-
-                    SearchView(showProgressBar: true)
-                        .tabItem {
-                            Label("Search", systemImage: "magnifyingglass")
-                        }
-                        .tag(1)
-
-                    SavedWordsView()
-                        .tabItem {
-                            Label("History", systemImage: "clock.fill")
-                        }
-                        .tag(2)
-
-                    SettingsView()
-                        .tabItem {
-                            Label("Settings", systemImage: "gear")
-                        }
-                        .tag(3)
-                }
-                .accentColor(AppTheme.selectableTint)
+                    .accentColor(AppTheme.selectableTint)
             }
 
             // Daily goal celebration (full-screen, same level as badge celebration)
@@ -109,13 +105,12 @@ struct ContentView: View {
             }
         }
         .onChange(of: selectedView) { oldValue, newValue in
-            // Track navigation analytics
+            // Track navigation analytics (Search tab removed, indices shifted)
             let action: AnalyticsAction = switch newValue {
             case 0: .navTabReview  // Shojin
-            case 1: .navTabDictionary  // Add
-            case 2: .navTabSaved  // History
-            case 3: .navTabSettings
-            default: .navTabDictionary
+            case 1: .navTabSaved  // History
+            case 2: .navTabSettings
+            default: .navTabReview
             }
             AnalyticsManager.shared.track(action: action)
         }
@@ -156,6 +151,11 @@ struct ContentView: View {
         .onChange(of: userManager.hasCompletedOnboarding) { _, completed in
             if completed {
                 showOnboarding = false
+
+                // Start preloading questions now that onboarding is complete
+                // This prevents videos from downloading/playing during onboarding
+                questionQueue.preloadQuestions()
+
                 // Refresh practice status after onboarding (schedule may have been created)
                 Task {
                     await userManager.refreshPracticeStatus()

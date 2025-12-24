@@ -27,10 +27,6 @@ class ReviewViewModel: ObservableObject {
     @Published var scoreAnimationScale: CGFloat = 1.0
     @Published var scoreAnimationColor: Color = .primary
 
-    // Badge celebration
-    @Published var showBadgeCelebration = false
-    @Published var earnedBadges: [NewBadge] = []
-
     // Mini curve animation
     @Published var showMiniCurve = false
     @Published var curveIsCorrect: Bool = false
@@ -154,11 +150,6 @@ class ReviewViewModel: ObservableObject {
         }
     }
 
-    func dismissBadgeCelebration() {
-        showBadgeCelebration = false
-        earnedBadges.removeAll()
-    }
-
     func dismissMiniCurve() {
         showMiniCurve = false
     }
@@ -203,11 +194,6 @@ class ReviewViewModel: ObservableObject {
                     switch result {
                     case .success(let submitResponse):
                         self.animateScoreChange(points: response ? 2 : 1, isCorrect: response)
-
-                        if let newBadges = submitResponse.new_badges, !newBadges.isEmpty {
-                            self.earnedBadges = newBadges
-                            self.showBadgeCelebration = true
-                        }
 
                         // Update practice status from embedded response (avoids extra API calls)
                         if let embeddedStatus = submitResponse.practice_status {

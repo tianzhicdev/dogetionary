@@ -22,8 +22,7 @@ struct LoopingVideoPlayer: View {
                 togglePlayPause()
             }
             .onAppear {
-                player.play()
-                isPlaying = true
+                print("LoopingVideoPlayer: Video \(videoId) view appeared")
                 hasEnded = false
             }
             .onDisappear {
@@ -64,19 +63,21 @@ private struct VideoPlayerView: UIViewRepresentable {
         // Setup end observer for this video
         context.coordinator.setupEndObserver(for: player, hasEnded: $hasEnded)
 
-        print("LoopingVideoPlayer: Created view for video \(videoId)")
+        // Auto-play when view is created (works even if player not ready yet)
+        player.play()
+        print("LoopingVideoPlayer: Created view for video \(videoId) and started playback")
 
         return view
     }
 
     func updateUIView(_ uiView: PlayerUIView, context: Context) {
-        // Update player reference
-        uiView.playerLayer.player = player
-
-        // Re-setup end observer when player changes
-        context.coordinator.setupEndObserver(for: player, hasEnded: $hasEnded)
-
-        print("LoopingVideoPlayer: Updated view for video \(videoId)")
+        // Only update if player changed
+        if uiView.playerLayer.player !== player {
+            uiView.playerLayer.player = player
+            context.coordinator.setupEndObserver(for: player, hasEnded: $hasEnded)
+            player.play()
+            print("LoopingVideoPlayer: Updated view with new player for video \(videoId)")
+        }
     }
 
     func makeCoordinator() -> Coordinator {

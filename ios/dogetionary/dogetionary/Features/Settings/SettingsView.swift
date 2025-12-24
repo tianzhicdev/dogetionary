@@ -18,14 +18,14 @@ struct SettingsView: View {
     @State private var searchText: String = ""
     @State private var feedbackText: String = ""
     @State private var isSubmittingFeedback = false
-    @State private var showFeedbackAlert = false
-    @State private var feedbackAlertMessage = ""
+    @State private var feedbackErrorMessage: String?
+    @State private var feedbackSuccessMessage: String?
     @ObservedObject private var userManager = UserManager.shared
     @State private var developerModeEnabled = DebugConfig.isDeveloperModeEnabled
     @State private var videoCacheInfo: String = ""
     @State private var questionCacheInfo: String = ""
-    @State private var showCacheClearAlert = false
-    @State private var cacheClearMessage = ""
+    @State private var cacheClearErrorMessage: String?
+    @State private var cacheClearSuccessMessage: String?
     @State private var vocabularyCounts: [TestType: VocabularyCountInfo] = [:]
 
     var body: some View {
@@ -57,19 +57,19 @@ struct SettingsView: View {
         } message: {
             Text("INVALID LANGUAGE SELECTION. PLEASE TRY AGAIN.")
         }
-        .alert("FEEDBACK", isPresented: $showFeedbackAlert) {
-            Button("OK") {
-                if feedbackAlertMessage.contains("Thank you") || feedbackAlertMessage.contains("THANK YOU") {
-                    feedbackText = ""
-                }
-            }
-        } message: {
-            Text(feedbackAlertMessage.uppercased())
+        .errorToast(message: feedbackErrorMessage) {
+            feedbackErrorMessage = nil
         }
-        .alert("CACHE", isPresented: $showCacheClearAlert) {
-            Button("OK") { }
-        } message: {
-            Text(cacheClearMessage.uppercased())
+        .errorToast(message: feedbackSuccessMessage) {
+            feedbackSuccessMessage = nil
+            // Clear feedback text on successful submission
+            feedbackText = ""
+        }
+        .errorToast(message: cacheClearErrorMessage) {
+            cacheClearErrorMessage = nil
+        }
+        .errorToast(message: cacheClearSuccessMessage) {
+            cacheClearSuccessMessage = nil
         }
         .onAppear {
             updateCacheInfo()
@@ -588,12 +588,10 @@ struct SettingsView: View {
                 switch result {
                 case .success:
                     Self.logger.info("Feedback submitted successfully")
-                    self.feedbackAlertMessage = "FEEDBACK SUBMITTED SUCCESSFULLY!"
-                    self.showFeedbackAlert = true
+                    self.feedbackSuccessMessage = "Feedback submitted successfully"
                 case .failure(let error):
                     Self.logger.error("Feedback submission failed: \(error.localizedDescription, privacy: .public)")
-                    self.feedbackAlertMessage = "FAILED TO SUBMIT FEEDBACK: \(error.localizedDescription.uppercased())"
-                    self.showFeedbackAlert = true
+                    self.feedbackErrorMessage = error.localizedDescription
                 }
             }
         }
@@ -675,15 +673,12 @@ struct SettingsView: View {
 
         // Show result message
         if !errors.isEmpty {
-            cacheClearMessage = "Failed to clear some caches: \(errors.joined(separator: ", "))"
+            cacheClearErrorMessage = "Failed to clear some caches: \(errors.joined(separator: ", "))"
         } else if totalCleared == 0 {
-            cacheClearMessage = "Cache was already empty"
+            cacheClearSuccessMessage = "Cache was already empty"
         } else {
-            cacheClearMessage = "Successfully cleared \(totalCleared) cached item\(totalCleared == 1 ? "" : "s")"
+            cacheClearSuccessMessage = "Successfully cleared \(totalCleared) cached item\(totalCleared == 1 ? "" : "s")"
         }
-
-        print("SettingsView: Showing alert with message: \(cacheClearMessage)")
-        showCacheClearAlert = true
     }
 
     private func fetchAllVocabularyCounts() {

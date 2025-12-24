@@ -32,6 +32,53 @@ struct ErrorToastModifier: ViewModifier {
     private let animationInDuration: TimeInterval = 0.4
     private let animationOutDuration: TimeInterval = 0.3
 
+    /// Sanitizes error messages to hide technical details from users
+    /// - Parameter rawError: The raw error message from backend/system
+    /// - Returns: User-friendly error message
+    private func sanitizeErrorMessage(_ rawError: String) -> String {
+        // List of patterns that indicate technical/server errors
+        let technicalErrorPatterns = [
+            "Failed to",
+            "Error:",
+            "Exception",
+            "Internal server error",
+            "Network error",
+            "decode",
+            "encode",
+            "nil",
+            "Optional",
+            "localizedDescription"
+        ]
+
+        // Check if error contains technical details
+        let containsTechnicalDetails = technicalErrorPatterns.contains { pattern in
+            rawError.lowercased().contains(pattern.lowercased())
+        }
+
+        if containsTechnicalDetails {
+            return "Server error"
+        }
+
+        // For specific known user-friendly errors, pass through
+        let userFriendlyErrors = [
+            "No definition found",
+            "Word not found",
+            "Network connection failed",
+            "Connection failed"
+        ]
+
+        let isUserFriendly = userFriendlyErrors.contains { friendly in
+            rawError.lowercased().contains(friendly.lowercased())
+        }
+
+        if isUserFriendly {
+            return rawError
+        }
+
+        // Default: generic message
+        return "Server error"
+    }
+
     func body(content: Content) -> some View {
         ZStack(alignment: .top) {
             content
@@ -52,7 +99,7 @@ struct ErrorToastModifier: ViewModifier {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(AppTheme.selectableTint)
 
-            Text(message.uppercased())
+            Text(sanitizeErrorMessage(message).uppercased())
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(AppTheme.smallTitleText)
                 .lineLimit(2)

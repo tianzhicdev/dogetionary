@@ -207,18 +207,6 @@ def submit_review():
         # Record the current review time
         current_review_time = datetime.now()
 
-        # Get old score BEFORE inserting review (for badge calculation)
-        old_score = calculate_user_score(user_id)
-
-        # Check test completion BEFORE saving word (to detect completion after this review)
-        old_completion_badges = check_test_completion_badges(
-            user_id=user_id,
-            current_word=word,
-            learning_language=learning_language,
-            enabled_tests_only=True
-        )
-        old_completion_badge_ids = {badge['badge_id'] for badge in old_completion_badges}
-
         # Use a single connection for the entire transaction
         conn = get_db_connection()
         cur = conn.cursor()
@@ -261,34 +249,7 @@ def submit_review():
             conn.close()
 
         # Calculate new score AFTER inserting review
-        new_score = old_score + (2 if response_bool else 1)
-
-        # Check if user earned new badges using utility functions
-        new_badges = []
-
-        # Check score-based achievements
-        score_badges = get_newly_earned_score_badges(old_score, new_score, user_id)
-        new_badges.extend(score_badges)
-
-        # Check for test vocabulary completion badges AFTER saving word
-        new_completion_badges = check_test_completion_badges(
-            user_id=user_id,
-            current_word=word,
-            learning_language=learning_language,
-            enabled_tests_only=True
-        )
-        # Only include badges that weren't already earned before this review
-        for badge in new_completion_badges:
-            if badge['badge_id'] not in old_completion_badge_ids:
-                new_badges.append(badge)
-
-        # Record all new badges in user_badges table
-        if new_badges:
-            from handlers.achievements import record_earned_badge
-            for badge in new_badges:
-                # Determine badge type from badge_id
-                badge_type = 'score_milestone' if badge['badge_id'].startswith('score_') else 'test_completion'
-                record_earned_badge(user_id, badge['badge_id'], badge_type)
+        new_score = calculate_user_score(user_id)
 
         # Calculate practice status for immediate UI update (avoids separate API calls)
         from handlers.streaks import calculate_streak_days
@@ -360,7 +321,7 @@ def submit_review():
             "word_id": word_id,
             "response": response,
             "new_score": new_score,
-            "new_badges": new_badges if new_badges else None,
+            "new_badges": None,
             "practice_status": {
                 "user_id": user_id,
                 "due_word_count": due_word_count,

@@ -23,6 +23,8 @@ struct DefinitionCard: View {
     var body: some View {
         ZStack {
             
+                AppTheme.verticalGradient2.ignoresSafeArea()
+            
         VStack(alignment: .leading, spacing: 8) {
             
             // V4: Famous Quote
