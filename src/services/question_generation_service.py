@@ -189,7 +189,7 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
     # Get native language name for prompt
     lang_name = LANG_NAMES.get(native_lang, native_lang)
 
-    # Generate pedagogically-sound question using enhanced prompt
+    # Generate meaning-in-context question using simplified prompt
     prompt = f"""You are generating a vocabulary question for English learners whose native language is {lang_name}.
 
 INPUT:
@@ -198,65 +198,35 @@ INPUT:
 - NATIVE LANGUAGE: {lang_name}
 
 TASK:
-1. Analyze how KEYWORD is used in this transcript
-2. Choose the most appropriate question type
-3. Generate the question with answer options in BOTH English and {lang_name}
-
-QUESTION TYPES (choose one):
-
-MEANING_IN_CONTEXT
-- Use when: the word has multiple meanings and context clarifies which one
-- Example: "right" (correct vs. direction), "fire" (flames vs. terminate)
-
-SYNONYM
-- Use when: testing if learner can recognize equivalent expressions
-- Example: "enormous" → "huge", "vanished" → "disappeared"
-
-COLLOCATION
-- Use when: the word pairs naturally with specific other words
-- Example: "make" + decision, "heavy" + rain, "commit" + crime
-
-IDIOM_COMPONENT
-- Use when: the word is part of an idiomatic expression in the transcript
-- Example: "break" in "break the ice", "hit" in "hit the road"
-
-REGISTER
-- Use when: the word signals formality level (slang, casual, formal)
-- Example: "gonna", "ain't", "commence", "dude"
-
-GRAMMAR_PATTERN
-- Use when: the word's form reveals tense, aspect, or structure worth noting
-- Example: "been" (present perfect), "would" (conditional), "-ing" vs "-ed"
+Generate a question asking what "{word}" means in this context. Provide 2 options in BOTH English and {lang_name}.
 
 OUTPUT FORMAT (JSON):
 {{
-  "question_type": "MEANING_IN_CONTEXT",
-  "analysis": "Brief explanation of why this type fits",
-  "question": "What does 'X' mean in this scene?",
+  "question": "What does '{word}' mean in this scene?",
   "options": [
-    {{"text": "...", "text_native": "... ({lang_name} translation)", "correct": true}},
-    {{"text": "...", "text_native": "... ({lang_name} translation)", "correct": false}}
+    {{"text": "...", "text_native": "... ({lang_name})", "correct": true}},
+    {{"text": "...", "text_native": "... ({lang_name})", "correct": false}}
   ],
   "explanation": "One sentence explaining the correct answer"
 }}
 
 RULES:
-- Always exactly 2 options, exactly 1 correct
+- Exactly 2 options, exactly 1 correct
 - Each option MUST have both "text" (English) and "text_native" ({lang_name})
-- Distractors must be plausible (common misunderstandings, literal readings, similar words)
+- Correct answer should match how the word is used in the transcript
+- Distractor should be a plausible alternative meaning or common misunderstanding
 - All options similar length and grammatical structure
-- Question must be answerable from transcript alone
-- Use simple, common vocabulary in all text
-- If the keyword usage is too ambiguous to generate a reliable question, return {{"error": "reason"}}"""
+- Use simple, common vocabulary
+- If the keyword usage is too ambiguous, return {{"error": "reason"}}"""
 
     try:
-        # Generate pedagogical question with LLM (enhanced format with 2 options)
+        # Generate meaning-in-context question with LLM (simple format with 2 options)
         # Uses fallback chain: DeepSeek V3 -> Qwen 2.5 -> Mistral Small -> GPT-4o
         response_json = llm_completion_with_fallback(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a language learning expert. Analyze transcripts to create pedagogically sound vocabulary questions. Return only valid JSON without markdown formatting."
+                    "content": "You are a language learning expert. Analyze transcripts to create vocabulary questions testing meaning in context. Return only valid JSON without markdown formatting."
                 },
                 {
                     "role": "user",
@@ -264,7 +234,7 @@ RULES:
                 }
             ],
             use_case="question",
-            schema_name="video_mc_enhanced"  # Use enhanced schema with question types
+            schema_name="video_mc_simple"  # Use simplified schema
         )
 
         # Parse JSON response (strict validation happens in llm_completion)
@@ -276,9 +246,7 @@ RULES:
             # Fall back to definition-based question instead
             return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
 
-        # Extract fields from enhanced format
-        question_type_detail = parsed['question_type']
-        analysis = parsed['analysis']
+        # Extract fields from simplified format
         question_text = parsed['question']
         options = parsed['options']
         explanation = parsed['explanation']
@@ -321,8 +289,8 @@ RULES:
         'question_type': 'video_mc',
         'word': word,
         'video_id': video_id,
-        'audio_transcript': audio_transcript,  # Use audio_transcript field
-        'question_text': question_text,  # Dynamic question from LLM
+        'audio_transcript': audio_transcript,
+        'question_text': question_text,
         'show_word_before_video': False,  # Hide word initially, reveal after answer
         'video_metadata': {
             'movie_title': movie_title,
@@ -331,11 +299,7 @@ RULES:
         },
         'options': ios_options,
         'correct_answer': correct_answer,
-        'meta': {  # Store pedagogical metadata for future analytics
-            'question_type_detail': question_type_detail,
-            'analysis': analysis,
-            'explanation': explanation
-        }
+        'explanation': explanation  # Post-answer explanation
     }
 
     logger.info(f"Generated video_mc question for word '{word}' with video_id={video_id}, movie_title={movie_title}, has_audio_transcript={audio_transcript is not None}")
@@ -347,14 +311,15 @@ def generate_mc_definition_prompt(word: str, definition_data: Dict, native_lang:
     """Generate prompt for multiple choice definition question."""
     translations = definition_data.get('translations', [])
     definitions = definition_data.get('definitions', [])
+    lang_name = LANG_NAMES.get(native_lang, native_lang)
 
     return f"""Generate a multiple choice question to test understanding of the word: "{word}"
 
 Word information:
-- Translations: {', '.join(translations)}
+- Translations to {lang_name}: {', '.join(translations)}
 - Definitions: {json.dumps(definitions, indent=2)}
 
-Task: Create a question asking "What does '{word}' mean?" with 2 answer options:
+Task: Create a question asking "What does '{word}' mean?" with 2 answer options in BOTH English and {lang_name}:
 - Option A: The CORRECT definition (clear, concise, pedagogically sound)
 - Option B: A plausible but INCORRECT distractor
 
@@ -375,27 +340,35 @@ Return ONLY valid JSON (no markdown, no explanation):
 {{
   "question_text": "What does '{word}' mean?",
   "options": [
-    {{"id": "A", "text": "..."}},
-    {{"id": "B", "text": "..."}}
+    {{"id": "A", "text": "...", "text_native": "... ({lang_name} translation)"}},
+    {{"id": "B", "text": "...", "text_native": "... ({lang_name} translation)"}}
   ],
   "correct_answer": "A"
-}}"""
+}}
+
+CRITICAL: Each option MUST include both "text" (English) and "text_native" ({lang_name} translation)."""
 
 
 def generate_mc_word_prompt(word: str, definition_data: Dict, native_lang: str) -> str:
     """Generate prompt for multiple choice word selection question."""
     definitions = definition_data.get('definitions', [])
     main_definition = definitions[0]['definition'] if definitions else ""
+    translations = definition_data.get('translations', [])
+    lang_name = LANG_NAMES.get(native_lang, native_lang)
+
+    # Get translation for the target word
+    word_translation = translations[0] if translations else ""
 
     return f"""Generate a multiple choice question to test word recognition for: "{word}"
 
 Definition: "{main_definition}"
+Translation to {lang_name}: {word_translation}
 
-Task: Create a question showing the definition and asking which word it describes.
+Task: Create a question showing the definition and asking which word it describes, with options in BOTH English and {lang_name}.
 
 Requirements:
-- Option A: "{word}" (CORRECT)
-- Option B: A similar word that DOESN'T match the definition
+- Option A: "{word}" (CORRECT) with {lang_name} translation
+- Option B: A similar word that DOESN'T match the definition, with {lang_name} translation
   - Should be related/similar to {word} (synonym, near-synonym, or word in same semantic field)
   - Must be a real English word
   - Should be a believable distractor
@@ -411,33 +384,39 @@ Return ONLY valid JSON (no markdown):
 {{
   "question_text": "Which word matches this definition: '{main_definition}'?",
   "options": [
-    {{"id": "A", "text": "{word}"}},
-    {{"id": "B", "text": "..."}}
+    {{"id": "A", "text": "{word}", "text_native": "{word_translation}"}},
+    {{"id": "B", "text": "...", "text_native": "... ({lang_name} translation)"}}
   ],
   "correct_answer": "A"
-}}"""
+}}
+
+CRITICAL: Each option MUST include both "text" (English word) and "text_native" ({lang_name} translation)."""
 
 
 def generate_fill_blank_prompt(word: str, definition_data: Dict, native_lang: str) -> str:
     """Generate prompt for fill-in-the-blank question."""
     definitions = definition_data.get('definitions', [])
+    translations = definition_data.get('translations', [])
     examples = []
     for d in definitions:
         examples.extend(d.get('examples', []))
 
     lang_name = LANG_NAMES.get(native_lang, native_lang)
+    word_translation = translations[0] if translations else ""
 
     return f"""Generate a fill-in-the-blank question for the word: "{word}"
+
+Word translation to {lang_name}: {word_translation}
 
 Definition data:
 {json.dumps(definition_data, indent=2)}
 
-Task: Create a sentence with a blank where "{word}" should go, plus 2 options.
+Task: Create a sentence with a blank where "{word}" should go, plus 2 options in BOTH English and {lang_name}.
 
 Requirements:
 - Create a natural, context-rich sentence (or use/adapt one of the examples)
-- Option A: "{word}" (CORRECT)
-- Option B: A related word that DOESN'T fit the context
+- Option A: "{word}" (CORRECT) with {lang_name} translation
+- Option B: A related word that DOESN'T fit the context, with {lang_name} translation
 - Include translation of the sentence to {lang_name}
 
 IMPORTANT - Language Simplicity:
@@ -452,12 +431,14 @@ Return ONLY valid JSON:
   "sentence": "The beauty of cherry blossoms is _____, lasting only a few weeks.",
   "question_text": "Fill in the blank:",
   "options": [
-    {{"id": "A", "text": "{word}"}},
-    {{"id": "B", "text": "..."}}
+    {{"id": "A", "text": "{word}", "text_native": "{word_translation}"}},
+    {{"id": "B", "text": "...", "text_native": "... ({lang_name} translation)"}}
   ],
   "correct_answer": "A",
   "sentence_translation": "..."
-}}"""
+}}
+
+CRITICAL: Each option MUST include both "text" (English word) and "text_native" ({lang_name} translation)."""
 
 
 def generate_pronounce_sentence_prompt(word: str, definition_data: Dict, native_lang: str) -> str:
@@ -502,46 +483,56 @@ def generate_mc_def_native_prompt(word: str, definition_data: Dict, native_lang:
     """Generate prompt for multiple choice native language definition question."""
     definitions = definition_data.get('definitions', [])
 
-    # Extract native language definitions
+    # Extract native language definitions and English definitions
     native_definitions = []
+    english_definitions = []
     for d in definitions:
         if 'definition_native' in d:
             native_definitions.append(d['definition_native'])
+        if 'definition' in d:
+            english_definitions.append(d['definition'])
 
     lang_name = LANG_NAMES.get(native_lang, native_lang)
 
-    return f"""Generate a multiple choice question testing understanding of the word "{word}" using {lang_name} definitions.
+    return f"""Generate a multiple choice question testing understanding of the word "{word}".
 
 Word: "{word}"
+Available English definitions:
+{json.dumps(english_definitions, indent=2, ensure_ascii=False)}
+
 Available {lang_name} definitions:
 {json.dumps(native_definitions, indent=2, ensure_ascii=False)}
 
-Task: Create a question asking "What does '{word}' mean?" with 2 answer options in {lang_name}:
-- Option A: The CORRECT definition in {lang_name} (clear, concise, pedagogically sound)
-- Option B: A plausible but INCORRECT distractor in {lang_name}
+Task: Create a simple question showing JUST the word "{word}" with 2 answer options (definitions in BOTH English and {lang_name}):
+- Option A: The CORRECT definition (clear, concise, pedagogically sound)
+- Option B: A plausible but INCORRECT distractor
 
 Distractor requirements:
 - Must be semantically related or similar concept
 - Should test real understanding, not be obviously wrong
 - Similar length and style to correct answer
 - Avoid negations or "none of the above"
-- Focus on creating ONE high-quality distractor in {lang_name}
+- Focus on creating ONE high-quality distractor
 
 IMPORTANT - Language Quality:
-- Use natural, idiomatic {lang_name}
+- Use natural, idiomatic English and {lang_name}
 - Avoid overly literal or awkward translations
-- The correct definition should match one of the provided native definitions
+- The correct definition should match one of the provided definitions
 - Write at an appropriate level for language learners
 
 Return ONLY valid JSON (no markdown, no explanation):
 {{
-  "question_text": "What does '{word}' mean?",
+  "question_text": "{word}",
   "options": [
-    {{"id": "A", "text": "... ({lang_name})"}},
-    {{"id": "B", "... ({lang_name})"}}
+    {{"id": "A", "text": "... (English definition)", "text_native": "... ({lang_name} translation)"}},
+    {{"id": "B", "text": "... (English definition)", "text_native": "... ({lang_name} translation)"}}
   ],
   "correct_answer": "A"
-}}"""
+}}
+
+CRITICAL:
+- question_text must be EXACTLY the word "{word}" (not a question like "What does X mean?")
+- Each option MUST include both "text" (English definition) and "text_native" ({lang_name} translation)"""
 
 
 def shuffle_question_options(question_data: Dict) -> Dict:

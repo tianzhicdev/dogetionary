@@ -18,6 +18,7 @@ struct DailyProgressBanner: View {
     @Binding var isExpanded: Bool
     @Binding var showDailyGoalCelebration: Bool  // Controlled by parent
     @Binding var showSearchBar: Bool  // Control search bar visibility
+    @Binding var isSearchEnabled: Bool  // Control search button visibility
 
     @State private var animatedProgress: Double = 0.0
     @State private var isAnimatingScale: Bool = false
@@ -130,15 +131,17 @@ struct DailyProgressBanner: View {
 
             Spacer()
 
-            // Search button
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    showSearchBar.toggle()
+            // Search button (only shown on Shojin tab)
+            if isSearchEnabled {
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showSearchBar.toggle()
+                    }
+                }) {
+                    Image(systemName: "magnifyingglass.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(AppTheme.selectableTint)
                 }
-            }) {
-                Image(systemName: "magnifyingglass.circle.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(AppTheme.selectableTint)
             }
 
             // Expand button
@@ -312,6 +315,7 @@ struct DailyProgressBanner: View {
 #Preview("Daily Progress Banner") {
     @Previewable @State var showCelebration = false
     @Previewable @State var showSearch = false
+    @Previewable @State var searchEnabled = true
 
     VStack(spacing: 20) {
         // Collapsed - low progress
@@ -325,7 +329,8 @@ struct DailyProgressBanner: View {
             testVocabularyAwards: nil,
             isExpanded: .constant(false),
             showDailyGoalCelebration: $showCelebration,
-            showSearchBar: $showSearch
+            showSearchBar: $showSearch,
+            isSearchEnabled: $searchEnabled
         )
 
         // Expanded - good progress
@@ -339,7 +344,8 @@ struct DailyProgressBanner: View {
             testVocabularyAwards: nil,
             isExpanded: .constant(true),
             showDailyGoalCelebration: $showCelebration,
-            showSearchBar: $showSearch
+            showSearchBar: $showSearch,
+            isSearchEnabled: $searchEnabled
         )
 
         // Expanded - over 100%
@@ -353,7 +359,8 @@ struct DailyProgressBanner: View {
             testVocabularyAwards: nil,
             isExpanded: .constant(true),
             showDailyGoalCelebration: $showCelebration,
-            showSearchBar: $showSearch
+            showSearchBar: $showSearch,
+            isSearchEnabled: $searchEnabled
         )
     }
     .padding()

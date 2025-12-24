@@ -16,7 +16,7 @@ struct EnhancedQuestionView: View {
     var body: some View {
         VStack {
             switch question.question_type {
-            case "mc_definition", "mc_word":
+            case "mc_definition", "mc_word", "mc_def_native":
                 MultipleChoiceQuestionView(
                     question: question,
                     onImmediateFeedback: { selectedAnswer in

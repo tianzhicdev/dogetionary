@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var dailyBannerExpanded = false
     @State private var showDailyGoalCelebration = false  // Full-screen celebration
     @State private var showSearchBar = false  // Control search bar visibility (for Shojin tab only)
+    @State private var isSearchEnabled = false  // Control search button visibility (only on Shojin tab)
     @Environment(\.scenePhase) var scenePhase
 
     private var dailyTarget: Int {
@@ -54,7 +55,8 @@ struct ContentView: View {
                     testVocabularyAwards: nil,
                     isExpanded: $dailyBannerExpanded,
                     showDailyGoalCelebration: $showDailyGoalCelebration,
-                    showSearchBar: $showSearchBar
+                    showSearchBar: $showSearchBar,
+                    isSearchEnabled: $isSearchEnabled
                 )
                 .padding(.horizontal, 8)
                 .padding(.top, 8)
@@ -74,18 +76,31 @@ struct ContentView: View {
                             Label("Shojin", systemImage: "figure.boxing")
                         }
                         .tag(0)
+                        .onAppear {
+                            isSearchEnabled = true
+                        }
+                        .onDisappear {
+                            isSearchEnabled = false
+                            showSearchBar = false  // Close search bar when leaving Shojin tab
+                        }
 
                         SavedWordsView()
                             .tabItem {
                                 Label("History", systemImage: "clock.fill")
                             }
                             .tag(1)
+                            .onAppear {
+                                isSearchEnabled = false
+                            }
 
                         SettingsView()
                             .tabItem {
                                 Label("Settings", systemImage: "gear")
                             }
                             .tag(2)
+                            .onAppear {
+                                isSearchEnabled = false
+                            }
                     }
                     .accentColor(AppTheme.selectableTint)
             }

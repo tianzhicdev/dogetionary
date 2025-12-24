@@ -169,10 +169,14 @@ MC_OPTION_SCHEMA = {
         },
         "text": {
             "type": "string",
-            "description": "The text content of this option"
+            "description": "The text content of this option in English"
+        },
+        "text_native": {
+            "type": "string",
+            "description": "The text content translated to learner's native language"
         }
     },
-    "required": ["id", "text"],
+    "required": ["id", "text", "text_native"],
     "additionalProperties": False
 }
 
@@ -265,28 +269,18 @@ PRONOUNCE_SENTENCE_QUESTION_SCHEMA = {
 }
 
 # ============================================================================
-# Video Multiple Choice Schema (Enhanced with pedagogical question types)
+# Video Multiple Choice Schema (Simplified - always tests meaning in context)
 # ============================================================================
 
-VIDEO_MC_ENHANCED_SCHEMA = {
-    "name": "video_mc_enhanced",
+VIDEO_MC_SIMPLE_SCHEMA = {
+    "name": "video_mc_simple",
     "strict": True,
     "schema": {
         "type": "object",
         "properties": {
-            "question_type": {
-                "type": "string",
-                "enum": ["MEANING_IN_CONTEXT", "SYNONYM", "COLLOCATION",
-                         "IDIOM_COMPONENT", "REGISTER", "GRAMMAR_PATTERN"],
-                "description": "Type of vocabulary question being tested"
-            },
-            "analysis": {
-                "type": "string",
-                "description": "Brief explanation of why this question type was chosen for this context"
-            },
             "question": {
                 "type": "string",
-                "description": "The actual question text to display to the learner"
+                "description": "Question asking what the word means in this context"
             },
             "options": {
                 "type": "array",
@@ -295,14 +289,18 @@ VIDEO_MC_ENHANCED_SCHEMA = {
                     "properties": {
                         "text": {
                             "type": "string",
-                            "description": "Option text"
+                            "description": "Option text in English"
+                        },
+                        "text_native": {
+                            "type": "string",
+                            "description": "Option text translated to learner's native language"
                         },
                         "correct": {
                             "type": "boolean",
                             "description": "Whether this option is correct"
                         }
                     },
-                    "required": ["text", "correct"],
+                    "required": ["text", "text_native", "correct"],
                     "additionalProperties": False
                 },
                 "minItems": 2,
@@ -314,7 +312,7 @@ VIDEO_MC_ENHANCED_SCHEMA = {
                 "description": "One sentence explaining why the correct answer is right (shown after answering)"
             }
         },
-        "required": ["question_type", "analysis", "question", "options", "explanation"],
+        "required": ["question", "options", "explanation"],
         "additionalProperties": False
     }
 }
@@ -330,7 +328,7 @@ SCHEMA_REGISTRY = {
     "mc_definition": MC_DEFINITION_QUESTION_SCHEMA,
     "mc_fillin": MC_FILLIN_QUESTION_SCHEMA,
     "pronounce_sentence": PRONOUNCE_SENTENCE_QUESTION_SCHEMA,
-    "video_mc_enhanced": VIDEO_MC_ENHANCED_SCHEMA,
+    "video_mc_simple": VIDEO_MC_SIMPLE_SCHEMA,
 }
 
 
