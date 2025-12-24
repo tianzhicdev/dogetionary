@@ -33,13 +33,141 @@ from static.privacy import PRIVACY_POLICY
 from static.support import SUPPORT_HTML
 
 
+def calculate_curve_for_word(word_data: Dict, review_history: list) -> Dict:
+    """
+    Core logic for calculating forgetting curve for a single word.
+    Extracted for reuse in both single and batch endpoints.
+
+    Args:
+        word_data: Dict with keys: id, word, created_at
+        review_history: List of dicts with keys: response, reviewed_at
+
+    Returns:
+        Dict matching ForgettingCurveResponse structure
+    """
+    word_id = word_data['id']
+    word = word_data['word']
+    created_at = word_data['created_at']
+
+    # Calculate next review date first
+    next_review_date = get_next_review_date_new(review_history, created_at)
+
+    # Determine time range: from creation to next review date (or 30 days if no reviews)
+    if review_history:
+        # Extend the curve to the next review date for complete visualization
+        end_date = next_review_date if next_review_date else max([r['reviewed_at'] for r in review_history])
+    else:
+        # For words with no reviews, show until next review or 30 days
+        end_date = next_review_date if next_review_date else (created_at + timedelta(days=30))
+
+    # Generate curve points (one per day) - use datetime throughout
+    curve_points = []
+
+    # Ensure we have datetime objects
+    current_datetime = created_at
+    end_datetime = end_date
+
+    # Start from beginning of creation day
+    if hasattr(current_datetime, 'date'):
+        current_datetime = datetime.combine(current_datetime.date(), datetime.min.time())
+    else:
+        current_datetime = datetime.combine(current_datetime, datetime.min.time())
+
+    # End at end of last review day
+    if hasattr(end_datetime, 'date'):
+        end_datetime = datetime.combine(end_datetime.date(), datetime.max.time())
+    else:
+        end_datetime = datetime.combine(end_datetime, datetime.max.time())
+
+    # Find last review date for determining solid vs dotted line
+    last_review_date = None
+    if review_history:
+        last_review_date = max([r['reviewed_at'] for r in review_history])
+        if hasattr(last_review_date, 'date'):
+            last_review_date = last_review_date.date()
+
+    # Generate points for each day
+    while current_datetime <= end_datetime:
+        # Use end of day for retention calculation (to include same-day reviews)
+        end_of_day = datetime.combine(current_datetime.date(), datetime.max.time())
+        retention = calculate_retention(review_history, end_of_day, created_at)
+
+        # Determine if this point is part of the solid line (historical) or dotted line (projection)
+        is_projection = False
+        if last_review_date and current_datetime.date() > last_review_date:
+            is_projection = True
+
+        curve_points.append({
+            "date": current_datetime.strftime('%Y-%m-%d'),
+            "retention": retention * 100,  # Convert to percentage
+            "is_projection": is_projection
+        })
+
+        # Move to next day (start of day)
+        current_datetime = datetime.combine((current_datetime + timedelta(days=1)).date(), datetime.min.time())
+
+    # Prepare all markers including creation and next review
+    all_markers = []
+
+    # Add creation marker
+    all_markers.append({
+        "date": created_at.strftime('%Y-%m-%d'),
+        "type": "creation",
+        "success": None
+    })
+
+    # Add review markers
+    for r in review_history:
+        all_markers.append({
+            "date": r['reviewed_at'].strftime('%Y-%m-%d'),
+            "type": "review",
+            "success": r['response']
+        })
+
+    # Add next review marker if available
+    if next_review_date:
+        all_markers.append({
+            "date": next_review_date.strftime('%Y-%m-%d'),
+            "type": "next_review",
+            "success": None
+        })
+
+    return {
+        "word_id": word_id,
+        "word": word,
+        "created_at": created_at.strftime('%Y-%m-%d'),
+        "forgetting_curve": curve_points,
+        "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
+        "review_markers": [
+            {
+                "date": r['reviewed_at'].strftime('%Y-%m-%d'),
+                "success": r['response']
+            }
+            for r in review_history
+        ],
+        "all_markers": all_markers
+    }
+
+
 def get_forgetting_curve(word_id):
-    """Get forgetting curve data for a specific word"""
+    """
+    Get forgetting curve data for a specific word
+
+    DEPRECATED: Use POST /v3/words/batch/forgetting-curves for better performance.
+    This single-word endpoint makes 2 SQL queries, while the batch endpoint
+    uses 1 optimized JOIN query for multiple words.
+    """
     try:
         user_id = request.args.get('user_id')
 
         if not user_id:
             return jsonify({"error": "user_id parameter is required"}), 400
+
+        # Log deprecation warning
+        logging.warning(
+            f"DEPRECATED ENDPOINT CALLED: GET /v3/words/{word_id}/forgetting-curve by user {user_id}. "
+            f"Use POST /v3/words/batch/forgetting-curves instead for better performance."
+        )
 
         # Get word details
         word = db_fetch_one("""
@@ -66,108 +194,11 @@ def get_forgetting_curve(word_id):
             }
             for review in reviews
         ]
-        
-        # Calculate curve data points
-        created_at = word['created_at']
-        
-        # Calculate next review date first
-        next_review_date = get_next_review_date_new(review_history, created_at)
-        
-        # Determine time range: from creation to next review date (or 30 days if no reviews)
-        if review_history:
-            # Extend the curve to the next review date for complete visualization
-            end_date = next_review_date if next_review_date else max([r['reviewed_at'] for r in review_history])
-        else:
-            # For words with no reviews, show until next review or 30 days
-            end_date = next_review_date if next_review_date else (created_at + timedelta(days=30))
-        
-        # Generate curve points (one per day) - use datetime throughout
-        curve_points = []
-        
-        # Ensure we have datetime objects
-        current_datetime = created_at
-        end_datetime = end_date
-        
-        # Start from beginning of creation day
-        if hasattr(current_datetime, 'date'):
-            current_datetime = datetime.combine(current_datetime.date(), datetime.min.time())
-        else:
-            current_datetime = datetime.combine(current_datetime, datetime.min.time())
-            
-        # End at end of last review day
-        if hasattr(end_datetime, 'date'):
-            end_datetime = datetime.combine(end_datetime.date(), datetime.max.time())
-        else:
-            end_datetime = datetime.combine(end_datetime, datetime.max.time())
-        
-        # Find last review date for determining solid vs dotted line
-        last_review_date = None
-        if review_history:
-            last_review_date = max([r['reviewed_at'] for r in review_history])
-            if hasattr(last_review_date, 'date'):
-                last_review_date = last_review_date.date()
-        
-        # Generate points for each day
-        while current_datetime <= end_datetime:
-            # Use end of day for retention calculation (to include same-day reviews)
-            end_of_day = datetime.combine(current_datetime.date(), datetime.max.time())
-            retention = calculate_retention(review_history, end_of_day, created_at)
-            
-            # Determine if this point is part of the solid line (historical) or dotted line (projection)
-            is_projection = False
-            if last_review_date and current_datetime.date() > last_review_date:
-                is_projection = True
-            
-            curve_points.append({
-                "date": current_datetime.strftime('%Y-%m-%d'),  # Display as date string
-                "retention": retention * 100,  # Convert to percentage
-                "is_projection": is_projection  # Flag for UI to render as dotted line
-            })
-            
-            # Move to next day (start of day)
-            current_datetime = datetime.combine((current_datetime + timedelta(days=1)).date(), datetime.min.time())
-        
-        # Prepare all markers including creation and next review
-        all_markers = []
-        
-        # Add creation marker
-        all_markers.append({
-            "date": created_at.strftime('%Y-%m-%d'),
-            "type": "creation",
-            "success": None
-        })
-        
-        # Add review markers
-        for r in review_history:
-            all_markers.append({
-                "date": r['reviewed_at'].strftime('%Y-%m-%d'),
-                "type": "review",
-                "success": r['response']
-            })
-        
-        # Add next review marker if available
-        if next_review_date:
-            all_markers.append({
-                "date": next_review_date.strftime('%Y-%m-%d'),
-                "type": "next_review",
-                "success": None
-            })
 
-        return jsonify({
-            "word_id": word_id,
-            "word": word['word'],
-            "created_at": created_at.strftime('%Y-%m-%d'),
-            "forgetting_curve": curve_points,
-            "next_review_date": next_review_date.strftime('%Y-%m-%d') if next_review_date else None,
-            "review_markers": [
-                {
-                    "date": r['reviewed_at'].strftime('%Y-%m-%d'),
-                    "success": r['response']
-                }
-                for r in review_history
-            ],
-            "all_markers": all_markers
-        })
+        # Use extracted core logic
+        curve_data = calculate_curve_for_word(word, review_history)
+
+        return jsonify(curve_data)
 
     except Exception as e:
         logger.error(f"Error getting forgetting curve: {str(e)}", exc_info=True)

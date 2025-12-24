@@ -31,6 +31,12 @@ class QuestionCacheManager {
 
     /// Save a question to cache
     func saveQuestion(word: String, learningLang: String, nativeLang: String, question: BatchReviewQuestion) {
+        // Check if caching is enabled
+        guard UserManager.shared.cacheEnabled else {
+            logger.debug("Cache disabled by user, skipping save for: \(word)")
+            return
+        }
+
         let cacheKey = makeCacheKey(word: word, learningLang: learningLang, nativeLang: nativeLang)
         let fileURL = cacheDirectory.appendingPathComponent("\(cacheKey).json")
 

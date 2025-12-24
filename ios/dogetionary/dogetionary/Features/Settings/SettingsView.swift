@@ -457,6 +457,20 @@ struct SettingsView: View {
             }
         ) {
             VStack(alignment: .leading, spacing: 12) {
+                // Cache toggle
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("ENABLE CACHING", isOn: $userManager.cacheEnabled)
+                        .tint(AppTheme.selectableTint)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppTheme.smallTitleText)
+
+                    Text("Cache questions and videos locally for offline access. Disabling will prevent new downloads but won't delete existing cache.")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.smallTextColor1)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.bottom, 8)
+
                 if !videoCacheInfo.isEmpty {
                     HStack {
                         Image(systemName: "video.fill")

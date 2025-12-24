@@ -633,6 +633,15 @@ struct AllMarker: Codable {
     }
 }
 
+struct BatchForgettingCurveResponse: Codable {
+    let curves: [ForgettingCurveResponse]
+    let not_found: [Int]
+
+    private enum CodingKeys: String, CodingKey {
+        case curves, not_found
+    }
+}
+
 // MARK: - Test Preparation Models
 
 /// Test type enum with all available test levels

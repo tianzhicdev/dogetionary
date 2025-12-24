@@ -91,32 +91,33 @@ struct SavedWordsView: View {
         print("🔄 SavedWordsView: Loading curve data for \(words.count) words in parallel")
 
         // Load all curves in parallel using TaskGroup
-        await withTaskGroup(of: (Int, ForgettingCurveResponse?).self) { group in
-            for word in words {
-                group.addTask {
-                    await withCheckedContinuation { continuation in
-                        DictionaryService.shared.getForgettingCurve(wordId: word.id) { result in
-                            switch result {
-                            case .success(let data):
-                                continuation.resume(returning: (word.id, data))
-                            case .failure(let error):
-                                print("❌ SavedWordsView: Failed to load curve for word_id=\(word.id): \(error)")
-                                continuation.resume(returning: (word.id, nil))
-                            }
-                        }
-                    }
-                }
-            }
+        // Use batch endpoint for better performance
+        let wordIds = words.map { $0.id }
 
-            // Collect all results and update cache
-            for await (wordId, curveData) in group {
-                if let data = curveData {
-                    curveDataCache[wordId] = data
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            DictionaryService.shared.getForgettingCurvesBatch(wordIds: wordIds) { result in
+                switch result {
+                case .success(let batchResponse):
+                    // Update cache with all curves
+                    for curve in batchResponse.curves {
+                        self.curveDataCache[curve.word_id] = curve
+                    }
+
+                    if !batchResponse.not_found.isEmpty {
+                        print("⚠️ SavedWordsView: \(batchResponse.not_found.count) words not found in batch request")
+                    }
+
+                    print("✅ SavedWordsView: Loaded \(batchResponse.curves.count) curves in batch")
+
+                case .failure(let error):
+                    print("❌ SavedWordsView: Failed to load curves batch: \(error)")
                 }
+
+                continuation.resume()
             }
         }
 
-        print("✅ SavedWordsView: Loaded \(curveDataCache.count) curve data entries")
+        print("✅ SavedWordsView: Loaded \(curveDataCache.count) curve data entries total")
     }
 
     @MainActor

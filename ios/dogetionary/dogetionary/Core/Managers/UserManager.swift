@@ -32,6 +32,8 @@ class UserManager: ObservableObject {
     private let reminderTimeKey = "DogetionaryReminderTime"
     // Practice status cache key
     private let cachedPracticeCountKey = "DogetionaryCachedPracticeCount"
+    // Cache control key (local-only, not synced to server)
+    private let cacheEnabledKey = "DogetionaryCacheEnabled"
 
     internal var isSyncingFromServer = false
 
@@ -113,6 +115,16 @@ class UserManager: ObservableObject {
             if !isSyncingFromServer {
                 syncTestSettingsToServer()
             }
+        }
+    }
+
+    // MARK: - Cache Control (Local-only, not synced to server)
+
+    /// Controls whether questions and videos are cached locally (default: true)
+    @Published var cacheEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(cacheEnabled, forKey: cacheEnabledKey)
+            logger.info("Cache enabled set to: \(self.cacheEnabled)")
         }
     }
 
@@ -288,6 +300,9 @@ class UserManager: ObservableObject {
         // Load daily time commitment (default: 30 minutes)
         let savedTimeCommitment = UserDefaults.standard.integer(forKey: "DogetionaryDailyTimeCommitmentMinutes")
         self.dailyTimeCommitmentMinutes = savedTimeCommitment > 0 ? savedTimeCommitment : 30
+
+        // Load cache enabled setting (default: true)
+        self.cacheEnabled = UserDefaults.standard.object(forKey: cacheEnabledKey) as? Bool ?? true
 
         // Load legacy test preparation settings (for backward compatibility)
         self.toeflEnabled = UserDefaults.standard.bool(forKey: toeflEnabledKey)

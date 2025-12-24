@@ -251,6 +251,17 @@ class VideoService: ObservableObject {
             return downloadVideoWithRetry(videoId: videoId, attempt: retryCount)
 
         case .notStarted:
+            // Check if caching is enabled
+            guard UserManager.shared.cacheEnabled else {
+                print("VideoService: Cache disabled, cannot download video \(videoId)")
+                let error = NSError(
+                    domain: "VideoService",
+                    code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: "Video caching is disabled in settings"]
+                )
+                return Fail(error: error).eraseToAnyPublisher()
+            }
+
             print("VideoService: Starting download for video \(videoId)")
             return downloadVideoWithRetry(videoId: videoId, attempt: 0)
         }
@@ -258,6 +269,12 @@ class VideoService: ObservableObject {
 
     /// Preload multiple videos in background (sequential, non-blocking)
     func preloadVideos(videoIds: [Int]) {
+        // Don't preload if caching is disabled
+        guard UserManager.shared.cacheEnabled else {
+            print("VideoService: Cache disabled, skipping preload of \(videoIds.count) videos")
+            return
+        }
+
         guard !videoIds.isEmpty else { return }
 
         print("VideoService: Queuing \(videoIds.count) videos for sequential download (one-by-one)")

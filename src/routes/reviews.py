@@ -4,6 +4,7 @@ from handlers.words import get_next_review_word_v2
 from handlers.reads import (
     get_due_counts, get_review_stats, get_forgetting_curve
 )
+from handlers.reads_batch import get_forgetting_curves_batch
 
 reviews_bp = Blueprint('reviews', __name__)
 
@@ -18,3 +19,6 @@ reviews_bp.route('/stats', methods=['GET'])(get_review_stats)
 
 # Word-specific stats
 reviews_bp.route('/words/<int:word_id>/forgetting-curve', methods=['GET'])(get_forgetting_curve)
+
+# Batch endpoints
+reviews_bp.route('/words/batch/forgetting-curves', methods=['POST'])(get_forgetting_curves_batch)

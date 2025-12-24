@@ -106,8 +106,8 @@ struct OptionButton: View {
                     // Native language translation (if available)
                     if let textNative = option.text_native {
                         Text(textNative)
-                            .font(.caption)
-                            .foregroundColor(AppTheme.bodyText.opacity(0.6))
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.bodyText)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -135,8 +135,8 @@ struct OptionButton: View {
                     // Native language translation (if available)
                     if let textNative = option.text_native {
                         Text(textNative)
-                            .font(.caption)
-                            .foregroundColor(AppTheme.bodyText.opacity(0.6))
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.bodyText)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }

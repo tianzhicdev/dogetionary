@@ -243,8 +243,13 @@ def get_word_definition_v4():
         # Queue missing audio
         audio_status = queue_missing_audio(word_normalized, definition_data, learning_lang, audio_refs)
 
+        # Create ETag from word+langs hash for cache validation
+        import hashlib
+        etag = hashlib.md5(f"{word_normalized}:{learning_lang}:{native_lang}".encode()).hexdigest()
+
         # Return response with multiple formats for backward compatibility
-        return jsonify({
+        # Definitions are cacheable based on word+langs (user_id is only for preference fallback)
+        response = jsonify({
             "word": word_normalized,
             "learning_language": learning_lang,
             "native_language": native_lang,
@@ -258,6 +263,18 @@ def get_word_definition_v4():
             "audio_references": audio_refs,
             "audio_generation_status": audio_status
         })
+
+        # Add Cloudflare-optimized cache headers
+        # Definitions are immutable (same word+langs always produces same definition from cache)
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        response.headers['CDN-Cache-Control'] = 'public, max-age=31536000, immutable'
+        response.headers['Cloudflare-CDN-Cache-Control'] = 'public, max-age=31536000'
+        response.headers['ETag'] = f'"{etag}"'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        # Vary header tells Cloudflare to cache based on these query params (not user_id)
+        response.headers['Vary'] = 'Accept, Accept-Encoding'
+
+        return response
 
     except Exception as e:
         logger.error(f"V4: Error getting definition for word '{word}': {str(e)}", exc_info=True)
@@ -420,7 +437,12 @@ def get_saved_words():
 
 
 def get_audio(text, language):
-    """Get or generate audio for text+language"""
+    """
+    Get or generate audio for text+language.
+
+    Returns audio with CDN-friendly cache headers for Cloudflare.
+    Audio is immutable (same text+language always produces same audio).
+    """
     conn = None
     cur = None
     try:
@@ -437,14 +459,33 @@ def get_audio(text, language):
         """, (text, language))
 
         result = cur.fetchone()
+        content_type = result['content_type'] if result else "audio/mpeg"
+
+        # Create ETag from text+language hash for cache validation
+        import hashlib
+        etag = hashlib.md5(f"{text}:{language}".encode()).hexdigest()
+
+        audio_size = len(audio_data)
+        logger.info(f"Serving audio: text='{text}', lang={language}, size={audio_size} bytes")
 
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-        return jsonify({
+
+        # Return JSON response with Cloudflare-optimized cache headers
+        response = jsonify({
             "audio_data": audio_base64,
-            "content_type": result['content_type'] if result else "audio/mpeg",
+            "content_type": content_type,
             "created_at": result['created_at'].isoformat() if result else None,
             "generated": True
         })
+
+        # Add cache headers (same as video endpoint)
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        response.headers['CDN-Cache-Control'] = 'public, max-age=31536000, immutable'
+        response.headers['Cloudflare-CDN-Cache-Control'] = 'public, max-age=31536000'
+        response.headers['ETag'] = f'"{etag}"'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+
+        return response
 
     except Exception as e:
         logger.error(f"Error getting audio: {str(e)}", exc_info=True)

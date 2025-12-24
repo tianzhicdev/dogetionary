@@ -685,23 +685,23 @@ def generate_question_with_llm(
     # LLM always returns correct answer as "A", we randomize it here
     if question_type in ['mc_definition', 'mc_word', 'mc_def_native', 'fill_blank']:
         if 'options' in question_data and len(question_data['options']) == 2:
-            # Extract option texts (LLM returns: A=correct, B=incorrect)
+            # Extract option objects (LLM returns: A=correct, B=incorrect)
             option_a = question_data['options'][0]
             option_b = question_data['options'][1]
 
             # 50/50 chance to swap positions
             if random.random() < 0.5:
-                # Keep correct answer as A
+                # Keep correct answer as A - preserve all fields
                 question_data['options'] = [
-                    {'id': 'A', 'text': option_a['text']},
-                    {'id': 'B', 'text': option_b['text']}
+                    {**option_a, 'id': 'A'},
+                    {**option_b, 'id': 'B'}
                 ]
                 question_data['correct_answer'] = 'A'
             else:
-                # Swap: correct answer becomes B
+                # Swap: correct answer becomes B - preserve all fields
                 question_data['options'] = [
-                    {'id': 'A', 'text': option_b['text']},
-                    {'id': 'B', 'text': option_a['text']}
+                    {**option_b, 'id': 'A'},
+                    {**option_a, 'id': 'B'}
                 ]
                 question_data['correct_answer'] = 'B'
 

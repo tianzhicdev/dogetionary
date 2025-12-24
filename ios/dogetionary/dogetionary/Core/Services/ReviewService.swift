@@ -264,4 +264,34 @@ class ReviewService: BaseNetworkService {
             completion: completion
         )
     }
+
+    func getForgettingCurvesBatch(wordIds: [Int], completion: @escaping (Result<BatchForgettingCurveResponse, Error>) -> Void) {
+        let userID = UserManager.shared.getUserID()
+        guard let url = URL(string: "\(baseURL)/v3/words/batch/forgetting-curves") else {
+            logger.error("Invalid URL for batch forgetting curves endpoint")
+            completion(.failure(DictionaryError.invalidURL))
+            return
+        }
+
+        let requestBody: [String: Any] = [
+            "user_id": userID,
+            "word_ids": wordIds
+        ]
+
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            logger.error("Failed to encode batch forgetting curves request body")
+            completion(.failure(DictionaryError.decodingError(NSError(domain: "JSONEncoding", code: -1))))
+            return
+        }
+
+        logger.info("Fetching \(wordIds.count) forgetting curves in batch for user: \(userID)")
+
+        performNetworkRequest(
+            url: url,
+            method: "POST",
+            body: bodyData,
+            responseType: BatchForgettingCurveResponse.self,
+            completion: completion
+        )
+    }
 }

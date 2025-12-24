@@ -83,6 +83,10 @@ class DictionaryService {
         ReviewService.shared.getForgettingCurve(wordId: wordId, completion: completion)
     }
 
+    func getForgettingCurvesBatch(wordIds: [Int], completion: @escaping (Result<BatchForgettingCurveResponse, Error>) -> Void) {
+        ReviewService.shared.getForgettingCurvesBatch(wordIds: wordIds, completion: completion)
+    }
+
     // MARK: - Schedule Service Delegation
 
     func getTodaySchedule(completion: @escaping (Result<DailyScheduleEntry, Error>) -> Void) {
