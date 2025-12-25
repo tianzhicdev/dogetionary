@@ -71,7 +71,7 @@ class ReviewViewModel: ObservableObject {
 
                     // If there's practice available, ensure the queue is loading
                     if status.has_practice || self.questionQueue.hasQuestions {
-                        if !self.questionQueue.hasQuestions && !self.questionQueue.isFetching {
+                        if !self.questionQueue.hasQuestions && self.questionQueue.activeFetchCount == 0 {
                             self.questionQueue.forceRefresh()
                         }
                     }

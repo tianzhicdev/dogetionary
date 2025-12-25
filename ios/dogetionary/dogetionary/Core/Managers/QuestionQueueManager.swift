@@ -8,24 +8,29 @@
 
 import SwiftUI
 import os
+import Combine
 
 /// Singleton manager for review question queue
 class QuestionQueueManager: ObservableObject {
     static let shared = QuestionQueueManager()
 
     // MARK: - Configuration
-    private let targetQueueSize = 10  // Always maintain 10 questions
+    private let targetQueueSize = 20  // Always maintain 20 questions
+    private let maxConcurrentFetches = 5  // Allow up to 5 simultaneous API calls
     private let logger = Logger(subsystem: "com.dogetionary", category: "QuestionQueue")
 
     // MARK: - Published State
     @Published private(set) var questionQueue: [BatchReviewQuestion] = []
-    @Published private(set) var isFetching = false
+    @Published private(set) var activeFetchCount = 0  // Track concurrent fetches
     @Published private(set) var hasMore = true
     @Published private(set) var totalAvailable = 0
     @Published private(set) var lastError: String?
 
     // Developer mode - controlled by DebugConfig
     @Published var debugMode = DebugConfig.enableDebugLogging
+
+    // MARK: - Private State
+    private var cancellables = Set<AnyCancellable>()
 
     private init() {
         logger.info("QuestionQueueManager initialized")
@@ -75,7 +80,7 @@ class QuestionQueueManager: ObservableObject {
         questionQueue.insert(contentsOf: questions, at: 0)
 
         // Prefetch videos for video_mc questions (same as addToQueue)
-        prefetchVideosFromQueue(questions)
+//        prefetchVideosFromQueue(questions)
 
         logger.info("Prepended \(questions.count) questions to queue, new size: \(self.questionQueue.count)")
     }
@@ -105,25 +110,41 @@ class QuestionQueueManager: ObservableObject {
         }
     }
 
-    /// Background refill to maintain target queue size - ONE-BY-ONE
+    /// Background refill to maintain target queue size - CONCURRENT (up to 5 at once)
     func refillIfNeeded() {
-        guard !isFetching else {
-            logger.debug("Already fetching, skipping refill")
-            return
-        }
-
-        guard questionQueue.count < targetQueueSize else {
+        // Calculate how many questions we need
+        let neededQuestions = targetQueueSize - questionQueue.count
+        guard neededQuestions > 0 else {
             logger.debug("Queue size \(self.questionQueue.count) >= target \(self.targetQueueSize), skipping refill")
             return
         }
 
-        logger.info("Refilling queue: current=\(self.questionQueue.count), target=\(self.targetQueueSize)")
-        // Fetch ONE question at a time
-        fetchNextQuestion { [weak self] success in
-            guard let self = self, success else { return }
-            // Continue fetching until target size (backend always has questions via 4-tier fallback)
-            if self.questionQueue.count < self.targetQueueSize {
-                self.refillIfNeeded()
+        // Calculate how many new fetches we can start (respect max concurrency)
+        let availableSlots = maxConcurrentFetches - activeFetchCount
+        guard availableSlots > 0 else {
+            logger.debug("Already at max concurrency (\(self.activeFetchCount)/\(self.maxConcurrentFetches)), skipping refill")
+            return
+        }
+
+        // Start multiple fetches in parallel (up to available slots)
+        let fetchesToStart = min(neededQuestions, availableSlots)
+        logger.info("Starting \(fetchesToStart) concurrent fetches (active: \(self.activeFetchCount), needed: \(neededQuestions))")
+
+        for _ in 0..<fetchesToStart {
+            activeFetchCount += 1
+
+            fetchNextQuestion { [weak self] success in
+                guard let self = self else { return }
+
+                // Decrement counter on completion (success or failure)
+                DispatchQueue.main.async {
+                    self.activeFetchCount -= 1
+
+                    // After each fetch completes, check if we need more
+                    if self.questionQueue.count < self.targetQueueSize {
+                        self.refillIfNeeded()
+                    }
+                }
             }
         }
     }
@@ -166,17 +187,12 @@ class QuestionQueueManager: ObservableObject {
 
     // MARK: - Private Methods
 
-    /// Fetch the next single question (cache-first, then API)
+    /// Fetch the next single question and download video if needed before adding to queue
     private func fetchNextQuestion(completion: ((Bool) -> Void)? = nil) {
-        guard !isFetching else {
-            completion?(false)
-            return
-        }
+        // No guard needed - concurrency controlled by activeFetchCount in refillIfNeeded()
+        // Each call increments activeFetchCount before calling this method
 
-        DispatchQueue.main.async {
-            self.isFetching = true
-            self.lastError = nil
-        }
+        lastError = nil
 
         let excludeWords = questionQueue.map { $0.word }
         let userManager = UserManager.shared
@@ -188,7 +204,7 @@ class QuestionQueueManager: ObservableObject {
         DictionaryService.shared.getReviewWordsBatch(count: 1, excludeWords: excludeWords) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.isFetching = false
+                // activeFetchCount decremented in refillIfNeeded() completion callback
 
                 switch result {
                 case .success(let response):
@@ -202,11 +218,14 @@ class QuestionQueueManager: ObservableObject {
                         )
                     }
 
-                    self.addToQueue(response.questions)
+                    // OPTION B: Download video BEFORE adding to queue (if video question)
+                    self.downloadVideoIfNeededThenAddToQueue(
+                        questions: response.questions,
+                        completion: completion
+                    )
+
                     self.hasMore = response.has_more
                     self.totalAvailable = response.total_available
-                    self.logger.info("Fetched 1 question, queue size: \(self.questionQueue.count), has_more: \(response.has_more)")
-                    completion?(true)
 
                 case .failure(let error):
                     self.lastError = error.localizedDescription
@@ -217,6 +236,72 @@ class QuestionQueueManager: ObservableObject {
         }
     }
 
+    /// Download video if needed, THEN add question to queue
+    /// This ensures videos are ready before questions become available
+    private func downloadVideoIfNeededThenAddToQueue(
+        questions: [BatchReviewQuestion],
+        completion: ((Bool) -> Void)?
+    ) {
+        guard let question = questions.first else {
+            completion?(true)
+            return
+        }
+
+        // Check if this is a video question
+        if question.question.question_type == "video_mc",
+           let videoId = question.question.video_id {
+
+            // Check if video is already cached
+            let state = VideoService.shared.getDownloadState(videoId: videoId)
+
+            switch state {
+            case .cached(let url, _, _):
+                // Already cached - ensure AVPlayer is created, then add to queue
+                logger.info("Video \(videoId) already cached, ensuring player exists")
+                AVPlayerManager.shared.createPlayer(videoId: videoId, url: url)
+                addToQueue([question])
+                logger.info("Fetched 1 question (video cached), queue size: \(self.questionQueue.count)")
+                completion?(true)
+
+            case .downloading, .notStarted, .failed:
+                // Need to download - wait for completion before adding to queue
+                logger.info("Video \(videoId) needs download, waiting before adding to queue...")
+
+                VideoService.shared.fetchVideo(videoId: videoId)
+                    .receive(on: DispatchQueue.main)
+                    .sink(
+                        receiveCompletion: { [weak self] result in
+                            guard let self = self else { return }
+
+                            if case .failure(let error) = result {
+                                self.logger.error("Failed to download video \(videoId): \(error.localizedDescription)")
+                                // Add to queue anyway - VideoQuestionView will handle error
+                                self.addToQueue([question])
+                                self.logger.info("Fetched 1 question (video failed), queue size: \(self.questionQueue.count)")
+                                completion?(false)
+                            }
+                        },
+                        receiveValue: { [weak self] url in
+                            guard let self = self else { return }
+
+                            // Video downloaded successfully - AVPlayer already created by VideoService
+                            self.logger.info("✓ Video \(videoId) downloaded, adding to queue")
+                            self.addToQueue([question])
+                            self.logger.info("Fetched 1 question (video ready), queue size: \(self.questionQueue.count)")
+                            completion?(true)
+                        }
+                    )
+                    .store(in: &self.cancellables)
+            }
+
+        } else {
+            // Non-video question - add immediately
+            addToQueue([question])
+            logger.info("Fetched 1 question (non-video), queue size: \(self.questionQueue.count)")
+            completion?(true)
+        }
+    }
+
     private func addToQueue(_ questions: [BatchReviewQuestion]) {
         for question in questions {
             guard !questionQueue.contains(where: { $0.word == question.word }) else {
@@ -224,27 +309,6 @@ class QuestionQueueManager: ObservableObject {
                 continue
             }
             questionQueue.append(question)
-        }
-
-        // Prefetch videos for video_mc questions
-        prefetchVideosFromQueue(questions)
-    }
-
-    private func prefetchVideosFromQueue(_ questions: [BatchReviewQuestion]) {
-        // Extract video IDs in order from the question queue
-        let videoIds = questions.compactMap { question -> Int? in
-            guard question.question.question_type == "video_mc",
-                  let videoId = question.question.video_id else {
-                return nil
-            }
-            return videoId
-        }
-
-        if !videoIds.isEmpty {
-            logger.info("Prefetching \(videoIds.count) videos in background")
-
-            // Download videos (non-blocking, sequential, returns immediately)
-            VideoService.shared.preloadVideos(videoIds: videoIds)
         }
     }
 }

@@ -181,10 +181,6 @@ struct ReviewView: View {
         .refreshable {
             await viewModel.refreshPracticeStatus()
         }
-        // Trigger queue refill when needed (UI updates automatically via computed property)
-        .onChange(of: queueManager.queueCount) { _, _ in
-            queueManager.refillIfNeeded()
-        }
         // Handle test settings changes via AppState
         .onChange(of: appState.testSettingsChanged) { _, changed in
             if changed {

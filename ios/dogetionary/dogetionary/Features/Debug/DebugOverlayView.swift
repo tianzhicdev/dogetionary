@@ -189,7 +189,7 @@ struct QuestionQueueDebugTab: View {
                 .cornerRadius(8)
 
                 // Queue status
-                if queueManager.isFetching {
+                if queueManager.activeFetchCount > 0 {
                     HStack {
                         ProgressView()
                             .scaleEffect(0.8)
@@ -558,7 +558,7 @@ struct LocalStateDebugTab: View {
                 StateSection(title: "QuestionQueue") {
                     StateRow(key: "Queue Count", value: "\(queueManager.queueCount)")
                     StateRow(key: "Has More", value: "\(queueManager.hasMore)")
-                    StateRow(key: "Is Fetching", value: "\(queueManager.isFetching)")
+                    StateRow(key: "Active Fetches", value: "\(queueManager.activeFetchCount)/5")
                     StateRow(key: "Total Available", value: "\(queueManager.totalAvailable)")
                     StateRow(key: "Debug Mode", value: "\(queueManager.debugMode)")
                 }

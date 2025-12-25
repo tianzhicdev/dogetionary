@@ -7,7 +7,6 @@
 
 import SwiftUI
 import AVKit
-import Combine
 
 struct VideoQuestionView: View {
     let question: ReviewQuestion
@@ -28,7 +27,6 @@ struct VideoQuestionView: View {
     @State private var isLoading = true
     @State private var loadError: String?
     @State private var showWord = false
-    @State private var cancellables = Set<AnyCancellable>()
 
     var body: some View {
         VStack(spacing: vStackSpacing) {
@@ -133,7 +131,8 @@ struct VideoQuestionView: View {
             return
         }
 
-        // STEP 1: Check if player already pre-created (instant!)
+        // With Option B implementation, videos are GUARANTEED to be downloaded before
+        // questions are added to queue. Just get the pre-created player.
         if let preCreatedPlayer = AVPlayerManager.shared.getPlayer(videoId: videoId) {
             print("✓ VideoQuestionView: Using pre-created player for video \(videoId)")
             player = preCreatedPlayer
@@ -141,60 +140,29 @@ struct VideoQuestionView: View {
             return
         }
 
-        // STEP 2: Player not ready yet, check video download state
-        let state = VideoService.shared.getDownloadState(videoId: videoId)
+        // Fallback: Player not found (should not happen with Option B, but handle gracefully)
+        // This could only happen if:
+        // 1. Video download failed but question was added to queue anyway
+        // 2. Player was removed from pool unexpectedly
+        print("⚠️ VideoQuestionView: Player not found for video \(videoId), attempting recovery...")
 
+        let state = VideoService.shared.getDownloadState(videoId: videoId)
         switch state {
         case .cached(let url, _, _):
-            // Video cached but player not created yet - create now
-            print("✓ VideoQuestionView: Video \(videoId) cached, creating player")
-            createPlayerNow(videoId: videoId, url: url)
+            // Video is cached but player missing - create now
+            print("VideoQuestionView: Creating player for cached video \(videoId)")
+            let newPlayer = AVPlayer(url: url)
+            newPlayer.isMuted = false
+            newPlayer.automaticallyWaitsToMinimizeStalling = false
+            player = newPlayer
+            isLoading = false
 
-        case .downloading(let progress, _, _, _):
-            // Video downloading - wait for it
-            print("VideoQuestionView: Video \(videoId) downloading (\(Int(progress * 100))%), waiting...")
-            waitForVideoAndCreatePlayer(videoId: videoId)
-
-        case .failed(let error, let retryCount, _):
-            // Download failed - try to fetch (will retry)
-            print("VideoQuestionView: Video \(videoId) download failed (\(retryCount) retries): \(error)")
-            waitForVideoAndCreatePlayer(videoId: videoId)
-
-        case .notStarted:
-            // Not downloaded yet - trigger download
-            print("VideoQuestionView: Video \(videoId) not started, triggering download")
-            waitForVideoAndCreatePlayer(videoId: videoId)
+        default:
+            // Video not ready - this is an error state with Option B
+            loadError = "Video not ready (unexpected state)"
+            isLoading = false
+            print("❌ VideoQuestionView: Video \(videoId) not ready - this should not happen with Option B")
         }
-    }
-
-    private func createPlayerNow(videoId: Int, url: URL) {
-        let newPlayer = AVPlayer(url: url)
-        newPlayer.isMuted = false
-        newPlayer.automaticallyWaitsToMinimizeStalling = false
-
-        player = newPlayer
-        isLoading = false
-
-        print("✓ VideoQuestionView: Created player on-demand for video \(videoId)")
-    }
-
-    private func waitForVideoAndCreatePlayer(videoId: Int) {
-        VideoService.shared.fetchVideo(videoId: videoId)
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { [self] completion in
-                    if case .failure(let error) = completion {
-                        loadError = error.localizedDescription
-                        isLoading = false
-                        print("❌ VideoQuestionView: Error loading video \(videoId): \(error)")
-                    }
-                },
-                receiveValue: { [self] url in
-                    print("✓ VideoQuestionView: Video \(videoId) downloaded, creating player")
-                    createPlayerNow(videoId: videoId, url: url)
-                }
-            )
-            .store(in: &cancellables)
     }
 }
 

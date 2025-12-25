@@ -37,9 +37,6 @@ def get_forgetting_curves_batch():
         if not isinstance(word_ids, list) or len(word_ids) == 0:
             return jsonify({"error": "word_ids must be non-empty array"}), 400
 
-        if len(word_ids) > 200:
-            return jsonify({"error": "Maximum 200 words per batch"}), 400
-
         # Fetch all words and reviews in ONE optimized query
         from utils.database import db_fetch_all
 

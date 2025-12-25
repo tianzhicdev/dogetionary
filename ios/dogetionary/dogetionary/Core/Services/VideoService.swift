@@ -128,7 +128,7 @@ class VideoService: ObservableObject {
     private let baseURL: String
     private let cacheDirectory: URL
     private let maxCacheSizeBytes: Int = 500 * 1024 * 1024  // 500 MB
-    private let maxConcurrentDownloads = 1  // Sequential download: one-by-one
+    private let maxConcurrentDownloads = 5  // Concurrent downloads: up to 5 at once
     private let maxRetries = 3
     private let retryDelays: [TimeInterval] = [1.0, 2.0, 4.0]
 

@@ -53,7 +53,7 @@ class AnalyticsManager: ObservableObject {
     }
 
     private func sendAnalytics(payload: [String: Any]) async {
-        guard let url = URL(string: "\(baseURL)/analytics/track") else {
+        guard let url = URL(string: "\(baseURL)/v3/analytics/track") else {
             logger.error("Invalid analytics URL")
             return
         }
