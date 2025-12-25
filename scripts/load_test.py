@@ -118,14 +118,21 @@ class PracticeModeUser(HttpUser):
             if response.status_code == 200:
                 try:
                     data = response.json()
-                    if data.get("questions"):
-                        self.current_questions = data["questions"]
+                    if data.get("questions") and len(data["questions"]) > 0:
+                        # Add new questions to our list (keep last 10 for variety)
+                        new_questions = data["questions"]
+                        self.current_questions.extend(new_questions)
+                        self.current_questions = self.current_questions[-10:]
+
                         # If video question, fetch video
-                        for q in self.current_questions:
-                            if q.get("question", {}).get("video_id"):
-                                self.get_video(q["question"]["video_id"])
+                        for q in new_questions:
+                            question_obj = q.get("question", {})
+                            video_id = question_obj.get("video_id")
+                            if video_id:
+                                self.get_video(video_id)
                     response.success()
                 except Exception as e:
+                    logger.error(f"Failed to parse review batch response: {e}")
                     response.failure(f"Failed to parse response: {e}")
             else:
                 response.failure(f"Status code: {response.status_code}")
@@ -141,20 +148,48 @@ class PracticeModeUser(HttpUser):
             # Skip if no questions fetched yet
             return
 
-        # Simulate answering a question
+        # Only submit for questions we actually received
         question = random.choice(self.current_questions)
-        word = question.get("word", "test")
+
+        # Extract word - handle both string and dict formats
+        word = question.get("word")
+        if not word:
+            # Skip if no valid word
+            logger.warning(f"No word found in question: {question}")
+            return
 
         # Randomly correct or incorrect
         is_correct = random.choice([True, False])
+
+        # Get question type and options from the question object
+        question_obj = question.get("question", {})
+        question_type = question_obj.get("question_type", "mc_definition")
+
+        # For multiple choice questions, we need to provide a valid response
+        # The API expects "response" field, not "correct"
+        options = question_obj.get("options", [])
+        if options:
+            # Pick the correct answer if is_correct=True, otherwise pick a random wrong one
+            if is_correct:
+                # Find correct answer
+                response = next((opt for opt in options if opt.get("is_correct")), options[0] if options else {})
+            else:
+                # Pick a wrong answer
+                wrong_answers = [opt for opt in options if not opt.get("is_correct")]
+                response = random.choice(wrong_answers) if wrong_answers else options[0]
+
+            # Extract just the text from the response option
+            response_text = response.get("text", "") if isinstance(response, dict) else str(response)
+        else:
+            # Fallback if no options available
+            response_text = word if is_correct else "wrong_answer"
 
         payload = {
             "user_id": self.user_id,
             "word": word,
             "learning_language": self.learning_language,
             "native_language": self.native_language,
-            "correct": is_correct,
-            "question_type": question.get("question", {}).get("question_type", "mc_definition")
+            "response": response_text
         }
 
         with self.client.post(
@@ -165,6 +200,14 @@ class PracticeModeUser(HttpUser):
         ) as response:
             if response.status_code == 200:
                 response.success()
+            elif response.status_code == 400:
+                # Log the error details for debugging
+                try:
+                    error_detail = response.json()
+                    logger.error(f"400 error submitting review: {error_detail}, payload: {payload}")
+                except:
+                    logger.error(f"400 error submitting review, payload: {payload}, response: {response.text[:200]}")
+                response.failure(f"Status code: 400 - {response.text[:100]}")
             else:
                 response.failure(f"Status code: {response.status_code}")
 

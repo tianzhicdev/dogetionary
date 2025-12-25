@@ -16,10 +16,15 @@ class NetworkClient {
     static let shared = NetworkClient()
 
     private let logger = Logger(subsystem: "com.dogetionary", category: "NetworkClient")
-    private let session = URLSession.shared
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 10.0     // 10 seconds for request timeout
+        config.timeoutIntervalForResource = 10.0    // 10 seconds for total resource timeout
+        return URLSession(configuration: config)
+    }()
 
     private init() {
-        logger.info("NetworkClient initialized")
+        logger.info("NetworkClient initialized with 10s timeout")
     }
 
     // MARK: - Data Task (Completion Handler)

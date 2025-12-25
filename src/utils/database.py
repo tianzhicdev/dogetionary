@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any, Union
 import logging
 import atexit
 import time
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://dogeuser:dogepass@localho
 
 # Global connection pool instance
 _connection_pool = None
+_health_monitor_thread = None
+_health_monitor_shutdown = threading.Event()
 
 class PooledConnectionWrapper:
     """
@@ -147,8 +150,8 @@ def _initialize_connection_pool():
         user, password, host, port, dbname = match.groups()
 
         _connection_pool = pool.ThreadedConnectionPool(
-            minconn=10,     # Minimum connections to maintain (increased from 5)
-            maxconn=50,     # Maximum connections allowed (increased from 20 for 100+ users)
+            minconn=20,     # Minimum connections to maintain (increased for better availability)
+            maxconn=100,    # Maximum connections allowed (doubled to handle concurrent load)
             user=user,
             password=password,
             host=host,
@@ -157,10 +160,13 @@ def _initialize_connection_pool():
             cursor_factory=RealDictCursor
         )
 
-        logger.info("✅ Database connection pool initialized (min=10, max=50)")
+        logger.info("✅ Database connection pool initialized (min=20, max=100)")
 
         # Register cleanup on exit
         atexit.register(_close_connection_pool)
+
+        # Start background health monitor
+        _start_health_monitor()
 
     except Exception as e:
         logger.error(f"Failed to initialize connection pool: {str(e)}", exc_info=True)
@@ -186,9 +192,117 @@ def _update_pool_metrics():
     except Exception as e:
         logger.debug(f"Failed to update pool metrics: {str(e)}")
 
+def _connection_pool_health_monitor():
+    """
+    Background thread that periodically monitors and cleans up the connection pool.
+
+    Runs every 60 seconds and:
+    1. Tests a sample of idle connections
+    2. Closes any dead connections found
+    3. Logs pool health statistics
+    """
+    global _connection_pool, _health_monitor_shutdown
+
+    logger.info("🔍 Connection pool health monitor started")
+
+    while not _health_monitor_shutdown.is_set():
+        try:
+            # Wait 60 seconds, but check shutdown flag frequently
+            if _health_monitor_shutdown.wait(timeout=60):
+                break  # Shutdown requested
+
+            if _connection_pool is None:
+                continue
+
+            # Get pool statistics
+            active_count = len(getattr(_connection_pool, '_used', {}))
+            max_count = _connection_pool.maxconn
+            idle_count = max_count - active_count
+
+            # Test a few idle connections to find dead ones
+            # We don't want to test all connections as that would be expensive
+            dead_connection_count = 0
+            connections_to_test = min(5, idle_count)  # Test up to 5 idle connections
+
+            for _ in range(connections_to_test):
+                try:
+                    # Get a connection
+                    test_conn = _connection_pool.getconn()
+
+                    # Test if it's alive
+                    try:
+                        cur = test_conn.cursor()
+                        cur.execute("SELECT 1")
+                        cur.close()
+                        # Connection is good, return it
+                        _connection_pool.putconn(test_conn)
+                    except:
+                        # Connection is dead, discard it
+                        dead_connection_count += 1
+                        try:
+                            _connection_pool.putconn(test_conn, close=True)
+                        except:
+                            pass
+                except:
+                    # Pool might be exhausted, skip this iteration
+                    break
+
+            # Log pool health status
+            if dead_connection_count > 0:
+                logger.warning(f"⚠️ Connection pool health check: Found and removed {dead_connection_count} dead connections")
+                if METRICS_ENABLED:
+                    db_connection_errors_total.labels(error_type='dead_connection_removed').inc(dead_connection_count)
+
+            # Log pool statistics periodically
+            utilization = (active_count / max_count * 100) if max_count > 0 else 0
+            logger.debug(f"Connection pool status: {active_count}/{max_count} active ({utilization:.1f}% utilization), {idle_count} idle")
+
+            # Update metrics
+            _update_pool_metrics()
+
+        except Exception as e:
+            logger.error(f"Error in connection pool health monitor: {str(e)}", exc_info=True)
+            # Continue monitoring despite errors
+
+    logger.info("🔍 Connection pool health monitor stopped")
+
+def _start_health_monitor():
+    """Start the connection pool health monitoring background thread."""
+    global _health_monitor_thread, _health_monitor_shutdown
+
+    if _health_monitor_thread is not None and _health_monitor_thread.is_alive():
+        return  # Already running
+
+    _health_monitor_shutdown.clear()
+    _health_monitor_thread = threading.Thread(
+        target=_connection_pool_health_monitor,
+        name="ConnectionPoolHealthMonitor",
+        daemon=True  # Daemon thread will automatically exit when main program exits
+    )
+    _health_monitor_thread.start()
+    logger.info("✅ Connection pool health monitor thread started")
+
+def _stop_health_monitor():
+    """Stop the connection pool health monitoring background thread."""
+    global _health_monitor_thread, _health_monitor_shutdown
+
+    if _health_monitor_thread is None or not _health_monitor_thread.is_alive():
+        return  # Not running
+
+    logger.info("Stopping connection pool health monitor...")
+    _health_monitor_shutdown.set()
+    _health_monitor_thread.join(timeout=5)  # Wait up to 5 seconds for thread to finish
+    _health_monitor_thread = None
+    logger.info("✅ Connection pool health monitor stopped")
+
 def _close_connection_pool():
     """Close all connections in the pool on application shutdown."""
     global _connection_pool
+
+    # Stop health monitor first
+    _stop_health_monitor()
+
+    # Then close the pool
     if _connection_pool is not None:
         _connection_pool.closeall()
         logger.info("✅ Database connection pool closed")
@@ -222,12 +336,21 @@ def validate_language(lang: str) -> bool:
     """Validate if language code is supported"""
     return lang in SUPPORTED_LANGUAGES
 
-def get_db_connection():
+def get_db_connection(max_retries: int = 3):
     """
-    Get a database connection from the connection pool.
+    Get a database connection from the connection pool with validation.
+
+    Implements test-on-borrow: validates connection is alive before returning it.
+    If connection is dead, discards it and retries up to max_retries times.
+
+    Args:
+        max_retries: Maximum number of retry attempts for getting a valid connection (default: 3)
 
     Returns:
         PooledConnectionWrapper: A wrapped connection that automatically returns to pool on close()
+
+    Raises:
+        Exception: If unable to get a valid connection after max_retries attempts
 
     Note:
         Connections must be returned to the pool by calling conn.close()
@@ -241,30 +364,59 @@ def get_db_connection():
 
     start_time = time.time() if METRICS_ENABLED else None
 
-    try:
-        raw_conn = _connection_pool.getconn()
+    for attempt in range(max_retries):
+        try:
+            raw_conn = _connection_pool.getconn()
 
-        # Track connection wait time
-        if METRICS_ENABLED and start_time is not None:
-            wait_time = time.time() - start_time
-            db_connection_wait_seconds.observe(wait_time)
+            # Track connection wait time
+            if METRICS_ENABLED and start_time is not None:
+                wait_time = time.time() - start_time
+                db_connection_wait_seconds.observe(wait_time)
 
-        # Update pool metrics after checkout
-        _update_pool_metrics()
+            # CRITICAL: Validate connection is alive before using it
+            # This prevents using corrupted connections from the pool
+            try:
+                cur = raw_conn.cursor()
+                cur.execute("SELECT 1")
+                cur.close()
 
-        # Wrap connection so close() returns it to the pool
-        return PooledConnectionWrapper(raw_conn, _connection_pool)
+                # Connection is valid - update metrics and return it
+                _update_pool_metrics()
+                return PooledConnectionWrapper(raw_conn, _connection_pool)
 
-    except pool.PoolError as e:
-        logger.error(f"Connection pool exhausted: {str(e)}", exc_info=True)
-        if METRICS_ENABLED:
-            db_connection_errors_total.labels(error_type='pool_exhausted').inc()
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get connection from pool: {str(e)}", exc_info=True)
-        if METRICS_ENABLED:
-            db_connection_errors_total.labels(error_type='getconn_failed').inc()
-        raise
+            except Exception as validation_error:
+                # Connection is dead/corrupted - discard it and try again
+                logger.warning(f"Connection validation failed (attempt {attempt + 1}/{max_retries}): {validation_error}")
+                if METRICS_ENABLED:
+                    db_connection_errors_total.labels(error_type='validation_failed').inc()
+
+                # Close and discard the bad connection (don't return to pool)
+                try:
+                    _connection_pool.putconn(raw_conn, close=True)
+                except:
+                    pass
+
+                # If this was the last attempt, raise the error
+                if attempt == max_retries - 1:
+                    logger.error(f"Failed to get valid connection after {max_retries} attempts")
+                    raise
+
+                # Otherwise, retry
+                continue
+
+        except pool.PoolError as e:
+            logger.error(f"Connection pool exhausted: {str(e)}", exc_info=True)
+            if METRICS_ENABLED:
+                db_connection_errors_total.labels(error_type='pool_exhausted').inc()
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get connection from pool: {str(e)}", exc_info=True)
+            if METRICS_ENABLED:
+                db_connection_errors_total.labels(error_type='getconn_failed').inc()
+            raise
+
+    # Should never reach here due to raise in loop, but just in case
+    raise Exception(f"Failed to get valid connection after {max_retries} attempts")
 
 @contextmanager
 def db_cursor(commit: bool = False):

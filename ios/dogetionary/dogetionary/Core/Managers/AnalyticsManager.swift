@@ -61,12 +61,13 @@ class AnalyticsManager: ObservableObject {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: payload)
 
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = jsonData
-
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let headers = ["Content-Type": "application/json"]
+            let (_, response) = try await NetworkClient.shared.data(
+                from: url,
+                method: "POST",
+                headers: headers,
+                body: jsonData
+            )
 
             if let httpResponse = response as? HTTPURLResponse {
                 if httpResponse.statusCode == 200 {

@@ -656,7 +656,7 @@ struct SettingsView: View {
             return
         }
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        NetworkClient.shared.dataTask(url: url) { data, response, error in
             if let error = error {
                 Self.logger.error("Error fetching all vocabulary counts: \(error.localizedDescription, privacy: .public)")
                 return
