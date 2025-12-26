@@ -13,8 +13,13 @@ struct EnhancedQuestionView: View {
     let onImmediateFeedback: ((Bool) -> Void)?
     let onAnswer: (Bool) -> Void
 
+    @State private var showReportDialog = false
+    @State private var showReportConfirmation = false
+    @State private var reportMessage = ""
+
     var body: some View {
-        VStack {
+        ZStack(alignment: .topTrailing) {
+            VStack {
             switch question.question_type {
             case "mc_definition", "mc_word", "mc_def_native":
                 MultipleChoiceQuestionView(
@@ -64,6 +69,64 @@ struct EnhancedQuestionView: View {
                 Text("Loading...")
                     .font(.title2)
                     .foregroundColor(.secondary)
+            }
+            }
+
+            // Report Content Button (top-right corner)
+            Button(action: {
+                showReportDialog = true
+            }) {
+                Image(systemName: "flag")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .padding(12)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.2))
+                    )
+            }
+            .padding(.top, 16)
+            .padding(.trailing, 16)
+            .confirmationDialog(
+                "Report Content",
+                isPresented: $showReportDialog,
+                titleVisibility: .visible
+            ) {
+                ForEach(ReportType.allCases, id: \.self) { reportType in
+                    Button(reportType.displayText) {
+                        submitReport(reportType: reportType)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("What issue are you reporting?")
+            }
+        }
+        .alert("Report Submitted", isPresented: $showReportConfirmation) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(reportMessage)
+        }
+    }
+
+    private func submitReport(reportType: ReportType) {
+        let userManager = UserManager.shared
+
+        DictionaryService.shared.reportContent(
+            word: question.word,
+            learningLanguage: userManager.learningLanguage,
+            nativeLanguage: userManager.nativeLanguage,
+            questionType: question.question_type,
+            videoId: question.video_id,
+            reportType: reportType
+        ) { result in
+            switch result {
+            case .success(let response):
+                reportMessage = response.message
+                showReportConfirmation = true
+            case .failure:
+                reportMessage = "Failed to submit report. Please try again."
+                showReportConfirmation = true
             }
         }
     }

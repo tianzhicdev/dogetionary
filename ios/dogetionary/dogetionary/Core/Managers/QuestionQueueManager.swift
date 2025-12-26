@@ -31,6 +31,15 @@ class QuestionQueueManager: ObservableObject {
 
     // MARK: - Private State
     private var cancellables = Set<AnyCancellable>()
+    private var searchGroups: [String: SearchGroup] = [:]
+
+    /// Track questions from a search to maintain grouped insertion
+    struct SearchGroup {
+        let word: String
+        var insertedVideoIds: [Int]  // Video IDs in insertion order
+        let timestamp: Date
+        var totalExpected: Int
+    }
 
     private init() {
         logger.info("QuestionQueueManager initialized")
@@ -72,17 +81,192 @@ class QuestionQueueManager: ObservableObject {
         return questionQueue.count
     }
 
-    /// Prepend questions to the FRONT of the queue (for instant video practice)
-    func prependQuestions(_ questions: [BatchReviewQuestion]) {
-        guard !questions.isEmpty else { return }
+    /// Stream prepend questions - insert as videos become ready (streaming approach)
+    /// First ready question is prepended, subsequent ones insert after their group
+    func streamPrependQuestions(
+        _ questions: [BatchReviewQuestion],
+        searchWord: String,
+        onFirstReady: @escaping () -> Void,
+        onProgress: @escaping (Int, Int) -> Void,
+        onComplete: @escaping () -> Void
+    ) {
+        guard !questions.isEmpty else {
+            onComplete()
+            return
+        }
 
-        // Insert at beginning
-        questionQueue.insert(contentsOf: questions, at: 0)
+        logger.info("Starting streaming prepend for '\(searchWord)': \(questions.count) questions")
 
-        // Prefetch videos for video_mc questions (same as addToQueue)
-//        prefetchVideosFromQueue(questions)
+        // Initialize search group
+        searchGroups[searchWord] = SearchGroup(
+            word: searchWord,
+            insertedVideoIds: [],
+            timestamp: Date(),
+            totalExpected: questions.count
+        )
 
-        logger.info("Prepended \(questions.count) questions to queue, new size: \(self.questionQueue.count)")
+        var readyCount = 0
+        var firstQuestionPrepended = false
+        let totalCount = questions.count
+
+        // Start parallel downloads for all video questions
+        for question in questions {
+            guard question.question.question_type == "video_mc",
+                  let videoId = question.question.video_id else {
+                // Non-video question - insert immediately
+                DispatchQueue.main.async { [weak self] in
+                    self?.insertAfterSearchGroup(question, searchWord: searchWord)
+                    readyCount += 1
+                    onProgress(readyCount, totalCount)
+
+                    if !firstQuestionPrepended {
+                        firstQuestionPrepended = true
+                        onFirstReady()
+                    }
+
+                    if readyCount == totalCount {
+                        onComplete()
+                    }
+                }
+                continue
+            }
+
+            // Check if video already cached
+            let state = VideoService.shared.getDownloadState(videoId: videoId)
+
+            if case .cached(let url, _, _) = state {
+                // Already cached - ensure player exists
+                AVPlayerManager.shared.createPlayer(videoId: videoId, url: url)
+
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+
+                    self.insertAfterSearchGroup(question, searchWord: searchWord)
+                    readyCount += 1
+                    self.logger.info("✓ Video \(videoId) already cached, inserted (\(readyCount)/\(totalCount))")
+                    onProgress(readyCount, totalCount)
+
+                    if !firstQuestionPrepended {
+                        firstQuestionPrepended = true
+                        onFirstReady()
+                    }
+
+                    if readyCount == totalCount {
+                        self.cleanupSearchGroup(searchWord)
+                        onComplete()
+                    }
+                }
+            } else {
+                // Need to download - wait for completion
+                self.logger.info("Downloading video \(videoId) for streaming prepend...")
+
+                VideoService.shared.fetchVideo(videoId: videoId)
+                    .receive(on: DispatchQueue.main)
+                    .sink(
+                        receiveCompletion: { [weak self] result in
+                            guard let self = self else { return }
+
+                            if case .failure(let error) = result {
+                                self.logger.error("Failed to download video \(videoId): \(error.localizedDescription)")
+                                // Skip this question on failure
+                                readyCount += 1
+                                onProgress(readyCount, totalCount)
+
+                                if readyCount == totalCount {
+                                    self.cleanupSearchGroup(searchWord)
+                                    onComplete()
+                                }
+                            }
+                        },
+                        receiveValue: { [weak self] url in
+                            guard let self = self else { return }
+
+                            // Video ready - insert into queue
+                            self.insertAfterSearchGroup(question, searchWord: searchWord)
+                            readyCount += 1
+                            self.logger.info("✓ Video \(videoId) ready, inserted (\(readyCount)/\(totalCount))")
+                            onProgress(readyCount, totalCount)
+
+                            if !firstQuestionPrepended {
+                                firstQuestionPrepended = true
+                                self.logger.info("First question ready for '\(searchWord)'")
+                                onFirstReady()
+                            }
+
+                            if readyCount == totalCount {
+                                self.logger.info("All \(totalCount) questions ready for '\(searchWord)'")
+                                self.cleanupSearchGroup(searchWord)
+                                onComplete()
+                            }
+                        }
+                    )
+                    .store(in: &self.cancellables)
+            }
+        }
+    }
+
+    /// Insert question after the last question from the same search group
+    /// If no questions from this search exist, prepend to front
+    private func insertAfterSearchGroup(_ question: BatchReviewQuestion, searchWord: String) {
+        guard var group = searchGroups[searchWord],
+              let videoId = question.question.video_id else {
+            // Fallback: prepend to front
+            questionQueue.insert(question, at: 0)
+            logger.info("Prepended '\(question.word)' (no search group)")
+            return
+        }
+
+        if group.insertedVideoIds.isEmpty {
+            // First question from this search - prepend to front
+            questionQueue.insert(question, at: 0)
+            group.insertedVideoIds.append(videoId)
+            searchGroups[searchWord] = group
+            logger.info("Prepended first question for '\(searchWord)': \(question.word)")
+        } else {
+            // Find last question from this search group
+            if let insertionIndex = findInsertionIndex(forSearchWord: searchWord) {
+                questionQueue.insert(question, at: insertionIndex)
+                group.insertedVideoIds.append(videoId)
+                searchGroups[searchWord] = group
+                logger.info("Inserted '\(question.word)' after search group '\(searchWord)' at index \(insertionIndex)")
+            } else {
+                // Search group questions were all popped - prepend to front
+                questionQueue.insert(question, at: 0)
+                group.insertedVideoIds.append(videoId)
+                searchGroups[searchWord] = group
+                logger.info("Prepended '\(question.word)' (search group popped)")
+            }
+        }
+    }
+
+    /// Find the index to insert after the last question from a search group
+    private func findInsertionIndex(forSearchWord word: String) -> Int? {
+        guard let group = searchGroups[word], !group.insertedVideoIds.isEmpty else {
+            return nil
+        }
+
+        // Search from the front for the last question from this search group
+        var lastFoundIndex: Int?
+
+        for (index, question) in questionQueue.enumerated() {
+            if let videoId = question.question.video_id,
+               group.insertedVideoIds.contains(videoId) {
+                lastFoundIndex = index
+            }
+        }
+
+        // Insert AFTER the last found question
+        if let lastIndex = lastFoundIndex {
+            return lastIndex + 1
+        }
+
+        return nil
+    }
+
+    /// Clean up old search groups to prevent memory leaks
+    private func cleanupSearchGroup(_ word: String) {
+        searchGroups.removeValue(forKey: word)
+        logger.info("Cleaned up search group for '\(word)'")
     }
 
     // MARK: - Fetching

@@ -25,6 +25,11 @@ class ReviewSearchViewModel: ObservableObject {
     @Published var validationSuggestion: String?
     @Published var currentWordConfidence: Double = 1.0
 
+    // Streaming prepend state
+    @Published var isStreamingPrepend = false
+    @Published var streamProgress: (ready: Int, total: Int) = (0, 0)
+    @Published var firstQuestionReady = false
+
     // MARK: - Initialization
     init(
         dictionaryService: DictionaryService = .shared,
@@ -110,26 +115,56 @@ class ReviewSearchViewModel: ObservableObject {
             guard let self = self else { return }
 
             Task { @MainActor in
-                self.isLoading = false
-
                 switch result {
                 case .success(let questions):
                     guard !questions.isEmpty else {
                         self.logger.warning("No video questions returned for '\(word)'")
+                        self.isLoading = false
                         return
                     }
 
-                    // Prepend to queue
-                    QuestionQueueManager.shared.prependQuestions(questions)
+                    self.logger.info("Starting streaming prepend for \(questions.count) video questions")
 
-                    self.logger.info("Prepended \(questions.count) video questions for '\(word)'")
+                    // Start streaming prepend
+                    self.isStreamingPrepend = true
+                    self.streamProgress = (0, questions.count)
+                    self.firstQuestionReady = false
 
-                    // Clear search and close
-                    self.searchText = ""
-                    onComplete()
+                    QuestionQueueManager.shared.streamPrependQuestions(
+                        questions,
+                        searchWord: word,
+                        onFirstReady: { [weak self] in
+                            guard let self = self else { return }
+                            Task { @MainActor in
+                                self.firstQuestionReady = true
+                                self.isLoading = false
+                                self.logger.info("First question ready for '\(word)'")
+
+                                // Clear search and close immediately when first question ready
+                                self.searchText = ""
+                                onComplete()
+                            }
+                        },
+                        onProgress: { [weak self] ready, total in
+                            guard let self = self else { return }
+                            Task { @MainActor in
+                                self.streamProgress = (ready, total)
+                                self.logger.info("Streaming progress: \(ready)/\(total)")
+                            }
+                        },
+                        onComplete: { [weak self] in
+                            guard let self = self else { return }
+                            Task { @MainActor in
+                                self.isStreamingPrepend = false
+                                self.logger.info("All video questions ready for '\(word)'")
+                            }
+                        }
+                    )
 
                 case .failure(let error):
                     self.logger.error("Failed to fetch video questions: \(error.localizedDescription)")
+                    self.isLoading = false
+                    self.isStreamingPrepend = false
                 }
             }
         }

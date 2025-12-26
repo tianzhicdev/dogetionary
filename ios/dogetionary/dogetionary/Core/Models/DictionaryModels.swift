@@ -1368,3 +1368,37 @@ struct PronunciationEvaluationResult: Codable {
              evaluation_threshold, review_id, next_interval_days
     }
 }
+
+// MARK: - Content Moderation Models
+
+/// Report type for content reporting
+enum ReportType: String, CaseIterable {
+    case inappropriate = "Inappropriate"
+    case incorrect = "Incorrect"
+    case copyright = "Copyright"
+    case other = "Other"
+
+    var displayText: String {
+        return self.rawValue
+    }
+}
+
+/// Request body for POST /v3/content/report
+struct ContentReportRequest: Codable {
+    let user_id: String
+    let word: String
+    let learning_language: String
+    let native_language: String
+    let question_type: String
+    let video_id: Int?
+    let report_type: String
+    let comment: String?
+}
+
+/// Response from POST /v3/content/report
+struct ContentReportResponse: Codable {
+    let success: Bool
+    let message: String
+    let report_id: Int?
+    let error: String?
+}

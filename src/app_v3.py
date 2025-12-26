@@ -23,6 +23,7 @@ from handlers.streaks import get_streak_days
 from handlers.achievements import get_achievement_progress, get_test_vocabulary_awards
 from handlers.practice_status import get_practice_status
 from handlers.app_version import check_app_version
+from handlers.content_moderation import report_content
 
 # Create v3 blueprint
 v3_api = Blueprint('v3_api', __name__, url_prefix='/v3')
@@ -97,6 +98,9 @@ v3_api.route('/app-version', methods=['GET'])(check_app_version)
 v3_api.route('/api/check-word-videos', methods=['GET'])(check_word_has_videos)
 v3_api.route('/api/video-questions-for-word', methods=['GET'])(get_video_questions_for_word)
 v3_api.route('/api/trigger-video-search', methods=['POST'])(trigger_video_search)
+
+# Content Moderation (V3)
+v3_api.route('/content/report', methods=['POST'])(report_content)
 
 # ============================================================================
 # TEST PREP ENDPOINTS (V3) - TOEFL/IELTS/DEMO vocabulary preparation

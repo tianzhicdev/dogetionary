@@ -163,12 +163,8 @@ def run_video_finder_for_word(word: str, lang: str):
 
         # Use temporary storage (no disk persistence needed - upload directly)
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Get backend URL from environment or use default
-            backend_url = os.getenv('BASE_URL', 'http://localhost:5001')
-
             finder = VideoFinder(
                 storage_dir=temp_dir,
-                backend_url=backend_url,
                 word_list_path=None,
                 clipcafe_api_key=clipcafe_api_key,
                 openai_api_key=openai_api_key,
@@ -178,11 +174,10 @@ def run_video_finder_for_word(word: str, lang: str):
                 download_only=False  # Upload to DB
             )
 
-            # Process single word
-            vocab_list = [word]  # Single word for LLM context
-            word_stats = finder.process_word(word, vocab_list)
+            # Process single word (no vocab_list needed - mappings can be any word)
+            word_stats = finder.process_word(word)
 
-            logger.info(f"Completed video search for '{word}': {word_stats['videos_uploaded']} videos uploaded")
+            logger.info(f"Completed video search for '{word}': {len(word_stats['videos_uploaded'])} videos uploaded")
 
     except Exception as e:
         logger.error(f"Video search failed for '{word}': {e}", exc_info=True)

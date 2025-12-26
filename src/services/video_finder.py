@@ -1,14 +1,15 @@
 """
-VideoFinder Service - 3-Stage video discovery pipeline
+VideoFinder Service - Refactored 3-Stage video discovery pipeline
 
 Stage 1: Search ClipCafe for video metadata
-Stage 2: Candidate selection using metadata transcript + LLM
-Stage 3: Audio verification using Whisper API + final LLM analysis
+Stage 2: Score-based filtering using metadata transcript + LLM (BEFORE download)
+Stage 3: Word mapping extraction using Whisper audio transcript + LLM (AFTER download)
 
 Features:
 - Idempotent: Caches all intermediate results, safe to resume
-- Quality filtering: Whisper audio transcript + dual LLM analysis
-- LLM fallback chain: Gemini -> DeepSeek -> Qwen -> GPT-4o-mini
+- Quality filtering: Score videos before download to save bandwidth
+- Audio-verified word mappings: Extract words from Whisper transcript only
+- Centralized LLM utility: Uses llm_completion_with_fallback from utils.llm
 """
 
 import os
@@ -25,14 +26,6 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# LLM fallback chain for video analysis
-LLM_FALLBACK_CHAIN = [
-    "google/gemini-2.0-flash-lite-001",   # $0.10/$0.40/M - 40% cheaper than GPT-4o-mini
-    "deepseek/deepseek-chat-v3.1",        # $0.14-0.28/M
-    "qwen/qwen-2.5-7b-instruct",          # $0.15/$0.17/M
-    "openai/gpt-4o-mini"                  # $0.15/$0.60/M - final fallback
-]
-
 
 class VideoFinder:
     """Main class for video discovery and upload pipeline"""
@@ -40,7 +33,6 @@ class VideoFinder:
     def __init__(
         self,
         storage_dir: str,
-        backend_url: str,
         word_list_path: Optional[str],
         clipcafe_api_key: str,
         openai_api_key: str,
@@ -51,7 +43,6 @@ class VideoFinder:
         download_only: bool = False
     ):
         self.storage_dir = Path(storage_dir)
-        self.backend_url = backend_url.rstrip('/') if backend_url else ''
         self.word_list_path = Path(word_list_path) if word_list_path else None
         self.clipcafe_api_key = clipcafe_api_key
         self.openai_api_key = openai_api_key
@@ -68,16 +59,33 @@ class VideoFinder:
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     def fetch_bundle_words(self, bundle_name: str) -> List[str]:
-        """Fetch words from bundle via backend API that need videos"""
+        """Fetch words from bundle that need videos (direct DB query)"""
         try:
-            url = f"{self.backend_url}/v3/admin/bundles/{bundle_name}/words-needing-videos"
-            logger.info(f"Fetching words from bundle '{bundle_name}' via API: {url}")
+            from handlers.admin_videos import BUNDLE_COLUMN_MAP
+            from utils.database import db_fetch_all
 
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
+            # Validate bundle name
+            if bundle_name not in BUNDLE_COLUMN_MAP:
+                raise ValueError(f"Invalid bundle name '{bundle_name}'. Valid bundles: {', '.join(BUNDLE_COLUMN_MAP.keys())}")
 
-            data = response.json()
-            words = data.get('words', [])
+            column_name = BUNDLE_COLUMN_MAP[bundle_name]
+
+            # Query words from bundle that don't have videos
+            query = f"""
+                SELECT bv.word
+                FROM bundle_vocabularies bv
+                WHERE bv.{column_name} = TRUE
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM word_to_video wtv
+                      WHERE wtv.word = bv.word
+                        AND wtv.learning_language = bv.language
+                  )
+                ORDER BY bv.word
+            """
+
+            rows = db_fetch_all(query)
+            words = [row['word'] for row in rows]
 
             logger.info(f"Fetched {len(words)} words needing videos from bundle '{bundle_name}'")
             return words
@@ -159,21 +167,10 @@ class VideoFinder:
 
         return []
 
-    def find_words_in_transcript(self, transcript: str, vocab_list: List[str]) -> List[str]:
-        """Find which vocabulary words appear in the transcript"""
-        transcript_lower = transcript.lower()
-        candidate_words = []
-
-        for vocab_word in vocab_list:
-            if re.search(r'\b' + re.escape(vocab_word.lower()) + r'\b', transcript_lower):
-                candidate_words.append(vocab_word)
-
-        return candidate_words
-
-    def analyze_candidates(self, metadata: Dict, search_word: str, vocab_list: List[str]) -> Optional[Dict]:
+    def analyze_scores(self, metadata: Dict, search_word: str) -> Optional[Dict]:
         """
-        STAGE 2: Analyze video metadata with LLM to identify candidate videos.
-        Uses metadata transcript (ClipCafe) for initial filtering.
+        STAGE 2: Analyze video scores using metadata transcript (BEFORE download).
+        Returns education_score and context_score only - no word mappings yet.
         """
         slug = metadata.get('slug', '')
         if not slug:
@@ -185,78 +182,52 @@ class VideoFinder:
             logger.info(f"    Skipping {slug} - transcript too short")
             return None
 
-        # Find candidate words
-        candidate_words = self.find_words_in_transcript(transcript, vocab_list)
-        if not candidate_words:
-            logger.info(f"    Skipping {slug} - no vocabulary words in transcript")
-            return None
+        # Build LLM prompt for scoring only
+        prompt = self._build_score_prompt(metadata)
 
-        # Build LLM prompt
-        prompt = self._build_llm_prompt(metadata, candidate_words)
-
-        # Query LLM
+        # Query LLM using centralized utility
         try:
-            llm_response = self._query_llm(prompt)
+            llm_response = self._query_llm_centralized(
+                prompt=prompt,
+                schema_name="video_score_analysis"
+            )
         except Exception as e:
             logger.error(f"    LLM query failed for {slug}: {e}")
             return None
 
-        # Validate and filter mappings
-        validated_mappings = []
-        for mapping in llm_response.get('mappings', []):
-            word = mapping.get('word', '').strip()
-            education_score = mapping.get('education_score', 0.0)
-            context_score = mapping.get('context_score', 0.0)
+        # Extract scores
+        education_score = llm_response.get('education_score', 0.0)
+        context_score = llm_response.get('context_score', 0.0)
 
-            # Validate word is in transcript (prevent LLM hallucination)
-            if not re.search(r'\b' + re.escape(word.lower()) + r'\b', transcript.lower()):
-                logger.warning(f"    Rejecting '{word}' - not in transcript (LLM hallucination)")
-                continue
-
-            # Dual-criteria threshold check
-            if education_score < self.education_min_score:
-                logger.debug(f"    Rejecting '{word}' - education score too low ({education_score:.2f} < {self.education_min_score})")
-                continue
-
-            if context_score < self.context_min_score:
-                logger.debug(f"    Rejecting '{word}' - context score too low ({context_score:.2f} < {self.context_min_score})")
-                continue
-
-            validated_mappings.append({
-                "word": word.lower(),
-                "education_score": round(education_score, 2),
-                "context_score": round(context_score, 2),
-                "reason": mapping.get('reason', '')
-            })
-
-        if not validated_mappings:
-            logger.info(f"    No quality mappings found for {slug}")
+        # Check if video passes thresholds
+        if education_score < self.education_min_score:
+            logger.debug(f"    Rejecting {slug} - education score too low ({education_score:.2f} < {self.education_min_score})")
             return None
 
-        # Limit mappings per video
-        validated_mappings = sorted(validated_mappings, key=lambda x: (x['education_score'] + x['context_score']) / 2, reverse=True)
-        validated_mappings = validated_mappings[:self.max_mappings_per_video]
+        if context_score < self.context_min_score:
+            logger.debug(f"    Rejecting {slug} - context score too low ({context_score:.2f} < {self.context_min_score})")
+            return None
 
         # Build result
         analysis = {
             "slug": slug,
             "search_word": search_word,
-            "mappings": validated_mappings,
+            "education_score": round(education_score, 2),
+            "context_score": round(context_score, 2),
+            "reason": llm_response.get('reason', ''),
             "analyzed_at": datetime.now().isoformat(),
-            "stage": "candidate"
+            "stage": "scored"
         }
 
-        logger.info(f"    Found {len(validated_mappings)} candidate mappings for {slug}")
+        logger.info(f"    ✓ {slug} passed scoring (edu={education_score:.2f}, ctx={context_score:.2f})")
         return analysis
 
-    def _build_llm_prompt(self, metadata: Dict, candidate_words: List[str]) -> str:
-        """Build LLM prompt for video analysis"""
+    def _build_score_prompt(self, metadata: Dict) -> str:
+        """Build LLM prompt for video scoring (education + context only)"""
         transcript = metadata.get('transcript', '')
         movie_title = metadata.get('movie_title', 'Unknown')
         movie_plot = metadata.get('movie_plot', '')[:200]
         duration = metadata.get('duration_seconds', 0)
-
-        candidate_words_str = ', '.join(candidate_words[:50])
 
         prompt = f"""You are an expert ESL teacher analyzing video clips for vocabulary instruction.
 
@@ -269,131 +240,199 @@ TRANSCRIPT:
 {transcript}
 
 TASK:
-Analyze this video and determine which of the following vocabulary words it effectively teaches.
+Analyze this video clip and evaluate it on TWO criteria for ESL teaching:
 
-Evaluate each word on TWO separate criteria:
-
-1. EDUCATION SCORE (0.0-1.0): How well does this video illustrate the word's meaning?
-   - Does the word appear clearly in the transcript?
-   - Are there likely visual cues that reinforce the meaning?
-   - Is the usage natural and memorable for learning?
+1. EDUCATION SCORE (0.0-1.0): How effective is this clip for teaching English vocabulary?
+   - Are the words spoken clearly and naturally?
+   - Are there likely visual cues that reinforce word meanings?
+   - Is the dialogue natural and memorable for learning?
+   - Is the vocabulary level appropriate for ESL learners?
 
 2. CONTEXT SCORE (0.0-1.0): Can this scene stand alone without watching the full movie?
    - Does the scene have sufficient context to be understood independently?
    - Would a learner understand what's happening without prior movie knowledge?
    - Is the emotional/narrative context clear from the clip alone?
-
-CANDIDATE WORDS (only suggest words from this list):
-{candidate_words_str}
-
-For each word you recommend, provide:
-- word: the vocabulary word
-- education_score: 0.0-1.0 (how well the video illustrates the word's meaning)
-- context_score: 0.0-1.0 (how well the scene stands alone)
-- reason: brief explanation (1-2 sentences)
+   - Can the scene work as a self-contained learning moment?
 
 Return ONLY valid JSON (no markdown, no extra text):
 {{
-  "mappings": [
+  "education_score": 0.85,
+  "context_score": 0.70,
+  "reason": "Brief 1-2 sentence explanation of why these scores were given"
+}}
+
+IMPORTANT:
+- Both scores must be between 0.0 and 1.0
+- Be conservative - only high-quality clips should score above {self.education_min_score}
+- Focus on objective factors, not subjective movie preferences
+"""
+        return prompt
+
+    def extract_word_mappings(self, metadata: Dict, audio_transcript: Dict, search_word: str) -> Optional[Dict]:
+        """
+        STAGE 3: Extract word mappings from audio transcript (AFTER download).
+        Discovers ALL English words suitable for ESL learning in the verified audio transcript.
+        """
+        slug = metadata.get('slug', '')
+        if not slug:
+            return None
+
+        # Get clean audio transcript
+        clean_transcript = audio_transcript.get('text', '')
+        if not clean_transcript or len(clean_transcript.split()) < 10:
+            logger.info(f"      Skipping {slug} - audio transcript too short")
+            return None
+
+        # Build prompt for word extraction
+        prompt = self._build_word_mapping_prompt(metadata, audio_transcript)
+
+        # Query LLM using centralized utility
+        try:
+            llm_response = self._query_llm_centralized(
+                prompt=prompt,
+                schema_name="word_mapping_extraction"
+            )
+        except Exception as e:
+            logger.error(f"      Word mapping LLM query failed for {slug}: {e}")
+            return None
+
+        # Validate and filter mappings
+        validated_mappings = []
+        for mapping in llm_response.get('word_mappings', []):
+            word = mapping.get('word', '').strip().lower()
+
+            if not word:
+                continue
+
+            # CRITICAL: Validate word exists in AUDIO transcript (prevent LLM hallucination)
+            if not re.search(r'\b' + re.escape(word) + r'\b', clean_transcript.lower()):
+                logger.warning(f"      Rejecting '{word}' - not in audio transcript (LLM hallucination)")
+                continue
+
+            validated_mappings.append({
+                "word": word,
+                "timestamp": mapping.get('timestamp'),
+                "learning_value": mapping.get('learning_value', '')
+            })
+
+        if not validated_mappings:
+            logger.info(f"      No valid word mappings found for {slug}")
+            return None
+
+        # Limit mappings per video
+        validated_mappings = validated_mappings[:self.max_mappings_per_video]
+
+        # Build result
+        analysis = {
+            "slug": slug,
+            "search_word": search_word,
+            "mappings": validated_mappings,
+            "analyzed_at": datetime.now().isoformat(),
+            "stage": "word_mapped"
+        }
+
+        logger.info(f"      ✓ Found {len(validated_mappings)} word mappings for {slug}")
+        return analysis
+
+    def _build_word_mapping_prompt(self, metadata: Dict, audio_transcript: Dict) -> str:
+        """Build LLM prompt for word mapping extraction"""
+        clean_transcript = audio_transcript.get('text', '')
+        movie_title = metadata.get('movie_title', 'Unknown')
+        duration = metadata.get('duration_seconds', 0)
+        word_timestamps = audio_transcript.get('words', [])
+
+        # Format word timestamps for reference
+        timestamp_info = ""
+        if word_timestamps:
+            timestamp_lines = [f"  {w.get('word', '')}: {w.get('start', 0):.1f}s"
+                             for w in word_timestamps[:50]]  # Show first 50 words
+            timestamp_info = "\n".join(timestamp_lines)
+
+        prompt = f"""You are an expert ESL teacher extracting vocabulary words from video transcripts.
+
+VIDEO INFORMATION:
+- Title: {movie_title}
+- Duration: {duration} seconds
+
+AUDIO TRANSCRIPT (verified by Whisper):
+{clean_transcript}
+
+WORD TIMESTAMPS (for reference):
+{timestamp_info}
+
+TASK:
+Extract ALL English words from this transcript that would be valuable for ESL learners.
+
+Focus on words that are:
+- Clearly spoken in the audio
+- Have educational value (common words, idioms, expressions)
+- Natural in context (not awkward or unclear usage)
+- Appropriate for ESL learning (not too obscure, not too basic)
+
+For each word, provide:
+- word: the vocabulary word (lowercase)
+- timestamp: approximate timestamp in seconds (optional, use word timestamp data if available)
+- learning_value: 1 sentence explaining why this word is valuable for ESL learners
+
+Return ONLY valid JSON (no markdown, no extra text):
+{{
+  "word_mappings": [
     {{
       "word": "example",
-      "education_score": 0.85,
-      "context_score": 0.70,
-      "reason": "Word used clearly with visual cues. Scene needs some movie context to fully understand."
+      "timestamp": 5.2,
+      "learning_value": "Common word used naturally in context with clear visual cues"
     }}
   ]
 }}
 
 IMPORTANT RULES:
-- Only suggest words from the candidate list above
-- Only suggest words that actually appear in the transcript
-- Minimum education_score: {self.education_min_score}
-- Minimum context_score: {self.context_min_score}
-- Maximum {self.max_mappings_per_video} mappings per video (focus on best matches)
+- ONLY suggest words that ACTUALLY APPEAR in the transcript above
+- Maximum {self.max_mappings_per_video} words (select the most valuable ones)
+- Words must be complete words, not partial matches
+- Focus on quality over quantity - only include truly valuable learning words
 """
         return prompt
 
-    def _query_llm(self, prompt: str) -> Dict:
-        """Query LLM with fallback chain (Gemini -> DeepSeek -> Qwen -> GPT-4o-mini)"""
+    def _query_llm_centralized(self, prompt: str, schema_name: str) -> Dict:
+        """
+        Query LLM using centralized utility with fallback chain.
+        Replaces custom _query_llm implementation.
+        """
+        from utils.llm import llm_completion_with_fallback
+
         messages = [
             {"role": "system", "content": "You are an ESL teaching expert. Always return valid JSON."},
             {"role": "user", "content": prompt}
         ]
 
-        # Try each model in the fallback chain
-        for i, model_name in enumerate(LLM_FALLBACK_CHAIN):
-            try:
-                # Determine API endpoint and key
-                if "/" not in model_name:
-                    # OpenAI direct (gpt-4o-mini without provider prefix)
-                    api_base = "https://api.openai.com/v1"
-                    api_key = self.openai_api_key
-                elif model_name.startswith("openai/"):
-                    # OpenAI via OpenRouter (with openai/ prefix)
-                    openrouter_key = os.getenv('OPEN_ROUTER_KEY')
-                    if not openrouter_key:
-                        # Fallback to direct OpenAI if no OpenRouter key
-                        api_base = "https://api.openai.com/v1"
-                        api_key = self.openai_api_key
-                        model_name = model_name.replace("openai/", "")
-                    else:
-                        api_base = "https://openrouter.ai/api/v1"
-                        api_key = openrouter_key
-                else:
-                    # OpenRouter for other providers
-                    api_base = "https://openrouter.ai/api/v1"
-                    api_key = os.getenv('OPEN_ROUTER_KEY')
-                    if not api_key:
-                        logger.warning(f"    {model_name} requires OPEN_ROUTER_KEY")
-                        continue
+        try:
+            # Use centralized LLM utility with video_analysis fallback chain
+            result_str = llm_completion_with_fallback(
+                messages=messages,
+                use_case="video_analysis",
+                schema_name=schema_name,
+                temperature=0.3,
+                max_tokens=800
+            )
 
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                }
+            if not result_str:
+                logger.error("    LLM returned empty response")
+                return {}
 
-                payload = {
-                    "model": model_name,
-                    "messages": messages,
-                    "temperature": 0.3,
-                    "max_tokens": 800,
-                    "response_format": {"type": "json_object"}
-                }
+            # Parse JSON response
+            parsed = json.loads(result_str)
+            return parsed
 
-                response = requests.post(
-                    f"{api_base}/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=60
-                )
-                response.raise_for_status()
-
-                result = response.json()
-                content = result['choices'][0]['message']['content']
-                parsed = json.loads(content)
-
-                if i > 0:
-                    logger.info(f"    ✓ Fallback to {model_name} succeeded")
-
-                return parsed
-
-            except json.JSONDecodeError as e:
-                logger.warning(f"    {model_name} returned invalid JSON: {e}")
-                continue
-            except Exception as e:
-                logger.warning(f"    {model_name} failed: {e}")
-                if i < len(LLM_FALLBACK_CHAIN) - 1:
-                    logger.info(f"    Trying next model in chain...")
-                    time.sleep(2)
-                continue
-
-        # All models failed
-        logger.error("    ✗ All LLM models in fallback chain failed")
-        return {"mappings": []}
+        except json.JSONDecodeError as e:
+            logger.error(f"    LLM returned invalid JSON: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"    LLM query failed: {e}")
+            return {}
 
     def extract_audio_transcript(self, video_path: Path, slug: str) -> Optional[Dict]:
         """
-        STAGE 3A: Extract clean audio transcript using Whisper API.
+        Extract clean audio transcript using Whisper API with word-level timestamps.
         """
         logger.info(f"      Extracting audio transcript with Whisper for {slug}...")
 
@@ -442,402 +481,185 @@ IMPORTANT RULES:
             logger.error(f"      Failed to extract Whisper transcript for {slug}: {e}")
             return None
 
-    def analyze_final(self, metadata: Dict, audio_transcript: Dict, search_word: str,
-                     vocab_list: List[str]) -> Optional[Dict]:
-        """
-        STAGE 3B: Final analysis using clean audio transcript from Whisper.
-        Re-evaluates candidate mappings with accurate transcript.
-        """
+    def download_video(self, metadata: Dict) -> Optional[Path]:
+        """Download video file from ClipCafe and save to storage"""
+        slug = metadata.get('slug', '')
+        clip_id = metadata.get('id', '')
+
+        if not slug or not clip_id:
+            logger.error(f"    Missing slug or id in metadata")
+            return None
+
+        # Create directory for this video
+        video_dir = self.storage_dir / slug
+        video_dir.mkdir(parents=True, exist_ok=True)
+
+        video_path = video_dir / f"{slug}.mp4"
+
+        # Skip if already downloaded
+        if video_path.exists():
+            logger.info(f"    Video already exists: {slug}.mp4")
+            return video_path
+
+        # Download video from ClipCafe
+        logger.info(f"    Downloading {slug}.mp4...")
+        video_url = f"https://api.clip.cafe/{clip_id}/video"
+
+        try:
+            response = requests.get(
+                video_url,
+                params={'api_key': self.clipcafe_api_key},
+                timeout=60
+            )
+            response.raise_for_status()
+
+            # Save video file
+            with open(video_path, 'wb') as f:
+                f.write(response.content)
+
+            size_mb = video_path.stat().st_size / (1024 * 1024)
+            logger.info(f"    Downloaded {slug}.mp4 ({size_mb:.2f} MB)")
+            return video_path
+
+        except Exception as e:
+            logger.error(f"    Failed to download video {slug}: {e}")
+            return None
+
+    def save_video_to_directory(self, metadata: Dict, analysis: Dict, video_path: Path,
+                                audio_transcript: Dict) -> Optional[Dict]:
+        """Save video and metadata to directory structure (download-only mode)"""
         slug = metadata.get('slug', '')
         if not slug:
             return None
 
-        # Get clean audio transcript
-        clean_transcript = audio_transcript.get('text', '')
-        if not clean_transcript or len(clean_transcript.split()) < 10:
-            logger.info(f"      Skipping {slug} - audio transcript too short")
-            return None
-
-        # Find candidate words in clean transcript
-        candidate_words = self.find_words_in_transcript(clean_transcript, vocab_list)
-        if not candidate_words:
-            logger.info(f"      Skipping {slug} - no vocabulary words in audio transcript")
-            return None
-
-        # Build final LLM prompt with audio transcript
-        prompt = self._build_final_llm_prompt(metadata, audio_transcript, candidate_words)
-
-        # Query LLM
-        try:
-            llm_response = self._query_llm(prompt)
-        except Exception as e:
-            logger.error(f"      Final LLM query failed for {slug}: {e}")
-            return None
-
-        # Validate and filter mappings
-        validated_mappings = []
-        for mapping in llm_response.get('mappings', []):
-            word = mapping.get('word', '').strip()
-            education_score = mapping.get('education_score', 0.0)
-            context_score = mapping.get('context_score', 0.0)
-
-            # Validate word is in clean audio transcript
-            if not re.search(r'\b' + re.escape(word.lower()) + r'\b', clean_transcript.lower()):
-                logger.warning(f"      Rejecting '{word}' - not in audio transcript")
-                continue
-
-            # Dual-criteria threshold check
-            if education_score < self.education_min_score:
-                logger.debug(f"      Rejecting '{word}' - education score too low ({education_score:.2f} < {self.education_min_score})")
-                continue
-
-            if context_score < self.context_min_score:
-                logger.debug(f"      Rejecting '{word}' - context score too low ({context_score:.2f} < {self.context_min_score})")
-                continue
-
-            validated_mappings.append({
-                "word": word.lower(),
-                "education_score": round(education_score, 2),
-                "context_score": round(context_score, 2),
-                "reason": mapping.get('reason', ''),
-                "timestamp": self._find_word_timestamp(word, audio_transcript.get('words', []))
-            })
-
-        if not validated_mappings:
-            logger.info(f"      No quality mappings found in final analysis for {slug}")
-            return None
-
-        # Limit mappings per video
-        validated_mappings = sorted(validated_mappings, key=lambda x: (x['education_score'] + x['context_score']) / 2, reverse=True)
-        validated_mappings = validated_mappings[:self.max_mappings_per_video]
-
-        # Build result
-        final_analysis = {
-            "slug": slug,
-            "search_word": search_word,
-            "mappings": validated_mappings,
-            "audio_verified": True,
-            "audio_duration": audio_transcript.get('duration', 0),
-            "analyzed_at": datetime.now().isoformat(),
-            "stage": "final"
-        }
-
-        logger.info(f"      ✓ Final analysis: {len(validated_mappings)} verified mappings for {slug}")
-        return final_analysis
-
-    def _build_final_llm_prompt(self, metadata: Dict, audio_transcript: Dict,
-                                candidate_words: List[str]) -> str:
-        """Build LLM prompt for final analysis with audio transcript"""
-        clean_transcript = audio_transcript.get('text', '')
-        movie_title = metadata.get('movie_title', 'Unknown')
-        movie_plot = metadata.get('movie_plot', '')[:200]
-        duration = audio_transcript.get('duration', 0)
-
-        candidate_words_str = ', '.join(candidate_words[:50])
-
-        prompt = f"""You are an expert ESL teacher analyzing video clips for vocabulary instruction.
-
-VIDEO INFORMATION:
-- Title: {movie_title}
-- Duration: {duration:.1f} seconds
-- Plot Context: {movie_plot}...
-
-CLEAN AUDIO TRANSCRIPT (from Whisper API):
-{clean_transcript}
-
-TASK:
-Analyze this video and determine which of the following vocabulary words it effectively teaches.
-
-Evaluate each word on TWO separate criteria:
-
-1. EDUCATION SCORE (0.0-1.0): How well does this video illustrate the word's meaning?
-   - Does the word appear clearly in the audio transcript?
-   - Are there likely visual cues that reinforce the meaning?
-   - Is the usage natural and memorable for learning?
-
-2. CONTEXT SCORE (0.0-1.0): Can this scene stand alone without watching the full movie?
-   - Does the scene have sufficient context to be understood independently?
-   - Would a learner understand what's happening without prior movie knowledge?
-   - Is the emotional/narrative context clear from the clip alone?
-
-CANDIDATE WORDS (only suggest words from this list):
-{candidate_words_str}
-
-For each word you recommend, provide:
-- word: the vocabulary word
-- education_score: 0.0-1.0 (how well the video illustrates the word's meaning)
-- context_score: 0.0-1.0 (how well the scene stands alone)
-- reason: brief explanation (1-2 sentences)
-
-Return ONLY valid JSON (no markdown, no extra text):
-{{
-  "mappings": [
-    {{
-      "word": "example",
-      "education_score": 0.85,
-      "context_score": 0.70,
-      "reason": "Word used clearly with visual cues. Scene needs some movie context to fully understand."
-    }}
-  ]
-}}
-
-IMPORTANT RULES:
-- Only suggest words from the candidate list above
-- Only suggest words that actually appear in the clean audio transcript
-- This is a VERIFIED audio transcript - be more confident in your assessments
-- Minimum education_score: {self.education_min_score}
-- Minimum context_score: {self.context_min_score}
-- Maximum {self.max_mappings_per_video} mappings per video (focus on best matches)
-"""
-        return prompt
-
-    def _find_word_timestamp(self, word: str, word_timestamps: List[Dict]) -> Optional[float]:
-        """Find timestamp of word in Whisper word-level timestamps"""
-        word_lower = word.lower()
-        for w in word_timestamps:
-            if w.get('word', '').strip().lower() == word_lower:
-                return w.get('start', 0)
-        return None
-
-    def download_video(self, metadata: Dict) -> Optional[Path]:
-        """Download video file to final destination (max 5MB)"""
-        slug = metadata.get('slug', '')
-        download_url = metadata.get('download')
-
-        if not slug or not download_url:
-            return None
-
-        # Video destination path
         video_dir = self.storage_dir / slug
-        video_dir.mkdir(parents=True, exist_ok=True)
-        video_path = video_dir / f"{slug}.mp4"
 
-        # Check if already exists (idempotency)
-        if video_path.exists():
-            file_size_bytes = video_path.stat().st_size
-            file_size_mb = file_size_bytes / (1024 * 1024)
-
-            # Check size limit even for existing videos
-            if file_size_bytes > 5 * 1024 * 1024:
-                logger.warning(f"      Skipping existing {slug}.mp4 - too large ({file_size_mb:.2f} MB)")
-                return None
-
-            logger.info(f"      Using existing video: {slug}.mp4 ({file_size_mb:.2f} MB)")
-            return video_path
-
-        # Download
-        logger.info(f"      Downloading video: {slug}.mp4...")
         try:
-            response = requests.get(download_url, stream=True, timeout=60)
-            response.raise_for_status()
+            # Save metadata
+            metadata_path = video_dir / "metadata.json"
+            with open(metadata_path, 'w') as f:
+                json.dump({
+                    "metadata": metadata,
+                    "analysis": analysis,
+                    "audio_transcript": audio_transcript,
+                    "source_id": self.source_id,
+                    "saved_at": datetime.now().isoformat()
+                }, f, indent=2)
 
-            with open(video_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
+            # Prepare word mappings with proper format
+            word_mappings = []
+            for m in analysis.get('mappings', []):
+                word_mappings.append({
+                    "word": m['word'],
+                    "learning_language": "en",
+                    "relevance_score": 0.8,  # Default since we don't have dual scores anymore
+                    "transcript_source": "audio"
+                })
 
-            file_size_bytes = video_path.stat().st_size
-            file_size_mb = file_size_bytes / (1024 * 1024)
+            result = {
+                "slug": slug,
+                "video_path": str(video_path),
+                "metadata_path": str(metadata_path),
+                "format": "mp4",  # FIXED: was "mp3"
+                "mappings": word_mappings
+            }
 
-            # Check size limit (5MB)
-            if file_size_bytes > 5 * 1024 * 1024:
-                logger.warning(f"      Skipping {slug}.mp4 - too large ({file_size_mb:.2f} MB)")
-                video_path.unlink()
-                return None
-
-            logger.info(f"      Downloaded {slug}.mp4 ({file_size_mb:.2f} MB)")
-            return video_path
+            logger.info(f"      ✓ Saved {slug} to directory")
+            return result
 
         except Exception as e:
-            logger.error(f"      Failed to download {slug}: {e}")
-            if video_path.exists():
-                video_path.unlink()
+            logger.error(f"      Failed to save {slug} to directory: {e}")
             return None
 
     def upload_to_backend(self, metadata: Dict, analysis: Dict, video_path: Path,
-                          audio_transcript: Optional[Dict] = None) -> Optional[Dict]:
-        """Upload video and mappings to backend API with optional audio transcript"""
+                         audio_transcript: Dict) -> Optional[Dict]:
+        """Upload video directly to database using admin_videos handler"""
         slug = metadata.get('slug', '')
-
-        # Check if already uploaded (idempotency via metadata.json)
-        video_dir = self.storage_dir / slug
-        if (video_dir / "metadata.json").exists():
-            logger.info(f"      Skipping upload - {slug} already exists")
+        if not slug:
             return None
 
-        # Read video file
-        with open(video_path, 'rb') as f:
-            video_bytes = f.read()
+        try:
+            # Read video file and encode as base64
+            with open(video_path, 'rb') as f:
+                video_bytes = f.read()
 
-        video_base64 = base64.b64encode(video_bytes).decode('utf-8')
-        size_bytes = len(video_bytes)
+            video_base64 = base64.b64encode(video_bytes).decode('utf-8')
+            size_bytes = len(video_bytes)
+            size_mb = size_bytes / (1024 * 1024)
 
-        # Prepare payload
-        payload = {
-            "source_id": self.source_id,
-            "videos": [
-                {
+            # Prepare word mappings from analysis
+            # Note: analysis now only has word/timestamp/learning_value from extract_word_mappings
+            # We need to get the scores from the earlier stage if needed, or use defaults
+            word_mappings = []
+            for m in analysis.get('mappings', []):
+                word_mappings.append({
+                    "word": m['word'],
+                    "learning_language": "en",
+                    "relevance_score": 0.8,  # Default relevance score
+                    "transcript_source": "audio",
+                    "timestamp": m.get('timestamp')
+                })
+
+            # Prepare video payload
+            payload = {
+                "videos": [{
                     "slug": slug,
                     "name": slug,
-                    "format": "mp4",
+                    "format": "mp4",  # FIXED: was "mp3"
                     "video_data_base64": video_base64,
                     "size_bytes": size_bytes,
                     "transcript": metadata.get('transcript', ''),
-                    "audio_transcript": audio_transcript.get('text', '') if audio_transcript else None,
-                    "audio_transcript_verified": analysis.get('audio_verified', False),
-                    "whisper_metadata": audio_transcript.get('whisper_metadata', {}) if audio_transcript else None,
+                    "audio_transcript": audio_transcript.get('text', ''),
+                    "audio_transcript_verified": True,
+                    "whisper_metadata": audio_transcript.get('whisper_metadata'),
                     "metadata": {
-                        "clip_id": metadata.get('clipID'),
-                        "duration_seconds": metadata.get('duration'),
-                        "resolution": metadata.get('resolution'),
+                        "clip_id": metadata.get('id'),
                         "movie_title": metadata.get('movie_title'),
-                        "movie_year": metadata.get('movie_year'),
                         "movie_plot": metadata.get('movie_plot'),
-                        "views": metadata.get('views'),
-                        "likes": metadata.get('likes'),
-                        "transcript": metadata.get('transcript'),
-                        "subtitles": metadata.get('subtitles'),
-                        "imdb_id": metadata.get('imdb'),
-                        "audio_duration": audio_transcript.get('duration', 0) if audio_transcript else None,
+                        "duration_seconds": metadata.get('duration_seconds'),
+                        "clipcafe_slug": slug,
+                        "analysis": analysis  # Include full analysis for reference
                     },
-                    "word_mappings": [
-                        {
-                            "word": m['word'],
-                            "learning_language": "en",
-                            "education_score": m['education_score'],
-                            "context_score": m['context_score'],
-                            "transcript_source": "audio" if analysis.get('audio_verified') else "metadata",
-                            "timestamp": m.get('timestamp')
-                        }
-                        for m in analysis['mappings']
-                    ]
-                }
-            ]
-        }
-
-        # Upload to backend
-        try:
-            response = requests.post(
-                f"{self.backend_url}/v3/admin/videos/batch-upload",
-                json=payload,
-                timeout=120
-            )
-            response.raise_for_status()
-
-            result = response.json()
-            video_result = result['results'][0]
-
-            logger.info(f"      ✓ Uploaded {slug}: video_id={video_result['video_id']}, "
-                       f"mappings_created={video_result['mappings_created']}")
-
-            return video_result
-
-        except Exception as e:
-            logger.error(f"      ✗ Failed to upload {slug}: {e}")
-            return None
-
-    def save_video_to_directory(
-        self,
-        metadata: Dict,
-        analysis: Dict,
-        video_path: Path,
-        audio_transcript: Optional[Dict] = None
-    ) -> Optional[Dict]:
-        """Save video and metadata to directory structure"""
-        slug = metadata.get('slug', '')
-
-        # Create video directory
-        video_dir = self.storage_dir / slug
-        video_dir.mkdir(parents=True, exist_ok=True)
-
-        # Copy MP4 video to final location
-        mp4_dest = video_dir / f"{slug}.mp4"
-        if video_path != mp4_dest:
-            import shutil
-            shutil.copy2(video_path, mp4_dest)
-
-        # Extract MP3 audio from MP4 video
-        mp3_path = video_dir / f"{slug}.mp3"
-        try:
-            logger.info(f"      Extracting MP3 audio: {slug}.mp3...")
-            subprocess.run([
-                'ffmpeg',
-                '-i', str(video_path),
-                '-vn',
-                '-acodec', 'libmp3lame',
-                '-q:a', '2',
-                '-y',
-                str(mp3_path)
-            ], check=True, capture_output=True, text=True)
-
-            mp3_size_mb = mp3_path.stat().st_size / (1024 * 1024)
-            logger.info(f"      ✓ Extracted {slug}.mp3 ({mp3_size_mb:.2f} MB)")
-
-        except subprocess.CalledProcessError as e:
-            logger.error(f"      ✗ Failed to extract MP3 for {slug}: {e.stderr}")
-            return None
-        except Exception as e:
-            logger.error(f"      ✗ Failed to extract MP3 for {slug}: {e}")
-            return None
-
-        # Prepare metadata.json (v3 format)
-        metadata_file = video_dir / "metadata.json"
-        metadata_content = {
-            "slug": slug,
-            "name": slug,
-            "format": "mp3",
-            "source_id": self.source_id,
-            "transcript": metadata.get('transcript', ''),
-            "audio_transcript": audio_transcript.get('text', '') if audio_transcript else None,
-            "audio_transcript_verified": analysis.get('audio_verified', False),
-            "whisper_metadata": audio_transcript.get('whisper_metadata', {}) if audio_transcript else {"segments": [], "task": "transcribe"},
-            "clipcafe_metadata": {
-                "clip_id": metadata.get('clipID'),
-                "duration_seconds": metadata.get('duration'),
-                "resolution": metadata.get('resolution'),
-                "movie_title": metadata.get('movie_title'),
-                "movie_year": metadata.get('movie_year'),
-                "movie_plot": metadata.get('movie_plot'),
-                "views": metadata.get('views'),
-                "likes": metadata.get('likes'),
-                "transcript": metadata.get('transcript'),
-                "subtitles": metadata.get('subtitles'),
-                "imdb_id": metadata.get('imdb'),
-                "audio_duration": audio_transcript.get('duration', 0) if audio_transcript else None,
-            },
-            "word_mappings": [
-                {
-                    "word": m['word'],
-                    "learning_language": "en",
-                    "education_score": m['education_score'],
-                    "context_score": m['context_score'],
-                    "transcript_source": "audio" if analysis.get('audio_verified') else "metadata",
-                    "timestamp": m.get('timestamp')
-                }
-                for m in analysis['mappings']
-            ]
-        }
-
-        # Save metadata.json
-        try:
-            with open(metadata_file, 'w') as f:
-                json.dump(metadata_content, f, indent=2)
-
-            logger.info(f"      ✓ Saved metadata.json with {len(analysis['mappings'])} word mappings")
-
-            return {
-                "slug": slug,
-                "mp3_path": str(mp3_path),
-                "metadata_path": str(metadata_file),
-                "mappings_count": len(analysis['mappings'])
+                    "word_mappings": word_mappings
+                }]
             }
 
+            logger.info(f"      Uploading {slug} to database ({size_mb:.2f}MB, {len(word_mappings)} mappings)...")
+
+            # Upload to database directly
+            try:
+                from handlers.admin_videos import _upload_single_video
+                from utils.database import get_db_connection
+                import psycopg2.extras
+
+                conn = get_db_connection()
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+                try:
+                    video_data = payload['videos'][0]
+                    result = _upload_single_video(cursor, video_data, self.source_id)
+                    conn.commit()
+
+                    logger.info(f"      ✓ Uploaded {slug}: video_id={result['video_id']}, "
+                               f"mappings_created={result['mappings_created']}")
+
+                    return result
+                except Exception as e:
+                    conn.rollback()
+                    raise
+                finally:
+                    cursor.close()
+                    conn.close()
+            except Exception as e:
+                logger.error(f"      ✗ Failed to upload {slug}: {e}")
+                return None
+
         except Exception as e:
-            logger.error(f"      ✗ Failed to save metadata for {slug}: {e}")
+            logger.error(f"      Failed to prepare upload for {slug}: {e}")
             return None
 
-    def process_word(self, word: str, vocab_list: List[str]) -> Dict:
-        """Process a single word through the 3-stage pipeline"""
+    def process_word(self, word: str) -> Dict:
+        """Process a single word through the refactored 3-stage pipeline"""
         logger.info(f"\n{'='*60}")
         logger.info(f"Processing word: {word}")
         logger.info(f"{'='*60}")
@@ -845,7 +667,8 @@ IMPORTANT RULES:
         word_stats = {
             'word': word,
             'videos_found': 0,
-            'candidates_found': 0,
+            'scored_videos': 0,
+            'downloaded_videos': 0,
             'audio_verified': 0,
             'videos_uploaded': [],
             'mappings_created': []
@@ -862,24 +685,24 @@ IMPORTANT RULES:
 
         logger.info(f"  [Stage 1] Found {len(metadata_list)} videos")
 
-        # STAGE 2: Candidate selection with metadata transcript
-        logger.info(f"  [Stage 2] Analyzing candidates with metadata transcripts...")
-        candidate_videos = []
+        # STAGE 2: Score-based filtering BEFORE download
+        logger.info(f"  [Stage 2] Scoring videos with metadata transcripts (before download)...")
+        scored_videos = []
         for metadata in metadata_list:
-            candidate_analysis = self.analyze_candidates(metadata, word, vocab_list)
-            if candidate_analysis and candidate_analysis.get('mappings'):
-                candidate_videos.append((metadata, candidate_analysis))
+            score_analysis = self.analyze_scores(metadata, word)
+            if score_analysis:
+                scored_videos.append((metadata, score_analysis))
 
-        word_stats['candidates_found'] = len(candidate_videos)
-        logger.info(f"  [Stage 2] Found {len(candidate_videos)} candidate videos")
+        word_stats['scored_videos'] = len(scored_videos)
+        logger.info(f"  [Stage 2] {len(scored_videos)} videos passed scoring thresholds")
 
-        if not candidate_videos:
-            logger.info(f"  No quality candidates found for '{word}'")
+        if not scored_videos:
+            logger.info(f"  No videos passed quality thresholds for '{word}'")
             return word_stats
 
-        # STAGE 3: Download videos, extract audio transcripts, and perform final analysis
-        logger.info(f"  [Stage 3] Performing audio verification with Whisper...")
-        for metadata, candidate_analysis in candidate_videos:
+        # STAGE 3: Download, extract audio, and extract word mappings
+        logger.info(f"  [Stage 3] Downloading videos and extracting word mappings...")
+        for metadata, score_analysis in scored_videos:
             slug = metadata.get('slug', '')
 
             # Skip if already exists (idempotency check)
@@ -893,16 +716,18 @@ IMPORTANT RULES:
             if not video_path:
                 continue
 
+            word_stats['downloaded_videos'] += 1
+
             # Extract audio transcript with Whisper
             audio_transcript = self.extract_audio_transcript(video_path, slug)
             if not audio_transcript:
                 logger.warning(f"      Failed to extract audio transcript for {slug}")
                 continue
 
-            # Perform final analysis with audio transcript
-            final_analysis = self.analyze_final(metadata, audio_transcript, word, vocab_list)
-            if not final_analysis or not final_analysis.get('mappings'):
-                logger.info(f"      No verified mappings for {slug} after audio analysis")
+            # Extract word mappings from audio transcript
+            mapping_analysis = self.extract_word_mappings(metadata, audio_transcript, word)
+            if not mapping_analysis or not mapping_analysis.get('mappings'):
+                logger.info(f"      No word mappings found for {slug}")
                 continue
 
             word_stats['audio_verified'] += 1
@@ -910,22 +735,22 @@ IMPORTANT RULES:
             # Save to directory or upload to backend
             if self.download_only:
                 # Download-only mode: save to directory structure
-                save_result = self.save_video_to_directory(metadata, final_analysis, video_path, audio_transcript)
+                save_result = self.save_video_to_directory(metadata, mapping_analysis, video_path, audio_transcript)
                 if save_result:
                     word_stats['videos_uploaded'].append({
                         'slug': slug,
-                        'mp3_path': save_result.get('mp3_path'),
+                        'video_path': save_result.get('video_path'),
                         'metadata_path': save_result.get('metadata_path'),
                         'status': 'saved',
                         'audio_verified': True
                     })
                     word_stats['mappings_created'].extend([
-                        {'word': m['word'], 'edu_score': m['education_score'], 'ctx_score': m['context_score'], 'source': 'audio'}
-                        for m in final_analysis['mappings']
+                        {'word': m['word'], 'source': 'audio'}
+                        for m in mapping_analysis['mappings']
                     ])
             else:
                 # Upload to backend with audio transcript
-                upload_result = self.upload_to_backend(metadata, final_analysis, video_path, audio_transcript)
+                upload_result = self.upload_to_backend(metadata, mapping_analysis, video_path, audio_transcript)
                 if upload_result:
                     word_stats['videos_uploaded'].append({
                         'slug': slug,
@@ -934,8 +759,8 @@ IMPORTANT RULES:
                         'audio_verified': True
                     })
                     word_stats['mappings_created'].extend([
-                        {'word': m['word'], 'edu_score': m['education_score'], 'ctx_score': m['context_score'], 'source': 'audio'}
-                        for m in final_analysis['mappings']
+                        {'word': m['word'], 'source': 'audio'}
+                        for m in mapping_analysis['mappings']
                     ])
 
         # Print word summary
@@ -943,7 +768,8 @@ IMPORTANT RULES:
         logger.info(f"SUMMARY FOR '{word.upper()}'")
         logger.info(f"{'='*60}")
         logger.info(f"Stage 1 - Videos found: {word_stats['videos_found']}")
-        logger.info(f"Stage 2 - Candidates selected: {word_stats['candidates_found']}")
+        logger.info(f"Stage 2 - Scored (passed): {word_stats['scored_videos']}")
+        logger.info(f"Stage 3 - Downloaded: {word_stats['downloaded_videos']}")
         logger.info(f"Stage 3 - Audio verified: {word_stats['audio_verified']}")
         if self.download_only:
             logger.info(f"Videos saved: {len(word_stats['videos_uploaded'])}")
@@ -964,7 +790,7 @@ IMPORTANT RULES:
         if word_stats['mappings_created']:
             logger.info(f"\nMappings created (from audio transcripts):")
             for m in word_stats['mappings_created']:
-                logger.info(f"  - {m['word']} (edu={m['edu_score']:.2f}, ctx={m['ctx_score']:.2f}, source={m['source']})")
+                logger.info(f"  - {m['word']} (source={m['source']})")
 
         logger.info(f"{'='*60}\n")
 
@@ -978,8 +804,6 @@ IMPORTANT RULES:
         logger.info(f"Mode: {'DOWNLOAD-ONLY' if self.download_only else 'DOWNLOAD + UPLOAD'}")
         logger.info(f"Source ID: {self.source_id}")
         logger.info(f"Storage Dir: {self.storage_dir}")
-        if not self.download_only:
-            logger.info(f"Backend URL: {self.backend_url}")
         logger.info(f"Word Source: {source_name or self.word_list_path}")
         logger.info(f"Max Videos per Word: {self.max_videos_per_word}")
         logger.info(f"Min Education Score: {self.education_min_score}")
@@ -989,7 +813,6 @@ IMPORTANT RULES:
         # Load words if not provided
         if words is None:
             words = self.load_words()
-        vocab_list = words
 
         # Process each word
         start_time = time.time()
@@ -997,7 +820,7 @@ IMPORTANT RULES:
         all_word_stats = []
 
         for i, word in enumerate(words, 1):
-            word_stats = self.process_word(word, vocab_list)
+            word_stats = self.process_word(word)
             all_word_stats.append(word_stats)
             words_processed += 1
 

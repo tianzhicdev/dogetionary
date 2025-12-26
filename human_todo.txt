@@ -443,16 +443,8 @@ order:
 2. new words from user selected bundle
 3. new words from every day english
 
--- done --
-
-
-
-
-
-
 names
 snapshot
-
 
 
 
@@ -495,6 +487,38 @@ pipeline + human verification;
 
   do you have more questions? let's do a research on how this can be
   done;
+
+
+
+in fact the bug / race condition provided some concureency that
+  was good; can we set the conccurency to be 5? it is ok if more
+  than 10 landed in the queue;
+
+  what would be the cleanest way to do it?
+  2. ideally we only add video questions to the queue if the videos
+  are downloaded
+
+
+  4. also perhaps we want to set the queue size to 20;
+
+
+6. Create an account
+Go to https://dmca.copyright.gov and register
+
+-- done --
+
+
+8. movie name and title to just title and year;
+
+5. report content
+
+9. api/web ui for uploading video: video, transcript, word, title, date;
+10 downlaod a shitton of videos; with a focus on pre-1928
+
+
+3. when the app closes, can we trigger a process to remove
+  downloaded videos (if they are not needed by any q in the queue)?
+
 
 
 
@@ -893,3 +917,44 @@ Complete the Analogy -> multi choice -> multi choice "Happy : Ecstatic :: Sad :
   Ready to start? I recommend beginning with Phase 1 (extract
   common functions) - it's low-risk, high-impact, and can be done
   incrementally without breaking existing functionality.
+
+
+
+
+  Phase 1: Quick Wins ⚡
+
+  1. Extract duplicate utility functions (date/word count/time
+  formatting)
+  2. Create shared empty state view component
+  3. Remove all commented-out code blocks
+  4. Extract common button styles
+
+  Phase 2: Component Extraction 🎨
+
+  1. Create LoadableView protocol for isLoading/errorMessage
+  pattern
+  2. Extract InfoBadge/Pill component
+  3. Create PrimaryButton, SecondaryButton components
+  4. Promote SectionHeader to shared component
+
+  Phase 3: Large File Decomposition 📁
+
+  1. CRITICAL: Split DictionaryModels.swift into domain-specific
+  files
+  2. Decompose SettingsView into section files
+  3. Decompose OnboardingView into page files
+  4. Decompose ReviewView, WordDetailView, ScheduleView
+
+  Phase 4: Architecture Improvements 🏗️
+
+  1. Extract ViewModels for WordDetailView, ScheduleView,
+  SettingsView, SavedWordsView
+  2. Implement protocol-based dependency injection
+  3. Consolidate AudioPlayer to environment object or singleton
+  4. Review and optimize computed properties
+
+  Phase 5: Performance Optimization ⚡
+
+  1. Cache computed filteredSchedules
+  2. Audit memory leaks (AudioPlayer, VideoService closures)
+  3. Batch state updates where possible

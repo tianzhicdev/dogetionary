@@ -96,6 +96,50 @@ struct ReviewView: View {
                             .tint(AppTheme.accentCyan)
                             .foregroundColor(AppTheme.smallTitleText)
                     }
+
+                    // Streaming prepend loading overlay
+                    if searchViewModel.isStreamingPrepend {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea()
+                            .transition(.opacity)
+
+                        VStack(spacing: 20) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(AppTheme.accentCyan)
+
+                            VStack(spacing: 8) {
+                                if searchViewModel.firstQuestionReady {
+                                    Text("First video ready!")
+                                        .font(.headline)
+                                        .foregroundColor(AppTheme.white)
+
+                                    Text("Preparing remaining videos...")
+                                        .font(.subheadline)
+                                        .foregroundColor(AppTheme.white.opacity(0.8))
+                                } else {
+                                    Text("Preparing videos...")
+                                        .font(.headline)
+                                        .foregroundColor(AppTheme.white)
+
+                                    Text("This may take a moment")
+                                        .font(.subheadline)
+                                        .foregroundColor(AppTheme.white.opacity(0.8))
+                                }
+
+                                // Progress indicator
+                                let (ready, total) = searchViewModel.streamProgress
+                                Text("\(ready) of \(total) ready")
+                                    .font(.caption)
+                                    .foregroundColor(AppTheme.white.opacity(0.6))
+                            }
+                        }
+                        .padding(32)
+                        .background(AppTheme.verticalGradient2)
+                        .cornerRadius(16)
+                        .shadow(radius: 10)
+                        .transition(.scale.combined(with: .opacity))
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

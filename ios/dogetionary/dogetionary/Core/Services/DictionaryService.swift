@@ -168,4 +168,55 @@ class DictionaryService {
     func triggerVideoSearch(word: String, completion: @escaping (Result<Void, Error>) -> Void) {
         VideoSearchService.shared.triggerVideoSearch(word: word, completion: completion)
     }
+
+    // MARK: - Content Moderation
+
+    /// Submit a content report for inappropriate/incorrect question content
+    /// - Parameters:
+    ///   - word: The word being reported
+    ///   - learningLanguage: Learning language code
+    ///   - nativeLanguage: Native language code
+    ///   - questionType: Type of question (e.g., "mc_definition", "video_mc")
+    ///   - videoId: Optional video ID for video questions
+    ///   - reportType: Type of report (Inappropriate, Incorrect, Copyright, Other)
+    ///   - comment: Optional user comment
+    ///   - completion: Result with ContentReportResponse
+    func reportContent(
+        word: String,
+        learningLanguage: String,
+        nativeLanguage: String,
+        questionType: String,
+        videoId: Int?,
+        reportType: ReportType,
+        comment: String? = nil,
+        completion: @escaping (Result<ContentReportResponse, Error>) -> Void
+    ) {
+        guard let userId = UserManager.shared.userId else {
+            completion(.failure(NSError(domain: "DictionaryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
+            return
+        }
+
+        let endpoint = "\(APIClient.baseURL)/v3/content/report"
+
+        let requestBody = ContentReportRequest(
+            user_id: userId.uuidString,
+            word: word,
+            learning_language: learningLanguage,
+            native_language: nativeLanguage,
+            question_type: questionType,
+            video_id: videoId,
+            report_type: reportType.rawValue,
+            comment: comment
+        )
+
+        APIClient.shared.request(
+            endpoint: endpoint,
+            method: "POST",
+            body: requestBody
+        ) { (result: Result<ContentReportResponse, Error>) in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+    }
 }
