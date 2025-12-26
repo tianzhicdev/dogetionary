@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "total_words": 4042,
+    "processed": 5,
+    "has_videos": 1,
+    "triggered": 4,
+    "failed": 0,
+    "skipped": 0,
+    "start_time": "2025-12-25T21:57:14.725204",
+    "end_time": "2025-12-25T21:57:22.793447"
+  },
+  "triggered_words": [
+    "abandon",
+    "abbreviate",
+    "abnormal",
+    "abolish"
+  ],
+  "words_with_videos": [
+    "ability"
+  ],
+  "failed_words": []
+}

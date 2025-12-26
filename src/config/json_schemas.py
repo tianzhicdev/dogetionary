@@ -318,6 +318,73 @@ VIDEO_MC_SIMPLE_SCHEMA = {
 }
 
 # ============================================================================
+# Video Score Analysis Schema
+# ============================================================================
+
+VIDEO_SCORE_ANALYSIS_SCHEMA = {
+    "name": "video_score_analysis_v1",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "education_score": {
+                "type": "number",
+                "description": "Score 0-1 for educational value (clarity, grammar, pronunciation)"
+            },
+            "context_score": {
+                "type": "number",
+                "description": "Score 0-1 for visual/narrative context (can scene be understood without movie knowledge)"
+            },
+            "reason": {
+                "type": "string",
+                "description": "Brief explanation of the scores"
+            }
+        },
+        "required": ["education_score", "context_score", "reason"],
+        "additionalProperties": False
+    }
+}
+
+# ============================================================================
+# Word Mapping Extraction Schema
+# ============================================================================
+
+WORD_MAPPING_EXTRACTION_SCHEMA = {
+    "name": "word_mapping_extraction_v1",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "word_mappings": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "word": {
+                            "type": "string",
+                            "description": "The English word found in the transcript"
+                        },
+                        "timestamp": {
+                            "type": "number",
+                            "description": "When the word appears in the video (seconds)"
+                        },
+                        "learning_value": {
+                            "type": "string",
+                            "description": "Why this word is valuable for ESL learners"
+                        }
+                    },
+                    "required": ["word", "timestamp", "learning_value"],
+                    "additionalProperties": False
+                },
+                "description": "List of English words suitable for ESL learning"
+            }
+        },
+        "required": ["word_mappings"],
+        "additionalProperties": False
+    }
+}
+
+# ============================================================================
 # Schema Registry (for easy lookup by use case)
 # ============================================================================
 
@@ -329,6 +396,8 @@ SCHEMA_REGISTRY = {
     "mc_fillin": MC_FILLIN_QUESTION_SCHEMA,
     "pronounce_sentence": PRONOUNCE_SENTENCE_QUESTION_SCHEMA,
     "video_mc_simple": VIDEO_MC_SIMPLE_SCHEMA,
+    "video_score_analysis": VIDEO_SCORE_ANALYSIS_SCHEMA,
+    "word_mapping_extraction": WORD_MAPPING_EXTRACTION_SCHEMA,
 }
 
 

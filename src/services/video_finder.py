@@ -484,10 +484,10 @@ IMPORTANT RULES:
     def download_video(self, metadata: Dict) -> Optional[Path]:
         """Download video file from ClipCafe and save to storage"""
         slug = metadata.get('slug', '')
-        clip_id = metadata.get('id', '')
+        clip_id = metadata.get('clipID', '')  # ClipCafe uses 'clipID' not 'id'
 
         if not slug or not clip_id:
-            logger.error(f"    Missing slug or id in metadata")
+            logger.error(f"    Missing slug or clipID in metadata")
             return None
 
         # Create directory for this video

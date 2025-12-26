@@ -16,21 +16,24 @@ struct VideoMetadataView: View {
     }
 
     var body: some View {
-        if let title = displayTitle {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.bodyText)
+        // Only show if feature flag is enabled
+        if Configuration.SHOW_MOVIE_TITLE_AND_YEAR {
+            if let title = displayTitle {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppTheme.bodyText)
 
-                if let year = metadata.movie_year {
-                    Text(String(year))
-                        .font(.subheadline)
-                        .foregroundColor(AppTheme.smallTitleText)
+                    if let year = metadata.movie_year {
+                        Text(String(year))
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.smallTitleText)
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
         }
     }
 }

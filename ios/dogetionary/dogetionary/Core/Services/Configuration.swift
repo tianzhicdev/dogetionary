@@ -45,4 +45,10 @@ struct Configuration {
         }
         return baseURL
     }
+
+    // MARK: - Feature Flags
+
+    /// Show movie title and year in video questions
+    /// Set to false to hide movie metadata from users
+    static let SHOW_MOVIE_TITLE_AND_YEAR = false
 }
