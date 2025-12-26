@@ -1072,7 +1072,7 @@ struct VideoMetadata: Codable {
 
 /// Enhanced review question data
 struct ReviewQuestion: Codable {
-    let question_type: String  // "recognition", "mc_definition", "mc_word", "fill_blank", "pronounce_sentence", "video_mc"
+    let question_type: String  // "recognition", "mc_definition", "mc_word", "fill_blank", "pronounce_sentence", "video_mc", "mc_quote"
     let word: String
     let question_text: String
     let options: [QuestionOption]?
@@ -1089,8 +1089,13 @@ struct ReviewQuestion: Codable {
     let audio_transcript: String?  // For video_mc type - Whisper-generated transcript from video audio
     let video_metadata: VideoMetadata?  // For video_mc type - Movie title and year
 
+    // Quote question fields
+    let quote: String?  // For mc_quote type - The famous quote containing the word
+    let quote_source: String?  // For mc_quote type - Source attribution (e.g., "Einstein", "Shakespeare - Hamlet")
+    let quote_translation: String?  // For mc_quote type - Native language translation of the quote
+
     private enum CodingKeys: String, CodingKey {
-        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video, audio_transcript, video_metadata
+        case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video, audio_transcript, video_metadata, quote, quote_source, quote_translation
     }
 }
 

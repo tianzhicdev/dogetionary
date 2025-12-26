@@ -12,12 +12,12 @@ struct ContentView: View {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var questionQueue = QuestionQueueManager.shared
     @StateObject private var appVersionManager = AppVersionManager.shared
-    @State private var selectedView = 0  // 0 = Shojin (default)
+    @State private var selectedView = 0  // 0 = TAT (default)
     @State private var showOnboarding = false
     @State private var dailyBannerExpanded = false
     @State private var showDailyGoalCelebration = false  // Full-screen celebration
-    @State private var showSearchBar = false  // Control search bar visibility (for Shojin tab only)
-    @State private var isSearchEnabled = false  // Control search button visibility (only on Shojin tab)
+    @State private var showSearchBar = false  // Control search bar visibility (for TAT tab only)
+    @State private var isSearchEnabled = false  // Control search button visibility (only on TAT tab)
     @Environment(\.scenePhase) var scenePhase
 
     private var dailyTarget: Int {
@@ -73,7 +73,7 @@ struct ContentView: View {
                             }
                         }
                         .tabItem {
-                            Label("Shojin", systemImage: "figure.boxing")
+                            Label("TAT", systemImage: "figure.boxing")
                         }
                         .tag(0)
                         .onAppear {
@@ -81,7 +81,7 @@ struct ContentView: View {
                         }
                         .onDisappear {
                             isSearchEnabled = false
-                            showSearchBar = false  // Close search bar when leaving Shojin tab
+                            showSearchBar = false  // Close search bar when leaving TAT tab
                         }
 
                         SavedWordsView()
@@ -122,7 +122,7 @@ struct ContentView: View {
         .onChange(of: selectedView) { oldValue, newValue in
             // Track navigation analytics (Search tab removed, indices shifted)
             let action: AnalyticsAction = switch newValue {
-            case 0: .navTabReview  // Shojin
+            case 0: .navTabReview  // TAT
             case 1: .navTabSaved  // History
             case 2: .navTabSettings
             default: .navTabReview
@@ -179,7 +179,7 @@ struct ContentView: View {
         }
         .onChange(of: AppState.shared.shouldNavigateToReview) { _, shouldNavigate in
             if shouldNavigate {
-                // Navigate to Shojin view when notification is tapped
+                // Navigate to TAT view when notification is tapped
                 selectedView = 0
             }
         }

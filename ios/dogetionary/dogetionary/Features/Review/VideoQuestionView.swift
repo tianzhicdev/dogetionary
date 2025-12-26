@@ -348,7 +348,10 @@ struct VideoQuestionView_Previews: PreviewProvider {
                         movie_title: "Medical Drama",
                         movie_year: 2024,
                         title: nil
-                    )
+                    ),
+                    quote: nil,
+                    quote_source: nil,
+                    quote_translation: nil
                 ),
                 onAnswer: { answer in
                     print("Selected: \(answer)")

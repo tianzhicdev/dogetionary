@@ -40,7 +40,8 @@ class VideoFinder:
         education_min_score: float = 0.6,
         context_min_score: float = 0.6,
         max_mappings_per_video: int = 5,
-        download_only: bool = False
+        download_only: bool = False,
+        backend_url: Optional[str] = None
     ):
         self.storage_dir = Path(storage_dir)
         self.word_list_path = Path(word_list_path) if word_list_path else None
@@ -51,6 +52,7 @@ class VideoFinder:
         self.context_min_score = context_min_score
         self.max_mappings_per_video = max_mappings_per_video
         self.download_only = download_only
+        self.backend_url = backend_url
 
         # Generate unique source_id for this pipeline run
         self.source_id = f"find_videos_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -106,6 +108,39 @@ class VideoFinder:
 
         logger.info(f"Loaded {len(words)} words from {self.word_list_path}")
         return words
+
+    def check_word_has_videos_remote(self, word: str, learning_language: str = "en") -> bool:
+        """
+        Check if word already has videos in production database via API.
+        Returns True if word has videos, False otherwise.
+        Skips check if backend_url is not configured.
+        """
+        if not self.backend_url:
+            logger.debug(f"  No backend_url configured - skipping remote check for '{word}'")
+            return False
+
+        try:
+            url = f"{self.backend_url}/v3/api/check-word-videos"
+            params = {"word": word, "lang": learning_language}
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            has_videos = data.get('has_videos', False)
+            video_count = data.get('video_count', 0)
+
+            if has_videos:
+                logger.info(f"  ✓ Word '{word}' already has {video_count} video(s) in production (skipping)")
+            else:
+                logger.debug(f"  Word '{word}' has no videos in production (proceeding)")
+
+            return has_videos
+
+        except Exception as e:
+            logger.error(f"  Failed to check production API for '{word}': {e}")
+            logger.error(f"  Skipping word '{word}' due to API check failure")
+            # Return True to skip the word entirely on API failure (as per user requirement)
+            return True
 
     def search_clipcafe(self, word: str) -> List[Dict]:
         """Search ClipCafe API for videos containing word in transcript"""
@@ -520,9 +555,62 @@ IMPORTANT RULES:
             logger.error(f"    Failed to download video {slug}: {e}")
             return None
 
+    def extract_mp3_from_mp4(self, video_path: Path) -> Optional[Path]:
+        """
+        Extract MP3 audio from MP4 video using ffmpeg.
+        Returns path to MP3 file, or None if extraction fails.
+        """
+        if not video_path.exists():
+            logger.error(f"    Video file does not exist: {video_path}")
+            return None
+
+        mp3_path = video_path.parent / f"{video_path.stem}.mp3"
+
+        # Skip if MP3 already exists
+        if mp3_path.exists():
+            logger.debug(f"    MP3 already exists: {mp3_path.name}")
+            return mp3_path
+
+        try:
+            logger.debug(f"    Extracting MP3 from {video_path.name}...")
+            cmd = [
+                'ffmpeg',
+                '-i', str(video_path),
+                '-vn',  # No video
+                '-acodec', 'libmp3lame',
+                '-q:a', '2',  # High quality
+                '-y',  # Overwrite output
+                str(mp3_path)
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            if mp3_path.exists():
+                size_kb = mp3_path.stat().st_size / 1024
+                logger.debug(f"    Extracted MP3: {mp3_path.name} ({size_kb:.1f} KB)")
+                return mp3_path
+            else:
+                logger.error(f"    MP3 extraction completed but file not found: {mp3_path}")
+                return None
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"    FFmpeg failed to extract MP3: {e.stderr}")
+            return None
+        except FileNotFoundError:
+            logger.error(f"    ffmpeg command not found. Install with: brew install ffmpeg")
+            return None
+        except Exception as e:
+            logger.error(f"    Unexpected error extracting MP3: {e}")
+            return None
+
     def save_video_to_directory(self, metadata: Dict, analysis: Dict, video_path: Path,
                                 audio_transcript: Dict) -> Optional[Dict]:
-        """Save video and metadata to directory structure (download-only mode)"""
+        """Save video, MP3, and metadata_v3.json to directory structure (download-only mode)"""
         slug = metadata.get('slug', '')
         if not slug:
             return None
@@ -530,16 +618,10 @@ IMPORTANT RULES:
         video_dir = self.storage_dir / slug
 
         try:
-            # Save metadata
-            metadata_path = video_dir / "metadata.json"
-            with open(metadata_path, 'w') as f:
-                json.dump({
-                    "metadata": metadata,
-                    "analysis": analysis,
-                    "audio_transcript": audio_transcript,
-                    "source_id": self.source_id,
-                    "saved_at": datetime.now().isoformat()
-                }, f, indent=2)
+            # Extract MP3 from MP4
+            mp3_path = self.extract_mp3_from_mp4(video_path)
+            if not mp3_path:
+                logger.warning(f"      Failed to extract MP3 for {slug}, continuing without MP3")
 
             # Prepare word mappings with proper format
             word_mappings = []
@@ -548,27 +630,46 @@ IMPORTANT RULES:
                     "word": m['word'],
                     "learning_language": "en",
                     "relevance_score": 0.8,  # Default since we don't have dual scores anymore
-                    "transcript_source": "audio"
+                    "transcript_source": "audio",
+                    "timestamp": m.get('timestamp', 0),
+                    "learning_value": m.get('learning_value', '')
                 })
+
+            # Save metadata_v3.json with audio_transcript and word mappings
+            metadata_path = video_dir / "metadata_v3.json"
+            with open(metadata_path, 'w') as f:
+                json.dump({
+                    "metadata": metadata,
+                    "analysis": analysis,
+                    "audio_transcript": audio_transcript,
+                    "word_mappings": word_mappings,
+                    "source_id": self.source_id,
+                    "saved_at": datetime.now().isoformat()
+                }, f, indent=2)
 
             result = {
                 "slug": slug,
                 "video_path": str(video_path),
+                "mp3_path": str(mp3_path) if mp3_path else None,
                 "metadata_path": str(metadata_path),
-                "format": "mp4",  # FIXED: was "mp3"
+                "format": "mp4",
                 "mappings": word_mappings
             }
 
-            logger.info(f"      ✓ Saved {slug} to directory")
+            logger.info(f"      ✓ Saved {slug} to directory (MP4 + MP3 + metadata_v3.json)")
             return result
 
         except Exception as e:
             logger.error(f"      Failed to save {slug} to directory: {e}")
             return None
 
-    def upload_to_backend(self, metadata: Dict, analysis: Dict, video_path: Path,
-                         audio_transcript: Dict) -> Optional[Dict]:
-        """Upload video directly to database using admin_videos handler"""
+    def upload_video_to_api(self, metadata: Dict, analysis: Dict, video_path: Path,
+                            audio_transcript: Dict) -> Optional[Dict]:
+        """Upload video to production backend via API endpoint /v3/admin/videos/batch-upload"""
+        if not self.backend_url:
+            logger.error("      Backend URL not configured - cannot upload")
+            return None
+
         slug = metadata.get('slug', '')
         if not slug:
             return None
@@ -583,74 +684,58 @@ IMPORTANT RULES:
             size_mb = size_bytes / (1024 * 1024)
 
             # Prepare word mappings from analysis
-            # Note: analysis now only has word/timestamp/learning_value from extract_word_mappings
-            # We need to get the scores from the earlier stage if needed, or use defaults
             word_mappings = []
             for m in analysis.get('mappings', []):
                 word_mappings.append({
                     "word": m['word'],
                     "learning_language": "en",
-                    "relevance_score": 0.8,  # Default relevance score
-                    "transcript_source": "audio",
-                    "timestamp": m.get('timestamp')
+                    "relevance_score": 0.8
                 })
 
-            # Prepare video payload
+            # Prepare batch upload payload (matching admin_videos.py format)
             payload = {
+                "source_id": self.source_id,
                 "videos": [{
                     "slug": slug,
-                    "name": slug,
-                    "format": "mp4",  # FIXED: was "mp3"
+                    "name": metadata.get('movie_title', slug),
+                    "format": "mp4",
                     "video_data_base64": video_base64,
-                    "size_bytes": size_bytes,
-                    "transcript": metadata.get('transcript', ''),
-                    "audio_transcript": audio_transcript.get('text', ''),
-                    "audio_transcript_verified": True,
-                    "whisper_metadata": audio_transcript.get('whisper_metadata'),
+                    "transcript": audio_transcript.get('text', ''),
                     "metadata": {
-                        "clip_id": metadata.get('id'),
+                        "clip_id": metadata.get('clipID'),
                         "movie_title": metadata.get('movie_title'),
                         "movie_plot": metadata.get('movie_plot'),
                         "duration_seconds": metadata.get('duration_seconds'),
                         "clipcafe_slug": slug,
-                        "analysis": analysis  # Include full analysis for reference
+                        "education_score": analysis.get('education_score'),
+                        "context_score": analysis.get('context_score'),
+                        "audio_transcript_verified": True
                     },
                     "word_mappings": word_mappings
                 }]
             }
 
-            logger.info(f"      Uploading {slug} to database ({size_mb:.2f}MB, {len(word_mappings)} mappings)...")
+            logger.info(f"      Uploading {slug} to {self.backend_url} ({size_mb:.2f}MB, {len(word_mappings)} mappings)...")
 
-            # Upload to database directly
-            try:
-                from handlers.admin_videos import _upload_single_video
-                from utils.database import get_db_connection
-                import psycopg2.extras
+            # Call batch-upload API
+            url = f"{self.backend_url}/v3/admin/videos/batch-upload"
+            response = requests.post(url, json=payload, timeout=120)
+            response.raise_for_status()
 
-                conn = get_db_connection()
-                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            result_data = response.json()
 
-                try:
-                    video_data = payload['videos'][0]
-                    result = _upload_single_video(cursor, video_data, self.source_id)
-                    conn.commit()
-
-                    logger.info(f"      ✓ Uploaded {slug}: video_id={result['video_id']}, "
-                               f"mappings_created={result['mappings_created']}")
-
-                    return result
-                except Exception as e:
-                    conn.rollback()
-                    raise
-                finally:
-                    cursor.close()
-                    conn.close()
-            except Exception as e:
-                logger.error(f"      ✗ Failed to upload {slug}: {e}")
+            if result_data.get('success'):
+                video_result = result_data.get('results', [{}])[0]
+                logger.info(f"      ✓ Uploaded {slug}: video_id={video_result.get('video_id')}, "
+                           f"status={video_result.get('status')}, "
+                           f"mappings_created={video_result.get('mappings_created')}")
+                return video_result
+            else:
+                logger.error(f"      ✗ Upload failed for {slug}: {result_data}")
                 return None
 
         except Exception as e:
-            logger.error(f"      Failed to prepare upload for {slug}: {e}")
+            logger.error(f"      ✗ Failed to upload {slug} to API: {e}")
             return None
 
     def process_word(self, word: str) -> Dict:
@@ -668,6 +753,12 @@ IMPORTANT RULES:
             'videos_uploaded': [],
             'mappings_created': []
         }
+
+        # STAGE 0: Check production API if backend_url is configured
+        if self.backend_url:
+            if self.check_word_has_videos_remote(word):
+                logger.info(f"  Word '{word}' already has videos in production - skipping entire pipeline")
+                return word_stats
 
         # STAGE 1: Search ClipCafe and cache metadata
         logger.info(f"  [Stage 1] Searching ClipCafe for '{word}'...")
@@ -700,10 +791,18 @@ IMPORTANT RULES:
         for metadata, score_analysis in scored_videos:
             slug = metadata.get('slug', '')
 
-            # Skip if already exists (idempotency check)
+            # Idempotency check: Skip if all 3 files already exist (mp4, mp3, metadata_v3.json)
             video_dir = self.storage_dir / slug
-            if (video_dir / "metadata.json").exists():
-                logger.info(f"    Skipping {slug} - already exists")
+            video_path_check = video_dir / f"{slug}.mp4"
+            mp3_path_check = video_dir / f"{slug}.mp3"
+            metadata_path_check = video_dir / "metadata_v3.json"
+
+            if video_path_check.exists() and mp3_path_check.exists() and metadata_path_check.exists():
+                logger.info(f"    Skipping {slug} - all files already exist (mp4 + mp3 + metadata_v3.json)")
+                # Check if needs upload to backend
+                if self.backend_url and not self.download_only:
+                    logger.info(f"      Checking if {slug} needs upload to backend...")
+                    # TODO: Add upload logic for existing files
                 continue
 
             # Download video
@@ -745,7 +844,7 @@ IMPORTANT RULES:
                     ])
             else:
                 # Upload to backend with audio transcript
-                upload_result = self.upload_to_backend(metadata, mapping_analysis, video_path, audio_transcript)
+                upload_result = self.upload_video_to_api(metadata, mapping_analysis, video_path, audio_transcript)
                 if upload_result:
                     word_stats['videos_uploaded'].append({
                         'slug': slug,

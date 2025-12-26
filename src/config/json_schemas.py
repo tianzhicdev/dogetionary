@@ -268,6 +268,46 @@ PRONOUNCE_SENTENCE_QUESTION_SCHEMA = {
     }
 }
 
+MC_QUOTE_QUESTION_SCHEMA = {
+    "name": "mc_quote_question",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "question_text": {
+                "type": "string",
+                "description": "The question prompt asking what the word means in the quote"
+            },
+            "quote": {
+                "type": "string",
+                "description": "The famous quote containing the target word"
+            },
+            "quote_source": {
+                "type": "string",
+                "description": "Source attribution for the quote (e.g., 'Einstein', 'Shakespeare - Hamlet')"
+            },
+            "quote_translation": {
+                "type": "string",
+                "description": "Natural translation of the quote to learner's native language"
+            },
+            "options": {
+                "type": "array",
+                "items": MC_OPTION_SCHEMA,
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Exactly 2 answer options (A, B)"
+            },
+            "correct_answer": {
+                "type": "string",
+                "enum": ["A", "B"],
+                "description": "The ID of the correct option"
+            }
+        },
+        "required": ["question_text", "quote", "quote_source", "quote_translation", "options", "correct_answer"],
+        "additionalProperties": False
+    }
+}
+
 # ============================================================================
 # Video Multiple Choice Schema (Simplified - always tests meaning in context)
 # ============================================================================
@@ -395,6 +435,7 @@ SCHEMA_REGISTRY = {
     "mc_definition": MC_DEFINITION_QUESTION_SCHEMA,
     "mc_fillin": MC_FILLIN_QUESTION_SCHEMA,
     "pronounce_sentence": PRONOUNCE_SENTENCE_QUESTION_SCHEMA,
+    "mc_quote": MC_QUOTE_QUESTION_SCHEMA,
     "video_mc_simple": VIDEO_MC_SIMPLE_SCHEMA,
     "video_score_analysis": VIDEO_SCORE_ANALYSIS_SCHEMA,
     "word_mapping_extraction": WORD_MAPPING_EXTRACTION_SCHEMA,

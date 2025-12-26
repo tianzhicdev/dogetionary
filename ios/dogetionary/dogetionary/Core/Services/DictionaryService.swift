@@ -191,15 +191,15 @@ class DictionaryService {
         comment: String? = nil,
         completion: @escaping (Result<ContentReportResponse, Error>) -> Void
     ) {
-        guard let userId = UserManager.shared.userId else {
-            completion(.failure(NSError(domain: "DictionaryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
+        let userID = UserManager.shared.getUserID()
+
+        guard let url = URL(string: "\(Configuration.effectiveBaseURL)/v3/content/report") else {
+            completion(.failure(DictionaryError.invalidURL))
             return
         }
 
-        let endpoint = "\(APIClient.baseURL)/v3/content/report"
-
         let requestBody = ContentReportRequest(
-            user_id: userId.uuidString,
+            user_id: userID,
             word: word,
             learning_language: learningLanguage,
             native_language: nativeLanguage,
@@ -209,14 +209,50 @@ class DictionaryService {
             comment: comment
         )
 
-        APIClient.shared.request(
-            endpoint: endpoint,
+        guard let bodyData = try? JSONEncoder().encode(requestBody) else {
+            completion(.failure(DictionaryError.invalidResponse))
+            return
+        }
+
+        let task = NetworkClient.shared.dataTask(
+            url: url,
             method: "POST",
-            body: requestBody
-        ) { (result: Result<ContentReportResponse, Error>) in
-            DispatchQueue.main.async {
-                completion(result)
+            headers: ["Content-Type": "application/json"],
+            body: bodyData
+        ) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(DictionaryError.invalidResponse))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(DictionaryError.noData))
+                return
+            }
+
+            if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                do {
+                    let response = try JSONDecoder().decode(ContentReportResponse.self, from: data)
+                    DispatchQueue.main.async {
+                        completion(.success(response))
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        completion(.failure(DictionaryError.decodingError(error)))
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(DictionaryError.serverError(httpResponse.statusCode)))
+                }
             }
         }
+
+        task.resume()
     }
 }

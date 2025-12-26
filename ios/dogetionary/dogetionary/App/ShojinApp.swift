@@ -1,6 +1,6 @@
 //
 //  ShojinApp.swift
-//  Shojin
+//  TAT (The Alien Training)
 //
 //  Created by biubiu on 9/6/25.
 //
@@ -10,7 +10,7 @@ import UserNotifications
 import AVFoundation
 
 @main
-struct ShojinApp: App {
+struct TATApp: App {
     @Environment(\.scenePhase) var scenePhase
 
     init() {
@@ -44,9 +44,9 @@ struct ShojinApp: App {
                 options: [.allowBluetoothA2DP, .mixWithOthers]
             )
             try audioSession.setActive(true)
-            print("✓ ShojinApp: Audio session configured for playback with Bluetooth support")
+            print("✓ TATApp: Audio session configured for playback with Bluetooth support")
         } catch {
-            print("❌ ShojinApp: Failed to configure audio session: \(error.localizedDescription)")
+            print("❌ TATApp: Failed to configure audio session: \(error.localizedDescription)")
         }
     }
     var body: some Scene {

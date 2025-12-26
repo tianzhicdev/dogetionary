@@ -56,8 +56,7 @@ def main():
 
     parser.add_argument(
         '--backend-url',
-        default='http://localhost:5001',
-        help='Backend API URL (default: http://localhost:5001)'
+        help='Backend API URL for uploading videos (e.g., http://localhost:5001 or https://kwafy.com/api)'
     )
 
     parser.add_argument(
@@ -107,14 +106,14 @@ def main():
     # Create pipeline
     finder = VideoFinder(
         storage_dir=args.storage_dir,
-        backend_url=args.backend_url,
         word_list_path=args.csv if args.csv else None,
         clipcafe_api_key=clipcafe_api_key,
         openai_api_key=openai_api_key,
         max_videos_per_word=args.max_videos,
         education_min_score=args.education_min_score,
         context_min_score=args.context_min_score,
-        download_only=args.download_only
+        download_only=args.download_only,
+        backend_url=args.backend_url
     )
 
     # Get words from either bundle or CSV

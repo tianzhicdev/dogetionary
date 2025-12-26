@@ -53,7 +53,8 @@ class VideoProductionManager:
         max_retries: int = 3,
         checkpoint_interval: int = 10,
         progress_file: str = "video_production_progress.json",
-        dry_run: bool = False
+        dry_run: bool = False,
+        max_concurrent_processing: int = 1  # Maximum words being processed simultaneously
     ):
         self.api_url = api_url.rstrip('/')
         self.words_file = Path(words_file)
@@ -63,6 +64,7 @@ class VideoProductionManager:
         self.checkpoint_interval = checkpoint_interval
         self.progress_file = Path(progress_file)
         self.dry_run = dry_run
+        self.max_concurrent_processing = max_concurrent_processing
 
         # Statistics tracking
         self.stats = {
@@ -251,6 +253,7 @@ class VideoProductionManager:
         for i, word in enumerate(words_to_process):
             actual_index = start_index + i
             self.stats['processed'] += 1
+            triggered_this_word = False
 
             try:
                 # Check if word has videos
@@ -270,6 +273,7 @@ class VideoProductionManager:
                     if success:
                         self.stats['triggered'] += 1
                         self.triggered_words.append(word)
+                        triggered_this_word = True
                     else:
                         self.stats['failed'] += 1
                         self.failed_words.append(word)
@@ -285,8 +289,8 @@ class VideoProductionManager:
                 logger.info(f"\n  Checkpoint: {self.stats['processed']} words processed, "
                           f"{self.stats['triggered']} triggered, {self.stats['has_videos']} skipped\n")
 
-            # Rate limiting delay (except for last word)
-            if i < len(words_to_process) - 1:
+            # Rate limiting delay - only after triggering production (not for skipped words)
+            if triggered_this_word and i < len(words_to_process) - 1:
                 time.sleep(self.delay_seconds)
 
         # Final checkpoint
@@ -391,7 +395,13 @@ Examples:
         '--delay',
         type=int,
         default=2,
-        help='Delay in seconds between API calls (default: 2)'
+        help='Delay in seconds between API calls (default: 2, recommended: 5-10 for production)'
+    )
+
+    parser.add_argument(
+        '--interval',
+        type=int,
+        help='Alias for --delay (overrides --delay if provided)'
     )
 
     parser.add_argument(
@@ -428,15 +438,19 @@ Examples:
 
     args = parser.parse_args()
 
+    # Use interval if provided, otherwise use delay
+    delay = args.interval if args.interval is not None else args.delay
+
     # Create manager
     manager = VideoProductionManager(
         api_url=args.api_url,
         words_file=args.words_file,
         learning_language=args.language,
-        delay_seconds=args.delay,
+        delay_seconds=delay,
         max_retries=args.max_retries,
         checkpoint_interval=args.checkpoint_interval,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        max_concurrent_processing=1
     )
 
     try:

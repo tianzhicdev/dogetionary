@@ -159,7 +159,7 @@ struct ReviewView: View {
                                     .font(.system(size: 20))
                                     .foregroundColor(AppTheme.accentCyan)
 
-                                Text("Videos for **\(definition.word)** will appear in Shojin shortly")
+                                Text("Videos for **\(definition.word)** will appear shortly")
                                     .font(.system(size: 14))
                                     .foregroundColor(AppTheme.bodyText)
                                     .frame(maxWidth: .infinity, alignment: .leading)

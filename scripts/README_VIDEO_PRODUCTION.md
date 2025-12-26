@@ -51,6 +51,9 @@ python3 trigger_video_production.py --resume
 # Custom delay between requests (default: 2 seconds)
 python3 trigger_video_production.py --delay 5
 
+# Use --interval for production (recommended: 5-10 seconds)
+python3 trigger_video_production.py --interval 10
+
 # Use different API URL
 python3 trigger_video_production.py --api-url http://production-url:5001
 ```
@@ -62,6 +65,7 @@ python3 trigger_video_production.py --api-url http://production-url:5001
 --words-file PATH       Path to vocabulary CSV file
 --language LANG         Learning language code (default: en)
 --delay SECONDS         Delay between API calls (default: 2)
+--interval SECONDS      Alias for --delay, overrides --delay if provided
 --limit N               Process only first N words
 --resume                Resume from last checkpoint
 --dry-run               Simulate without triggering production
@@ -89,7 +93,10 @@ For each word in vocabulary_merged.csv:
    - This starts background video discovery pipeline
    - Video finder will search ClipCafe, download, and verify videos
 
-3. **Wait**: Delay 2 seconds before next word (configurable with `--delay`)
+3. **Wait**: Delay only after triggering production (configurable with `--delay` or `--interval`)
+   - Default: 2 seconds
+   - Production: 10 seconds recommended
+   - **Note**: No delay for skipped words (already have videos)
 
 4. **Checkpoint**: Every 10 words, save progress to `video_production_progress.json`
 
@@ -276,6 +283,48 @@ Actual time may vary based on:
 - Network latency
 - Number of words already having videos (skipped faster)
 - Rate limiting delays
+
+## Production Recommendations
+
+### For Production Servers
+
+When running on production servers, use these settings to avoid overloading:
+
+```bash
+# Recommended production settings
+python3 trigger_video_production.py \
+  --api-url https://your-production-url.com/api \
+  --interval 10 \
+  --limit 100 \
+  --resume
+
+# Why these settings:
+# --interval 10: 10 seconds between requests prevents server overload
+# --limit 100: Process in small batches for better control
+# --resume: Continue from where you left off if interrupted
+```
+
+**Key Differences from Local Development:**
+- **Local development**: `--delay 2` (2 seconds) is fine
+- **Production**: `--interval 10` (10 seconds) recommended to:
+  - Prevent server resource exhaustion
+  - Allow video processing pipeline to complete
+  - Avoid overwhelming ClipCafe API
+  - Reduce risk of container crashes
+
+### Batch Processing Strategy
+
+Process the full vocabulary in manageable chunks:
+
+```bash
+# First batch (words 0-99)
+python3 trigger_video_production.py --interval 10 --limit 100
+
+# Second batch (words 100-199)
+python3 trigger_video_production.py --interval 10 --resume --limit 200
+
+# Continue until all 4,042 words processed
+```
 
 ## Tips
 

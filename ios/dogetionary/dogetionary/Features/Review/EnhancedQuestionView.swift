@@ -34,6 +34,15 @@ struct EnhancedQuestionView: View {
                     }
                 )
 
+            case "mc_quote":
+                QuoteQuestionView(
+                    question: question,
+                    onAnswer: { selectedAnswer in
+                        let isCorrect = selectedAnswer == question.correct_answer
+                        onAnswer(isCorrect)
+                    }
+                )
+
             case "fill_blank":
                 FillInBlankQuestionView(
                     question: question,
@@ -154,7 +163,10 @@ struct EnhancedQuestionView: View {
         video_id: nil,
         show_word_before_video: nil,
         audio_transcript: nil,
-        video_metadata: nil
+        video_metadata: nil,
+        quote: nil,
+        quote_source: nil,
+        quote_translation: nil
     )
 
     ZStack {
@@ -188,7 +200,10 @@ struct EnhancedQuestionView: View {
         video_id: nil,
         show_word_before_video: nil,
         audio_transcript: nil,
-        video_metadata: nil
+        video_metadata: nil,
+        quote: nil,
+        quote_source: nil,
+        quote_translation: nil
     )
 
     ZStack {

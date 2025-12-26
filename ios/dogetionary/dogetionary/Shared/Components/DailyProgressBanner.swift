@@ -131,7 +131,7 @@ struct DailyProgressBanner: View {
 
             Spacer()
 
-            // Search button (only shown on Shojin tab)
+            // Search button (only shown on TAT tab)
             if isSearchEnabled {
                 Button(action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {

@@ -44,13 +44,14 @@ LANG_NAMES = {
 }
 
 # Question type weights for random selection
-# NOTE: Set to 0 for all types - relying on video_mc prioritization and mc_def_native
+# NOTE: Set to 0 for all types - relying on video_mc prioritization, mc_quote, and mc_def_native
 QUESTION_TYPE_WEIGHTS = {
     'mc_definition': 0.0,       # Disabled
     'mc_word': 0.0,             # Disabled
     'fill_blank': 0.0,          # Disabled
     'pronounce_sentence': 0.0,  # Disabled
-    'mc_def_native': 1.0,       # Native language definition MC (used when no videos available)
+    'mc_def_native': 0.2,       # 20% when no videos - Native language definition MC
+    'mc_quote': 0.8,            # 80% when no videos - Quote-based contextual question
     # video_mc is prioritized separately via check_word_has_videos() on line 715
 }
 
@@ -535,6 +536,97 @@ CRITICAL:
 - Each option MUST include both "text" (English definition) and "text_native" ({lang_name} translation)"""
 
 
+def generate_mc_quote_prompt(word: str, definition_data: Dict, native_lang: str) -> str:
+    """Generate prompt for multiple choice quote question using famous_quote from definition."""
+
+    # Extract famous_quote from definition_data
+    famous_quote = definition_data.get('famous_quote')
+
+    # Validate that famous_quote exists and contains the word
+    if not famous_quote or not famous_quote.get('quote'):
+        logger.warning(f"No famous_quote for '{word}', falling back to mc_def_native")
+        return generate_mc_def_native_prompt(word, definition_data, native_lang)
+
+    quote_text = famous_quote.get('quote', '')
+    quote_source = famous_quote.get('source', 'Unknown')
+
+    # Check if quote actually contains the word (case-insensitive)
+    word_lower = word.lower()
+    quote_lower = quote_text.lower()
+
+    if word_lower not in quote_lower:
+        logger.warning(f"famous_quote for '{word}' does not contain the word, falling back to mc_def_native")
+        return generate_mc_def_native_prompt(word, definition_data, native_lang)
+
+    # Extract definitions for context
+    definitions = definition_data.get('definitions', [])
+    native_definitions = []
+    english_definitions = []
+
+    for d in definitions:
+        if 'definition_native' in d:
+            native_definitions.append(d['definition_native'])
+        if 'definition' in d:
+            english_definitions.append(d['definition'])
+
+    lang_name = LANG_NAMES.get(native_lang, native_lang)
+
+    return f"""Generate a multiple choice question testing understanding of the word "{word}" using this famous quote.
+
+Word: "{word}"
+Quote: "{quote_text}"
+Quote Source: {quote_source}
+
+Available English definitions:
+{json.dumps(english_definitions, indent=2, ensure_ascii=False)}
+
+Available {lang_name} definitions:
+{json.dumps(native_definitions, indent=2, ensure_ascii=False)}
+
+Task: Create a quote-based question with:
+1. question_text: "What does '{word}' mean in this quote?"
+2. quote: The provided quote (exactly as given above)
+3. quote_source: The source attribution (exactly as given above)
+4. quote_translation: Natural {lang_name} translation of the entire quote
+5. 2 answer options (definitions in BOTH English and {lang_name}):
+   - Option A: The CORRECT definition based on how the word is used in the quote
+   - Option B: A plausible but INCORRECT distractor
+
+Distractor requirements:
+- Must be semantically related or similar concept
+- Should test real understanding, not be obviously wrong
+- Similar length and style to correct answer
+- Avoid negations or "none of the above"
+- Focus on creating ONE high-quality distractor
+
+IMPORTANT - Translation Quality:
+- quote_translation should be natural and idiomatic {lang_name}
+- Not word-for-word literal translation
+- Preserve the tone and meaning of the original quote
+- Use natural, idiomatic English and {lang_name} in definitions
+- The correct definition should match one of the provided definitions
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{
+  "question_text": "What does '{word}' mean in this quote?",
+  "quote": "{quote_text}",
+  "quote_source": "{quote_source}",
+  "quote_translation": "... (natural {lang_name} translation of the entire quote)",
+  "options": [
+    {{"id": "A", "text": "... (English definition)", "text_native": "... ({lang_name} translation)"}},
+    {{"id": "B", "text": "... (English definition)", "text_native": "... ({lang_name} translation)"}}
+  ],
+  "correct_answer": "A"
+}}
+
+CRITICAL:
+- quote must be EXACTLY the provided quote
+- quote_source must be EXACTLY the provided source
+- quote_translation must be natural and complete
+- Each option MUST include both "text" (English) and "text_native" ({lang_name})
+- The question tests word meaning IN CONTEXT of the quote"""
+
+
 def shuffle_question_options(question_data: Dict) -> Dict:
     """
     Shuffle the options in a multiple choice question to randomize answer position.
@@ -669,6 +761,9 @@ def generate_question_with_llm(
     elif question_type == 'mc_def_native':
         prompt = generate_mc_def_native_prompt(word, definition, native_lang)
         schema_name = 'mc_definition'  # Same schema as mc_definition
+    elif question_type == 'mc_quote':
+        prompt = generate_mc_quote_prompt(word, definition, native_lang)
+        schema_name = 'mc_quote'  # New schema for quote questions
     elif question_type == 'fill_blank':
         prompt = generate_fill_blank_prompt(word, definition, native_lang)
         schema_name = 'mc_fillin'
@@ -683,7 +778,7 @@ def generate_question_with_llm(
 
     # Randomize answer position for MC questions (prevents pattern learning)
     # LLM always returns correct answer as "A", we randomize it here
-    if question_type in ['mc_definition', 'mc_word', 'mc_def_native', 'fill_blank']:
+    if question_type in ['mc_definition', 'mc_word', 'mc_def_native', 'mc_quote', 'fill_blank']:
         if 'options' in question_data and len(question_data['options']) == 2:
             # Extract option objects (LLM returns: A=correct, B=incorrect)
             option_a = question_data['options'][0]

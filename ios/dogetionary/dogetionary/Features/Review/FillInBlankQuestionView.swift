@@ -71,7 +71,10 @@ struct FillInBlankQuestionView: View {
         video_id: nil,
         show_word_before_video: nil,
         audio_transcript: nil,
-        video_metadata: nil
+        video_metadata: nil,
+        quote: nil,
+        quote_source: nil,
+        quote_translation: nil
     )
 
     ZStack {

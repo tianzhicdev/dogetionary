@@ -2,7 +2,7 @@
 //  ReviewSearchViewModel.swift
 //  dogetionary
 //
-//  Handles word search within Shojin/Review view
+//  Handles word search within TAT/Review view
 //  Simple 2-branch logic: videos OR definition
 //
 
@@ -48,7 +48,7 @@ class ReviewSearchViewModel: ObservableObject {
 
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        logger.info("Searching for '\(query)' in Shojin view")
+        logger.info("Searching for '\(query)' in TAT view")
 
         isLoading = true
 
