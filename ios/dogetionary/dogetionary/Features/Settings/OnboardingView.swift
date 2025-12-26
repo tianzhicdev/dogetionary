@@ -327,7 +327,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 20)
 
             VStack(alignment: .leading, spacing: 16) {
-                (Text("Your brain forgets in predictable patterns. SHOJIN tracks each word individually and prompts review at the ")
+                (Text("Your brain forgets in predictable patterns. The Alien Training Program tracks each word individually and prompts review at the ")
                     .foregroundColor(AppTheme.bodyText) +
                 Text("precise moment")
                     .foregroundColor(AppTheme.selectableTint)

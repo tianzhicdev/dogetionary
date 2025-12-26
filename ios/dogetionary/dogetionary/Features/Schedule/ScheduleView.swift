@@ -628,50 +628,6 @@ struct DayCard: View {
     }
 }
 
-// MARK: - Task Badge
-
-struct TaskBadge: View {
-    let count: Int
-    let completed: Int
-    let label: String
-    let color: Color
-
-    init(count: Int, completed: Int = 0, label: String, color: Color) {
-        self.count = count
-        self.completed = completed
-        self.label = label
-        self.color = color
-    }
-
-    var body: some View {
-        HStack(spacing: 4) {
-            if completed > 0 {
-                Text("\(completed)/\(count)")
-                    .font(.system(size: 12, weight: .bold))
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 10))
-                    .foregroundColor(AppTheme.accentCyan)
-            } else {
-                Text("\(count)")
-                    .font(.system(size: 12, weight: .bold))
-            }
-            Text(label.uppercased())
-                .font(.system(size: 11, weight: .medium))
-        }
-        .foregroundColor(completed == count && count > 0 ? AppTheme.accentCyan : AppTheme.smallTitleText)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(AppTheme.panelFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(completed == count && count > 0 ? AppTheme.accentCyan : AppTheme.selectableTint.opacity(0.3), lineWidth: 1)
-                )
-        )
-    }
-}
-
 // MARK: - Word Section
 
 struct WordSection: View {

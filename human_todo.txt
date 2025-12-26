@@ -958,3 +958,21 @@ Complete the Analogy -> multi choice -> multi choice "Happy : Ecstatic :: Sad :
   1. Cache computed filteredSchedules
   2. Audit memory leaks (AudioPlayer, VideoService closures)
   3. Batch state updates where possible
+
+
+  1. ✅ Delete 18 unused structs/views
+  2. ✅ Replace 98 print() with Logger
+  3. ✅ Split DictionaryModels.swift
+  4. ✅ Add basic unit tests for critical paths
+
+  Should Do (Next Sprint):
+
+  5. Refactor UserManager (god object)
+  6. Standardize threading with @MainActor
+  7. Extract large view files (>700 lines)
+
+  Nice to Have (Backlog):
+
+  8. Migrate to async/await
+  9. Add comprehensive test suite
+  10. Generate DocC documentation

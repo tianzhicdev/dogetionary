@@ -353,16 +353,6 @@ struct SavedWord: Identifiable, Codable {
 }
 
 // Review Models
-struct ReviewSubmissionRequest: Codable {
-    let user_id: String
-    let word_id: Int
-    let response: Bool
-
-    private enum CodingKeys: String, CodingKey {
-        case user_id, word_id, response
-    }
-}
-
 struct ReviewSubmissionResponse: Codable {
     let success: Bool
     let word: String?
@@ -415,30 +405,6 @@ struct ToggleExcludeResponse: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case success, word_id, word, is_excluded, previous_status, message
-    }
-}
-
-// Next Due Words Models
-struct NextDueWordsResponse: Codable {
-    let user_id: String
-    let saved_words: [SavedWord]
-    let count: Int
-    let limit: Int
-
-    private enum CodingKeys: String, CodingKey {
-        case user_id, saved_words, count, limit
-    }
-}
-
-// Review Words Models (simplified for review_next endpoint)
-struct ReviewWordsResponse: Codable {
-    let user_id: String
-    let saved_words: [ReviewWord]
-    let count: Int
-    let new_words_remaining_today: Int?  // NEW: count of scheduled new words remaining today
-
-    private enum CodingKeys: String, CodingKey {
-        case user_id, saved_words, count, new_words_remaining_today
     }
 }
 
@@ -702,67 +668,6 @@ enum TestType: String, Codable, CaseIterable {
     }
 }
 
-struct TestSettings: Codable {
-    // V3 API: active test type
-    let active_test: String?  // "TOEFL_BEGINNER", "IELTS_ADVANCED", etc., or null
-    let target_days: Int?
-
-    // Legacy fields for backward compatibility
-    let toefl_enabled: Bool?
-    let ielts_enabled: Bool?
-    let demo_enabled: Bool?
-    let toefl_target_days: Int?
-    let ielts_target_days: Int?
-    let demo_target_days: Int?
-
-    let last_test_words_added: String?
-    let learning_language: String
-    let native_language: String
-
-    private enum CodingKeys: String, CodingKey {
-        case active_test, target_days
-        case toefl_enabled, ielts_enabled, demo_enabled
-        case toefl_target_days, ielts_target_days, demo_target_days
-        case last_test_words_added, learning_language, native_language
-    }
-
-    /// Get active test type from either new or legacy format
-    var activeTestType: TestType? {
-        if let activeTest = active_test {
-            return TestType(rawValue: activeTest)
-        }
-        // Fallback to legacy format (map to advanced level)
-        if toefl_enabled == true {
-            return .toeflAdvanced
-        }
-        if ielts_enabled == true {
-            return .ieltsAdvanced
-        }
-        if demo_enabled == true {
-            return .demo
-        }
-        return nil
-    }
-
-    /// Get target days from either new or legacy format
-    var effectiveTargetDays: Int {
-        if let days = target_days {
-            return days
-        }
-        // Fallback to legacy format
-        if toefl_enabled == true, let days = toefl_target_days {
-            return days
-        }
-        if ielts_enabled == true, let days = ielts_target_days {
-            return days
-        }
-        if demo_enabled == true, let days = demo_target_days {
-            return days
-        }
-        return 30  // Default
-    }
-}
-
 struct TestProgress: Codable {
     let saved: Int
     let total: Int
@@ -770,15 +675,6 @@ struct TestProgress: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case saved, total, percentage
-    }
-}
-
-struct TestSettingsResponse: Codable {
-    let settings: TestSettings
-    let progress: TestProgressData
-
-    private enum CodingKeys: String, CodingKey {
-        case settings, progress
     }
 }
 
@@ -818,88 +714,6 @@ struct TestProgressData: Codable {
     }
 }
 
-struct TestSettingsUpdateRequest: Codable {
-    let user_id: String
-
-    // V3 API format (preferred)
-    let test_type: String?  // "TOEFL_BEGINNER", null, etc.
-    let target_days: Int?
-
-    // Legacy API format for backward compatibility
-    let toefl_enabled: Bool?
-    let ielts_enabled: Bool?
-    let demo_enabled: Bool?
-    let toefl_target_days: Int?
-    let ielts_target_days: Int?
-    let demo_target_days: Int?
-
-    private enum CodingKeys: String, CodingKey {
-        case user_id
-        case test_type, target_days
-        case toefl_enabled, ielts_enabled, demo_enabled
-        case toefl_target_days, ielts_target_days, demo_target_days
-    }
-
-    /// Create request using new V3 API format
-    init(userID: String, testType: TestType?, targetDays: Int?) {
-        self.user_id = userID
-        self.test_type = testType?.rawValue
-        self.target_days = targetDays
-        // Legacy fields set to nil
-        self.toefl_enabled = nil
-        self.ielts_enabled = nil
-        self.demo_enabled = nil
-        self.toefl_target_days = nil
-        self.ielts_target_days = nil
-        self.demo_target_days = nil
-    }
-
-    /// Create request using legacy API format (for backward compatibility)
-    init(userID: String, toeflEnabled: Bool?, ieltsEnabled: Bool?, demoEnabled: Bool?, toeflTargetDays: Int?, ieltsTargetDays: Int?, demoTargetDays: Int?) {
-        self.user_id = userID
-        self.test_type = nil
-        self.target_days = nil
-        self.toefl_enabled = toeflEnabled
-        self.ielts_enabled = ieltsEnabled
-        self.demo_enabled = demoEnabled
-        self.toefl_target_days = toeflTargetDays
-        self.ielts_target_days = ieltsTargetDays
-        self.demo_target_days = demoTargetDays
-    }
-
-    /// Custom encoding to ensure test_type field is always included (even when nil)
-    /// This is required for the backend to distinguish between V3 and legacy API formats
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-
-        try container.encode(user_id, forKey: .user_id)
-
-        // V3 API fields - always encode test_type if it's not nil OR if target_days is set
-        // This ensures the backend recognizes it as V3 API format
-        if test_type != nil || target_days != nil {
-            try container.encode(test_type, forKey: .test_type)  // Explicitly encode nil as null
-            try container.encodeIfPresent(target_days, forKey: .target_days)
-        }
-
-        // Legacy API fields - only encode if they're not nil
-        try container.encodeIfPresent(toefl_enabled, forKey: .toefl_enabled)
-        try container.encodeIfPresent(ielts_enabled, forKey: .ielts_enabled)
-        try container.encodeIfPresent(demo_enabled, forKey: .demo_enabled)
-        try container.encodeIfPresent(toefl_target_days, forKey: .toefl_target_days)
-        try container.encodeIfPresent(ielts_target_days, forKey: .ielts_target_days)
-        try container.encodeIfPresent(demo_target_days, forKey: .demo_target_days)
-    }
-}
-
-struct TestSettingsUpdateResponse: Codable {
-    let success: Bool
-    let settings: TestSettings
-
-    private enum CodingKeys: String, CodingKey {
-        case success, settings
-    }
-}
-
 // WordValidation struct remains as it's used by merged V1 endpoint
 struct WordValidation: Codable {
     let confidence: Double
@@ -924,16 +738,6 @@ struct StudySchedule: Codable {
     private enum CodingKeys: String, CodingKey {
         case schedule_id, days_remaining, total_new_words, daily_new_words,
              test_practice_words_count, non_test_practice_words_count
-    }
-}
-
-/// Response when creating a schedule
-struct CreateScheduleResponse: Codable {
-    let success: Bool
-    let schedule: StudySchedule
-
-    private enum CodingKeys: String, CodingKey {
-        case success, schedule
     }
 }
 
@@ -999,17 +803,6 @@ struct ScheduleSummary: Codable {
              total_test_practice, total_test_practice_remaining, total_test_practice_completed,
              total_non_test_practice, total_non_test_practice_remaining, total_non_test_practice_completed,
              total_words, total_remaining, total_completed
-    }
-}
-
-/// Response when reviewing a new word from schedule
-struct ReviewNewWordResponse: Codable {
-    let success: Bool
-    let word_id: Int
-    let next_review_date: String
-
-    private enum CodingKeys: String, CodingKey {
-        case success, word_id, next_review_date
     }
 }
 
@@ -1096,33 +889,6 @@ struct ReviewQuestion: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case question_type, word, question_text, options, correct_answer, sentence, sentence_translation, show_definition, audio_url, evaluation_threshold, video_id, show_word_before_video, audio_transcript, video_metadata, quote, quote_source, quote_translation
-    }
-}
-
-/// Response from /v3/review_next_enhanced
-struct EnhancedReviewResponse: Codable {
-    let user_id: String
-    let word_id: Int?
-    let word: String?
-    let learning_language: String?
-    let native_language: String?
-    let is_new_word: Bool?
-    let new_words_remaining_today: Int?
-    let question: ReviewQuestion?
-    let definition: DefinitionData?
-
-    // Fields for "no words" response
-    let count: Int?
-    let message: String?
-    let saved_words: [String]?
-
-    // Helper to check if there's a word to review
-    var hasWordToReview: Bool {
-        return word_id != nil && word != nil && question != nil
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case user_id, word_id, word, learning_language, native_language, is_new_word, new_words_remaining_today, question, definition, count, message, saved_words
     }
 }
 
