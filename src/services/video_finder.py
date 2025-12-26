@@ -484,10 +484,10 @@ IMPORTANT RULES:
     def download_video(self, metadata: Dict) -> Optional[Path]:
         """Download video file from ClipCafe and save to storage"""
         slug = metadata.get('slug', '')
-        clip_id = metadata.get('clipID', '')  # ClipCafe uses 'clipID' not 'id'
+        download_url = metadata.get('download', '')  # ClipCafe provides direct download URL
 
-        if not slug or not clip_id:
-            logger.error(f"    Missing slug or clipID in metadata")
+        if not slug or not download_url:
+            logger.error(f"    Missing slug or download URL in metadata")
             return None
 
         # Create directory for this video
@@ -501,16 +501,11 @@ IMPORTANT RULES:
             logger.info(f"    Video already exists: {slug}.mp4")
             return video_path
 
-        # Download video from ClipCafe
+        # Download video from ClipCafe using direct download URL
         logger.info(f"    Downloading {slug}.mp4...")
-        video_url = f"https://api.clip.cafe/{clip_id}/video"
 
         try:
-            response = requests.get(
-                video_url,
-                params={'api_key': self.clipcafe_api_key},
-                timeout=60
-            )
+            response = requests.get(download_url, timeout=60)
             response.raise_for_status()
 
             # Save video file
