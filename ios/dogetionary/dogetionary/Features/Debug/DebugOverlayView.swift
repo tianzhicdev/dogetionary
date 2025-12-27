@@ -211,19 +211,37 @@ struct QuestionQueueDebugTab: View {
                     .padding(.horizontal)
                 }
 
-                // Question list
-                if queueManager.questionQueue.isEmpty {
-                    Text("No questions in queue")
+                // Priority Queue
+                if !queueManager.priorityQueue.isEmpty {
+                    Text("Priority Queue (\(queueManager.priorityQueue.count))")
+                        .font(.caption.bold())
+                        .foregroundColor(.orange)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(queueManager.priorityQueue.enumerated()), id: \.element.word) { index, question in
+                            QuestionQueueRow(index: index, question: question)
+                        }
+                    }
+                }
+
+                // Background Queue
+                if !queueManager.backgroundQueue.isEmpty {
+                    Text("Background Queue (\(queueManager.backgroundQueue.count))")
+                        .font(.caption.bold())
+                        .foregroundColor(.blue)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(queueManager.backgroundQueue.enumerated()), id: \.element.word) { index, question in
+                            QuestionQueueRow(index: index, question: question)
+                        }
+                    }
+                }
+
+                // Empty state
+                if queueManager.priorityQueue.isEmpty && queueManager.backgroundQueue.isEmpty {
+                    Text("No questions in either queue")
                         .font(.caption)
                         .foregroundColor(.gray)
                         .padding()
                         .frame(maxWidth: .infinity)
-                } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(queueManager.questionQueue.enumerated()), id: \.element.word) { index, question in
-                            QuestionQueueRow(index: index, question: question)
-                        }
-                    }
                 }
             }
             .padding()

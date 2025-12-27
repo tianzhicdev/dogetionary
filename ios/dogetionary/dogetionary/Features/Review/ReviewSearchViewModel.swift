@@ -125,14 +125,13 @@ class ReviewSearchViewModel: ObservableObject {
 
                     self.logger.info("Starting streaming prepend for \(questions.count) video questions")
 
-                    // Start streaming prepend
+                    // Start streaming append to priority queue
                     self.isStreamingPrepend = true
                     self.streamProgress = (0, questions.count)
                     self.firstQuestionReady = false
 
-                    QuestionQueueManager.shared.streamPrependQuestions(
+                    QuestionQueueManager.shared.streamAppendToPriorityQueue(
                         questions,
-                        searchWord: word,
                         onFirstReady: { [weak self] in
                             guard let self = self else { return }
                             Task { @MainActor in

@@ -90,17 +90,21 @@ def get_video_questions_for_word():
                     native_lang='zh'  # TODO: get from user preferences
                 )
 
-                # Return BatchReviewQuestion format (same as /v3/review-batch)
-                questions.append({
-                    "word": video['word'],
-                    "saved_word_id": None,  # Video questions are not from saved words
-                    "source": "VIDEO",  # Custom source type for video questions
-                    "position": idx,
-                    "learning_language": lang,
-                    "native_language": "zh",  # TODO: get from user preferences
-                    "question": question_data,
-                    "definition": None  # No definition needed for video questions
-                })
+                # ONLY add if it's actually a video question (not fallback)
+                if question_data.get('question_type') == 'video_mc':
+                    # Return BatchReviewQuestion format (same as /v3/review-batch)
+                    questions.append({
+                        "word": video['word'],
+                        "saved_word_id": None,  # Video questions are not from saved words
+                        "source": "VIDEO",  # Custom source type for video questions
+                        "position": idx,
+                        "learning_language": lang,
+                        "native_language": "zh",  # TODO: get from user preferences
+                        "question": question_data,
+                        "definition": None  # No definition needed for video questions
+                    })
+                else:
+                    logger.warning(f"Skipping non-video fallback question for '{video['word']}' (video {video['video_id']})")
             except Exception as e:
                 logger.error(f"Failed to generate question for video {video['video_id']}: {e}")
                 continue

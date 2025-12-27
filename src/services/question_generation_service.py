@@ -50,8 +50,8 @@ QUESTION_TYPE_WEIGHTS = {
     'mc_word': 0.0,             # Disabled
     'fill_blank': 0.0,          # Disabled
     'pronounce_sentence': 0.0,  # Disabled
-    'mc_def_native': 0.2,       # 20% when no videos - Native language definition MC
-    'mc_quote': 0.8,            # 80% when no videos - Quote-based contextual question
+    'mc_def_native': 0.0,       # 20% when no videos - Native language definition MC
+    'mc_quote': 1,            # 80% when no videos - Quote-based contextual question
     # video_mc is prioritized separately via check_word_has_videos() on line 715
 }
 

@@ -861,6 +861,59 @@ class TestRunner:
             self.log(f"✗ /v3/review/pronounce endpoint failed with error: {e}")
             self.failed += 1
 
+    def test_video_search_only_video_questions(self):
+        """Test that video search endpoint only returns video_mc questions"""
+        self.log("Testing /v3/video-questions-for-word endpoint...")
+
+        try:
+            # Test with a common word
+            response = requests.get(
+                f"{BASE_URL}/v3/video-questions-for-word",
+                params={
+                    "word": "hello",
+                    "lang": "en"
+                }
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                self.assert_json_contains(data, 'questions', 'video search response contains questions')
+
+                # Verify ALL questions are video_mc type
+                questions = data.get('questions', [])
+                all_video_mc = all(
+                    q.get('question', {}).get('question_type') == 'video_mc'
+                    for q in questions
+                )
+
+                if all_video_mc and len(questions) > 0:
+                    self.log(f"✓ All {len(questions)} questions are video_mc type")
+                    self.passed += 1
+                elif len(questions) == 0:
+                    self.log(f"✓ No questions returned (acceptable for words without videos)")
+                    self.passed += 1
+                else:
+                    non_video_types = [
+                        q.get('question', {}).get('question_type')
+                        for q in questions
+                        if q.get('question', {}).get('question_type') != 'video_mc'
+                    ]
+                    self.log(f"✗ Found non-video questions: {non_video_types}")
+                    self.failed += 1
+            else:
+                # 404 is acceptable if no videos found for the word
+                if response.status_code == 404:
+                    self.log(f"✓ No videos found for word (404 is acceptable)")
+                    self.passed += 1
+                else:
+                    self.log(f"✗ Unexpected status code: {response.status_code}")
+                    self.log(f"   Response: {response.text}")
+                    self.failed += 1
+
+        except Exception as e:
+            self.log(f"✗ Exception in video search test: {str(e)}")
+            self.failed += 1
+
     def run_all_tests(self):
         """Run all integration tests"""
         self.log("Starting integration tests...")
@@ -885,6 +938,7 @@ class TestRunner:
         self.test_practice_status_without_test()
         self.test_practice_status_has_practice_logic()
         self.test_pronunciation_review_endpoint()
+        self.test_video_search_only_video_questions()
 
         self.log(f"\nTest Results: {self.passed} passed, {self.failed} failed")
 

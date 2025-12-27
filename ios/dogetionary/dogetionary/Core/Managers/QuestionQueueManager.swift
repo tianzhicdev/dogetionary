@@ -15,12 +15,16 @@ class QuestionQueueManager: ObservableObject {
     static let shared = QuestionQueueManager()
 
     // MARK: - Configuration
-    private let targetQueueSize = 20  // Always maintain 20 questions
+    private let targetQueueSize = 20  // Always maintain 20 questions in backgroundQueue
     private let maxConcurrentFetches = 5  // Allow up to 5 simultaneous API calls
     private let logger = Logger(subsystem: "com.dogetionary", category: "QuestionQueue")
 
     // MARK: - Published State
-    @Published private(set) var questionQueue: [BatchReviewQuestion] = []
+
+    // Dual queue system: priority (search) + background (stream)
+    @Published private(set) var priorityQueue: [BatchReviewQuestion] = []      // User-initiated searches (FIFO)
+    @Published private(set) var backgroundQueue: [BatchReviewQuestion] = []    // Normal practice stream
+
     @Published private(set) var activeFetchCount = 0  // Track concurrent fetches
     @Published private(set) var hasMore = true
     @Published private(set) var totalAvailable = 0
@@ -31,15 +35,6 @@ class QuestionQueueManager: ObservableObject {
 
     // MARK: - Private State
     private var cancellables = Set<AnyCancellable>()
-    private var searchGroups: [String: SearchGroup] = [:]
-
-    /// Track questions from a search to maintain grouped insertion
-    struct SearchGroup {
-        let word: String
-        var insertedVideoIds: [Int]  // Video IDs in insertion order
-        let timestamp: Date
-        var totalExpected: Int
-    }
 
     private init() {
         logger.info("QuestionQueueManager initialized")
@@ -48,44 +43,72 @@ class QuestionQueueManager: ObservableObject {
 
     // MARK: - Queue Operations
 
-    /// Get the next question from the queue
+    /// Get the next question from the queue (priority first, then background)
     func popQuestion() -> BatchReviewQuestion? {
-        guard !questionQueue.isEmpty else { return nil }
-        let question = questionQueue.removeFirst()
-        logger.info("Popped question: \(question.word), queue size: \(self.questionQueue.count)")
+        // Priority: check priorityQueue first, then backgroundQueue
+        if !priorityQueue.isEmpty {
+            let question = priorityQueue.removeFirst()
+            logger.info("Popped from priorityQueue: \(question.word), remaining: \(self.priorityQueue.count)")
 
-        // Cleanup player for video questions (after user has finished with it)
-        if question.question.question_type == "video_mc",
-           let videoId = question.question.video_id {
-            AVPlayerManager.shared.removePlayer(videoId: videoId)
+            // Cleanup player for video questions (after user has finished with it)
+            if question.question.question_type == "video_mc",
+               let videoId = question.question.video_id {
+                AVPlayerManager.shared.removePlayer(videoId: videoId)
+            }
+
+            // No refill for priorityQueue (user-driven), but check backgroundQueue
+            refillIfNeeded()
+
+            return question
+        } else if !backgroundQueue.isEmpty {
+            let question = backgroundQueue.removeFirst()
+            logger.info("Popped from backgroundQueue: \(question.word), remaining: \(self.backgroundQueue.count)")
+
+            // Cleanup player for video questions (after user has finished with it)
+            if question.question.question_type == "video_mc",
+               let videoId = question.question.video_id {
+                AVPlayerManager.shared.removePlayer(videoId: videoId)
+            }
+
+            // Trigger background refill
+            refillIfNeeded()
+
+            return question
         }
 
-        // Trigger background refill if needed
-        refillIfNeeded()
-
-        return question
+        return nil
     }
 
-    /// Peek at the current question without removing it
+    /// Peek at the current question without removing it (priority first)
     func currentQuestion() -> BatchReviewQuestion? {
-        return questionQueue.first
+        return priorityQueue.first ?? backgroundQueue.first
     }
 
-    /// Check if queue has questions
+    /// Check if either queue has questions
     var hasQuestions: Bool {
-        return !questionQueue.isEmpty
+        return !priorityQueue.isEmpty || !backgroundQueue.isEmpty
     }
 
-    /// Number of questions in queue
+    /// Total number of questions in both queues
     var queueCount: Int {
-        return questionQueue.count
+        return priorityQueue.count + backgroundQueue.count
     }
 
-    /// Stream prepend questions - insert as videos become ready (streaming approach)
-    /// First ready question is prepended, subsequent ones insert after their group
-    func streamPrependQuestions(
+    /// Number of questions in priority queue (for debugging)
+    var priorityQueueCount: Int {
+        return priorityQueue.count
+    }
+
+    /// Number of questions in background queue (for debugging)
+    var backgroundQueueCount: Int {
+        return backgroundQueue.count
+    }
+
+
+    /// Stream append questions to priority queue as videos become ready
+    /// Simple FIFO order - questions appended as each video downloads
+    func streamAppendToPriorityQueue(
         _ questions: [BatchReviewQuestion],
-        searchWord: String,
         onFirstReady: @escaping () -> Void,
         onProgress: @escaping (Int, Int) -> Void,
         onComplete: @escaping () -> Void
@@ -95,32 +118,24 @@ class QuestionQueueManager: ObservableObject {
             return
         }
 
-        logger.info("Starting streaming prepend for '\(searchWord)': \(questions.count) questions")
-
-        // Initialize search group
-        searchGroups[searchWord] = SearchGroup(
-            word: searchWord,
-            insertedVideoIds: [],
-            timestamp: Date(),
-            totalExpected: questions.count
-        )
+        logger.info("Starting stream append to priorityQueue: \(questions.count) questions")
 
         var readyCount = 0
-        var firstQuestionPrepended = false
+        var firstQuestionReady = false
         let totalCount = questions.count
 
         // Start parallel downloads for all video questions
         for question in questions {
             guard question.question.question_type == "video_mc",
                   let videoId = question.question.video_id else {
-                // Non-video question - insert immediately
+                // Non-video question - append immediately
                 DispatchQueue.main.async { [weak self] in
-                    self?.insertAfterSearchGroup(question, searchWord: searchWord)
+                    self?.appendToPriorityQueue(question)
                     readyCount += 1
                     onProgress(readyCount, totalCount)
 
-                    if !firstQuestionPrepended {
-                        firstQuestionPrepended = true
+                    if !firstQuestionReady {
+                        firstQuestionReady = true
                         onFirstReady()
                     }
 
@@ -141,24 +156,23 @@ class QuestionQueueManager: ObservableObject {
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
 
-                    self.insertAfterSearchGroup(question, searchWord: searchWord)
+                    self.appendToPriorityQueue(question)
                     readyCount += 1
-                    self.logger.info("✓ Video \(videoId) already cached, inserted (\(readyCount)/\(totalCount))")
+                    self.logger.info("✓ Video \(videoId) cached, appended (\(readyCount)/\(totalCount))")
                     onProgress(readyCount, totalCount)
 
-                    if !firstQuestionPrepended {
-                        firstQuestionPrepended = true
+                    if !firstQuestionReady {
+                        firstQuestionReady = true
                         onFirstReady()
                     }
 
                     if readyCount == totalCount {
-                        self.cleanupSearchGroup(searchWord)
                         onComplete()
                     }
                 }
             } else {
                 // Need to download - wait for completion
-                self.logger.info("Downloading video \(videoId) for streaming prepend...")
+                self.logger.info("Downloading video \(videoId) for priority queue...")
 
                 VideoService.shared.fetchVideo(videoId: videoId)
                     .receive(on: DispatchQueue.main)
@@ -173,7 +187,6 @@ class QuestionQueueManager: ObservableObject {
                                 onProgress(readyCount, totalCount)
 
                                 if readyCount == totalCount {
-                                    self.cleanupSearchGroup(searchWord)
                                     onComplete()
                                 }
                             }
@@ -181,21 +194,20 @@ class QuestionQueueManager: ObservableObject {
                         receiveValue: { [weak self] url in
                             guard let self = self else { return }
 
-                            // Video ready - insert into queue
-                            self.insertAfterSearchGroup(question, searchWord: searchWord)
+                            // Video ready - append to priority queue (FIFO)
+                            self.appendToPriorityQueue(question)
                             readyCount += 1
-                            self.logger.info("✓ Video \(videoId) ready, inserted (\(readyCount)/\(totalCount))")
+                            self.logger.info("✓ Video \(videoId) ready, appended (\(readyCount)/\(totalCount))")
                             onProgress(readyCount, totalCount)
 
-                            if !firstQuestionPrepended {
-                                firstQuestionPrepended = true
-                                self.logger.info("First question ready for '\(searchWord)'")
+                            if !firstQuestionReady {
+                                firstQuestionReady = true
+                                self.logger.info("First question ready in priorityQueue")
                                 onFirstReady()
                             }
 
                             if readyCount == totalCount {
-                                self.logger.info("All \(totalCount) questions ready for '\(searchWord)'")
-                                self.cleanupSearchGroup(searchWord)
+                                self.logger.info("All \(totalCount) questions ready in priorityQueue")
                                 onComplete()
                             }
                         }
@@ -205,68 +217,17 @@ class QuestionQueueManager: ObservableObject {
         }
     }
 
-    /// Insert question after the last question from the same search group
-    /// If no questions from this search exist, prepend to front
-    private func insertAfterSearchGroup(_ question: BatchReviewQuestion, searchWord: String) {
-        guard var group = searchGroups[searchWord],
-              let videoId = question.question.video_id else {
-            // Fallback: prepend to front
-            questionQueue.insert(question, at: 0)
-            logger.info("Prepended '\(question.word)' (no search group)")
+    /// Append question to priority queue (simple FIFO)
+    private func appendToPriorityQueue(_ question: BatchReviewQuestion) {
+        // Allow duplicates between queues (per Q5)
+        // Only check for duplicates within priorityQueue itself
+        guard !priorityQueue.contains(where: { $0.word == question.word }) else {
+            logger.debug("Skipping duplicate in priorityQueue: \(question.word)")
             return
         }
 
-        if group.insertedVideoIds.isEmpty {
-            // First question from this search - prepend to front
-            questionQueue.insert(question, at: 0)
-            group.insertedVideoIds.append(videoId)
-            searchGroups[searchWord] = group
-            logger.info("Prepended first question for '\(searchWord)': \(question.word)")
-        } else {
-            // Find last question from this search group
-            if let insertionIndex = findInsertionIndex(forSearchWord: searchWord) {
-                questionQueue.insert(question, at: insertionIndex)
-                group.insertedVideoIds.append(videoId)
-                searchGroups[searchWord] = group
-                logger.info("Inserted '\(question.word)' after search group '\(searchWord)' at index \(insertionIndex)")
-            } else {
-                // Search group questions were all popped - prepend to front
-                questionQueue.insert(question, at: 0)
-                group.insertedVideoIds.append(videoId)
-                searchGroups[searchWord] = group
-                logger.info("Prepended '\(question.word)' (search group popped)")
-            }
-        }
-    }
-
-    /// Find the index to insert after the last question from a search group
-    private func findInsertionIndex(forSearchWord word: String) -> Int? {
-        guard let group = searchGroups[word], !group.insertedVideoIds.isEmpty else {
-            return nil
-        }
-
-        // Search from the front for the last question from this search group
-        var lastFoundIndex: Int?
-
-        for (index, question) in questionQueue.enumerated() {
-            if let videoId = question.question.video_id,
-               group.insertedVideoIds.contains(videoId) {
-                lastFoundIndex = index
-            }
-        }
-
-        // Insert AFTER the last found question
-        if let lastIndex = lastFoundIndex {
-            return lastIndex + 1
-        }
-
-        return nil
-    }
-
-    /// Clean up old search groups to prevent memory leaks
-    private func cleanupSearchGroup(_ word: String) {
-        searchGroups.removeValue(forKey: word)
-        logger.info("Cleaned up search group for '\(word)'")
+        priorityQueue.append(question)
+        logger.info("Appended to priorityQueue: \(question.word), total: \(self.priorityQueue.count)")
     }
 
     // MARK: - Fetching
@@ -280,7 +241,7 @@ class QuestionQueueManager: ObservableObject {
             return
         }
 
-        guard questionQueue.isEmpty else {
+        guard backgroundQueue.isEmpty else {
             logger.info("Queue already has questions, skipping preload")
             return
         }
@@ -295,11 +256,12 @@ class QuestionQueueManager: ObservableObject {
     }
 
     /// Background refill to maintain target queue size - CONCURRENT (up to 5 at once)
+    /// Only refills backgroundQueue (priorityQueue is user-driven via search)
     func refillIfNeeded() {
-        // Calculate how many questions we need
-        let neededQuestions = targetQueueSize - questionQueue.count
+        // Calculate how many questions we need in backgroundQueue
+        let neededQuestions = targetQueueSize - backgroundQueue.count
         guard neededQuestions > 0 else {
-            logger.debug("Queue size \(self.questionQueue.count) >= target \(self.targetQueueSize), skipping refill")
+            logger.debug("backgroundQueue size \(self.backgroundQueue.count) >= target \(self.targetQueueSize), skipping refill")
             return
         }
 
@@ -325,7 +287,7 @@ class QuestionQueueManager: ObservableObject {
                     self.activeFetchCount -= 1
 
                     // After each fetch completes, check if we need more
-                    if self.questionQueue.count < self.targetQueueSize {
+                    if self.backgroundQueue.count < self.targetQueueSize {
                         self.refillIfNeeded()
                     }
                 }
@@ -333,28 +295,48 @@ class QuestionQueueManager: ObservableObject {
         }
     }
 
-    /// Clear the queue (e.g., when user logs out or data changes)
+    /// Clear both queues (e.g., when user logs out or data changes)
     func clearQueue(preserveFirst: Bool = false) {
-        if preserveFirst && !questionQueue.isEmpty {
-            // Keep only the first question
-            let first = questionQueue[0]
-            questionQueue = [first]
+        if preserveFirst {
+            // Preserve first from priorityQueue if exists, else from backgroundQueue
+            if !priorityQueue.isEmpty {
+                let first = priorityQueue[0]
+                priorityQueue = [first]
+                backgroundQueue.removeAll()
 
-            logger.info("Queue cleared (preserved first question: \(first.word))")
+                logger.info("Queues cleared (preserved first from priorityQueue: \(first.word))")
 
-            // Clear all cached players except current question's video
-            if let videoId = first.question.video_id {
-                AVPlayerManager.shared.clearExcept(videoId: videoId)
+                // Clear all players except current
+                if let videoId = first.question.video_id {
+                    AVPlayerManager.shared.clearExcept(videoId: videoId)
+                } else {
+                    AVPlayerManager.shared.clearAll()
+                }
+            } else if !backgroundQueue.isEmpty {
+                let first = backgroundQueue[0]
+                backgroundQueue = [first]
+
+                logger.info("Queues cleared (preserved first from backgroundQueue: \(first.word))")
+
+                // Clear all players except current
+                if let videoId = first.question.video_id {
+                    AVPlayerManager.shared.clearExcept(videoId: videoId)
+                } else {
+                    AVPlayerManager.shared.clearAll()
+                }
             } else {
+                // Both empty
+                priorityQueue.removeAll()
+                backgroundQueue.removeAll()
+                logger.info("Queues cleared (both already empty)")
                 AVPlayerManager.shared.clearAll()
             }
         } else {
             // Remove everything
-            questionQueue.removeAll()
+            priorityQueue.removeAll()
+            backgroundQueue.removeAll()
 
-            logger.info("Queue cleared (all questions removed)")
-
-            // Clear all cached players
+            logger.info("Queues cleared (all removed)")
             AVPlayerManager.shared.clearAll()
         }
 
@@ -378,7 +360,7 @@ class QuestionQueueManager: ObservableObject {
 
         lastError = nil
 
-        let excludeWords = questionQueue.map { $0.word }
+        let excludeWords = backgroundQueue.map { $0.word }
         let userManager = UserManager.shared
         let learningLang = userManager.learningLanguage
         let nativeLang = userManager.nativeLanguage
@@ -443,8 +425,8 @@ class QuestionQueueManager: ObservableObject {
                 // Already cached - ensure AVPlayer is created, then add to queue
                 logger.info("Video \(videoId) already cached, ensuring player exists")
                 AVPlayerManager.shared.createPlayer(videoId: videoId, url: url)
-                addToQueue([question])
-                logger.info("Fetched 1 question (video cached), queue size: \(self.questionQueue.count)")
+                appendToBackgroundQueue([question])
+                logger.info("Fetched 1 question (video cached), queue size: \(self.backgroundQueue.count)")
                 completion?(true)
 
             case .downloading, .notStarted, .failed:
@@ -460,8 +442,8 @@ class QuestionQueueManager: ObservableObject {
                             if case .failure(let error) = result {
                                 self.logger.error("Failed to download video \(videoId): \(error.localizedDescription)")
                                 // Add to queue anyway - VideoQuestionView will handle error
-                                self.addToQueue([question])
-                                self.logger.info("Fetched 1 question (video failed), queue size: \(self.questionQueue.count)")
+                                self.appendToBackgroundQueue([question])
+                                self.logger.info("Fetched 1 question (video failed), queue size: \(self.backgroundQueue.count)")
                                 completion?(false)
                             }
                         },
@@ -470,8 +452,8 @@ class QuestionQueueManager: ObservableObject {
 
                             // Video downloaded successfully - AVPlayer already created by VideoService
                             self.logger.info("✓ Video \(videoId) downloaded, adding to queue")
-                            self.addToQueue([question])
-                            self.logger.info("Fetched 1 question (video ready), queue size: \(self.questionQueue.count)")
+                            self.appendToBackgroundQueue([question])
+                            self.logger.info("Fetched 1 question (video ready), queue size: \(self.backgroundQueue.count)")
                             completion?(true)
                         }
                     )
@@ -480,19 +462,21 @@ class QuestionQueueManager: ObservableObject {
 
         } else {
             // Non-video question - add immediately
-            addToQueue([question])
-            logger.info("Fetched 1 question (non-video), queue size: \(self.questionQueue.count)")
+            appendToBackgroundQueue([question])
+            logger.info("Fetched 1 question (non-video), queue size: \(self.backgroundQueue.count)")
             completion?(true)
         }
     }
 
-    private func addToQueue(_ questions: [BatchReviewQuestion]) {
+    private func appendToBackgroundQueue(_ questions: [BatchReviewQuestion]) {
         for question in questions {
-            guard !questionQueue.contains(where: { $0.word == question.word }) else {
-                logger.debug("Skipping duplicate word: \(question.word)")
+            // Allow duplicates between priority and background queues (per Q5)
+            // Only check for duplicates within backgroundQueue itself
+            guard !backgroundQueue.contains(where: { $0.word == question.word }) else {
+                logger.debug("Skipping duplicate in backgroundQueue: \(question.word)")
                 continue
             }
-            questionQueue.append(question)
+            backgroundQueue.append(question)
         }
     }
 }
