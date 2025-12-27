@@ -23,8 +23,13 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 logger = logging.getLogger(__name__)
+
+# Thread-safe logging lock
+_log_lock = threading.Lock()
 
 
 class VideoFinder:
@@ -890,8 +895,14 @@ IMPORTANT RULES:
 
         return word_stats
 
-    def run(self, words: Optional[List[str]] = None, source_name: Optional[str] = None):
-        """Run the complete pipeline"""
+    def run(self, words: Optional[List[str]] = None, source_name: Optional[str] = None, concurrency: int = 1):
+        """Run the complete pipeline with optional parallel processing
+
+        Args:
+            words: List of words to process (if None, loads from word_list_path)
+            source_name: Name of the source (for logging)
+            concurrency: Number of words to process in parallel (default: 1 for sequential)
+        """
         logger.info(f"\n{'='*80}")
         logger.info(f"STARTING VIDEO DISCOVERY PIPELINE")
         logger.info(f"{'='*80}")
@@ -902,6 +913,7 @@ IMPORTANT RULES:
         logger.info(f"Max Videos per Word: {self.max_videos_per_word}")
         logger.info(f"Min Education Score: {self.education_min_score}")
         logger.info(f"Min Context Score: {self.context_min_score}")
+        logger.info(f"Concurrency: {concurrency} word(s) in parallel")
         logger.info(f"{'='*80}\n")
 
         # Load words if not provided
@@ -913,12 +925,46 @@ IMPORTANT RULES:
         words_processed = 0
         all_word_stats = []
 
-        for i, word in enumerate(words, 1):
-            word_stats = self.process_word(word)
-            all_word_stats.append(word_stats)
-            words_processed += 1
+        if concurrency == 1:
+            # Sequential processing (original behavior)
+            for i, word in enumerate(words, 1):
+                word_stats = self.process_word(word)
+                all_word_stats.append(word_stats)
+                words_processed += 1
 
-            logger.info(f"\nProgress: {i}/{len(words)} words ({100*i/len(words):.1f}%)")
+                logger.info(f"\nProgress: {i}/{len(words)} words ({100*i/len(words):.1f}%)")
+        else:
+            # Parallel processing
+            logger.info(f"Using parallel processing with {concurrency} workers")
+
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                # Submit all word processing tasks
+                future_to_word = {
+                    executor.submit(self._process_word_safe, word, i, len(words)): word
+                    for i, word in enumerate(words, 1)
+                }
+
+                # Collect results as they complete
+                for future in as_completed(future_to_word):
+                    word = future_to_word[future]
+                    try:
+                        word_stats = future.result()
+                        all_word_stats.append(word_stats)
+                        words_processed += 1
+                    except Exception as e:
+                        with _log_lock:
+                            logger.error(f"Failed to process word '{word}': {e}")
+                        # Create empty stats for failed word
+                        all_word_stats.append({
+                            'word': word,
+                            'videos_found': 0,
+                            'scored_videos': 0,
+                            'downloaded_videos': 0,
+                            'audio_verified': 0,
+                            'videos_uploaded': [],
+                            'mappings_created': []
+                        })
+                        words_processed += 1
 
         # Final Summary
         elapsed = time.time() - start_time
@@ -934,3 +980,27 @@ IMPORTANT RULES:
         logger.info(f"Mappings Created: {total_mappings}")
         logger.info(f"Time Elapsed: {elapsed/3600:.2f} hours")
         logger.info(f"{'='*80}")
+
+    def _process_word_safe(self, word: str, word_index: int, total_words: int):
+        """Thread-safe wrapper for process_word with progress logging
+
+        Args:
+            word: Word to process
+            word_index: 1-based index of this word
+            total_words: Total number of words being processed
+
+        Returns:
+            Word statistics dictionary
+        """
+        try:
+            word_stats = self.process_word(word)
+
+            # Thread-safe progress logging
+            with _log_lock:
+                logger.info(f"\nProgress: {word_index}/{total_words} words ({100*word_index/total_words:.1f}%)")
+
+            return word_stats
+        except Exception as e:
+            with _log_lock:
+                logger.error(f"Error processing word '{word}': {e}")
+            raise

@@ -86,6 +86,13 @@ def main():
         help='Download and process videos without uploading (saves to storage directory)'
     )
 
+    parser.add_argument(
+        '--concurrency',
+        type=int,
+        default=1,
+        help='Number of words to process in parallel (default: 1, recommended: 3-5 for production)'
+    )
+
     args = parser.parse_args()
 
     # Load secrets from .env.secrets
@@ -122,8 +129,8 @@ def main():
     else:
         words = finder.load_words()
 
-    # Run pipeline with words
-    finder.run(words=words, source_name=args.bundle or args.csv)
+    # Run pipeline with words and concurrency
+    finder.run(words=words, source_name=args.bundle or args.csv, concurrency=args.concurrency)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "tat.jpeg",
+      "filename" : "logo_alien.jpeg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "tat 1.jpeg",
+      "filename" : "logo_alien 1.jpeg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "tat 2.jpeg",
+      "filename" : "logo_alien 2.jpeg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
