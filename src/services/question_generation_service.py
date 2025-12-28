@@ -153,7 +153,7 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
         return None
 
 
-def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, native_lang: str) -> Dict:
+def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, native_lang: str, video_data: Dict) -> Dict:
     """
     Generate a video multiple-choice question.
 
@@ -164,23 +164,17 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
         definition: Full definition data (used to get native language translations)
         learning_lang: Language being learned
         native_lang: User's native language
+        video_data: Video information dict with keys: video_id, audio_transcript, movie_title, movie_year, title
 
     Returns:
         Dict containing video question data with native language translations in options
     """
-    # Check if word has videos
-    video_info = check_word_has_videos(word, learning_lang)
-
-    if not video_info:
-        logger.warning(f"No videos found for word '{word}', falling back to mc_definition")
-        # Fallback to mc_definition if no videos available
-        return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
-
-    video_id = video_info['video_id']
-    audio_transcript = video_info.get('audio_transcript')
-    movie_title = video_info.get('movie_title')
-    movie_year = video_info.get('movie_year')
-    title = video_info.get('title')
+    # Use provided video data (no random selection)
+    video_id = video_data['video_id']
+    audio_transcript = video_data.get('audio_transcript')
+    movie_title = video_data.get('movie_title')
+    movie_year = video_data.get('movie_year')
+    title = video_data.get('title')
 
     # If no transcript available, fallback to mc_definition
     if not audio_transcript:
@@ -749,7 +743,15 @@ def generate_question_with_llm(
 
     # Handle video_mc type specially (doesn't use LLM for generation)
     if question_type == 'video_mc':
-        return generate_video_mc_question(word, definition, learning_lang, native_lang)
+        # Get video data for this word
+        video_data = check_word_has_videos(word, learning_lang)
+        if not video_data:
+            # No videos available - fallback to mc_def_native
+            logger.warning(f"No videos found for '{word}', falling back to mc_def_native")
+            question_type = 'mc_def_native'
+            # Continue to normal LLM generation below
+        else:
+            return generate_video_mc_question(word, definition, learning_lang, native_lang, video_data)
 
     # Select appropriate prompt generator and schema for LLM-based questions
     if question_type == 'mc_definition':

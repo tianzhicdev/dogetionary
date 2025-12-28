@@ -51,8 +51,9 @@ class VideoSearchService: BaseNetworkService {
     /// Fetch video questions for a specific word
     func getVideoQuestionsForWord(word: String, limit: Int = 5, completion: @escaping (Result<[BatchReviewQuestion], Error>) -> Void) {
         let encodedWord = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word
+        let userId = UserManager.shared.userID
 
-        guard let url = URL(string: "\(baseURL)/v3/api/video-questions-for-word?word=\(encodedWord)&lang=en&limit=\(limit)") else {
+        guard let url = URL(string: "\(baseURL)/v3/api/video-questions-for-word?word=\(encodedWord)&lang=en&user_id=\(userId)&limit=\(limit)") else {
             logger.error("Invalid URL for getVideoQuestionsForWord: \(word)")
             completion(.failure(DictionaryError.invalidURL))
             return

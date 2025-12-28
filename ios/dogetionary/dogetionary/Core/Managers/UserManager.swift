@@ -18,6 +18,7 @@ class UserManager: ObservableObject {
     private let userNameKey = "DogetionaryUserName"
     private let userMottoKey = "DogetionaryUserMotto"
     private let hasRequestedAppRatingKey = "DogetionaryHasRequestedAppRating"
+    private let questionsAnsweredCountKey = "DogetionaryQuestionsAnsweredCount"
     // V3 API keys
     private let testTypeKey = "DogetionaryTestType"
     private let targetDaysKey = "DogetionaryTargetDays"
@@ -477,6 +478,26 @@ class UserManager: ObservableObject {
     func markAppRatingRequested() {
         UserDefaults.standard.set(true, forKey: hasRequestedAppRatingKey)
         logger.info("Marked app rating as requested")
+    }
+
+    var questionsAnsweredCount: Int {
+        return UserDefaults.standard.integer(forKey: questionsAnsweredCountKey)
+    }
+
+    func incrementQuestionsAnswered() {
+        let newCount = questionsAnsweredCount + 1
+        UserDefaults.standard.set(newCount, forKey: questionsAnsweredCountKey)
+        logger.debug("Questions answered count: \(newCount)")
+    }
+
+    func resetQuestionsAnswered() {
+        UserDefaults.standard.set(0, forKey: questionsAnsweredCountKey)
+        logger.info("Reset questions answered count to 0")
+    }
+
+    func resetAppRatingRequest() {
+        UserDefaults.standard.set(false, forKey: hasRequestedAppRatingKey)
+        logger.info("Reset app rating request flag")
     }
 
     // MARK: - Onboarding Management

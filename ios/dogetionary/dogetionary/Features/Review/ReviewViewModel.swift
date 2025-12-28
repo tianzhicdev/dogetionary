@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import StoreKit
 
 @MainActor
 class ReviewViewModel: ObservableObject {
@@ -223,6 +224,15 @@ class ReviewViewModel: ObservableObject {
                             }
                         }
 
+                        // Increment questions answered counter
+                        self.userManager.incrementQuestionsAnswered()
+
+                        // Request App Store review after 5 questions (only once)
+                        if !self.userManager.hasRequestedAppRating &&
+                           self.userManager.questionsAnsweredCount >= 5 {
+                            self.requestAppReview()
+                        }
+
                     case .failure(let error):
                         self.errorMessage = error.localizedDescription
                     }
@@ -248,6 +258,21 @@ class ReviewViewModel: ObservableObject {
                 self.scoreAnimationScale = 1.0
                 self.scoreAnimationColor = .primary
             }
+        }
+    }
+
+    private func requestAppReview() {
+        // Request App Store review using StoreKit
+        // iOS automatically rate-limits this to 3 times per year
+        if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
+            userManager.markAppRatingRequested()
+
+            // Track analytics
+            AnalyticsManager.shared.track(action: .appLaunch, metadata: [
+                "event": "app_review_requested",
+                "questions_answered": userManager.questionsAnsweredCount
+            ])
         }
     }
 }

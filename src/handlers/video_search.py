@@ -54,10 +54,19 @@ def get_video_questions_for_word():
     """
     word = request.args.get('word', '').strip().lower()
     lang = request.args.get('lang', 'en')
+    user_id = request.args.get('user_id')
     limit = int(request.args.get('limit', 5))
 
-    if not word:
-        return jsonify({"error": "word required"}), 400
+    if not word or not user_id:
+        return jsonify({"error": "word and user_id required"}), 400
+
+    # Get user's actual native language
+    from services.user_service import get_user_preferences
+    try:
+        _, native_lang, _, _ = get_user_preferences(user_id)
+    except Exception as e:
+        logger.error(f"Failed to get user preferences for {user_id}: {e}")
+        native_lang = 'zh'  # Fallback to Chinese if user fetch fails
 
     try:
         # Get videos for this word
@@ -66,11 +75,13 @@ def get_video_questions_for_word():
                 v.id as video_id,
                 v.name as video_name,
                 v.audio_transcript,
+                v.metadata,
                 wtv.word
             FROM word_to_video wtv
             JOIN videos v ON wtv.video_id = v.id
             WHERE wtv.word = %s
               AND wtv.learning_language = %s
+              AND v.size_bytes <= 5242880
             ORDER BY wtv.relevance_score DESC NULLS LAST
             LIMIT %s
         """, (word, lang, limit))
@@ -82,12 +93,25 @@ def get_video_questions_for_word():
         questions = []
         for idx, video in enumerate(videos):
             try:
-                # Generate video_mc question
+                # Extract metadata
+                metadata = video.get('metadata', {}) or {}
+
+                # Prepare video data for question generation
+                video_data = {
+                    'video_id': video['video_id'],
+                    'audio_transcript': video['audio_transcript'],
+                    'movie_title': metadata.get('movie_title'),
+                    'movie_year': metadata.get('movie_year'),
+                    'title': video['video_name']
+                }
+
+                # Generate video_mc question with specific video
                 question_data = generate_video_mc_question(
                     word=video['word'],
                     definition={},  # Not used for video questions
                     learning_lang=lang,
-                    native_lang='zh'  # TODO: get from user preferences
+                    native_lang=native_lang,
+                    video_data=video_data
                 )
 
                 # ONLY add if it's actually a video question (not fallback)
@@ -99,7 +123,7 @@ def get_video_questions_for_word():
                         "source": "VIDEO",  # Custom source type for video questions
                         "position": idx,
                         "learning_language": lang,
-                        "native_language": "zh",  # TODO: get from user preferences
+                        "native_language": native_lang,
                         "question": question_data,
                         "definition": None  # No definition needed for video questions
                     })

@@ -97,6 +97,10 @@ struct SettingsView: View {
                         "new_language": newValue
                     ])
                     userManager.nativeLanguage = newValue
+
+                    // Clear question queue since translations are now stale
+                    // Preserve first question for better UX (user isn't left with empty state)
+                    QuestionQueueManager.shared.clearQueue(preserveFirst: true)
                 }
             }
         )
@@ -442,6 +446,54 @@ struct SettingsView: View {
                         .padding(8)
                         .background(AppTheme.selectableTint)
                         .cornerRadius(10)
+                }
+            }.listRowBackground(Color.clear)
+
+            Section(header: HStack {
+                Text("APP STORE REVIEW DEBUG")
+                    .foregroundStyle(AppTheme.gradient1)
+                    .fontWeight(.semibold)
+            }) {
+                VStack(alignment: .leading, spacing: 12) {
+                    // Display current state
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(AppTheme.accentCyan)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Questions Answered: \(UserManager.shared.questionsAnsweredCount)")
+                                .font(.subheadline)
+                                .foregroundColor(AppTheme.smallTitleText)
+                            Text("Review Requested: \(UserManager.shared.hasRequestedAppRating ? "Yes" : "No")")
+                                .font(.subheadline)
+                                .foregroundColor(AppTheme.smallTitleText)
+                        }
+                    }
+                    .padding(.bottom, 8)
+
+                    // Reset buttons
+                    Button {
+                        UserManager.shared.resetQuestionsAnswered()
+                    } label: {
+                        Label("RESET QUESTION COUNT", systemImage: "arrow.counterclockwise")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(8)
+                            .background(AppTheme.selectableTint)
+                            .cornerRadius(10)
+                    }
+
+                    Button {
+                        UserManager.shared.resetAppRatingRequest()
+                    } label: {
+                        Label("RESET REVIEW FLAG", systemImage: "star.slash")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(8)
+                            .background(AppTheme.warningColor)
+                            .cornerRadius(10)
+                    }
                 }
             }.listRowBackground(Color.clear)
         }

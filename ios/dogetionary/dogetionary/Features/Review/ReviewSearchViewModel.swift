@@ -48,27 +48,33 @@ class ReviewSearchViewModel: ObservableObject {
 
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        logger.info("Searching for '\(query)' in TAT view")
+        logger.info("Searching for '\(query)' in review view")
 
         isLoading = true
 
-        // Check if videos exist first
-        dictionaryService.checkWordHasVideos(word: query) { [weak self] result in
+        // Try video questions first (single API call - faster than 2-step check)
+        dictionaryService.getVideoQuestionsForWord(word: query, limit: 5) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
                 switch result {
-                case .success(let hasVideos):
-                    if hasVideos {
-                        // Branch A: Has videos → fetch and prepend
-                        self.fetchVideoQuestionsAndPrepend(word: query, onComplete: onVideosPrepended)
+                case .success(let questions):
+                    if !questions.isEmpty {
+                        // Branch A: Has video questions → stream to priority queue
+                        self.logger.info("Found \(questions.count) video questions for '\(query)'")
+                        self.streamVideoQuestionsToPriorityQueue(
+                            questions: questions,
+                            word: query,
+                            onComplete: onVideosPrepended
+                        )
                     } else {
-                        // Branch B: No videos → fetch definition
+                        // Branch B: No video questions → fetch definition
+                        self.logger.info("No video questions for '\(query)', showing definition")
                         self.fetchDefinitionAndShow(word: query)
                     }
 
                 case .failure(let error):
-                    self.logger.error("Error checking videos for '\(query)': \(error.localizedDescription)")
+                    self.logger.error("Failed to fetch video questions: \(error.localizedDescription)")
                     // Fallback: fetch definition
                     self.fetchDefinitionAndShow(word: query)
                 }
@@ -108,65 +114,43 @@ class ReviewSearchViewModel: ObservableObject {
 
     // MARK: - Private Methods
 
-    private func fetchVideoQuestionsAndPrepend(word: String, onComplete: @escaping () -> Void) {
-        logger.info("Fetching video questions for '\(word)'")
+    private func streamVideoQuestionsToPriorityQueue(questions: [BatchReviewQuestion], word: String, onComplete: @escaping () -> Void) {
+        logger.info("Streaming \(questions.count) video questions to priority queue for '\(word)'")
 
-        dictionaryService.getVideoQuestionsForWord(word: word, limit: 5) { [weak self] result in
-            guard let self = self else { return }
+        // Start streaming append to priority queue
+        isStreamingPrepend = true
+        streamProgress = (0, questions.count)
+        firstQuestionReady = false
 
-            Task { @MainActor in
-                switch result {
-                case .success(let questions):
-                    guard !questions.isEmpty else {
-                        self.logger.warning("No video questions returned for '\(word)'")
-                        self.isLoading = false
-                        return
-                    }
-
-                    self.logger.info("Starting streaming prepend for \(questions.count) video questions")
-
-                    // Start streaming append to priority queue
-                    self.isStreamingPrepend = true
-                    self.streamProgress = (0, questions.count)
-                    self.firstQuestionReady = false
-
-                    QuestionQueueManager.shared.streamAppendToPriorityQueue(
-                        questions,
-                        onFirstReady: { [weak self] in
-                            guard let self = self else { return }
-                            Task { @MainActor in
-                                self.firstQuestionReady = true
-                                self.isLoading = false
-                                self.logger.info("First question ready for '\(word)'")
-
-                                // Clear search and close immediately when first question ready
-                                self.searchText = ""
-                                onComplete()
-                            }
-                        },
-                        onProgress: { [weak self] ready, total in
-                            guard let self = self else { return }
-                            Task { @MainActor in
-                                self.streamProgress = (ready, total)
-                                self.logger.info("Streaming progress: \(ready)/\(total)")
-                            }
-                        },
-                        onComplete: { [weak self] in
-                            guard let self = self else { return }
-                            Task { @MainActor in
-                                self.isStreamingPrepend = false
-                                self.logger.info("All video questions ready for '\(word)'")
-                            }
-                        }
-                    )
-
-                case .failure(let error):
-                    self.logger.error("Failed to fetch video questions: \(error.localizedDescription)")
+        QuestionQueueManager.shared.streamAppendToPriorityQueue(
+            questions,
+            onFirstReady: { [weak self] in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    self.firstQuestionReady = true
                     self.isLoading = false
+                    self.logger.info("First question ready for '\(word)'")
+
+                    // Clear search and close immediately when first question ready
+                    self.searchText = ""
+                    onComplete()
+                }
+            },
+            onProgress: { [weak self] ready, total in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    self.streamProgress = (ready, total)
+                    self.logger.info("Streaming progress: \(ready)/\(total)")
+                }
+            },
+            onComplete: { [weak self] in
+                guard let self = self else { return }
+                Task { @MainActor in
                     self.isStreamingPrepend = false
+                    self.logger.info("All video questions ready for '\(word)'")
                 }
             }
-        }
+        )
     }
 
     private func fetchDefinitionAndShow(word: String) {
