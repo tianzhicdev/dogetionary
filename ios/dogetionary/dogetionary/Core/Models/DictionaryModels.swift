@@ -612,28 +612,28 @@ struct BatchForgettingCurveResponse: Codable {
 
 /// Test type enum with all available test levels
 enum TestType: String, Codable, CaseIterable {
+    case demo = "DEMO"
+    case businessEnglish = "BUSINESS_ENGLISH"
+    case everydayEnglish = "EVERYDAY_ENGLISH"
     case toeflBeginner = "TOEFL_BEGINNER"
     case toeflIntermediate = "TOEFL_INTERMEDIATE"
     case toeflAdvanced = "TOEFL_ADVANCED"
     case ieltsBeginner = "IELTS_BEGINNER"
     case ieltsIntermediate = "IELTS_INTERMEDIATE"
     case ieltsAdvanced = "IELTS_ADVANCED"
-    case demo = "DEMO"
-    case businessEnglish = "BUSINESS_ENGLISH"
-    case everydayEnglish = "EVERYDAY_ENGLISH"
 
     /// Display name for UI
     var displayName: String {
         switch self {
+        case .demo: return "Demo"
+        case .businessEnglish: return "Business English"
+        case .everydayEnglish: return "Everyday English"
         case .toeflBeginner: return "TOEFL Beginner"
         case .toeflIntermediate: return "TOEFL Intermediate"
         case .toeflAdvanced: return "TOEFL Advanced"
         case .ieltsBeginner: return "IELTS Beginner"
         case .ieltsIntermediate: return "IELTS Intermediate"
         case .ieltsAdvanced: return "IELTS Advanced"
-        case .demo: return "Demo Bundle"
-        case .businessEnglish: return "Business English"
-        case .everydayEnglish: return "Everyday English"
         }
     }
 

@@ -73,7 +73,7 @@ struct ContentView: View {
                             }
                         }
                         .tabItem {
-                            Label("TAT", systemImage: "figure.boxing")
+                            Label("Train", systemImage: "figure.boxing")
                         }
                         .tag(0)
                         .onAppear {

@@ -159,7 +159,7 @@ struct ReviewView: View {
                                     .font(.system(size: 20))
                                     .foregroundColor(AppTheme.accentCyan)
 
-                                Text("Videos for **\(definition.word)** will appear shortly")
+                                Text("No Videos for **\(definition.word)**")
                                     .font(.system(size: 14))
                                     .foregroundColor(AppTheme.bodyText)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -174,7 +174,11 @@ struct ReviewView: View {
                             DefinitionCard(definition: definition)
                                 .padding(.horizontal)
                         }
+                        .background(
+                            AppTheme.verticalGradient2.ignoresSafeArea())
                     }
+                    .background(
+                        AppTheme.verticalGradient2.ignoresSafeArea())
                     .navigationTitle("Definition")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -185,6 +189,8 @@ struct ReviewView: View {
                         }
                     }
                 }
+                .background(
+                    AppTheme.verticalGradient2.ignoresSafeArea())
             }
         }
         .alert("Word Validation", isPresented: $searchViewModel.showValidationAlert) {
