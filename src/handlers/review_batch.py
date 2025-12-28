@@ -256,7 +256,16 @@ def get_review_words_batch():
                 word = row['word']
                 saved_word_id = row['saved_word_id']  # May be None for new words
                 word_learning_lang = row.get('learning_language', learning_lang)
-                word_native_lang = row.get('native_language', native_lang)
+
+                # CRITICAL: Always use user's CURRENT native_lang preference, not the one stored in saved words
+                # (The stored value becomes outdated when users change their language settings)
+                word_native_lang = native_lang  # Use current preference, not row.get('native_language')
+
+                # Log if there's a mismatch (indicates user changed their language settings)
+                row_native_lang = row.get('native_language')
+                if row_native_lang and row_native_lang != native_lang:
+                    logger.info(f"🔄 Language mismatch for '{word}': user current={native_lang}, saved word had={row_native_lang} (using current)")
+
                 source_type = row.get('source_type', 'unknown')
 
                 # Get complete question data (definition + question + audio)
