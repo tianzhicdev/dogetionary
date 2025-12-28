@@ -201,13 +201,13 @@ struct WordDefinitionSheet: View {
             nativeLanguage: "zh"
         ) { result in
             DispatchQueue.main.async {
-                isLoading = false
-
                 switch result {
                 case .success(let defs):
                     definition = defs.first
+                    isLoading = false
                 case .failure(let error):
                     errorMessage = error.localizedDescription
+                    isLoading = false
                 }
             }
         }

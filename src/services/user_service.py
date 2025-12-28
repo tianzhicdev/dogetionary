@@ -1,6 +1,9 @@
 import json
+import logging
 from utils.database import get_db_connection
 from utils.llm import llm_completion_with_fallback
+
+logger = logging.getLogger(__name__)
 
 def generate_user_profile() -> tuple[str, str]:
     """Generate a proper, civil user name and motto using LLM with fallback chain"""
@@ -35,13 +38,12 @@ def generate_user_profile() -> tuple[str, str]:
         username = username[:20] if len(username) > 20 else username
         motto = motto[:50] if len(motto) > 50 else motto
 
-        # Note: app.logger reference will need to be handled
-        print(f"Generated user profile - Username: {username}, Motto: {motto}")
+        logger.info(f"✓ Generated user profile - Username: {username}, Motto: {motto}")
         return username, motto
 
     except Exception as e:
-        # Note: app.logger reference will need to be handled
-        print(f"Error generating user profile: {str(e)}")
+        logger.error(f"❌ Error generating user profile: {e}", exc_info=True)
+        logger.info(f"Using fallback profile: LearningExplorer / Every word is a new adventure!")
         # Provide safe fallbacks
         return "LearningExplorer", "Every word is a new adventure!"
 
@@ -49,6 +51,7 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
     conn = None
     cur = None
     try:
+        logger.info(f"📋 get_user_preferences called for user_id='{user_id}'")
         conn = get_db_connection()
         cur = conn.cursor()
 
@@ -61,10 +64,12 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
         result = cur.fetchone()
 
         if result:
+            logger.info(f"✓ Found user preferences: user_id='{user_id}', learning_lang='{result['learning_language']}', native_lang='{result['native_language']}'")
             return (result['learning_language'], result['native_language'],
                    result['user_name'] or '', result['user_motto'] or '')
         else:
             # Generate AI profile for new user
+            logger.warning(f"⚠️ No preferences found for user_id='{user_id}', creating new user with defaults (learning='en', native='zh')")
             username, motto = generate_user_profile()
 
             cur.execute("""
@@ -73,13 +78,17 @@ def get_user_preferences(user_id: str) -> tuple[str, str, str, str]:
                 ON CONFLICT (user_id) DO NOTHING
             """, (user_id, username, motto))
             conn.commit()
+            logger.info(f"✓ Created new user: user_id='{user_id}', learning='en', native='zh', username='{username}'")
             return 'en', 'zh', username, motto
 
     except Exception as e:
         if conn:
             conn.rollback()
-        # Note: app.logger reference will need to be handled
-        print(f"Error getting user preferences: {str(e)}")
+        logger.error(f"❌ ERROR in get_user_preferences for user_id='{user_id}'")
+        logger.error(f"❌ Exception type: {type(e).__name__}")
+        logger.error(f"❌ Exception message: {e}")
+        logger.error(f"❌ Full stack trace:", exc_info=True)
+        logger.error(f"❌ Returning fallback values: learning='en', native='zh'")
         return 'en', 'zh', 'LearningExplorer', 'Every word is a new adventure!'
     finally:
         if cur:
