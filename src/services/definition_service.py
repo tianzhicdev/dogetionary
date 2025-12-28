@@ -231,13 +231,13 @@ def get_or_generate_definition(word: str, learning_lang: str, native_lang: str, 
 
         existing = cur.fetchone()
         if existing:
-            logger.info(f"Definition cache hit for '{word}'")
+            logger.info(f"📚 Definition cache HIT: word='{word}', learning_lang='{learning_lang}', native_lang='{native_lang}'")
             cur.close()
             conn.close()
             return existing['definition_data']
 
         # Generate definition using OpenAI with V4 schema
-        logger.info(f"Generating V4 definition with LLM for '{word}' ({learning_lang} → {native_lang})")
+        logger.info(f"📚 Definition cache MISS: word='{word}', learning_lang='{learning_lang}', native_lang='{native_lang}' - generating new definition")
 
         # Use V4 prompt
         prompt = build_v4_definition_prompt(word, learning_lang, native_lang)

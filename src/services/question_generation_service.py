@@ -82,10 +82,10 @@ def get_cached_question(word: str, learning_lang: str, native_lang: str, questio
         """, (word, learning_lang, native_lang, question_type))
 
         if result:
-            logger.info(f"Cache hit for question: {word} ({question_type})")
+            logger.info(f"❓ Question cache HIT: word='{word}', type='{question_type}', learning_lang='{learning_lang}', native_lang='{native_lang}'")
             return result['question_data']
 
-        logger.info(f"Cache miss for question: {word} ({question_type})")
+        logger.info(f"❓ Question cache MISS: word='{word}', type='{question_type}', learning_lang='{learning_lang}', native_lang='{native_lang}'")
         return None
 
     except Exception as e:
@@ -170,6 +170,8 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
     Returns:
         Dict containing video question data with native language translations in options
     """
+    logger.info(f"🎥 Generating video_mc question: word='{word}', learning_lang='{learning_lang}', native_lang='{native_lang}', video_id={video_data.get('video_id')}")
+
     # Use provided video data (no random selection)
     video_id = video_data['video_id']
     audio_transcript = video_data.get('audio_transcript')
@@ -183,6 +185,7 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
 
     # Get native language name for prompt
     lang_name = LANG_NAMES.get(native_lang, native_lang)
+    logger.info(f"🌐 Using native language: {native_lang} ({lang_name}) for video question generation")
 
     # Generate meaning-in-context question using simplified prompt
     prompt = f"""You are generating a vocabulary question for English learners whose native language is {lang_name}.
@@ -735,7 +738,7 @@ def generate_question_with_llm(
     Returns:
         Dict containing question data ready to send to client
     """
-    logger.info(f"Generating {question_type} question for word: {word}")
+    logger.info(f"❓ Generating {question_type} question: word='{word}', learning_lang='{learning_lang}', native_lang='{native_lang}'")
 
     # Handle video_mc type specially (doesn't use LLM for generation)
     if question_type == 'video_mc':
@@ -848,6 +851,8 @@ def get_or_generate_question(
     # Import here to avoid circular imports
     import base64
     from utils.database import get_db_connection
+
+    logger.info(f"🔍 get_or_generate_question called: word='{word}', learning_lang='{learning_lang}', native_lang='{native_lang}', question_type={question_type}")
 
     # Step 1: Get or fetch definition (if not provided)
     if definition is None:
