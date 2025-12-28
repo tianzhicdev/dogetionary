@@ -705,7 +705,10 @@ IMPORTANT RULES:
                     "name": metadata.get('movie_title', slug),
                     "format": "mp4",
                     "video_data_base64": video_base64,
-                    "transcript": audio_transcript.get('text', ''),
+                    "transcript": metadata.get('transcript', ''),  # ClipCafe metadata transcript
+                    "audio_transcript": audio_transcript.get('text', ''),  # Whisper audio transcript
+                    "audio_transcript_verified": True,
+                    "whisper_metadata": audio_transcript.get('whisper_metadata'),
                     "metadata": {
                         "clip_id": metadata.get('clipID'),
                         "movie_title": metadata.get('movie_title'),
@@ -713,8 +716,7 @@ IMPORTANT RULES:
                         "duration_seconds": metadata.get('duration_seconds'),
                         "clipcafe_slug": slug,
                         "education_score": analysis.get('education_score'),
-                        "context_score": analysis.get('context_score'),
-                        "audio_transcript_verified": True
+                        "context_score": analysis.get('context_score')
                     },
                     "word_mappings": word_mappings
                 }]

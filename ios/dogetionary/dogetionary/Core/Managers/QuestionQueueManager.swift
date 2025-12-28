@@ -347,7 +347,7 @@ class QuestionQueueManager: ObservableObject {
 
     /// Force refresh - clear and reload (preserves current question)
     func forceRefresh() {
-        clearQueue(preserveFirst: true)
+        clearQueue(preserveFirst: false)
         refillIfNeeded()  // Refill from position 1 onward
     }
 

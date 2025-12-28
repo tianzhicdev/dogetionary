@@ -100,7 +100,7 @@ struct SettingsView: View {
 
                     // Clear question queue since translations are now stale
                     // Preserve first question for better UX (user isn't left with empty state)
-                    QuestionQueueManager.shared.clearQueue(preserveFirst: true)
+                    QuestionQueueManager.shared.clearQueue(preserveFirst: false)
                 }
             }
         )

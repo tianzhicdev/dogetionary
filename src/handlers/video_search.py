@@ -57,6 +57,8 @@ def get_video_questions_for_word():
     user_id = request.args.get('user_id')
     limit = int(request.args.get('limit', 5))
 
+    logger.info(f"📝 get_video_questions_for_word called: word='{word}', user_id='{user_id}', lang='{lang}', limit={limit}")
+
     if not word or not user_id:
         return jsonify({"error": "word and user_id required"}), 400
 
@@ -64,8 +66,13 @@ def get_video_questions_for_word():
     from services.user_service import get_user_preferences
     try:
         _, native_lang, _, _ = get_user_preferences(user_id)
+        logger.info(f"✓ Successfully fetched native language for user {user_id}: {native_lang}")
     except Exception as e:
-        logger.error(f"Failed to get user preferences for {user_id}: {e}")
+        logger.error(f"❌ FALLBACK TO CHINESE: Failed to get user preferences for user_id='{user_id}'")
+        logger.error(f"❌ Exception type: {type(e).__name__}")
+        logger.error(f"❌ Exception message: {e}")
+        logger.error(f"❌ Full stack trace:", exc_info=True)
+        logger.error(f"❌ Using fallback native_lang='zh' (Chinese) instead of user's actual preference")
         native_lang = 'zh'  # Fallback to Chinese if user fetch fails
 
     try:
@@ -90,6 +97,7 @@ def get_video_questions_for_word():
             return jsonify({"word": word, "questions": [], "count": 0})
 
         # Generate questions for each video
+        logger.info(f"🎬 Generating {len(videos)} video questions with native_lang='{native_lang}'")
         questions = []
         for idx, video in enumerate(videos):
             try:
