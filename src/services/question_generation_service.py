@@ -123,7 +123,7 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
         Dict with video_id, audio_transcript, and metadata if videos exist, None otherwise
     """
     try:
-        # Only select videos under 5MB (5242880 bytes) for better performance
+        # Only select videos under 5MB (5242880 bytes) with transcripts for better performance
         result = db_fetch_one("""
             SELECT v.id, v.audio_transcript, v.metadata, v.name
             FROM word_to_video wtv
@@ -131,6 +131,7 @@ def check_word_has_videos(word: str, learning_lang: str) -> Optional[Dict]:
             WHERE LOWER(wtv.word) = LOWER(%s)
               AND wtv.learning_language = %s
               AND v.size_bytes <= 5242880
+              AND v.audio_transcript IS NOT NULL
             ORDER BY wtv.relevance_score DESC NULLS LAST, RANDOM()
             LIMIT 1
         """, (word, learning_lang))
@@ -176,10 +177,9 @@ def generate_video_mc_question(word: str, definition: Dict, learning_lang: str, 
     movie_year = video_data.get('movie_year')
     title = video_data.get('title')
 
-    # If no transcript available, fallback to mc_definition
+    # Validate that transcript exists (should never fail if check_word_has_videos() is correct)
     if not audio_transcript:
-        logger.warning(f"No audio_transcript available for video {video_id}, falling back to mc_definition")
-        return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
+        raise ValueError(f"video_data missing audio_transcript for video {video_id}")
 
     # Get native language name for prompt
     lang_name = LANG_NAMES.get(native_lang, native_lang)
@@ -237,9 +237,7 @@ RULES:
 
         # Handle error case (LLM couldn't generate reliable question)
         if 'error' in parsed:
-            logger.warning(f"LLM returned error for video question: {parsed['error']}, falling back to mc_definition")
-            # Fall back to definition-based question instead
-            return generate_question_with_llm(word, definition, learning_lang, native_lang, 'mc_definition')
+            raise ValueError(f"LLM could not generate video question: {parsed['error']}")
 
         # Extract fields from simplified format
         question_text = parsed['question']
@@ -538,8 +536,7 @@ def generate_mc_quote_prompt(word: str, definition_data: Dict, native_lang: str)
 
     # Validate that famous_quote exists and contains the word
     if not famous_quote or not famous_quote.get('quote'):
-        logger.warning(f"No famous_quote for '{word}', falling back to mc_def_native")
-        return generate_mc_def_native_prompt(word, definition_data, native_lang)
+        raise ValueError(f"No famous_quote available for word '{word}'")
 
     quote_text = famous_quote.get('quote', '')
     quote_source = famous_quote.get('source', 'Unknown')
@@ -549,8 +546,7 @@ def generate_mc_quote_prompt(word: str, definition_data: Dict, native_lang: str)
     quote_lower = quote_text.lower()
 
     if word_lower not in quote_lower:
-        logger.warning(f"famous_quote for '{word}' does not contain the word, falling back to mc_def_native")
-        return generate_mc_def_native_prompt(word, definition_data, native_lang)
+        raise ValueError(f"famous_quote does not contain the word '{word}'")
 
     # Extract definitions for context
     definitions = definition_data.get('definitions', [])
@@ -743,15 +739,21 @@ def generate_question_with_llm(
 
     # Handle video_mc type specially (doesn't use LLM for generation)
     if question_type == 'video_mc':
-        # Get video data for this word
+        # Get video data for this word (now includes transcript check)
         video_data = check_word_has_videos(word, learning_lang)
         if not video_data:
-            # No videos available - fallback to mc_def_native
-            logger.warning(f"No videos found for '{word}', falling back to mc_def_native")
-            question_type = 'mc_def_native'
+            # No videos with transcripts available - fallback to mc_quote
+            logger.warning(f"No videos with transcripts for '{word}', falling back to mc_quote")
+            question_type = 'mc_quote'
             # Continue to normal LLM generation below
         else:
-            return generate_video_mc_question(word, definition, learning_lang, native_lang, video_data)
+            try:
+                return generate_video_mc_question(word, definition, learning_lang, native_lang, video_data)
+            except (ValueError, KeyError, json.JSONDecodeError) as e:
+                # Video question generation failed - fallback to mc_quote
+                logger.warning(f"Video question generation failed for '{word}': {e}, falling back to mc_quote")
+                question_type = 'mc_quote'
+                # Continue to normal LLM generation below
 
     # Select appropriate prompt generator and schema for LLM-based questions
     if question_type == 'mc_definition':
@@ -764,8 +766,15 @@ def generate_question_with_llm(
         prompt = generate_mc_def_native_prompt(word, definition, native_lang)
         schema_name = 'mc_definition'  # Same schema as mc_definition
     elif question_type == 'mc_quote':
-        prompt = generate_mc_quote_prompt(word, definition, native_lang)
-        schema_name = 'mc_quote'  # New schema for quote questions
+        try:
+            prompt = generate_mc_quote_prompt(word, definition, native_lang)
+            schema_name = 'mc_quote'  # New schema for quote questions
+        except ValueError as e:
+            # No valid quote - fallback to mc_def_native
+            logger.warning(f"mc_quote generation failed for '{word}': {e}, falling back to mc_def_native")
+            prompt = generate_mc_def_native_prompt(word, definition, native_lang)
+            schema_name = 'mc_definition'
+            question_type = 'mc_def_native'  # Update question_type for cache consistency
     elif question_type == 'fill_blank':
         prompt = generate_fill_blank_prompt(word, definition, native_lang)
         schema_name = 'mc_fillin'
